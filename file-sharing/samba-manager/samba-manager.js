@@ -948,14 +948,34 @@ function parse_shares(lines) {
 }
 
 /* create_share_list_entry
- * Receives: name of share as a string, callback function to delete share on click
- * Does: calls create_list_entry with share_name and on_delete, and appends classes
- * to make entry span width of list
+ * Receives: name of share as a string, share path, and callback function to delete share on click
+ * Does: creates list entries for a table tag
  * Returns: entry element
  */
-function create_share_list_entry(share_name, on_delete) {
-    var entry = create_list_entry(share_name, on_delete);
-    entry.classList.add("row-45d", "flex-45d-space-between", "flex-45d-center");
+function create_share_list_entry(share_name, path, on_delete) {
+    var entry = document.createElement("tr");
+    entry.classList.add("highlight-entry");
+
+    var entry_name = document.createElement("td");
+    entry_name.innerText = share_name;
+
+    var entry_path = document.createElement("td");
+    entry_path.innerText = path;
+
+    var del = document.createElement("td");
+    del.style.padding = "2px"
+    del.style.textAlign = "right"
+    var del_div = document.createElement("span");
+    del_div.classList.add("circle-icon", "circle-icon-danger");
+    del_div.addEventListener("click", function () {
+        on_delete(share_name, [del_div, del, entry_path, entry_name, entry]);
+    });
+    del.appendChild(del_div);
+
+    entry.appendChild(entry_name);
+    entry.appendChild(entry_path);
+    entry.appendChild(del);
+
     return entry;
 }
 
@@ -978,14 +998,20 @@ function populate_share_list() {
     proc.done(function (data) {
         const [shares, glob] = parse_shares(data.split("\n"));
         if (Object.keys(shares).length === 0) {
-            var msg = document.createElement("div");
-            msg.innerText = 'No shares. Click "New Share" to add one.';
-            msg.classList.add("row-45d");
+            var msg = document.createElement("tr");
+            var name = document.createElement("td");
+            name.innerText = 'No NFSs. Click the "plus" to add one.';
+            var path = document.createElement("td");
+            var del = document.createElement("td");
+            msg.appendChild(name)
+            msg.appendChild(path)
+            msg.appendChild(del)
             shares_list.appendChild(msg);
         } else {
             Object.keys(shares).forEach(function (share_name) {
                 var item = create_share_list_entry(
                     share_name,
+                    shares[share_name].path,
                     show_rm_share_dialog
                 );
                 item.firstChild.onclick = function () {

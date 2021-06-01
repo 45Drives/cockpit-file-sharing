@@ -50,123 +50,123 @@
 
 				<!-- Panels -->
 
-				<div class="pf-l-gallery pf-m-gutter">
-
-					<div class="pf-l-grid pf-m-gutter">
-
-						<!-- User Management -->
-						<div class="pf-l-grid__item">
-							<article class="pf-c-card">
-								<div class="pf-c-card__header">
-									<div class="pf-c-card__title">
-										<h2 class="pf-m-lg">User Management</h2>
-									</div>
-								</div>
-								<div class="pf-c-card__body">
-									<div>
-										User:
-										<select class="ct-select user-selection" name="users"
-											id="user-selection"></select>
-										<button type="button" class="pf-c-button pf-m-danger side-bar"
-											id="show-rm-smbpasswd-btn">Remove
-											Password</button>
-										<button type="button" class="pf-c-button pf-m-primary side-bar"
-											id="show-smbpasswd-dialog-btn">Set Samba
-											Password</button>
-									</div>
-									<div class="vertical-spacer"></div>
-									<hr class="pf-c-divider" />
-									<div class="vertical-spacer">
-										<!-- <div class="vertical-spacer"></div> -->
-									</div>
-									<div>
-										<h3>
-											<span id="rm-smbpasswd-modal-user" class="username-45d"></span>'s Groups:
-											<button type="button" class="pf-c-button pf-m-primary side-bar"
-												id="add-group-to-user"><span class="fa fa-plus"></span></button>
-										</h3>
-									</div>
-									<div class="vertical-spacer"></div>
-									<div class="pf-c-list" id="user-group-list"></div>
-									<div>
-										<div class="no-margin" id="user-select-info">
-											<span id="user-select-info-icon"></span>
-											<span id="user-select-info-text"></span>
-										</div>
-										<div class="no-margin" id="add-group-info">
-											<span id="add-group-info-icon"></span>
-											<span id="add-group-info-text"></span>
-										</div>
-										<div class="no-margin" id="fail-group-info">
-											<span id="fail-group-info-icon"></span>
-											<span id="fail-group-info-text"></span>
-										</div>
-										<div class="no-margin" id="smbpasswd-info">
-											<span id="smbpasswd-info-icon"></span>
-											<span id="smbpasswd-info-text"></span>
-										</div>
-									</div>
-								</div>
-							</article>
-						</div>
-
-						<!-- Group Management -->
-
-						<div class="pf-l-grid__item">
-							<article class="pf-c-card">
-								<div class="pf-c-card__header">
-									<div class="pf-c-card__title">
-										<h2>Group Management</h2>
-									</div>
-									<div class="pf-c-card__actions">
-										<button type="button" class="pf-c-button pf-m-primary" id="add-group-btn"><span
-												class="fa fa-plus"></span></button>
-									</div>
-								</div>
-								<div class="pf-c-card__body">
-									<hr class="pf-c-divider" />
-									<div class="vertical-spacer"></div>
-									<div class="pf-c-list" id="groups-list"></div>
-									<div id="group-info" class="no-margin">
-										<span id="group-info-icon"></span>
-										<span id="group-info-text"></span>
-									</div>
-								</div>
-							</article>
-						</div>
-					</div>
-
+				<div class="pf-l-grid pf-m-gutter">
 
 					<!-- Share Management -->
+					<div class="pf-l-grid__item">
+						<article class="pf-c-card">
+							<div class="pf-c-card__header">
+								<div class="pf-c-card__title">
+									<h2 class="pf-m-lg">Share Management</h2>
+								</div>
+								<div class="pf-c-card__actions">
+									<button type="button" class="pf-c-button pf-m-primary" id="samba-global-btn">Global
+										Config</button>
+									<button type="button" class="pf-c-button pf-m-primary" id="add-share-btn"><span
+											class="fa fa-plus"></span></button>
+								</div>
+							</div>
+							<div class="pf-c-card__body contains-list">
+								<table class="ct-table pf-c-table pf-m-grid-md pf-m-compact">
+									<thread>
+										<tr>
+											<th class="bold pf-m-width-50">
+												<span class="pf-c-table__text bold-text">Name</span>
+											</th>
+											<th class="pf-m-width-50 pf-c-table__sort pf-m-selected">
+												<span class="pf-c-table__text bold-text">Path</span>
+											</th>
+											<th class="pf-m-width-50 pf-c-table__sort pf-m-selected"> </th>
+										</tr>
+									</thread>
+									<tbody id="shares-list">
+									</tbody>
+								</table>
+								<br>
+								<div id="share-info" class="no-margin">
+									<span id="share-info-icon"></span>
+									<span id="share-info-text"></span>
+								</div>
+							</div>
+						</article>
+					</div>
 
-					<div class="pf-l-grid">
-						<div class="pf-l-grid__item">
-
-							<article class="pf-c-card">
-								<div class="pf-c-card__header">
-									<div class="pf-c-card__title">
-										<h2 class="pf-m-lg">Share Management</h2>
+					<!-- User Management -->
+					<div class="pf-l-grid__item pf-m-6-col">
+						<article class="pf-c-card">
+							<div class="pf-c-card__header">
+								<div class="pf-c-card__title">
+									<h2 class="pf-m-lg">User Management</h2>
+								</div>
+							</div>
+							<div class="pf-c-card__body">
+								<div>
+									User:
+									<select class="ct-select user-selection" name="users" id="user-selection"></select>
+									<button type="button" class="pf-c-button pf-m-danger side-bar"
+										id="show-rm-smbpasswd-btn">Remove
+										Password</button>
+									<button type="button" class="pf-c-button pf-m-primary side-bar"
+										id="show-smbpasswd-dialog-btn">Set Samba
+										Password</button>
+								</div>
+								<div class="vertical-spacer"></div>
+								<hr class="pf-c-divider" />
+								<div class="vertical-spacer">
+								</div>
+								<div>
+									<h3>
+										<span id="rm-smbpasswd-modal-user" class="username-45d"></span>'s Groups:
+										<button type="button" class="pf-c-button pf-m-primary side-bar"
+											id="add-group-to-user"><span class="fa fa-plus"></span></button>
+									</h3>
+								</div>
+								<div class="vertical-spacer"></div>
+								<div class="pf-c-list" id="user-group-list"></div>
+								<div>
+									<div class="no-margin" id="user-select-info">
+										<span id="user-select-info-icon"></span>
+										<span id="user-select-info-text"></span>
 									</div>
-									<div class="pf-c-card__actions">
-										<button type="button" class="pf-c-button pf-m-primary"
-											id="samba-global-btn">Global
-											Config</button>
-										<button type="button" class="pf-c-button pf-m-primary" id="add-share-btn"><span
-												class="fa fa-plus"></span></button>
+									<div class="no-margin" id="add-group-info">
+										<span id="add-group-info-icon"></span>
+										<span id="add-group-info-text"></span>
+									</div>
+									<div class="no-margin" id="fail-group-info">
+										<span id="fail-group-info-icon"></span>
+										<span id="fail-group-info-text"></span>
+									</div>
+									<div class="no-margin" id="smbpasswd-info">
+										<span id="smbpasswd-info-icon"></span>
+										<span id="smbpasswd-info-text"></span>
 									</div>
 								</div>
-								<div class="pf-c-card__body">
-									<hr class="pf-c-divider" />
-									<div class="vertical-spacer"></div>
-									<div class="pf-c-list" id="shares-list">
-									</div>
-									<div id="share-info" class="no-margin">
-										<span id="share-info-icon"></span>
-										<span id="share-info-text"></span>
-									</div>
+							</div>
+						</article>
+					</div>
+
+					<!-- Group Management -->
+					<div class="pf-l-grid__item pf-m-6-col">
+						<article class="pf-c-card">
+							<div class="pf-c-card__header">
+								<div class="pf-c-card__title">
+									<h2>Group Management</h2>
 								</div>
-							</article>
-						</div>
+								<div class="pf-c-card__actions">
+									<button type="button" class="pf-c-button pf-m-primary" id="add-group-btn"><span
+											class="fa fa-plus"></span></button>
+								</div>
+							</div>
+							<div class="pf-c-card__body">
+								<hr class="pf-c-divider" />
+								<div class="vertical-spacer"></div>
+								<div class="pf-c-list" id="groups-list"></div>
+								<div id="group-info" class="no-margin">
+									<span id="group-info-icon"></span>
+									<span id="group-info-text"></span>
+								</div>
+							</div>
+						</article>
 					</div>
 				</div>
 
@@ -421,7 +421,8 @@
 								<label class="label-45d" for="add-user">
 									<select class="ct-select user-selection use-domain" name="add-user"
 										id="add-user-to-share">
-										<option class="placeholder" value="" disabled selected hidden>Add a user</option>
+										<option class="placeholder" value="" disabled selected hidden>Add a user
+										</option>
 									</select>
 							</div>
 						</div>
@@ -470,7 +471,8 @@
 							placeholder="parameter = value"></textarea>
 						<div>
 							<var id="is-pressed-shadowcopy" hidden>false</var>
-							<button class="pf-c-button pf-m-secondary" id="shadowcopy">Populate Shadow Copy settings</button>
+							<button class="pf-c-button pf-m-secondary" id="shadowcopy">Populate Shadow Copy
+								settings</button>
 							<var id="is-pressed-macos" hidden>false</var>
 							<button class="pf-c-button pf-m-secondary" id="macos">Populate MacOS Share</button>
 							<var id="is-pressed-auditlogs" hidden>false</var>
