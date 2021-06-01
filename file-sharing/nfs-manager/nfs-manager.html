@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<!-- 
+    Cockpit File Sharing - Cockpit plugin for managing file shares.
+    Copyright (C) 2021 Sam Silver <ssilver@45drives.com>
+
+    This file is part of Cockpit File Sharing.
+    Cockpit File Sharing is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    Cockpit File Sharing is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.  
+-->
+<head>
+    <title>NFS Manager</title>
+    <meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<link href="../../storage/storage.css" type="text/css" rel="stylesheet">
+	<link href="nfs-manager.css" type="text/css" rel="stylesheet">
+	<script src="../../base1/cockpit.js"></script>
+	<script src="../../manifests.js"></script>
+	<script defer src="nfs-manager.js"></script>
+</head>
+
+<body>
+    <div class="pf-c-page">
+        <div class="pf-c-page__main" tabindex="-1">
+            <section class="pf-c-page__main-section">
+
+                <div id="blurred-screen">
+                    <!-- logo -->
+                    <div class="spinner-45d" id="spinner"></div>
+
+					<!-- Main-info indicator -->
+					<div class="no-margin main-info" id="main-info">
+						<span id="main-info-icon"></span>
+						<span id="main-info-text"></span>
+					</div>
+				</div>
+
+                <article class="pf-c-card">
+                    <div class="pf-c-card__header">
+                        <div class="pf-c-card__title">
+                            <h2 class="pf-m-lg">NFS Manager</h2>
+                        </div>
+                        <div class="pf-c-card__actions">
+                            <button type="button" class="pf-c-button pf-m-primary" id="show-nfs-modal"><span
+                                    class="fa fa-plus"></span></button>
+                        </div>
+                    </div>
+                    <div class="pf-c-card__body contains-list">
+                        <table class="ct-table pf-c-table pf-m-grid-md pf-m-compact">
+                            <thread>
+                                <tr>
+                                    <th class="bold pf-m-width-30">
+                                        <span class="pf-c-table__text bold-text">Name</span>
+                                    </th>
+                                    <th class="pf-m-width-30 pf-c-table__sort pf-m-selected">
+                                        <span class="pf-c-table__text bold-text">Path</span>
+                                    </th>
+                                    <th class="pf-m-width-30 pf-c-table__sort pf-m-selected">
+                                        <span class="pf-c-table__text bold-text">IP</span>
+                                    </th>
+                                    <th class="pf-m-width-30 pf-c-table__sort pf-m-selected">
+                                        <span class="pf-c-table__text bold-text">Options</span>
+                                    </th>
+                                    <th class="pf-m-width-30 pf-c-table__sort pf-m-selected"> </th>
+                                </tr>
+                            </thread>
+                            <tbody id="nfs-list">
+                            </tbody>
+                        </table>
+                        <br>
+                        <div class="no-margin" id="nfs-info">
+                            <span id="nfs-info-icon"></span>
+                            <span id="nfs-info-text"></span>
+                        </div>
+                    </div>
+                </article>
+                
+            </section>
+        </div>
+    </div>
+
+    <!-- Modals -->
+
+    <div id="nfs-modal" class="modal" role="dialog">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 class="pf-c-modal-box__tittle"><span class="pf-modal-box__title-text">Add NFS</span></h2>
+				</div>
+				<div class="modal-body col-45d flex-45d-stretch">
+                    <div class="form-row">
+                        <label class="label-45d bold-text" for="input-name">Name</label>
+                        <input type="text" id="input-name">
+                    </div>
+                    <div class="form-row">
+                        <label class="label-45d bold-text" for="input-path">Path</label>
+                        <input type="text" id="input-path">
+                    </div>
+                    <div class="form-row">
+                        <label class="label-45d bold-text" for="input-ip">IP</label>
+                        <input type="text" id="input-ip">
+                    </div>
+                    <div class="form-row">
+                        <label class="label-45d bold-text" for="input-perms">Options</label>
+                        <input type="text" id="input-perms" placeholder="Will default to 'rw, sync, no_subtree_check' if left empty">
+                    </div>
+                    <br>
+                    <div class="no-margin" id="nfs-modal-info">
+                        <span id="nfs-modal-info-icon"></span>
+                        <span id="nfs-modal-info-text"></span>
+                    </div>
+				</div>
+				<div class="modal-footer row-45d">
+					<button type="button" class="pf-c-button pf-m-primary" type="button"
+						id="add-nfs-btn">Add</button><var id="is-clicked" hidden></var>
+					<button type="button" class="pf-c-button pf-m-secondary" type="button"
+						id="hide-nfs-modal">Cancel</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+    <div id="rm-nfs-modal" class="modal" role="dialog">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h4 class="modal-title">Remove <span class="nfs-to-remove"></span>?</h4>
+				</div>
+				<div class="modal-body">
+					This will permanently remove the <span class="nfs-to-remove"></span> NFS.
+				</div>
+				<div class="modal-footer row-45d flex-align-left">
+					<button type="button" class="button-fallback-danger pf-c-button pf-m-danger"
+						id="continue-rm-nfs">Continue</button>
+					<button type="button" class="button-fallback-default pf-c-button pf-m-secondary"
+						id="cancel-rm-nfs">Cancel</button>
+
+				</div>
+			</div>
+		</div>
+	</div>
+
+</body>
+
+</html>

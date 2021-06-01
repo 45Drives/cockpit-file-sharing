@@ -1,0 +1,11 @@
+{
+    "version": 1.0,
+
+    "menu": {
+        "file-sharing": {
+            "label": "File Sharing",
+            "path": "file-sharing.html",
+            "order": 116
+        }
+    }
+}

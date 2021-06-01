@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<!-- 
+Cockpit File Sharing - Cockpit plugin for managing file shares.
+Copyright (C) 2021 Sam Silver <ssilver@45drives.com>
+
+This file is part of Cockpit File Sharing.
+Cockpit File Sharing is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+Cockpit File Sharing is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<head>
+    <title>File Sharing</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="../storage/storage.css" type="text/css" rel="stylesheet">
+    <link href="file-sharing.css" type="text/css" rel="stylesheet">
+    <script defer src="file-sharing.js"></script>
+</head>
+
+<body>
+    <div class="pf-c-page">
+        <div class="pf-c-page__main" tabindex="-1">
+            <section class="pf-c-page__main-section pf-m-light">
+                <nav class="pf-c-nav pf-m-horizontal pf-m-tertiary">
+                    <ul class="pf-c-nav__list">
+                        <li class="pf-c-nav__item"><button id="samba-btn">Samba</button></li>
+                        <li class="pf-c-nav__item"><button id="nfs-btn">NFS</button></li>
+                    </ul>
+                </nav>
+            </section>
+
+            <iframe class="frame" name="samba-manager" src="samba-manager/samba-manager.html" title="Samba Manager" id="main-frame"></iframe>
+            <img src="branding/branding.svg" class="logo"></img>
+
+        </div>
+    </div>
+</body>
+
+</html>
