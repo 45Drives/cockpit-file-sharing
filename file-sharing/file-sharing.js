@@ -19,9 +19,19 @@
  * Does: Gets iframe ID and switches the src to inputted value
  * Returns: Nothing
  */
-function switch_iframe(location) {
+function switch_iframe(is_samba) {
     var frame = document.getElementById("main-frame");
-    frame.src = location;
+
+    if (is_samba)  {
+        document.getElementById("nfs-btn").classList.remove("tab-selected");
+        frame.src = "samba-manager/samba-manager.html"
+        document.getElementById("samba-btn").classList.add("tab-selected");
+    }
+    else {
+        document.getElementById("samba-btn").classList.remove("tab-selected");
+        frame.src = "nfs-manager/nfs-manager.html"
+        document.getElementById("nfs-btn").classList.add("tab-selected");
+    }
 }
 
 
@@ -31,8 +41,16 @@ function switch_iframe(location) {
  * Returns: Nothing
  */
 function button_setup() {
-    document.getElementById("samba-btn").addEventListener("click",  function() {switch_iframe("samba-manager/samba-manager.html");});
-    document.getElementById("nfs-btn").addEventListener("click", function() {switch_iframe("nfs-manager/nfs-manager.html");});
+    document.getElementById("samba-btn").addEventListener("click",  function() {
+        if(!document.getElementById("samba-btn").classList.contains("tab-selected")) {
+            switch_iframe(true)
+        }
+    });
+    document.getElementById("nfs-btn").addEventListener("click", function() {
+        if(!document.getElementById("nfs-btn").classList.contains("tab-selected")) {
+            switch_iframe(false)
+        }
+    });
 }
 
 /* add_share

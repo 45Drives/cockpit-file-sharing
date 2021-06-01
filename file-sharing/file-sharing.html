@@ -28,14 +28,13 @@ along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
 
 <body>
     <div class="pf-c-page">
-        <div class="pf-c-page__main" tabindex="-1">
+        <div class="pf-c-page__main" >
             <section class="pf-c-page__main-section pf-m-light">
-                <nav class="pf-c-nav pf-m-horizontal pf-m-tertiary">
-                    <ul class="pf-c-nav__list">
-                        <li class="pf-c-nav__item"><button id="samba-btn">Samba</button></li>
-                        <li class="pf-c-nav__item"><button id="nfs-btn">NFS</button></li>
-                    </ul>
-                </nav>
+                <h1>File Sharing</h1>
+                <div class="tab-bar">
+                    <button class="tab tab-selected" id="samba-btn">Samba</button>
+                    <button class="tab" id="nfs-btn">NFS</button>
+                </div>
             </section>
 
             <iframe class="frame" name="samba-manager" src="samba-manager/samba-manager.html" title="Samba Manager" id="main-frame"></iframe>

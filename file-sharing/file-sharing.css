@@ -28,3 +28,30 @@ along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
     height: 75px;
     width: auto;
 }
+
+.tab-bar {
+    position: relative;
+    bottom: -17px;
+}
+
+.tab {
+    background-color: #ffff;
+    color: black;
+    float: left;
+    border: 1px solid #f0f0f0;
+    outline: none;
+    cursor: pointer;
+    padding: 5px 10px;
+    font-size: 17px;
+    width: 15%;
+    border-radius: 15px 15px 0px 0px;
+}
+
+.tab-selected {
+    background-color: #f0f0f0;
+    width: 15%;
+}
+
+.pf-c-page__main-section {
+    padding: 16px;
+}
