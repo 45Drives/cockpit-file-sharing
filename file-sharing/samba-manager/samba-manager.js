@@ -1550,7 +1550,7 @@ function del_parms(
     payload["section"] = share_name;
     payload["parms"] = [...params_to_delete];
     var proc = cockpit.spawn(
-        ["/usr/share/cockpit/file-sharing/samba-manager/del_parms.py"],
+        ["/usr/share/cockpit/file-sharing/samba-manager/scripts/del_parms.py"],
         {
             err: "out",
             superuser: "require",
@@ -1582,7 +1582,7 @@ function set_parms(share_name, params, action, hide_modal_func, info_id) {
     payload["section"] = share_name;
     payload["parms"] = params;
     var proc = cockpit.spawn(
-        ["/usr/share/cockpit/file-sharing/samba-manager/set_parms.py"],
+        ["/usr/share/cockpit/file-sharing/samba-manager/scripts/set_parms.py"],
         {
             err: "out",
             superuser: "require",
@@ -1685,7 +1685,7 @@ function windows_acl() {
 async function check_dir(path) {
     children = [];
 	var proc = cockpit.spawn(
-		["/usr/share/cockpit/file-sharing/samba-manager/ls.py", path],
+		["/usr/share/cockpit/file-sharing/samba-manager/scripts/ls.py", path],
 		{err:"out", superuser: "try"}
 	);
 	proc.fail((e, data) => {
@@ -1978,8 +1978,7 @@ async function edit_samba_global() {
  * calls "net sam rights list SeDiskOperatorPrivilege" to get list
  * Returns: Nothing
  */
-async function populate_privilege_list() {
-    set_spinner("privilege")
+function populate_privilege_list() {
     var list = document.getElementById("privilege-list")
 
     while (list.firstChild) {
@@ -1993,7 +1992,6 @@ async function populate_privilege_list() {
         rows.forEach(function (obj) {
             list.appendChild(create_privilege_list_entry(obj));
         });
-        clear_info("privilege");
     });
     proc.fail(function (ex, data) {
         set_error("privilege", "Failed to get list of privileges: " + data);
@@ -2009,11 +2007,11 @@ async function populate_privilege_list() {
  */
 function rm_privilege(entry_name, element_list) {
     set_spinner("privilege");
-    var proc = cockpit.spawn(["net", "sam", "rights", "revoke", '"' + entry_name + '"', "SeDiskOperatorPrivilege"], {
+    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/samba-manager/scripts/del_privileges.py", entry_name], {
         err: "out",
         superuser: "require",
     });
-    proc.done(function (data) {
+    proc.done(function () {
         populate_privilege_list();
         set_success(
             "privilege",
@@ -2022,7 +2020,8 @@ function rm_privilege(entry_name, element_list) {
         );
         element_list.forEach((elem) => elem.remove());
     });
-    proc.fail(function (ex, data) {
+    proc.fail(function (data) {
+        console.log(data)
         set_error("privilege", data, timeout_ms);
     });
     hide_rm_privilege_dialog();
@@ -2107,14 +2106,10 @@ async function add_privilege() {
         set_error("add-privilege", "Enter a password.", timeout_ms);
     else {
 
-        group = '"' + group + '"';
-        username = '"' + username + '"';
-        password = '"' + password + '"';
-
-        var proc = cockpit.spawn(["net", "sam", "rights", "grant", group, "SeDiskOperatorPrivilege", "-U", username + "%" + password]);
+        var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/samba-manager/scripts/set_privileges.py", group, username, password]);
         proc.done(function() {
-            set_success("privilege", "Added privilege!", timeout_ms);
             populate_privilege_list();
+            set_success("privilege", "Added privilege!", timeout_ms);
             hide_privilege_dialog();
         });
         proc.fail(function(data) {
