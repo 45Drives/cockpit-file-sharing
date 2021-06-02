@@ -1148,6 +1148,7 @@ function set_share_defaults() {
     document.getElementById("share-name-feedback").innerText = "";
     document.getElementById("comment").value = "";
     document.getElementById("path").value = "";
+    document.getElementById("windows-acls").checked = false;
     document.getElementById("share-path-feedback").innerText = "";
     share_valid_groups.clear();
     share_valid_users.clear();
@@ -1156,7 +1157,10 @@ function set_share_defaults() {
     document.getElementById("guest-ok").checked = false;
     document.getElementById("read-only").checked = false;
     document.getElementById("browseable").checked = true;
-    document.getElementById("advanced-share-settings-input").value = "";
+    var input = document.getElementById("advanced-share-settings-input");
+    input.value = "";
+    input.style.height = "";
+    input.style.height = Math.max(input.scrollHeight + 5, 50) + "px";
     document.getElementById("continue-share").disabled = false;
 }
 
@@ -1623,7 +1627,7 @@ function toggle_advanced_share_settings() {
  */
 function check_shadow_copy() {
     var path = document.getElementById("path").value;
-    var notCephfs = "\nshadow: snapdir = .zfs/snapshot\nshadow: sort = desc\nshadow: format = %Y-%m-%d-%H%M%S\n";
+    var notCephfs = "shadow: snapdir = .zfs/snapshot\nshadow: sort = desc\nshadow: format = %Y-%m-%d-%H%M%S";
 
     var proc = cockpit.spawn(["getfattr", "-n", "ceph.dir.entries", path], {err:"ignore"});
     proc.done(function() {
@@ -1653,6 +1657,80 @@ function find_vfs_object(input, vfs_object) {
     }
 }
 
+/* windows_acl
+ * Receives: Nothing
+ * Does: Populates advanced settings with windows_acl settings if checked.
+ * Returns: nothing
+ */
+function windows_acl() {
+    var user = document.getElementById("add-user-to-share")
+    var group = document.getElementById("add-group-to-share")
+
+    if(document.getElementById("windows-acls").checked == true) {
+        user.disabled = true;
+        group.disabled = true;
+        populate_advanced_share_settings("windows-acls", "acl_xattr:", "map acl inherit = yes\nacl_xattr:ignore system acl = yes", "acl_xattr");
+    }
+    else {
+        user.disabled = false;
+        group.disabled = false;
+    }
+}
+
+/* check_dir
+ * Receives: Path
+ * Does: Runs ls.py command to get list of directories form path.
+ * Returns: nothing
+ */
+async function check_dir(path) {
+    children = [];
+	var proc = cockpit.spawn(
+		["/usr/share/cockpit/file-sharing/samba-manager/ls.py", path],
+		{err:"out", superuser: "try"}
+	);
+	proc.fail((e, data) => {
+		return [];
+	});
+	var data = await proc;
+	var response = JSON.parse(data);
+	this.stat = response["."]["stat"];
+	var entries = response["children"];
+	entries.forEach((entry) => {
+		if(entry["isdir"])
+			children.push(entry["filename"]);
+	});
+	return children;
+}
+
+/* nav_bar_update_choices
+ * Receives: Nothing
+ * Does: Populates input list with choices of paths to choose from.
+ * Returns: nothing
+ */
+async function nav_bar_update_choices() {
+    var list = document.getElementById("possible-paths");
+	var partial_path_str = document.getElementById("path").value;
+	var last_delim = partial_path_str.lastIndexOf('/');
+    var old_path = document.getElementById("old-path");
+	if(last_delim === -1)
+		return;
+	var parent_path_str = partial_path_str.slice(0, last_delim);
+	if(old_path.value === parent_path_str)
+		return;
+	old_path.value = parent_path_str;
+    var error = false;
+	var objs = await check_dir(parent_path_str).catch(() => {error = true});
+    if(error)
+        return;
+	while(list.firstChild)
+		list.removeChild(list.firstChild);
+	objs.forEach((obj) => {
+		var option = document.createElement("option");
+		option.value = parent_path_str + "/" + obj
+		list.appendChild(option);
+	});
+}
+
 /* populate_advanced_share_settings
  * Receives: id, string_to_check, string, and vfs_object
  * Does: Populates advanced share settings depending on the id and string_to_check with string received
@@ -1664,8 +1742,10 @@ function populate_advanced_share_settings(id, string_to_check, string, vfs_objec
 
     if(input.value.includes(string_to_check)) {
         if(pressed.innerText.includes("true")) {
-            input.value = "vfs objects = " + vfs_object + "\n" + string;
+            input.value = "vfs objects = " + vfs_object + "\n\n" + string;
             pressed.innerText = false;
+            input.style.height = "";
+            input.style.height = Math.max(input.scrollHeight + 5, 50) + "px";
         }
         else {
             set_error("share-modal", "Parameters already contain " + id + " settings. Press again to clear all parameters and populate with JUST " + id + " settings.", timeout_ms);
@@ -1676,9 +1756,12 @@ function populate_advanced_share_settings(id, string_to_check, string, vfs_objec
         }
     }
     else {
-        input.value = find_vfs_object(input, vfs_object) + "\n" + string;
+        input.value = find_vfs_object(input, vfs_object) + "\n\n" + string;
+        input.style.height = "";
+        input.style.height = Math.max(input.scrollHeight + 5, 50) + "px";
     }
 }
+
 
 /* show_rm_share_dialog
  * Receives: name of share as string, list of elements to delete
@@ -1970,13 +2053,14 @@ function set_up_buttons() {
     document
         .getElementById("macos")
         .addEventListener("click", function() {
-                populate_advanced_share_settings("macos", "fruit:", "\nfruit:encoding = native\nfruit:metadata = stream\n", "catia fruit streams_xattr");
+                populate_advanced_share_settings("macos", "fruit:", "fruit:encoding = native\nfruit:metadata = stream", "catia fruit streams_xattr");
             });
     document
         .getElementById("auditlogs")
         .addEventListener("click", function() {
-                populate_advanced_share_settings("auditlogs", "full_audit:", "\nfull_audit:priority = notice\nfull_audit:facility = local5\nfull_audit:success = connect disconnect mkdir rmdir read write rename\nfull_audit:failure = connect\nfull_audit:prefix = %u|%I|%S\n", "full_audit");
+                populate_advanced_share_settings("auditlogs", "full_audit:", "full_audit:priority = notice\nfull_audit:facility = local5\nfull_audit:success = connect disconnect mkdir rmdir read write rename\nfull_audit:failure = connect\nfull_audit:prefix = %u|%I|%S", "full_audit");
             });
+    document.getElementById("windows-acls").addEventListener("click", windows_acl);
     document
         .getElementById("share-name")
         .addEventListener("input", verify_share_settings);
@@ -2004,13 +2088,16 @@ function set_up_buttons() {
         .getElementById("advanced-global-settings-input")
         .addEventListener("input", check_enable_log_level_dropdown);
 
+    document.getElementById("path").addEventListener("input", nav_bar_update_choices)
+
     // Set callback to dynamically resize textareas to fit height of text
     var text_areas = document.getElementsByTagName("textarea");
     for (let text_area of text_areas) {
-        text_area.oninput = function () {
+        text_area.addEventListener("input", function () {
             this.style.height = "";
             this.style.height = Math.max(this.scrollHeight + 5, 50) + "px";
-        };
+            console.log("running")
+        });
     }
 }
 

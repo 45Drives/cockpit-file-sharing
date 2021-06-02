@@ -415,3 +415,7 @@ button > .button-symbol {
 .main-info {
     position: inherit;
 }
+
+.bold-text {
+    font-weight: bold;
+}

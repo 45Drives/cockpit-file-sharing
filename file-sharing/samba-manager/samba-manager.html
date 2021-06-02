@@ -168,6 +168,7 @@
 							</div>
 						</article>
 					</div>
+					
 				</div>
 
 			</section>
@@ -408,8 +409,19 @@
 					<div class="form-row">
 						<label class="label-45d" for="path">Path</label>
 						<div class="input-feedback-group">
-							<input class="ct-input share-param" type="text" aria-invalid="false" id="path" />
+							<input class="ct-input share-param" type="text" list="possible-paths" autocomplete="off" id="path"></input>
+							<datalist id="possible-paths">
+							</datalist>
+							<var id="old-path" hidden></var>
 							<div class="input-feedback" id="share-path-feedback"></div>
+						</div>
+					</div>
+					<div class="form-row">
+						<label class="label-45d">Windows ACLs</label>
+						<div class="row-45d flex-3">
+							<input class="ct-input" type="checkbox" id="windows-acls" name="windows-acls" />
+							<span class="padding" />
+							<var id="is-pressed-windows-acls" hidden>false</var>
 						</div>
 					</div>
 					<div class="form-row">
