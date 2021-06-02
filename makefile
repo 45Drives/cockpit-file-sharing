@@ -21,3 +21,12 @@ install:
 
 uninstall:
 	rm -rf $(DESTDIR)/usr/share/cockpit/file-sharing
+
+install-local:
+	mkdir -p $(HOME)/.local/share/cockpit
+	cp -rpf file-sharing $(HOME)/.local/share/cockpit
+	sed -i "s#\"/usr/share/\(cockpit/file-sharing/samba-manager/scripts/.*\)\"#\"$(HOME)/.local/share/\1\"#g" $(HOME)/.local/share/cockpit/file-sharing/samba-manager/samba-manager.js
+	sed -i "s#\"/usr/share/\(cockpit/file-sharing/nfs-manager/scripts/.*\)\"#\"$(HOME)/.local/share/\1\"#g" $(HOME)/.local/share/cockpit/file-sharing/nfs-manager/nfs-manager.js
+
+make uninstall-local:
+	rm -rf $(HOME)/.local/share/cockpit/file-sharing
