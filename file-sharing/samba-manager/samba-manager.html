@@ -168,7 +168,30 @@
 							</div>
 						</article>
 					</div>
-					
+
+					<!-- Untitled -->
+					<div class="pf-l-grid__item pf-m-6-col">
+						<article class="pf-c-card">
+							<div class="pf-c-card__header">
+								<div class="pf-c-card__title">
+									<h2>Untitled Unmastered</h2>
+								</div>
+								<div class="pf-c-card__actions">
+									<button type="button" class="pf-c-button pf-m-primary" id="show-privilege-btn"><span
+											class="fa fa-plus"></span></button>
+								</div>
+							</div>
+							<div class="pf-c-card__body">
+								<hr class="pf-c-divider" />
+								<div class="vertical-spacer"></div>
+								<div class="pf-c-list" id="privilege-list"></div>
+								<div id="privilege-info" class="no-margin">
+									<span id="privilege-info-icon"></span>
+									<span id="privilege-info-text"></span>
+								</div>
+							</div>
+						</article>
+					</div>
 				</div>
 
 			</section>
@@ -521,6 +544,69 @@
 						id="continue-rm-share">Continue</button>
 					<button type="button" class="button-fallback-default pf-c-button pf-m-secondary"
 						id="cancel-rm-share">Cancel</button>
+
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Untitled -->
+	<div id="privilege-modal" class="modal" role="dialog">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h1 class="pf-c-modal-box__tittle">Lil Yachty is lit, no cap!</h1>
+				</div>
+				<div class="modal-body col-45d flex-45d-stretch">
+					<div class="form-row">
+						<label class="label-45d">Group</label>
+						<div class="input-feedback-group">
+							<input class="ct-input" type="text" aria-invalid="false" id="privilege-group" autocomplete="off"/>
+						</div>
+					</div>
+					<div class="form-row">
+						<label class="label-45d">Username</label>
+						<div class="input-feedback-group">
+							<input class="ct-input" type="text" aria-invalid="false" id="privilege-username" autocomplete="off"/>
+						</div>
+					</div>
+					<div class="form-row">
+						<label class="label-45d">Password</label>
+						<div class="input-feedback-group">
+							<input class="ct-input" type="text" aria-invalid="false" id="privilege-password" autocomplete="off"/>
+						</div>
+					</div>
+					<div id="add-privilege-info">
+						<span id="add-privilege-info-icon"></span>
+						<span id="add-privilege-info-text"></span>
+					</div>
+				</div>
+				<div class="modal-footer row-45d flex-align-left">
+					<button type="button" class="pf-c-button pf-m-primary" type="button"
+						id="add-privilege-btn">Add</button>
+					<button type="button" class="pf-c-button pf-m-secondary" type="button"
+						id="cancel-privilege-btn">Cancel</button>
+
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- remove privilege modal -->
+	<div id="rm-privilege-modal" class="modal" role="dialog">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h4 class="modal-title">Remove <span class="privilege-to-remove"></span>?</h4>
+				</div>
+				<div class="modal-body">
+					This will permanently remove the <span class="privilege-to-remove"></span> privilege.
+				</div>
+				<div class="modal-footer row-45d flex-align-left">
+					<button type="button" class="button-fallback-danger pf-c-button pf-m-danger"
+						id="continue-rm-privilege">Continue</button>
+					<button type="button" class="button-fallback-default pf-c-button pf-m-secondary"
+						id="cancel-rm-privilege">Cancel</button>
 
 				</div>
 			</div>

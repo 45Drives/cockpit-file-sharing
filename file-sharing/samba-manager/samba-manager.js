@@ -1972,6 +1972,157 @@ async function edit_samba_global() {
     );
 }
 
+/* populate_privilege_list
+ * Receives: Nothing
+ * Does: clears privilege management list and group select lists, then
+ * calls "net sam rights list SeDiskOperatorPrivilege" to get list
+ * Returns: Nothing
+ */
+async function populate_privilege_list() {
+    set_spinner("privilege")
+    var list = document.getElementById("privilege-list")
+
+    while (list.firstChild) {
+        list.removeChild(list.firstChild);
+    }
+
+    var proc = cockpit.spawn(["net", "sam", "rights", "list", "SeDiskOperatorPrivilege"], { err: "out" });
+    proc.done(function (data) {
+        var rows = data.split("\n");
+        rows.pop();
+        rows.forEach(function (obj) {
+            list.appendChild(create_privilege_list_entry(obj));
+        });
+        clear_info("privilege");
+    });
+    proc.fail(function (ex, data) {
+        set_error("privilege", "Failed to get list of privileges: " + data);
+    });
+    return proc;
+} 
+
+
+/* rm_privilege
+ * Receives: entry_name, element_list
+ * Does: Removes list entry from privilege group
+ * Returns: Nothing
+ */
+function rm_privilege(entry_name, element_list) {
+    set_spinner("privilege");
+    var proc = cockpit.spawn(["net", "sam", "rights", "revoke", '"' + entry_name + '"', "SeDiskOperatorPrivilege"], {
+        err: "out",
+        superuser: "require",
+    });
+    proc.done(function (data) {
+        populate_privilege_list();
+        set_success(
+            "privilege",
+            "Successfully deleted " + entry_name + ".",
+            timeout_ms
+        );
+        element_list.forEach((elem) => elem.remove());
+    });
+    proc.fail(function (ex, data) {
+        set_error("privilege", data, timeout_ms);
+    });
+    hide_rm_privilege_dialog();
+}
+
+/* create_privilege_list_entry
+ * Receives: entry_name
+ * Does: creates a list with name entry_name
+ * Returns: Nothing
+ */
+function create_privilege_list_entry(entry_name) {
+    var entry = create_list_entry(entry_name, show_rm_privilege_dialog)
+    entry.classList.add("row-45d", "flex-45d-space-between", "flex-45d-center");
+    return entry;
+}
+
+/* show_rm_privilege_dialog
+ * Receives: Nothing
+ * Does: shows remove privilege modal
+ * Returns: Nothing
+ */
+function show_rm_privilege_dialog(entry_name, element_list) {
+    var entry_name_fields = document.getElementsByClassName("privilege-to-remove");
+    for (let field of entry_name_fields) {
+        field.innerText = entry_name;
+    }
+    var modal = document.getElementById("rm-privilege-modal");
+    modal.style.display = "block";
+    var continue_rm_privilege = document.getElementById("continue-rm-privilege");
+    continue_rm_privilege.onclick = function () {
+        rm_privilege(entry_name, element_list);
+    };
+}
+
+/* hide_rm_privilege_dialog
+ * Receives: Nothing
+ * Does: hides remove privilege modal
+ * Returns: Nothing
+ */
+function hide_rm_privilege_dialog() {
+    var modal = document.getElementById("rm-privilege-modal");
+    modal.style.display = "none";
+}
+
+/* show_privilege_dialog
+ * Receives: Nothing
+ * Does: shows privilege modal
+ * Returns: Nothing
+ */
+function show_privilege_dialog() {
+    var modal = document.getElementById("privilege-modal");
+    modal.style.display = "block";
+}
+
+/* hide_privilege_dialog
+ * Receives: Nothing
+ * Does: shows privilege modal
+ * Returns: Nothing
+ */
+function hide_privilege_dialog() {
+    var modal = document.getElementById("privilege-modal");
+    modal.style.display = "none";
+}
+
+/* add_privilege
+ * Receives: Nothing
+ * Does: Takes inputted values and run them through
+ * net sam rights grant group SeDiskOperatorPrivilege -U username%password
+ * to give rights to the group. Then refresh page.
+ * Returns: Nothing
+ */
+async function add_privilege() {
+    var group = document.getElementById("privilege-group").value;
+    var username = document.getElementById("privilege-username").value;
+    var password = document.getElementById("privilege-password").value;
+
+    if (group == "")
+        set_error("add-privilege", "Enter a group.", timeout_ms);
+    else if (username == "")
+        set_error("add-privilege", "Enter a username.", timeout_ms);
+    else if (password == "")
+        set_error("add-privilege", "Enter a password.", timeout_ms);
+    else {
+
+        group = '"' + group + '"';
+        username = '"' + username + '"';
+        password = '"' + password + '"';
+
+        var proc = cockpit.spawn(["net", "sam", "rights", "grant", group, "SeDiskOperatorPrivilege", "-U", username + "%" + password]);
+        proc.done(function() {
+            set_success("privilege", "Added privilege!", timeout_ms);
+            populate_privilege_list();
+            hide_privilege_dialog();
+        });
+        proc.fail(function(data) {
+            set_error("add-privilege", "Could not set privileges: " + data, timeout_ms);
+        });
+    }
+}
+
 /* set_up_buttons
  * Receives: nothing
  * Does: sets up event listener callbacks for button presses and field input
@@ -2090,13 +2241,26 @@ function set_up_buttons() {
 
     document.getElementById("path").addEventListener("input", nav_bar_update_choices)
 
+    document
+        .getElementById("show-privilege-btn")
+        .addEventListener("click", show_privilege_dialog);
+    document
+        .getElementById("cancel-privilege-btn")
+        .addEventListener("click", hide_privilege_dialog);
+    document
+        .getElementById("add-privilege-btn")
+        .addEventListener("click", add_privilege);
+    document
+        .getElementById("cancel-rm-privilege")
+        .addEventListener("click", hide_rm_privilege_dialog);
+
+
     // Set callback to dynamically resize textareas to fit height of text
     var text_areas = document.getElementsByTagName("textarea");
     for (let text_area of text_areas) {
         text_area.addEventListener("input", function () {
             this.style.height = "";
             this.style.height = Math.max(this.scrollHeight + 5, 50) + "px";
-            console.log("running")
         });
     }
 }
@@ -2150,6 +2314,7 @@ async function setup() {
     get_domain_range();
     await add_group_options();
     await add_user_options();
+    await populate_privilege_list();
     set_up_buttons();
     clear_setup_spinner();
 }
