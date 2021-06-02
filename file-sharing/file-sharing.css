@@ -31,25 +31,32 @@ along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
 
 .tab-bar {
     position: relative;
-    bottom: -17px;
+    bottom: -16px;
 }
 
 .tab {
     background-color: #ffff;
     color: black;
     float: left;
-    border: 1px solid #f0f0f0;
+    border: 0px solid #f0f0f0;
     outline: none;
     cursor: pointer;
     padding: 5px 10px;
     font-size: 17px;
-    width: 15%;
-    border-radius: 15px 15px 0px 0px;
+    width: 10%;
+    /* border-radius: 15px 15px 0px 0px; */
+}
+
+.tab:hover {
+    background-color: #fdfdfd;
 }
 
 .tab-selected {
     background-color: #f0f0f0;
-    width: 15%;
+}
+
+.tab-selected:hover{
+    background-color: #f0f0f0;
 }
 
 .pf-c-page__main-section {
