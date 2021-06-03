@@ -12,6 +12,7 @@
 # GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License
 # along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
+default:
 
 all: default
 

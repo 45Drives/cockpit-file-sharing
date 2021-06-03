@@ -1,0 +1,8 @@
+FROM ubuntu:focal
+
+LABEL description="Container in which to build ubuntu applications"
+
+ENV TZ=America/Glace_Bay
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN apt update && apt install -y make build-essential fakeroot devscripts debhelper python3
