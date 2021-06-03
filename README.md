@@ -60,6 +60,7 @@ sudo wget http://images.45drives.com/repo/debian/45drives.list
 ```
 3. Uncomment second line in sources.list.d/45drives.list
 ```sh
+vim /etc/apt/sources.list.d/45drives.list
 sudo apt update
 ```
 4. Install Package
