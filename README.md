@@ -2,7 +2,7 @@
 A Cockpit plugin to easily manage samba and NFS file sharing.
 
 ## Features
-* Add and edit samba shares.
+* Add and edit Samba shares.
 * Full control of Samba Share parameters
 * Auto populate parameters with commonly used settings
 * Edit global Samba config
