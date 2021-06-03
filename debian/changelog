@@ -1,0 +1,5 @@
+cockpit-file-sharing (1.0.0-1focal) focal; urgency=medium
+
+  * Initial packaging of cockpit-file-sharing for Ubuntu Focal.
+
+ -- Sam Silver <ssilver@45drives.com>  Thu, 03 Jun 2021 10:07:00 -0300
