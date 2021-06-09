@@ -17,29 +17,11 @@ A Cockpit plugin to easily manage samba and NFS file sharing.
 ### Adding Shares
 ![Adding a Samba Share](img/samba/samba_add_shares.png)
 
-### Removing Shares
-![Removing a Samba Share](img/samba/samba_remove_shares.png)
-
-### Editing Global Settings
-![Editing Global config](img/samba/samba_global.png)
-
-### Adding Groups to User
-![Adding a user to groups](img/samba/samba_user_to_grp.png)
-
-### Creating Groups
-![Creating a new group](img/samba/samba_add_group.png)
-
-### Creating SeDiskOperator Privileges
-![Adding a SeDiskOperator Privilege](img/samba/samba_privileges.png)
-
 ## NFS Manager
 ![NFS Manager Interface](img/nfs/nfs_interface.png)
 
 ### Adding a NFS
 ![Adding a NFS](img/nfs/nfs_add.png)
-
-### Removing a NFS
-![Removing a NFS](img/nfs/nfs_remove.png)
 
 # Installation
 ## From Source
