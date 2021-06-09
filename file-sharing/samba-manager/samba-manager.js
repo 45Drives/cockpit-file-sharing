@@ -2272,7 +2272,13 @@ function check_permissions() {
         check_smb_conf();
     });
     proc.fail(function (ex, data) {
-        fatal_error("User account lacks permission to configure Samba!");
+        console.log(ex, data);
+        if(ex.problem === "not-found") {
+            fatal_error("Samba is not installed. Please install...");
+        } 
+        else {
+            fatal_error("User account lacks permission to configure Samba!");
+        }
     });
 }
 
