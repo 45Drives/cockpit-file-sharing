@@ -37,18 +37,6 @@ def create_dir(path):
     except OSError:
         print("Cannot make directory.")
         sys.exit(1)
-        
-# Name: create_permissions
-# Receives: Path
-# Does: Updates permissions of new made or existing path.
-# Returns: Nothing
-def create_permissions(path):
-    print("Writing permissions...")
-    proc = subprocess.call(["chown", "nobody:nogroup", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    proc2 = subprocess.call(["chmod", "777", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if (proc == 1 | proc2 == 1):
-        print("Could not change permissions.")
-        sys.exit(1)
 
 # Name: write_exports
 # Receives: Name, Path, Client IP and Options
@@ -83,7 +71,6 @@ def reset_config():
 # Returns: Nothing
 def make_nfs(name, path, ip, options):
     create_dir(path)
-    create_permissions(path)
     write_exports(name, path, ip, options)
     reset_config()
     print("Done! Please mount " + path + " to your directory of choosing on your own system!")
