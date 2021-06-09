@@ -1000,7 +1000,7 @@ function populate_share_list() {
         if (Object.keys(shares).length === 0) {
             var msg = document.createElement("tr");
             var name = document.createElement("td");
-            name.innerText = 'No NFSs. Click the "plus" to add one.';
+            name.innerText = 'No shares. Click the "plus" to add one.';
             var path = document.createElement("td");
             var del = document.createElement("td");
             msg.appendChild(name)
