@@ -1,0 +1,16 @@
+name: Publish Packages
+on:
+  push:
+    branches: [ Packaging ]
+jobs:
+  publish:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Run Package script
+        run: /root/packaging_scripts/package.py ${{github.workspace}}
+      - name: Rsync to local computer
+        run: |
+          rsync -avh ${{github.workspace}}/dist/deb/*.deb sam@192.168.36.197:~/45drives-release/Ubuntu20/
+          rsync -avh ${{github.workspace}}/dist/rpm/*/*.rpm sam@192.168.36.197:~/45drives-release/El8/
