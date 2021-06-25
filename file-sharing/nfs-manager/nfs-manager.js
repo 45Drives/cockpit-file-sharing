@@ -373,7 +373,7 @@ function check_nfs() {
         setup()
     });
     proc.fail(function (data) {
-        fatal_error("Failed to load NFS services. Do you have NFS installed?")
+        fatal_error("Failed to load NFS services. Is NFS installed or enabled?")
     });
 }
 
