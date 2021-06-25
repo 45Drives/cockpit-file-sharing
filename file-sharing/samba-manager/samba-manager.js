@@ -1985,7 +1985,7 @@ function populate_privilege_list() {
         list.removeChild(list.firstChild);
     }
 
-    var proc = cockpit.spawn(["net", "sam", "rights", "list", "SeDiskOperatorPrivilege"], { err: "out" });
+    var proc = cockpit.spawn(["net", "sam", "rights", "list", "SeDiskOperatorPrivilege"], { err: "out", superuser: "require" });
     proc.done(function (data) {
         var rows = data.split("\n");
         rows.pop();
