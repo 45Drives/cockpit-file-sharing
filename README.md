@@ -75,25 +75,35 @@ For any more info on settings that can be inserted into this area, please checko
 
 ### Removing Shares
 ![Removing Samba Shares](img/samba/samba_remove.gif)
+
 Removing shares is as simple as clicking the "X" beside the share you would like to delete, then confirm that you want to remove the share.
+
 
 ### Editing Global Settings
 ![Global Samba Settings](img/samba/samba_global.png)
+
 In the global samba settings menu you can change the description of the server as well as the amount of logs that are viewable. Much like the advanced samba settings, there is a input section to add any parameter you would like to set for all your shares on your server.
+
 
 ### Group Management
 ![Group Management](img/samba/samba_group.gif)
+
 Adding a group is as simple as pressing the "+" button, name the group, then confirm. Removing the group is just as easy, click the "X" next to the group you would like to delete, then confirm.
+
 
 ### User Management
 ![User Management](img/samba/samba_user.gif)
+
 Manging Samba Users in file sharing is as easy as can be. First you select the user to manage, you can then add as many groups as you want to the user and also delete groups from a user if needed!
 
 ![Password](img/samba/samba_password.png)
+
 Changing the password of a samba user is possible through the "Set Samba Password" button. You can remove the password by clicking the "Remove Password" button, then confirm.
+
 
 ### SeDiskOperatorPrivilege
 ![Add Privilege](img/samba/samba_privilege.gif)
+
 You can add privileges by clicking on the "+" button. You will be greeted with the menu above, you can set the group of the privilege and you can add a username and password. Remove privileges by clicking the "X".
 
 ## NFS Manager
