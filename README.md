@@ -85,10 +85,12 @@ Removing shares is as simple as clicking the "X" beside the share you would like
 In the global samba settings menu you can change the description of the server as well as the amount of logs that are viewable. Much like the advanced samba settings, there is a input section to add any parameter you would like to set for all your shares on your server.
 
 
+
 ### Group Management
 ![Group Management](img/samba/samba_group.gif)
 
 Adding a group is as simple as pressing the "+" button, name the group, then confirm. Removing the group is just as easy, click the "X" next to the group you would like to delete, then confirm.
+
 
 
 ### User Management
@@ -99,6 +101,7 @@ Manging Samba Users in file sharing is as easy as can be. First you select the u
 ![Password](img/samba/samba_password.png)
 
 Changing the password of a samba user is possible through the "Set Samba Password" button. You can remove the password by clicking the "Remove Password" button, then confirm.
+
 
 
 ### SeDiskOperatorPrivilege
