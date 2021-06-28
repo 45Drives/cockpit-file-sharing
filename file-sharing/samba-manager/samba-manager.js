@@ -1055,7 +1055,10 @@ function show_share_dialog(
             var path = document.getElementById("path").value;
 
             if (path == old_path) {
-                var proc = cockpit.spawn(["mkdir", path]);
+                var proc = cockpit.spawn(["mkdir", path], {
+                    err: "out",
+                    superuser: "require",
+                });
                 proc.done(function (data) {
                     console.log("Directory " + path + " made");
                     add_share();
@@ -1064,7 +1067,10 @@ function show_share_dialog(
                     set_error("share-modal", data, timeout_ms);
                 });
             } else {
-                var proc = cockpit.spawn(["stat", path]);
+                var proc = cockpit.spawn(["stat", path], {
+                    err: "out",
+                    superuser: "require",
+                });
                 proc.done(function (data) {
                     add_share();
                 });
@@ -1089,7 +1095,10 @@ function show_share_dialog(
             var path = document.getElementById("path").value;
 
             if (path == old_path) {
-                var proc = cockpit.spawn(["mkdir", path]);
+                var proc = cockpit.spawn(["mkdir", path], {
+                    err: "out",
+                    superuser: "require",
+                });
                 proc.done(function (data) {
                     console.log("Directory " + path + " made");
                     edit_share(share_name, share_settings, "updated");
@@ -1098,7 +1107,10 @@ function show_share_dialog(
                     set_error("share-modal", data, timeout_ms);
                 });
             } else {
-                var proc = cockpit.spawn(["stat", path]);
+                var proc = cockpit.spawn(["stat", path], {
+                    err: "out",
+                    superuser: "require",
+                });
                 proc.done(function (data) {
                     edit_share(share_name, share_settings, "updated");
                 });
@@ -2021,7 +2033,6 @@ function rm_privilege(entry_name, element_list) {
         element_list.forEach((elem) => elem.remove());
     });
     proc.fail(function (data) {
-        console.log(data)
         set_error("privilege", data, timeout_ms);
     });
     hide_rm_privilege_dialog();
@@ -2106,11 +2117,19 @@ async function add_privilege() {
         set_error("add-privilege", "Enter a password.", timeout_ms);
     else {
 
-        var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/samba-manager/scripts/set_privileges.py", group, username, password]);
-        proc.done(function() {
-            populate_privilege_list();
-            set_success("privilege", "Added privilege!", timeout_ms);
-            hide_privilege_dialog();
+        var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/samba-manager/scripts/set_privileges.py", group, username, password], {
+            err: "out",
+            superuser: "require",
+        });
+        proc.done(function(data) {
+            if (data != "") {
+                set_error("add-privilege", data, timeout_ms);
+            }
+            else {
+                populate_privilege_list();
+                set_success("privilege", "Added privilege!", timeout_ms);
+                hide_privilege_dialog();
+            }
         });
         proc.fail(function(data) {
             set_error("add-privilege", "Could not set privileges: " + data, timeout_ms);
@@ -2272,7 +2291,6 @@ function check_permissions() {
         check_smb_conf();
     });
     proc.fail(function (ex, data) {
-        console.log(ex, data);
         if(ex.problem === "not-found") {
             fatal_error("Samba is not installed. Please install...");
         } 
