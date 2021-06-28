@@ -38,7 +38,7 @@ A Cockpit plugin to easily manage samba and NFS file sharing.
 
 ## Installation
 ### From Source
-1. Ensure dependencies are installed: `cockpit`, `samba`, `nfs-kernel-server`.
+Ensure dependencies are installed: `cockpit`, `samba`, `nfs-kernel-server`.
 ```bash
 $ git clone https://github.com/45Drives/cockpit-file-sharing.git
 $ cd cockpit-file-sharing
