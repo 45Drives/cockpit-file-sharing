@@ -43,8 +43,8 @@ def create_dir(path):
 # Does: Enters name, path and clients ip into exports config.
 # Returns: Nothing
 def write_exports(name, path, ip, options):
-    print("Writing to /etc/exports")
-    with open("/etc/exports", "a") as f:
+    print("Writing to /etc/exports.d/cockpit-file-sharing.exports")
+    with open("/etc/exports.d/cockpit-file-sharing.exports", "a") as f:
         f.write("# Name: " + name + "\n" + path + " " + ip + "(" + options + ")\n")
 
 # Name: reset_config
@@ -53,16 +53,10 @@ def write_exports(name, path, ip, options):
 # Returns: Nothing
 def reset_config():
     try:
-        subprocess.run(["exportfs", "-a"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("Exporting new share permissions...")
+        subprocess.run(["exportfs", "-ra"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("Restarting nfs...")
     except OSError:
-        print("Could not exportfs -a. Error: " + OSError)
-        sys.exit(1)
-    try:
-        subprocess.run(["systemctl", "restart", "nfs-kernel-system"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("Restarting nfs-kernel-system...")
-    except OSError:
-        print("Could not restart nfs-kernel-system, do you have it on your system?")
+        print("Could not restart nfs, do you have it on your system?")
         sys.exit(1)
 
 # Name: make_nfs
@@ -78,15 +72,15 @@ def make_nfs(name, path, ip, options):
 
 # Name: check_config
 # Receives: Nothing
-# Does: Checks in /etc/exports exists/ is in correct format.
+# Does: Checks in /etc/exports.d/cockpit-file-sharing.exports exists/ is in correct format.
 # Returns: Nothing
 def check_config():
     try:
-        file = open("/etc/exports", "r")
+        file = open("/etc/exports.d/cockpit-file-sharing.exports", "r")
         lines = file.readlines()
         file.close()
     except OSError:
-        print("Could not open /etc/exports. Do you have nfs installed?")
+        print("Could not open /etc/exports.d/cockpit-file-sharing.exports. Do you have nfs installed?")
         sys.exit(1)
     
     if len(lines) == 0 or lines[0] != "# Formmated for cockpit-nfs-manager\n":

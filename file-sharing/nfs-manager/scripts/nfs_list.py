@@ -18,12 +18,13 @@
 """
 
 import re
+import subprocess
 import sys
 import json
 
 # Name: check_config
 # Receives: Nothing
-# Does: Checks in /etc/exports exists/ is in correct format.
+# Does: Checks in /etc/exports.d/cockpit-file-sharing.exports exists/ is in correct format.
 # Returns: Nothing
 def check_config():
     try:
@@ -33,21 +34,26 @@ def check_config():
     except OSError:
         print("Could not open /etc/exports. Do you have nfs installed?")
         sys.exit(1)
-    
-    if len(lines) == 0 or lines[0] != "# Formmated for cockpit-nfs-manager\n":
-        file = open("/etc/exports", "w")
+
+    try:
+        file = open("/etc/exports.d/cockpit-file-sharing.exports")
+        lines = file.readlines()
+        file.close()
+    except OSError:
+        child = subprocess.run(["mkdir", "/etc/exports.d"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        file = open("/etc/exports.d/cockpit-file-sharing.exports", "w")
         file.write("# Formmated for cockpit-nfs-manager\n")
         file.close()
 
 # Name: main
 # Receives: nothing
-# Does: Opens /etc/exports and parses the files for inputted exports. prints as JSON
+# Does: Opens /etc/exports.d/cockpit-file-sharing.exports and parses the files for inputted exports. prints as JSON
 # Returns: Nothing
 def main():
     check_config()
     obj = []
     try:
-        file = open("/etc/exports", "r")
+        file = open("/etc/exports.d/cockpit-file-sharing.exports", "r")
         lines = file.readlines()
         file.close()
         for i in range(0, len(lines), 1):

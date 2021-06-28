@@ -207,7 +207,10 @@ function clear_setup_spinner() {
  * Returns: Nothing
  */
 function create_nfs(ip, path, name, options) {
-    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_add.py", name, path, ip, options]);
+    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_add.py", name, path, ip, options], {
+        err: "out",
+        superuser: "require",
+    });
     proc.done(function () {
         populate_nfs_list();
         set_success("nfs", "Added " + name + " NFS to server.", timeout_ms);
@@ -225,7 +228,10 @@ function create_nfs(ip, path, name, options) {
  * Returns: Nothing
  */
 function rm_nfs(name) {
-    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_remove.py", name]);
+    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_remove.py", name], {
+        err: "out",
+        superuser: "require",
+    });
     proc.done(function () {
         populate_nfs_list();
         set_success("nfs", "Removed " + name + " NFS from server.", timeout_ms);
@@ -321,6 +327,7 @@ function populate_nfs_list() {
         superuser: "require",
     });
     proc.done(function (data) {
+        console.log(data)
         var obj = JSON.parse(data)
 
         if (obj.length === 0) {
@@ -346,7 +353,7 @@ function populate_nfs_list() {
         }
     });
     proc.fail(function (ex, data) {
-        set_error("nfs", data);
+        set_error("nfs", "Error while populating nfs list: " + data);
     });
 }
 

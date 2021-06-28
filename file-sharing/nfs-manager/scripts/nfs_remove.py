@@ -23,15 +23,15 @@ from optparse import OptionParser
 
 # Name: check_config
 # Receives: Nothing
-# Does: Checks in /etc/exports exists/ is in correct format.
+# Does: Checks in /etc/exports.d/cockpit-file-sharing.exports exists / is in correct format.
 # Returns: Nothing
 def check_config():
     try:
-        file = open("/etc/exports", "r")
+        file = open("/etc/exports.d/cockpit-file-sharing.exports", "r")
         lines = file.readlines()
         file.close()
     except OSError:
-        print("Could not open /etc/exports. Do you have nfs installed?")
+        print("Could not open /etc/exports.d/cockpit-file-sharing.exports. Do you have nfs installed?")
         sys.exit(1)
     
     if len(lines) == 0 or lines[0] != "# Formmated for cockpit-nfs-manager\n":
@@ -44,27 +44,21 @@ def check_config():
 # Returns: Nothing
 def reset_config():
     try:
-        subprocess.run(["exportfs", "-a"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("Exporting new share permissions...")
+        subprocess.run(["exportfs", "-ra"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("Restarting nfs...")
     except OSError:
-        print("Could not exportfs -a. Error: " + OSError)
-        sys.exit(1)
-    try:
-        subprocess.run(["systemctl", "restart", "nfs-kernel-system"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("Restarting nfs-kernel-system...")
-    except OSError:
-        print("Could not restart nfs-kernel-system, do you have it on your system?")
+        print("Could not restart nfs, do you have it on your system?")
         sys.exit(1)
 
 # Name: remove_nfs
 # Receives: Name and del_dir
-# Does: Parses /etc/exports for the names of NFS(s) to be deleted, remove them from list.
-# Then rewrite /etc/exports with new file. Delete directroy if flagged.
+# Does: Parses /etc/exports.d/cockpit-file-sharing.exports for the names of NFS(s) to be deleted, remove them from list.
+# Then rewrite /etc/exports.d/cockpit-file-sharing.exports with new file. Delete directroy if flagged.
 # Returns: Nothing
 def remove_nfs(name):
     try:
         does_exist = False
-        file = open("/etc/exports", "r")
+        file = open("/etc/exports.d/cockpit-file-sharing.exports", "r")
         lines = file.readlines()
         file.close()
         for i in range(0, len(lines), 1):
@@ -79,7 +73,7 @@ def remove_nfs(name):
         
         if does_exist:
             print("Rewriting exports...")
-            file = open("/etc/exports", "w")
+            file = open("/etc/exports.d/cockpit-file-sharing.exports", "w")
             file.write("".join(lines))
             file.close()
             reset_config()
