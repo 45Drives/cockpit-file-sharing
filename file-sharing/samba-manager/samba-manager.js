@@ -1161,6 +1161,8 @@ function set_share_defaults() {
     document.getElementById("comment").value = "";
     document.getElementById("path").value = "";
     document.getElementById("windows-acls").checked = false;
+    document.getElementById("add-user-to-share").disabled = false;
+    document.getElementById("add-group-to-share").disabled = false;
     document.getElementById("share-path-feedback").innerText = "";
     share_valid_groups.clear();
     share_valid_users.clear();
