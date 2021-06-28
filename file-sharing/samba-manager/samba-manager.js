@@ -1999,11 +1999,17 @@ function populate_privilege_list() {
 
     var proc = cockpit.spawn(["net", "sam", "rights", "list", "SeDiskOperatorPrivilege"], { err: "out", superuser: "require" });
     proc.done(function (data) {
-        var rows = data.split("\n");
-        rows.pop();
-        rows.forEach(function (obj) {
-            list.appendChild(create_privilege_list_entry(obj));
-        });
+        if(data == "") {
+            var emptyList = document.createElement("div");
+            emptyList.innerText = 'No privileges set. Click the "plus" to add one.';
+            list.appendChild(emptyList)
+        } else {
+            var rows = data.split("\n");
+            rows.pop();
+            rows.forEach(function (obj) {
+                list.appendChild(create_privilege_list_entry(obj));
+            });
+        }
     });
     proc.fail(function (ex, data) {
         set_error("privilege", "Failed to get list of privileges: " + data);
@@ -2024,13 +2030,13 @@ function rm_privilege(entry_name, element_list) {
         superuser: "require",
     });
     proc.done(function () {
-        populate_privilege_list();
         set_success(
             "privilege",
             "Successfully deleted " + entry_name + ".",
             timeout_ms
         );
         element_list.forEach((elem) => elem.remove());
+        populate_privilege_list();
     });
     proc.fail(function (data) {
         set_error("privilege", data, timeout_ms);
