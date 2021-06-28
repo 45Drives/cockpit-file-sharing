@@ -327,7 +327,6 @@ function populate_nfs_list() {
         superuser: "require",
     });
     proc.done(function (data) {
-        console.log(data)
         var obj = JSON.parse(data)
 
         if (obj.length === 0) {
