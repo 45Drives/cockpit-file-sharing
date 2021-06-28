@@ -89,7 +89,7 @@ Adding a group is as simple as pressing the "+" button, name the group, then con
 ![User Management](img/samba/samba_user.gif)
 Manging Samba Users in file sharing is as easy as can be. First you select the user to manage, you can then add as many groups as you want to the user and also delete groups from a user if needed!
 
-![Password](img/samba/password.png)
+![Password](img/samba/samba_password.png)
 Changing the password of a samba user is possible through the "Set Samba Password" button. You can remove the password by clicking the "Remove Password" button, then confirm.
 
 ### SeDiskOperatorPrivilege
