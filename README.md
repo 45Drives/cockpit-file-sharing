@@ -21,12 +21,12 @@ A Cockpit plugin to easily manage samba and NFS file sharing.
 ## General
 
 ### Features
-* Add and edit Samba shares.
+* Add and edit Samba shares
 * Full control of Samba Share parameters
 * Auto populate parameters with commonly used settings
 * Edit global Samba config
 * Manage Samba users and their groups
-* Add and remove groups.
+* Add and remove groups
 * Set SeDiskOperator Privileges
 * Add and remove NFS sharing with full control of permissions and client IPs
 
@@ -53,23 +53,23 @@ The main component to this manager is the "Share Management" card. This is used 
 ### Add Share
 ![Add Samba Share Menu](img/samba/samba_add.png)
 
-You have fully ability to customize your share the way you want it. Looking through the options in the menu, a lot are self explanatory, such as share name and description, however the rest of the options can be complicated. Down below are the options and their descriptors.
+You have full ability to customize your share the way you want it. Looking through the options in the menu, a lot are self explanatory, such as share name and description, however the rest of the options can be complicated. Down below are the options and their descriptors.
 
 * Path - The path to the directory on the server you would like to share
 * Windows ACLs - Checking the box adds parameters that enables access control list on the share
 * Valid Users - Users who can access the share
 * Valid Groups - Groups that can access the share
-* Guest Ok - Sets that no password is required to connect to the samba share.
-* Browsable - Controls whether the share is seen a list of available shares in net view. 
+* Guest Ok - Checking this box makes the Samba Share not require a password to access
+* Browsable - Controls whether the share is seen a list of available shares in net view 
 
 ### Advanced Settings
 ![Advanced Samba Settings](img/samba/samba_advanced.png)
 
 Under the advanced settings tab there is an input box. You can enter any extra Samba settings you want into this box. We have implemented templates that will auto populate the input box with popular settings many users use. Down below is a description of these auto populate settings.
 
-* Shadow Copy - Utilizes microsoft's shadow copy service which creates backup copies or snapshots of files within the samba share.
+* Shadow Copy - Utilizes microsoft's shadow copy service which creates backup copies or snapshots of files within the samba share
 * MacOS Share - Allows shares to be seen on MacOS
-* Audit Logs - Adds ability to record events and changes on the samba share.
+* Audit Logs - Adds ability to record events and changes on the samba share
 
 For any more info on settings that can be inserted into this area, please checkout the samba config documentation, https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html. 
 
@@ -82,7 +82,7 @@ Removing shares is as simple as clicking the "X" beside the share you would like
 ### Editing Global Settings
 ![Global Samba Settings](img/samba/samba_global.png)
 
-In the global samba settings menu you can change the description of the server as well as the amount of logs that are viewable. Much like the advanced samba settings, there is a input section to add any parameter you would like to set for all your shares on your server.
+In the global settings, you can change the description of the server as well as the amount of logs that are viewable. Much like the advanced samba settings, there is a input section to add any parameter you would like to set for all your shares on your server.
 
 
 ### Group Management
@@ -110,5 +110,5 @@ You can add privileges by clicking on the "+" button. You will be greeted with t
 
 ## NFS Manager
 ![NFS](img/nfs/nfs.gif)
-
+ 
 You can add NFS by clicking "+" button. Within the nfs add menu you have the  options for, name of the NFS, path to files of the NFS, IP of who's allowed to access the NFS and options of the NFS. Removing a NFS is as easy as clicking the "X" beside the NFS you would like to delete, then confirm.
