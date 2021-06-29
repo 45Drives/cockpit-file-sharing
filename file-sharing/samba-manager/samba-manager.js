@@ -39,6 +39,12 @@ var global_samba_conf = {};
 var using_domain = false;
 var domain_lower_limit;
 
+var windows_acl_parms = {
+    "vfs-objects": "acl_xattr",
+    "map-acl-inherit": "yes",
+    "acl_xattr:ignore-system-acl": "yes"
+};
+
 /* get_global_conf
  * Receives: nothing
  * Does: parses content of /etc/samba/smb.conf to get global options
@@ -1031,7 +1037,7 @@ function populate_share_list() {
     return proc;
 }
 
-/* show_share_dialogshow_rm_group_dialog
+/* show_share_dialog
  * Receives: string containing "create" or "edit", name of share being modified,
  * object containing share settings
  * Does: shows share modal dialog and sets up buttons in modal dialog
@@ -1100,7 +1106,7 @@ function show_share_dialog(
                     superuser: "require",
                 });
                 proc.done(function (data) {
-                    console.log("Directory " + path + " made");
+                    console.lcontinue-shareog("Directory " + path + " made");
                     edit_share(share_name, share_settings, "updated");
                 });
                 proc.fail(function (ex, data) {
@@ -1223,6 +1229,18 @@ function populate_share_settings(settings) {
         if (value === "yes") param.checked = true;
         else if (value === "no") param.checked = false;
         else param.value = value;
+    }
+    var is_windows_acl = true;
+    for (let param of Object.keys(windows_acl_parms)) {
+        if (Object.hasOwnProperty.call(advanced_settings, param)) {
+            delete advanced_settings[param];
+        }
+        else {
+            is_windows_acl = false;
+        }
+    }
+    if (is_windows_acl) {
+        document.getElementById("windows-acls").setAttribute("checked", true);
     }
     advanced_share_settings_before_change = { ...advanced_settings };
     var advanced_settings_list = [];
@@ -1504,6 +1522,13 @@ function edit_share(share_name, settings, action) {
         hide_share_dialog,
         "share-modal"
     );
+
+    if (document.getElementById("windows-acls").checked) {
+        edit_parms(share_name, windows_acl_parms, [], "updated", () => {}, "share-modal")
+    }
+    else {
+        edit_parms(share_name, {}, Object.keys(windows_acl_parms), "updated", () => {}, "share-modal")
+    }
 }
 
 /* edit_parms
@@ -1677,13 +1702,27 @@ function find_vfs_object(input, vfs_object) {
  * Returns: nothing
  */
 function windows_acl() {
-    var user = document.getElementById("add-user-to-share")
-    var group = document.getElementById("add-group-to-share")
+    var user = document.getElementById("add-user-to-share");
+    var group = document.getElementById("add-group-to-share");
+    var users_selected = document.getElementById("selected-users");
+    var groups_selected = document.getElementById("selected-groups")
 
     if(document.getElementById("windows-acls").checked == true) {
         user.disabled = true;
         group.disabled = true;
-        populate_advanced_share_settings("windows-acls", "acl_xattr:", "map acl inherit = yes\nacl_xattr:ignore system acl = yes", "acl_xattr");
+
+        while (users_selected.firstChild) {
+            users_selected.removeChild(users_selected.firstChild);
+            
+        }
+        while (groups_selected.firstChild) {
+            groups_selected.removeChild(groups_selected.firstChild);
+        }
+
+        share_valid_users.clear();
+        share_valid_groups.clear();
+
+        update_users_in_share();
     }
     else {
         user.disabled = false;
