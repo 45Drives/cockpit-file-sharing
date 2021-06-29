@@ -126,7 +126,7 @@ function show_nfs_modal() {
 
 function add_nfs() {
     var ip = document.getElementById("input-ip").value;
-    var path = document.getElementById("input-path").value;
+    var path = "{path}".format(path=document.getElementById("input-path").value);
     var name = document.getElementById("input-name").value;
     var options = document.getElementById("input-perms").value;
     var is_clicked = document.getElementById("is-clicked");
@@ -332,7 +332,7 @@ function populate_nfs_list() {
         if (obj.length === 0) {
             var msg = document.createElement("tr");
             var name = document.createElement("td");
-            name.innerText = 'No NFSs. Click the "plus" to add one.';
+            name.innerText = 'No exports. Click the "plus" to add one.';
             var path = document.createElement("td");
             var ip = document.createElement("td");
             var perm = document.createElement("td");
