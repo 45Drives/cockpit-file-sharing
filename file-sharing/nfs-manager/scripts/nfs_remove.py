@@ -20,6 +20,7 @@
 import sys
 import subprocess
 from optparse import OptionParser
+import re
 
 # Name: check_config
 # Receives: Nothing
@@ -55,30 +56,40 @@ def reset_config():
 # Does: Parses /etc/exports.d/cockpit-file-sharing.exports for the names of NFS(s) to be deleted, remove them from list.
 # Then rewrite /etc/exports.d/cockpit-file-sharing.exports with new file. Delete directroy if flagged.
 # Returns: Nothing
-def remove_nfs(name):
+def remove_nfs(name, ip):
     try:
-        does_exist = False
+        ip_exist = False
+        name_exist = False
         file = open("/etc/exports.d/cockpit-file-sharing.exports", "r")
         lines = file.readlines()
         file.close()
         for i in range(0, len(lines), 1):
-            if("Name:" in lines[i]):
-                if(name + "\n" in lines[i]):
-                    print("Removing: " + lines[i])
-                    lines.remove(lines[i])
-                    print("Removing: " + lines[i])
-                    lines.remove(lines[i])
-                    does_exist = True
+            if(("Name: " + name) in lines[i]):
+                name_exist = True
+                i = i+1
+                if (ip in lines[i]):
+                    ip_exist = True
+
+                    regex = r"{ip}\([^\)]*\)\s*".format(ip=re.escape(ip))
+                    lines[i] = re.sub(regex, "", lines[i])
+
+                    if lines[i][-2] == '"':
+                        print(name + " has no more clients. Removing " + name + ".")
+                        lines.remove(lines[i])
+                        lines.remove(lines[i-1])
                     break
-        
-        if does_exist:
+
+        if name_exist and ip_exist:
             print("Rewriting exports...")
             file = open("/etc/exports.d/cockpit-file-sharing.exports", "w")
             file.write("".join(lines))
             file.close()
             reset_config()
+        elif name_exist and not ip_exist:
+            print("That Client ip does not exist.")
+            sys.exit(1)
         else:
-            print("That NFS does not exist.")
+            print("That NFS Name does not exist.")
             sys.exit(1)
 
     except OSError:
@@ -94,10 +105,10 @@ def main():
     check_config()
     parser = OptionParser()
     (options, args) = parser.parse_args()
-    if len(args) < 1:
-        print("Not enough arguments!\nnfs_remove <name>")
+    if len(args) < 2:
+        print("Not enough arguments!\nnfs_remove <name> <client ip>")
         sys.exit(1)
-    remove_nfs(args[0])
+    remove_nfs(args[0], args[1])
 
 
 if __name__ == "__main__":

@@ -221,53 +221,53 @@ function create_nfs(ip, path, name, options) {
     });
 }
 
-/* Name: rm_nfs
+/* Name: rm_client
  * Receives: name
  * Does: Runs the nfs_remove script with inputted entry name to remove said NFS.
  * Also removes elements list from table.
  * Returns: Nothing
  */
-function rm_nfs(name) {
-    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_remove.py", name], {
+function rm_client(name, ip) {
+    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_remove.py", name, ip], {
         err: "out",
         superuser: "require",
     });
     proc.done(function () {
         populate_nfs_list();
-        set_success("nfs", "Removed " + name + " NFS from server.", timeout_ms);
-        hide_rm_nfs_modal();
+        set_success("nfs", "Removed client " + ip + " from " + name + ".", timeout_ms);
+        hide_rm_client_modal();
     });
     proc.fail(function (data) {
-        set_error("nfs", "Could not remove NFS: " + data, timeout_ms);
-        hide_rm_nfs_modal();
+        set_error("nfs", "Could not remove client " + ip + " from " + name + ":" + data, timeout_ms);
+        hide_rm_client_modal();
     });
 }
 
-/* Name: show_rm_nfs_modal
- * Receives: entry_name
+/* Name: show_rm_client_modal
+ * Receives: entry_ip
  * Does: Shows remove NFS model
  * Returns: Nothing
  */
-function show_rm_nfs_modal(entry_name) {
-    var nfs_to_rm = document.getElementsByClassName('nfs-to-remove');
-    for (var items in nfs_to_rm) {
-        nfs_to_rm[items].innerText = entry_name;
+function show_rm_client_modal(entry_name, entry_ip) {
+    var client_to_rm = document.getElementsByClassName('client-to-remove');
+    for (var items in client_to_rm) {
+        client_to_rm[items].innerText = entry_ip + " from " + entry_name;
     }
-    var modal = document.getElementById("rm-nfs-modal");
+    var modal = document.getElementById("rm-client-modal");
     modal.style.display = "block";
-    var continue_rm_nfs = document.getElementById("continue-rm-nfs");
+    var continue_rm_nfs = document.getElementById("continue-rm-client");
     continue_rm_nfs.onclick = function () {
-        rm_nfs(entry_name);
+        rm_client(entry_name, entry_ip);
     };
 }
 
-/* Name: hide_rm_nfs_modal
+/* Name: hide_rm_client_modal
  * Receives: Nothing
  * Does: Hides remove NFS model
  * Returns: Nothing
  */
-function hide_rm_nfs_modal() {
-    var modal = document.getElementById("rm-nfs-modal");
+function hide_rm_client_modal() {
+    var modal = document.getElementById("rm-client-modal");
     modal.style.display = "none";
 }
 
@@ -276,7 +276,9 @@ function hide_rm_nfs_modal() {
  * Does: Makes a entry for a list
  * Returns: entry
  */
-function create_list_entry(name, path, ip, permissions, on_delete) {
+function create_list_entry(name, path, ip, permissions, on_delete, name_del) {
+    if ((name_del ?? null) === null) name_del = name;
+    
     var entry = document.createElement("tr");
     entry.classList.add("highlight-entry");
 
@@ -298,7 +300,7 @@ function create_list_entry(name, path, ip, permissions, on_delete) {
     var del_div = document.createElement("span");
     del_div.classList.add("circle-icon", "circle-icon-danger");
     del_div.addEventListener("click", function () {
-        on_delete(name);
+        on_delete(name_del, ip);
     });
     del.appendChild(del_div);
 
@@ -346,8 +348,19 @@ function populate_nfs_list() {
         }
         else {
             obj.forEach(function(obj) {
-                var item = create_list_entry(obj.Name, obj.Path, obj.Clients[0][0], obj.Clients[0][1], show_rm_nfs_modal)
-                nfs_list.appendChild(item);
+                // Check if there is more clients, if so then iterate through and add new rows
+                let len = obj.Clients.length
+                for(let i = 0; i < len; i++) {
+                    // The very first entry will always go into the first column
+                    if (i == 0) {
+                        var new_client = create_list_entry(obj.Name, obj.Path, obj.Clients[0][0], obj.Clients[0][1], show_rm_client_modal)
+                    }
+                    // Entries after will go below first column
+                    else {
+                        var new_client = create_list_entry(" ", " ", obj.Clients[i][0], obj.Clients[i][1], show_rm_client_modal, obj.Name)
+                    }
+                    nfs_list.appendChild(new_client);
+                }
             });
         }
     });
@@ -410,7 +423,7 @@ function check_permissions() {
 function set_up_buttons() {
     document.getElementById("show-nfs-modal").addEventListener("click", show_nfs_modal);
     document.getElementById("hide-nfs-modal").addEventListener("click", hide_nfs_modal);
-    document.getElementById("cancel-rm-nfs").addEventListener("click", hide_rm_nfs_modal);
+    document.getElementById("cancel-rm-client").addEventListener("click", hide_rm_client_modal);
     document.getElementById("add-nfs-btn").addEventListener("click", add_nfs);
 }
 
