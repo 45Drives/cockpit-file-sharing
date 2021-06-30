@@ -126,7 +126,7 @@ function show_nfs_modal() {
 
 function add_nfs() {
     var ip = document.getElementById("input-ip").value;
-    var path = "{path}".format(path=document.getElementById("input-path").value);
+    var path = `"${document.getElementById("input-path").value}"`;
     var name = document.getElementById("input-name").value;
     var options = document.getElementById("input-perms").value;
     var is_clicked = document.getElementById("is-clicked");
@@ -154,7 +154,7 @@ function add_nfs() {
         else if (path == "") {
             set_error("nfs-modal", "Enter a path.", timeout_ms)
         }
-        else if (path[0] != "/") {
+        else if (path[1] != "/") {
             set_error("nfs-modal", "Path has to be absolute.", timeout_ms)
         }
         else if (ip == "") {
@@ -346,7 +346,7 @@ function populate_nfs_list() {
         }
         else {
             obj.forEach(function(obj) {
-                var item = create_list_entry(obj.Name, obj.Path, obj.IP, obj.Permissions, show_rm_nfs_modal)
+                var item = create_list_entry(obj.Name, obj.Path, obj.Clients[0][0], obj.Clients[0][1], show_rm_nfs_modal)
                 nfs_list.appendChild(item);
             });
         }

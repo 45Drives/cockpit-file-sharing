@@ -60,11 +60,11 @@ def main():
             if("Name:" in lines[i]):
                 name = lines[i][8:-1]
                 i += 1
-                fields = re.findall(r"^([^\s]+)\s([^\s]+)\(([^\(]+)\)$", lines[i], re.MULTILINE)
+                fields = re.findall(r"^\"([^\"]+)\"(.+)$", lines[i])
                 path = fields[0][0]
-                ip = fields[0][1]
-                permissions = fields[0][2]
-                dic = {"Name":name, "Path":path, "IP":ip, "Permissions":permissions}
+                all_clients = fields[0][1]
+                clients = re.findall(r"\s*([^\(]+)\(([^\)]+)\)", all_clients)
+                dic = {"Name":name, "Path":path, "Clients":clients}
                 obj.append(dic)
     except OSError:
         print(OSError)
