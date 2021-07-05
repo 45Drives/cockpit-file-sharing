@@ -11,7 +11,7 @@ Files: file-sharing/branding/*
 Copyright: 2021 Josh Boudreau <jboudreau@45drives.com>
 License: GPL-3.0+
 
-Files: file-sharing/samba/*
+Files: file-sharing/samba-manager/*
 Copyright: 2021 Josh Boudreau <jboudreau@45drives.com>
 License: GPL-3.0+
 

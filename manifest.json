@@ -15,8 +15,8 @@
         "el": "noarch"
     },
     "description": {
-        "long": "A cockpit module to manage Samba and NFS file sharing.",
-        "short": "A cockpit module to manage Samba and NFS file sharing."
+        "long": "A cockpit module to make file sharing with Samba and NFS easier.",
+        "short": "A cockpit module to make file sharing with Samba and NFS easier."
     },
     "defaults": {
         "urgency": "medium"

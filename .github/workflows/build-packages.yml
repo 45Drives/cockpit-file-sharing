@@ -6,7 +6,7 @@ on:
     tags:
       - 'v*.*.*'
 jobs:
-  publish:
+  main:
     runs-on: self-hosted
     steps:
       - name: Checkout
@@ -21,11 +21,10 @@ jobs:
           echo "VERSION=$(cat ${{github.workspace}}/manifest.json | jq --raw-output '.version')" >> $GITHUB_ENV
           echo "REVISION=$(cat ${{github.workspace}}/manifest.json | jq --raw-output '.buildVersion')" >> $GITHUB_ENV
       - name: GitHub Release
-        id: release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          name: ${{env.TITLE}} ${{env.VERSION}}-${{env.REVISION}}
+          name: ${{env.TITLE}} ${{env.VERSION}}
           prerelease: ${{env.PRERELEASE}}
           body_path: ${{github.workspace}}/CHANGELOG.md
           files: |
@@ -33,12 +32,9 @@ jobs:
             ${{github.workspace}}/dist/packages/*/*.rpm
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-      - name: Repository Database
+      - name: Update Repository
         if: startsWith(github.ref, 'refs/tags/')
         run: update-repositories ${{github.workspace}}
-
-      # TODO: Make sync script to 1.91
-      #   - do rsync dry-run of updated repo (full ubuntu/rocky)
-      #   - check error code
-      #   - rsync key.asc
-      #   - rsync updated repo
+      - name: Publish Repository
+        if: startsWith(github.ref, 'refs/tags/')
+        run: publish-repo
