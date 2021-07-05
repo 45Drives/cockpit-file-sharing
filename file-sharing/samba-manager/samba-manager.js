@@ -40,7 +40,6 @@ var using_domain = false;
 var domain_lower_limit;
 
 var windows_acl_parms = {
-    "vfs-objects": "acl_xattr",
     "map-acl-inherit": "yes",
     "acl_xattr:ignore-system-acl": "yes"
 };
@@ -990,18 +989,13 @@ function create_share_list_entry(share_name, path, on_delete) {
  * Does: clears list of shares, repopulates list based on returned object from parse_shares
  * Returns: promise
  */
-function populate_share_list() {
+async function populate_share_list() {
     var shares_list = document.getElementById("shares-list");
 
-    while (shares_list.firstChild) {
-        shares_list.removeChild(shares_list.firstChild);
-    }
-
-    var proc = cockpit.spawn(["net", "conf", "list"], {
-        err: "out",
-        superuser: "require",
-    });
-    proc.done(function (data) {
+    shares_list.innerHTML = ""
+    
+    try {
+        var data = await run_command(["net", "conf", "list"]);
         const [shares, glob] = parse_shares(data.split("\n"));
         if (Object.keys(shares).length === 0) {
             var msg = document.createElement("tr");
@@ -1030,11 +1024,25 @@ function populate_share_list() {
         for (let key of Object.keys(glob)) {
             global_samba_conf[key] = glob[key];
         }
-    });
-    proc.fail(function (ex, data) {
-        set_error("share", data);
-    });
-    return proc;
+    }
+    catch (err) {
+        set_error("share", err);
+    }
+}
+
+function run_command(args) {
+    return new Promise((resolve,reject) => {
+        let proc = cockpit.spawn(args, {
+            err: "out",
+            superuser: "require",
+        })
+        proc.done((data) => {
+            resolve(data)
+        })
+        proc.fail((err, data) => {
+            reject(data)
+        })
+    })
 }
 
 /* show_share_dialog
@@ -1103,10 +1111,10 @@ function show_share_dialog(
             if (path == old_path) {
                 var proc = cockpit.spawn(["mkdir", path], {
                     err: "out",
-                    superuser: "require",
+                    superuser: "try",
                 });
                 proc.done(function (data) {
-                    console.lcontinue-shareog("Directory " + path + " made");
+                    console.log("Directory " + path + " made");
                     edit_share(share_name, share_settings, "updated");
                 });
                 proc.fail(function (ex, data) {
@@ -1115,7 +1123,7 @@ function show_share_dialog(
             } else {
                 var proc = cockpit.spawn(["stat", path], {
                     err: "out",
-                    superuser: "require",
+                    superuser: "try",
                 });
                 proc.done(function (data) {
                     edit_share(share_name, share_settings, "updated");
@@ -1241,6 +1249,10 @@ function populate_share_settings(settings) {
     }
     if (is_windows_acl) {
         document.getElementById("windows-acls").setAttribute("checked", true);
+        advanced_settings["vfs-objects"] = advanced_settings["vfs-objects"].replace("acl_xattr", "")
+        if (advanced_settings["vfs-objects"] == "") {
+            delete advanced_settings["vfs-objects"]
+        }
     }
     advanced_share_settings_before_change = { ...advanced_settings };
     var advanced_settings_list = [];
@@ -1514,6 +1526,25 @@ function edit_share(share_name, settings, action) {
     for (let param of params_to_delete) {
         if (param in extra_params) params_to_delete.delete(param);
     }
+
+    if (document.getElementById("windows-acls").checked) {
+        changed_settings = Object.assign(changed_settings, windows_acl_parms)
+        if (!!changed_settings["vfs-objects"]) {
+            changed_settings["vfs-objects"] = changed_settings["vfs-objects"] + " acl_xattr";
+        } else {
+            changed_settings["vfs-objects"] = "acl_xattr"
+        }
+    }
+    else {
+        var temp_acl_parms = Object.keys(windows_acl_parms)
+        temp_acl_parms.push(... params_to_delete.values())
+        params_to_delete = temp_acl_parms
+
+        if (!changed_settings["vfs-objects"]) {
+            params_to_delete.push("vfs-objects")
+        }
+    }
+
     edit_parms(
         share_name,
         changed_settings,
@@ -1523,12 +1554,7 @@ function edit_share(share_name, settings, action) {
         "share-modal"
     );
 
-    if (document.getElementById("windows-acls").checked) {
-        edit_parms(share_name, windows_acl_parms, [], "updated", () => {}, "share-modal")
-    }
-    else {
-        edit_parms(share_name, {}, Object.keys(windows_acl_parms), "updated", () => {}, "share-modal")
-    }
+    
 }
 
 /* edit_parms
