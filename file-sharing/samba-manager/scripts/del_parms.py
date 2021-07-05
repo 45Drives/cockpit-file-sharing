@@ -30,11 +30,11 @@ for parm in settings["parms"]:
 	try:
 		child = subprocess.Popen(["net", "conf", "delparm", section, parm_real_name], stdout=subprocess.PIPE)
 	except OSError:
-		print("Error executing net conf setparm, is it installed?", file=sys.stderr)
+		print("Error executing net conf setparm, is it installed?")
 		sys.exit(1)
 	out, err = child.communicate()
 	if(child.wait() != 0):
-		print(err, file=sys.stderr)
+		print(err)
 		sys.exit(child.returncode)
 
 sys.exit(0)
