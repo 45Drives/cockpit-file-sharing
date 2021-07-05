@@ -45,6 +45,11 @@
             "image": "rocky-el8-builder",
             "codeName": "el8",
             "type": "el"
+        },
+        {
+            "image": "centos-el7-builder",
+            "codeName": "el7",
+            "type": "el"
         }
     ],
     "changelog": {
