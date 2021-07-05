@@ -1,0 +1,59 @@
+{
+    "__version": "45D-R1",
+    "name": "cockpit-file-sharing",
+    "title": "Cockpit File Sharing",
+    "prerelease": true,
+    "version": "1.0.0",
+    "buildVersion": "1",
+    "author": "Sam Silver <ssilver@45drives.com>",
+    "url": "https://github.com/45Drives/cockpit-file-sharing",
+    "category": "utils",
+    "priority": "optional",
+    "licence": "GPL-3.0+",
+    "architecture": {
+        "deb": "all",
+        "el": "noarch"
+    },
+    "description": {
+        "long": "A cockpit module to make file sharing with Samba and NFS easier.",
+        "short": "A cockpit module to make file sharing with Samba and NFS easier."
+    },
+    "defaults": {
+        "urgency": "medium"
+    },
+    "dependencies": {
+        "deb": [
+            "cockpit",
+            "python3",
+            "samba",
+            "nfs-kernel-server"
+        ],
+        "el": [
+            "cockpit",
+            "python3",
+            "samba",
+            "nfs-utils"
+        ]
+    },
+    "releases": [
+        {
+            "image": "ubuntu-focal-builder",
+            "codeName": "focal",
+            "type": "deb"
+        },
+        {
+            "image": "rocky-el8-builder",
+            "codeName": "el8",
+            "type": "el"
+        }
+    ],
+    "changelog": {
+        "urgency": "medium",
+        "version": "1.0.0",
+        "buildVersion": "1",
+        "ignore": [],
+        "date": null,
+        "packager": "Sam Silver <ssilver@45drives.com>",
+        "changes": []
+    }
+}
