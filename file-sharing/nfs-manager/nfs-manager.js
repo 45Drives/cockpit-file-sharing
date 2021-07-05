@@ -312,9 +312,10 @@ function rm_client(name, ip) {
         err: "out",
         superuser: "require",
     });
-    proc.done(function () {
+    proc.done(function (data) {
         populate_nfs_list();
         set_success("nfs", "Removed client " + ip + " from " + name + ".", timeout_ms);
+        console.log(data)
         hide_rm_client_modal();
     });
     proc.fail(function (data) {

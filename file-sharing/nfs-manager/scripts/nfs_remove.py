@@ -70,14 +70,17 @@ def remove_nfs(name, ip):
                 if (ip in lines[i]):
                     ip_exist = True
 
-                    regex = r"{ip}\([^\)]*\)\s*".format(ip=re.escape(ip))
+                    regex = r"{ip}\([^\)]*\)[ \t]*".format(ip=re.escape(ip))
                     lines[i] = re.sub(regex, "", lines[i])
 
-                    if lines[i][-2] == '"':
+                    if (re.match(r"^\"[^\"]*\"\s*$", lines[i]) != None):
                         print(name + " has no more clients. Removing " + name + ".")
                         lines.remove(lines[i])
                         lines.remove(lines[i-1])
+                        
                     break
+
+                    
 
         if name_exist and ip_exist:
             print("Rewriting exports...")
