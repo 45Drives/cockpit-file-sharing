@@ -19,6 +19,7 @@
 
 from os import name
 import re
+import json
 import sys
 import subprocess
 from optparse import OptionParser
@@ -28,6 +29,7 @@ from optparse import OptionParser
 # Does: Checks if directory exists, if not, create it.
 # Returns: Nothing
 def create_dir(path):
+    print("Path: " + path)
     if subprocess.call(["stat", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0:
         print("Directory already exist, using it...")
         return
@@ -42,10 +44,19 @@ def create_dir(path):
 # Receives: Name, Path, Client IP and Options
 # Does: Enters name, path and clients ip into exports config.
 # Returns: Nothing
-def write_exports(name, path, ip, options):
-    print("Writing to /etc/exports.d/cockpit-file-sharing.exports")
-    with open("/etc/exports.d/cockpit-file-sharing.exports", "a") as f:
-        f.write("# Name: " + name + "\n" + path + " " + ip + "(" + options + ")\n")
+def write_exports(name, path, info):
+    try:
+        client_info = json.loads(info)
+        clients = ""
+        for index in range(0, len(client_info), 2):
+            clients += " " + client_info[index] + "(" + client_info[index+1] + ")"
+
+        print(clients)
+        print("Writing to /etc/exports.d/cockpit-file-sharing.exports")
+        with open("/etc/exports.d/cockpit-file-sharing.exports", "a") as f:
+            f.write('# Name: ' + name + '\n"' + path + '"' + clients + '\n')
+    except Exception as err:
+        print(err)
 
 # Name: reset_config
 # Receives: Nothing
@@ -63,9 +74,9 @@ def reset_config():
 # Receives: Name, Path, IP and Options
 # Does: Runs all functions that launches certian commands to make nfs
 # Returns: Nothing
-def make_nfs(name, path, ip, options):
+def make_nfs(name, path, info):
     create_dir(path)
-    write_exports(name, path, ip, options)
+    write_exports(name, path, info)
     reset_config()
     print("Done! Please mount " + path + " to your directory of choosing on your own system!")
     print("sudo mount <host-ip>:" + path + " <path to dir>")
@@ -96,10 +107,10 @@ def main():
     check_config()
     parser = OptionParser()
     (options, args) = parser.parse_args()
-    if len(args) < 4:
-        print("Not enough arguments!\nnfs_add <name> <path> <client-ip> <options>")
+    if len(args) < 3:
+        print("Not enough arguments!\nnfs_add <name> <path> <client-info-array>")
         sys.exit(1)
-    make_nfs(args[0], args[1], args[2], args[3])
+    make_nfs(args[0], args[1], args[2])
 
 if __name__ == "__main__":
     main()

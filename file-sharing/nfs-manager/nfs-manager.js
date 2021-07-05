@@ -120,15 +120,24 @@ function show_nfs_modal() {
         }
     }
 
+    document.getElementById("clients").innerHTML = "";
+    add_client(false);
+
     var modal = document.getElementById("nfs-modal");
     modal.style.display = "block";
 }
 
 function add_nfs() {
-    var ip = document.getElementById("input-ip").value;
-    var path = `"${document.getElementById("input-path").value}"`;
     var name = document.getElementById("input-name").value;
-    var options = document.getElementById("input-perms").value;
+    var path = document.getElementById("input-path").value;
+
+    var client_info = []
+    var client_to_add = document.getElementsByClassName('client-to-add');
+
+    for (let i = 0; i < client_to_add.length; i++) {
+        client_info.push(client_to_add[i].value)
+    }
+
     var is_clicked = document.getElementById("is-clicked");
     var name_exist = false;
 
@@ -154,23 +163,37 @@ function add_nfs() {
         else if (path == "") {
             set_error("nfs-modal", "Enter a path.", timeout_ms)
         }
-        else if (path[1] != "/") {
+        else if (path[0] != "/") {
             set_error("nfs-modal", "Path has to be absolute.", timeout_ms)
         }
-        else if (ip == "") {
-            set_error("nfs-modal", "Enter an IP.", timeout_ms)
-        }
         else {     
-            if (options == "") {
-                options = "rw,sync,no_subtree_check";
+            // Check is IPs are empty
+            for (let i = 0; i < client_info.length; i++) {
+                //Check ips
+                if(i%2 == 0 || i == 0) {
+                    if(client_info[i] == "") {
+                        set_error("nfs-modal", "Please fill every IP input.", timeout_ms)
+                    }
+                // Check options
+                } else {  
+                    if (client_info[i] == "") {
+                        client_info[i] = "rw,sync,no_subtree_check";
+                    } else {
+                        // If options string has white space... remove it.
+                        client_info[i] = client_info[i].replace(/\s/g, "");
+                    }
+                }
             }
+
+            client_obj = JSON.stringify(client_info)
+
             if (is_clicked.value == path) {
-                create_nfs(ip, path, name, options);
+                create_nfs(name, path, client_obj);
             }
             else {
                 var proc = cockpit.spawn(["stat", path])
                 proc.done(function() {
-                    create_nfs(ip, path, name, options);
+                    create_nfs(name, path, client_obj);
                 });
                 proc.fail(function() {
                     is_clicked.value = path
@@ -202,23 +225,79 @@ function clear_setup_spinner() {
 }
 
 /* Name: create_nfs
- * Receives: Nothing 
+ * Receives: name, path, client_info
  * Does: Takes inputted IP, and path and launches CLI command with said inputs
  * Returns: Nothing
  */
-function create_nfs(ip, path, name, options) {
-    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_add.py", name, path, ip, options], {
+function create_nfs(name, path, client_info) {
+    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_add.py", name, path, client_info], {
         err: "out",
         superuser: "require",
     });
     proc.done(function () {
         populate_nfs_list();
-        set_success("nfs", "Added " + name + " NFS to server.", timeout_ms);
+        set_success("nfs", "Added " + name + " export to the server.", timeout_ms);
         hide_nfs_modal();
     });
     proc.fail(function (data) {
-        set_error("nfs-modal", "Could not add NFS: " + data, timeout_ms);
+        set_error("nfs-modal", "Could not add export: " + data, timeout_ms);
     });
+}
+
+/* Name: add_client
+ * Receives: Nothing
+ * Does: Adds another ip and options input to add a new client
+ * Returns: Nothing
+ */
+function add_client(spacer) {
+    if ((spacer ?? null) === null) spacer = true;
+
+    client_section = document.getElementById("clients");
+
+    ip_row = document.createElement("div");
+    ip_row.classList.add("form-row");
+
+    ip_label = document.createElement("label");
+    ip_label.classList.add("label-45d");
+    ip_label.classList.add("bold-text");
+    ip_label.innerText = "Client IP";
+
+    ip_input = document.createElement("input");
+    ip_input.type = "text";
+    ip_input.classList.add("client-to-add")
+    
+    ip_row.appendChild(ip_label);
+    ip_row.appendChild(ip_input);
+
+
+    options_row = document.createElement("div");
+    options_row.classList.add("form-row");
+
+    options_label = document.createElement("label");
+    options_label.classList.add("label-45d");
+    options_label.classList.add("bold-text");
+    options_label.innerText = "Options";
+
+    options_input = document.createElement("input");
+    options_input.type = "text";
+    options_input.placeholder = "Will default to 'rw,sync,no_subtree_check' if left empty";
+    options_input.classList.add("client-to-add")
+    
+    options_row.appendChild(options_label);
+    options_row.appendChild(options_input);
+
+    if (spacer) {
+        divider = document.createElement("div");
+        divider.classList.add("pf-c-divider");
+        spacer = document.createElement("div");
+        spacer.classList.add("vertical-spacer");
+
+        client_section.appendChild(divider);
+        client_section.appendChild(spacer);
+    }
+
+    client_section.appendChild(ip_row);
+    client_section.appendChild(options_row);
 }
 
 /* Name: rm_client
@@ -425,6 +504,7 @@ function set_up_buttons() {
     document.getElementById("hide-nfs-modal").addEventListener("click", hide_nfs_modal);
     document.getElementById("cancel-rm-client").addEventListener("click", hide_rm_client_modal);
     document.getElementById("add-nfs-btn").addEventListener("click", add_nfs);
+    document.getElementById("add-client-btn").addEventListener("click", add_client);
 }
 
 /* Name: main

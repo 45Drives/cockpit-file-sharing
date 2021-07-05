@@ -105,13 +105,12 @@
                         <input type="text" id="input-path">
                     </div>
                     <div class="form-row">
-                        <label class="label-45d bold-text" for="input-ip">IP</label>
-                        <input type="text" id="input-ip">
+                        <label class="label-45d bold-text" for="clients">Clients: </label>
+                        <button type="button" class="pf-c-button pf-m-primary" id="add-client-btn">
+                            <span class="fa fa-plus"></span>
+                        </button>
                     </div>
-                    <div class="form-row">
-                        <label class="label-45d bold-text" for="input-perms">Options</label>
-                        <input type="text" id="input-perms" placeholder="Will default to 'rw, sync, no_subtree_check' if left empty">
-                    </div>
+                    <div id="clients"></div>
                     <br>
                     <div class="no-margin" id="nfs-modal-info">
                         <span id="nfs-modal-info-icon"></span>
