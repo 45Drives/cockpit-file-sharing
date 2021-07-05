@@ -171,8 +171,8 @@ function add_nfs() {
             for (let i = 0; i < client_info.length; i++) {
                 //Check ips
                 if(i%2 == 0 || i == 0) {
-                    if(client_info[i] == "") {
-                        set_error("nfs-modal", "Please fill every IP input.", timeout_ms)
+                    if (client_info[i] == "") {
+                        client_info[i] = "*";
                     }
                 // Check options
                 } else {  
@@ -265,6 +265,7 @@ function add_client(spacer) {
     ip_input = document.createElement("input");
     ip_input.type = "text";
     ip_input.classList.add("client-to-add")
+    ip_input.placeholder = "Will default to '*' if left empty"
     
     ip_row.appendChild(ip_label);
     ip_row.appendChild(ip_input);
