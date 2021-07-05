@@ -111,4 +111,8 @@ You can add privileges by clicking on the "+" button. You will be greeted with t
 ## NFS Manager
 ![NFS](img/nfs/nfs.gif)
  
-You can add NFS by clicking "+" button. Within the nfs add menu you have the  options for, name of the NFS, path to files of the NFS, IP of who's allowed to access the NFS and options of the NFS. Removing a NFS is as easy as clicking the "X" beside the NFS you would like to delete, then confirm.
+You can add a NFS export by clicking "+" button. Within the nfs add menu, you have the options for name and path. There is also a section for clients. You may add a client by clicking the "+" button. This will give you another set of IP and options. The IP is who can access the particular export and the options are the permissions that IP has on the export. By adding multiple clients you can have multiple IP address accessing the same export, all having different permissions. 
+
+We have set the default IP to "*". This means that anyone can have access to that export. We have set defaults of permissions to rw,sync,no_tree_subcheck. If you want to enter your own permissions, do so by separating the options by commas (See out defaults for example). Check https://linux.die.net/man/5/nfs to see a full list of available options/permissions. 
+
+Removing a NFS is as easy as clicking the "X" beside the NFS you would like to delete, then confirm.
