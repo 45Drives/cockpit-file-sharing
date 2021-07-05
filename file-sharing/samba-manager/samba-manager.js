@@ -39,6 +39,11 @@ var global_samba_conf = {};
 var using_domain = false;
 var domain_lower_limit;
 
+var windows_acl_parms = {
+    "map-acl-inherit": "yes",
+    "acl_xattr:ignore-system-acl": "yes"
+};
+
 /* get_global_conf
  * Receives: nothing
  * Does: parses content of /etc/samba/smb.conf to get global options
@@ -984,18 +989,13 @@ function create_share_list_entry(share_name, path, on_delete) {
  * Does: clears list of shares, repopulates list based on returned object from parse_shares
  * Returns: promise
  */
-function populate_share_list() {
+async function populate_share_list() {
     var shares_list = document.getElementById("shares-list");
 
-    while (shares_list.firstChild) {
-        shares_list.removeChild(shares_list.firstChild);
-    }
-
-    var proc = cockpit.spawn(["net", "conf", "list"], {
-        err: "out",
-        superuser: "require",
-    });
-    proc.done(function (data) {
+    shares_list.innerHTML = ""
+    
+    try {
+        var data = await run_command(["net", "conf", "list"]);
         const [shares, glob] = parse_shares(data.split("\n"));
         if (Object.keys(shares).length === 0) {
             var msg = document.createElement("tr");
@@ -1024,14 +1024,28 @@ function populate_share_list() {
         for (let key of Object.keys(glob)) {
             global_samba_conf[key] = glob[key];
         }
-    });
-    proc.fail(function (ex, data) {
-        set_error("share", data);
-    });
-    return proc;
+    }
+    catch (err) {
+        set_error("share", err);
+    }
 }
 
-/* show_share_dialogshow_rm_group_dialog
+function run_command(args) {
+    return new Promise((resolve,reject) => {
+        let proc = cockpit.spawn(args, {
+            err: "out",
+            superuser: "require",
+        })
+        proc.done((data) => {
+            resolve(data)
+        })
+        proc.fail((err, data) => {
+            reject(data)
+        })
+    })
+}
+
+/* show_share_dialog
  * Receives: string containing "create" or "edit", name of share being modified,
  * object containing share settings
  * Does: shows share modal dialog and sets up buttons in modal dialog
@@ -1055,7 +1069,10 @@ function show_share_dialog(
             var path = document.getElementById("path").value;
 
             if (path == old_path) {
-                var proc = cockpit.spawn(["mkdir", path]);
+                var proc = cockpit.spawn(["mkdir", path], {
+                    err: "out",
+                    superuser: "require",
+                });
                 proc.done(function (data) {
                     console.log("Directory " + path + " made");
                     add_share();
@@ -1064,7 +1081,10 @@ function show_share_dialog(
                     set_error("share-modal", data, timeout_ms);
                 });
             } else {
-                var proc = cockpit.spawn(["stat", path]);
+                var proc = cockpit.spawn(["stat", path], {
+                    err: "out",
+                    superuser: "require",
+                });
                 proc.done(function (data) {
                     add_share();
                 });
@@ -1089,7 +1109,10 @@ function show_share_dialog(
             var path = document.getElementById("path").value;
 
             if (path == old_path) {
-                var proc = cockpit.spawn(["mkdir", path]);
+                var proc = cockpit.spawn(["mkdir", path], {
+                    err: "out",
+                    superuser: "try",
+                });
                 proc.done(function (data) {
                     console.log("Directory " + path + " made");
                     edit_share(share_name, share_settings, "updated");
@@ -1098,7 +1121,10 @@ function show_share_dialog(
                     set_error("share-modal", data, timeout_ms);
                 });
             } else {
-                var proc = cockpit.spawn(["stat", path]);
+                var proc = cockpit.spawn(["stat", path], {
+                    err: "out",
+                    superuser: "try",
+                });
                 proc.done(function (data) {
                     edit_share(share_name, share_settings, "updated");
                 });
@@ -1149,6 +1175,8 @@ function set_share_defaults() {
     document.getElementById("comment").value = "";
     document.getElementById("path").value = "";
     document.getElementById("windows-acls").checked = false;
+    document.getElementById("add-user-to-share").disabled = false;
+    document.getElementById("add-group-to-share").disabled = false;
     document.getElementById("share-path-feedback").innerText = "";
     share_valid_groups.clear();
     share_valid_users.clear();
@@ -1209,6 +1237,22 @@ function populate_share_settings(settings) {
         if (value === "yes") param.checked = true;
         else if (value === "no") param.checked = false;
         else param.value = value;
+    }
+    var is_windows_acl = true;
+    for (let param of Object.keys(windows_acl_parms)) {
+        if (Object.hasOwnProperty.call(advanced_settings, param)) {
+            delete advanced_settings[param];
+        }
+        else {
+            is_windows_acl = false;
+        }
+    }
+    if (is_windows_acl) {
+        document.getElementById("windows-acls").setAttribute("checked", true);
+        advanced_settings["vfs-objects"] = advanced_settings["vfs-objects"].replace("acl_xattr", "")
+        if (advanced_settings["vfs-objects"] == "") {
+            delete advanced_settings["vfs-objects"]
+        }
     }
     advanced_share_settings_before_change = { ...advanced_settings };
     var advanced_settings_list = [];
@@ -1482,6 +1526,25 @@ function edit_share(share_name, settings, action) {
     for (let param of params_to_delete) {
         if (param in extra_params) params_to_delete.delete(param);
     }
+
+    if (document.getElementById("windows-acls").checked) {
+        changed_settings = Object.assign(changed_settings, windows_acl_parms)
+        if (!!changed_settings["vfs-objects"]) {
+            changed_settings["vfs-objects"] = changed_settings["vfs-objects"] + " acl_xattr";
+        } else {
+            changed_settings["vfs-objects"] = "acl_xattr"
+        }
+    }
+    else {
+        var temp_acl_parms = Object.keys(windows_acl_parms)
+        temp_acl_parms.push(... params_to_delete.values())
+        params_to_delete = temp_acl_parms
+
+        if (!changed_settings["vfs-objects"]) {
+            params_to_delete.push("vfs-objects")
+        }
+    }
+
     edit_parms(
         share_name,
         changed_settings,
@@ -1490,6 +1553,8 @@ function edit_share(share_name, settings, action) {
         hide_share_dialog,
         "share-modal"
     );
+
+    
 }
 
 /* edit_parms
@@ -1663,13 +1728,27 @@ function find_vfs_object(input, vfs_object) {
  * Returns: nothing
  */
 function windows_acl() {
-    var user = document.getElementById("add-user-to-share")
-    var group = document.getElementById("add-group-to-share")
+    var user = document.getElementById("add-user-to-share");
+    var group = document.getElementById("add-group-to-share");
+    var users_selected = document.getElementById("selected-users");
+    var groups_selected = document.getElementById("selected-groups")
 
     if(document.getElementById("windows-acls").checked == true) {
         user.disabled = true;
         group.disabled = true;
-        populate_advanced_share_settings("windows-acls", "acl_xattr:", "map acl inherit = yes\nacl_xattr:ignore system acl = yes", "acl_xattr");
+
+        while (users_selected.firstChild) {
+            users_selected.removeChild(users_selected.firstChild);
+            
+        }
+        while (groups_selected.firstChild) {
+            groups_selected.removeChild(groups_selected.firstChild);
+        }
+
+        share_valid_users.clear();
+        share_valid_groups.clear();
+
+        update_users_in_share();
     }
     else {
         user.disabled = false;
@@ -1985,13 +2064,19 @@ function populate_privilege_list() {
         list.removeChild(list.firstChild);
     }
 
-    var proc = cockpit.spawn(["net", "sam", "rights", "list", "SeDiskOperatorPrivilege"], { err: "out" });
+    var proc = cockpit.spawn(["net", "sam", "rights", "list", "SeDiskOperatorPrivilege"], { err: "out", superuser: "require" });
     proc.done(function (data) {
-        var rows = data.split("\n");
-        rows.pop();
-        rows.forEach(function (obj) {
-            list.appendChild(create_privilege_list_entry(obj));
-        });
+        if(data == "") {
+            var emptyList = document.createElement("div");
+            emptyList.innerText = 'No privileges set. Click the "plus" to add one.';
+            list.appendChild(emptyList)
+        } else {
+            var rows = data.split("\n");
+            rows.pop();
+            rows.forEach(function (obj) {
+                list.appendChild(create_privilege_list_entry(obj));
+            });
+        }
     });
     proc.fail(function (ex, data) {
         set_error("privilege", "Failed to get list of privileges: " + data);
@@ -2012,16 +2097,15 @@ function rm_privilege(entry_name, element_list) {
         superuser: "require",
     });
     proc.done(function () {
-        populate_privilege_list();
         set_success(
             "privilege",
             "Successfully deleted " + entry_name + ".",
             timeout_ms
         );
         element_list.forEach((elem) => elem.remove());
+        populate_privilege_list();
     });
     proc.fail(function (data) {
-        console.log(data)
         set_error("privilege", data, timeout_ms);
     });
     hide_rm_privilege_dialog();
@@ -2106,11 +2190,19 @@ async function add_privilege() {
         set_error("add-privilege", "Enter a password.", timeout_ms);
     else {
 
-        var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/samba-manager/scripts/set_privileges.py", group, username, password]);
-        proc.done(function() {
-            populate_privilege_list();
-            set_success("privilege", "Added privilege!", timeout_ms);
-            hide_privilege_dialog();
+        var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/samba-manager/scripts/set_privileges.py", group, username, password], {
+            err: "out",
+            superuser: "require",
+        });
+        proc.done(function(data) {
+            if (data != "") {
+                set_error("add-privilege", data, timeout_ms);
+            }
+            else {
+                populate_privilege_list();
+                set_success("privilege", "Added privilege!", timeout_ms);
+                hide_privilege_dialog();
+            }
         });
         proc.fail(function(data) {
             set_error("add-privilege", "Could not set privileges: " + data, timeout_ms);
@@ -2272,7 +2364,6 @@ function check_permissions() {
         check_smb_conf();
     });
     proc.fail(function (ex, data) {
-        console.log(ex, data);
         if(ex.problem === "not-found") {
             fatal_error("Samba is not installed. Please install...");
         } 

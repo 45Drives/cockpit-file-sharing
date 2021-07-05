@@ -72,6 +72,7 @@ along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
 .modal {
     background-color: rgb(0, 0, 0); /* Fallback color */
     background-color: rgba(0, 0, 0, 0.6); /* Black w/ opacity */
+    overflow-y: auto;
 }
 
 .highlight-entry:hover {
@@ -194,4 +195,10 @@ along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
     margin: 30px;
     height: 75px;
     width: auto;
+}
+
+.vertical-spacer {
+    display: inline-block;
+    margin-top: 5px;
+    margin-bottom: 5px;
 }

@@ -24,11 +24,11 @@ def main():
     if(len(sys.argv) < 4):
         sys.exit(1)
     try:
-        subprocess.run(["net", "sam", "rights", "grant", sys.argv[1], "SeDiskOperatorPrivilege", "-U", sys.argv[2]+"%"+sys.argv[3]])
+        child = subprocess.Popen(["net", "sam", "rights", "grant", sys.argv[1], "SeDiskOperatorPrivilege", "-U", sys.argv[2]+"%"+sys.argv[3]], stdout=subprocess.PIPE)
+        child.communicate()
     except Exception as e:
         print(e)
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

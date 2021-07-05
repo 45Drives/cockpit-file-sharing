@@ -120,15 +120,24 @@ function show_nfs_modal() {
         }
     }
 
+    document.getElementById("clients").innerHTML = "";
+    add_client(false);
+
     var modal = document.getElementById("nfs-modal");
     modal.style.display = "block";
 }
 
 function add_nfs() {
-    var ip = document.getElementById("input-ip").value;
-    var path = document.getElementById("input-path").value;
     var name = document.getElementById("input-name").value;
-    var options = document.getElementById("input-perms").value;
+    var path = document.getElementById("input-path").value;
+
+    var client_info = []
+    var client_to_add = document.getElementsByClassName('client-to-add');
+
+    for (let i = 0; i < client_to_add.length; i++) {
+        client_info.push(client_to_add[i].value)
+    }
+
     var is_clicked = document.getElementById("is-clicked");
     var name_exist = false;
 
@@ -157,20 +166,34 @@ function add_nfs() {
         else if (path[0] != "/") {
             set_error("nfs-modal", "Path has to be absolute.", timeout_ms)
         }
-        else if (ip == "") {
-            set_error("nfs-modal", "Enter an IP.", timeout_ms)
-        }
         else {     
-            if (options == "") {
-                options = "rw,sync,no_subtree_check";
+            // Check is IPs are empty
+            for (let i = 0; i < client_info.length; i++) {
+                //Check ips
+                if(i%2 == 0 || i == 0) {
+                    if (client_info[i] == "") {
+                        client_info[i] = "*";
+                    }
+                // Check options
+                } else {  
+                    if (client_info[i] == "") {
+                        client_info[i] = "rw,sync,no_subtree_check";
+                    } else {
+                        // If options string has white space... remove it.
+                        client_info[i] = client_info[i].replace(/\s/g, "");
+                    }
+                }
             }
+
+            client_obj = JSON.stringify(client_info)
+
             if (is_clicked.value == path) {
-                create_nfs(ip, path, name, options);
+                create_nfs(name, path, client_obj);
             }
             else {
                 var proc = cockpit.spawn(["stat", path])
                 proc.done(function() {
-                    create_nfs(ip, path, name, options);
+                    create_nfs(name, path, client_obj);
                 });
                 proc.fail(function() {
                     is_clicked.value = path
@@ -202,66 +225,130 @@ function clear_setup_spinner() {
 }
 
 /* Name: create_nfs
- * Receives: Nothing 
+ * Receives: name, path, client_info
  * Does: Takes inputted IP, and path and launches CLI command with said inputs
  * Returns: Nothing
  */
-function create_nfs(ip, path, name, options) {
-    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_add.py", name, path, ip, options]);
+function create_nfs(name, path, client_info) {
+    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_add.py", name, path, client_info], {
+        err: "out",
+        superuser: "require",
+    });
     proc.done(function () {
         populate_nfs_list();
-        set_success("nfs", "Added " + name + " NFS to server.", timeout_ms);
+        set_success("nfs", "Added " + name + " export to the server.", timeout_ms);
         hide_nfs_modal();
     });
     proc.fail(function (data) {
-        set_error("nfs-modal", "Could not add NFS: " + data, timeout_ms);
+        set_error("nfs-modal", "Could not add export: " + data, timeout_ms);
     });
 }
 
-/* Name: rm_nfs
+/* Name: add_client
+ * Receives: Nothing
+ * Does: Adds another ip and options input to add a new client
+ * Returns: Nothing
+ */
+function add_client(spacer) {
+    if ((spacer ?? null) === null) spacer = true;
+
+    client_section = document.getElementById("clients");
+
+    ip_row = document.createElement("div");
+    ip_row.classList.add("form-row");
+
+    ip_label = document.createElement("label");
+    ip_label.classList.add("label-45d");
+    ip_label.classList.add("bold-text");
+    ip_label.innerText = "Client IP";
+
+    ip_input = document.createElement("input");
+    ip_input.type = "text";
+    ip_input.classList.add("client-to-add")
+    ip_input.placeholder = "Will default to '*' if left empty"
+    
+    ip_row.appendChild(ip_label);
+    ip_row.appendChild(ip_input);
+
+
+    options_row = document.createElement("div");
+    options_row.classList.add("form-row");
+
+    options_label = document.createElement("label");
+    options_label.classList.add("label-45d");
+    options_label.classList.add("bold-text");
+    options_label.innerText = "Options";
+
+    options_input = document.createElement("input");
+    options_input.type = "text";
+    options_input.placeholder = "Will default to 'rw,sync,no_subtree_check' if left empty";
+    options_input.classList.add("client-to-add")
+    
+    options_row.appendChild(options_label);
+    options_row.appendChild(options_input);
+
+    if (spacer) {
+        divider = document.createElement("div");
+        divider.classList.add("pf-c-divider");
+        spacer = document.createElement("div");
+        spacer.classList.add("vertical-spacer");
+
+        client_section.appendChild(divider);
+        client_section.appendChild(spacer);
+    }
+
+    client_section.appendChild(ip_row);
+    client_section.appendChild(options_row);
+}
+
+/* Name: rm_client
  * Receives: name
  * Does: Runs the nfs_remove script with inputted entry name to remove said NFS.
  * Also removes elements list from table.
  * Returns: Nothing
  */
-function rm_nfs(name) {
-    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_remove.py", name]);
-    proc.done(function () {
+function rm_client(name, ip) {
+    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_remove.py", name, ip], {
+        err: "out",
+        superuser: "require",
+    });
+    proc.done(function (data) {
         populate_nfs_list();
-        set_success("nfs", "Removed " + name + " NFS from server.", timeout_ms);
-        hide_rm_nfs_modal();
+        set_success("nfs", "Removed client " + ip + " from " + name + ".", timeout_ms);
+        console.log(data)
+        hide_rm_client_modal();
     });
     proc.fail(function (data) {
-        set_error("nfs", "Could not remove NFS: " + data, timeout_ms);
-        hide_rm_nfs_modal();
+        set_error("nfs", "Could not remove client " + ip + " from " + name + ":" + data, timeout_ms);
+        hide_rm_client_modal();
     });
 }
 
-/* Name: show_rm_nfs_modal
- * Receives: entry_name
+/* Name: show_rm_client_modal
+ * Receives: entry_ip
  * Does: Shows remove NFS model
  * Returns: Nothing
  */
-function show_rm_nfs_modal(entry_name) {
-    var nfs_to_rm = document.getElementsByClassName('nfs-to-remove');
-    for (var items in nfs_to_rm) {
-        nfs_to_rm[items].innerText = entry_name;
+function show_rm_client_modal(entry_name, entry_ip) {
+    var client_to_rm = document.getElementsByClassName('client-to-remove');
+    for (var items in client_to_rm) {
+        client_to_rm[items].innerText = entry_ip + " from " + entry_name;
     }
-    var modal = document.getElementById("rm-nfs-modal");
+    var modal = document.getElementById("rm-client-modal");
     modal.style.display = "block";
-    var continue_rm_nfs = document.getElementById("continue-rm-nfs");
+    var continue_rm_nfs = document.getElementById("continue-rm-client");
     continue_rm_nfs.onclick = function () {
-        rm_nfs(entry_name);
+        rm_client(entry_name, entry_ip);
     };
 }
 
-/* Name: hide_rm_nfs_modal
+/* Name: hide_rm_client_modal
  * Receives: Nothing
  * Does: Hides remove NFS model
  * Returns: Nothing
  */
-function hide_rm_nfs_modal() {
-    var modal = document.getElementById("rm-nfs-modal");
+function hide_rm_client_modal() {
+    var modal = document.getElementById("rm-client-modal");
     modal.style.display = "none";
 }
 
@@ -270,7 +357,9 @@ function hide_rm_nfs_modal() {
  * Does: Makes a entry for a list
  * Returns: entry
  */
-function create_list_entry(name, path, ip, permissions, on_delete) {
+function create_list_entry(name, path, ip, permissions, on_delete, name_del) {
+    if ((name_del ?? null) === null) name_del = name;
+    
     var entry = document.createElement("tr");
     entry.classList.add("highlight-entry");
 
@@ -292,7 +381,7 @@ function create_list_entry(name, path, ip, permissions, on_delete) {
     var del_div = document.createElement("span");
     del_div.classList.add("circle-icon", "circle-icon-danger");
     del_div.addEventListener("click", function () {
-        on_delete(name);
+        on_delete(name_del, ip);
     });
     del.appendChild(del_div);
 
@@ -326,7 +415,7 @@ function populate_nfs_list() {
         if (obj.length === 0) {
             var msg = document.createElement("tr");
             var name = document.createElement("td");
-            name.innerText = 'No NFSs. Click the "plus" to add one.';
+            name.innerText = 'No exports. Click the "plus" to add one.';
             var path = document.createElement("td");
             var ip = document.createElement("td");
             var perm = document.createElement("td");
@@ -340,13 +429,24 @@ function populate_nfs_list() {
         }
         else {
             obj.forEach(function(obj) {
-                var item = create_list_entry(obj.Name, obj.Path, obj.IP, obj.Permissions, show_rm_nfs_modal)
-                nfs_list.appendChild(item);
+                // Check if there is more clients, if so then iterate through and add new rows
+                let len = obj.Clients.length
+                for(let i = 0; i < len; i++) {
+                    // The very first entry will always go into the first column
+                    if (i == 0) {
+                        var new_client = create_list_entry(obj.Name, obj.Path, obj.Clients[0][0], obj.Clients[0][1], show_rm_client_modal)
+                    }
+                    // Entries after will go below first column
+                    else {
+                        var new_client = create_list_entry(" ", " ", obj.Clients[i][0], obj.Clients[i][1], show_rm_client_modal, obj.Name)
+                    }
+                    nfs_list.appendChild(new_client);
+                }
             });
         }
     });
     proc.fail(function (ex, data) {
-        set_error("nfs", data);
+        set_error("nfs", "Error while populating nfs list: " + data);
     });
 }
 
@@ -373,7 +473,7 @@ function check_nfs() {
         setup()
     });
     proc.fail(function (data) {
-        fatal_error("Failed to load NFS services. Do you have NFS installed?")
+        fatal_error("Failed to load NFS services. Is NFS installed or enabled?")
     });
 }
 
@@ -404,8 +504,9 @@ function check_permissions() {
 function set_up_buttons() {
     document.getElementById("show-nfs-modal").addEventListener("click", show_nfs_modal);
     document.getElementById("hide-nfs-modal").addEventListener("click", hide_nfs_modal);
-    document.getElementById("cancel-rm-nfs").addEventListener("click", hide_rm_nfs_modal);
+    document.getElementById("cancel-rm-client").addEventListener("click", hide_rm_client_modal);
     document.getElementById("add-nfs-btn").addEventListener("click", add_nfs);
+    document.getElementById("add-client-btn").addEventListener("click", add_client);
 }
 
 /* Name: main
