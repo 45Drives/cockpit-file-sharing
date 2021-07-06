@@ -7,6 +7,10 @@ A Cockpit plugin to easily manage samba and NFS file sharing.
     * [Samba Manager Screenshot](#samba-manager-screenshot)
     * [NFS Manager Screenshot](#nfs-manager-screenshot)
 * [Installation](#installation)
+    * [From 45Drives Repo](#from-45drives-repo)
+        * [Ubuntu](#ubuntu)
+        * [Rocky](#rocky)
+        * [CentOS 7](#centos-7)
     * [From Source](#from-source)
 * [Samba Manager](#samba-manager)
     * [Add Share](#add-share)
@@ -37,6 +41,27 @@ A Cockpit plugin to easily manage samba and NFS file sharing.
 ![NFS Manager Interface](img/nfs/nfs_interface.png)
 
 ## Installation
+### From 45Drives Repo
+#### Ubuntu
+```bash
+$ wget -qO - http://images.45drives.com/repo/keys/aptpubkey.asc | apt-key add -
+$ curl -o /etc/apt/sources.list.d/45drives.list http://images.45drives.com/repo/debian/45drives.list
+$ apt update
+$ apt install cockpit-file-sharing
+```
+#### Rocky
+```bash
+$ curl -o /etc/yum.repos.d/45drives.repo http://images.45drives.com/repo/centos/45drives-centos.repo
+$ dnf clean all && dnf makecache
+$ dnf install cockpit-file-sharing
+```
+#### CentOS 7
+```bash
+$ curl -o /etc/yum.repos.d/45drives.repo http://images.45drives.com/repo/centos/45drives-centos.repo
+$ yum clean all && yum makecache fast
+$ yum install cockpit-file-sharing
+```
+
 ### From Source
 Ensure dependencies are installed: `cockpit`, `python3`, `samba`, `nfs-kernel-server`.
 ```bash
