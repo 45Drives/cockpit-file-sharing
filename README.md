@@ -58,7 +58,7 @@ $ dnf install cockpit-file-sharing
 #### CentOS 7
 ```bash
 $ curl -o /etc/yum.repos.d/45drives.repo http://images.45drives.com/repo/centos/45drives-centos.repo
-$ yum clean all && yum makecache fast
+$ yum clean all && yum makecache
 $ yum install cockpit-file-sharing
 ```
 
