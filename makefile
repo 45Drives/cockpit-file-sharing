@@ -14,20 +14,19 @@
 # along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
 default:
 
-all: default
+target=file-sharing
 
+all:
+
+
+# system install, requires `systemctl restart cockpit.socket`
 install:
-	mkdir -p $(DESTDIR)/usr/share/cockpit/
-	cp -rpf file-sharing $(DESTDIR)/usr/share/cockpit
+	mkdir -p $(DESTDIR)/usr/share/cockpit
+	cp -rpf $(target) $(DESTDIR)/usr/share/cockpit
 
-uninstall:
-	rm -rf $(DESTDIR)/usr/share/cockpit/file-sharing
-
+# install to ~/.local, can test plugin without restarting cockpit
 install-local:
 	mkdir -p $(HOME)/.local/share/cockpit
-	cp -rpf file-sharing $(HOME)/.local/share/cockpit
-	sed -i "s#\"/usr/share/\(cockpit/file-sharing/samba-manager/scripts/.*\)\"#\"$(HOME)/.local/share/\1\"#g" $(HOME)/.local/share/cockpit/file-sharing/samba-manager/samba-manager.js
-	sed -i "s#\"/usr/share/\(cockpit/file-sharing/nfs-manager/scripts/.*\)\"#\"$(HOME)/.local/share/\1\"#g" $(HOME)/.local/share/cockpit/file-sharing/nfs-manager/nfs-manager.js
-
-make uninstall-local:
-	rm -rf $(HOME)/.local/share/cockpit/file-sharing
+	cp -rpf $(target) $(HOME)/.local/share/cockpit
+	find $(HOME)/.local/share/cockpit/$(target)/nfs-manager -name '*.js' -exec sed -i "s#\"/usr/share/\(cockpit/$(target)/nfs-manager/scripts/.*\)\"#\"$(HOME)/.local/share/\1\"#g" {} \;
+	find $(HOME)/.local/share/cockpit/$(target)/samba-manager -name '*.js' -exec sed -i "s#\"/usr/share/\(cockpit/$(target)/samba-manager/scripts/.*\)\"#\"$(HOME)/.local/share/\1\"#g" {} \;
