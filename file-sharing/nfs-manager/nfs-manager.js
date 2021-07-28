@@ -18,6 +18,7 @@
 // Import components from other scripts
 import {Notification, fatal_error} from "../components/notifications.js"
 import {showModal, hideModal} from "../components/modals.js"
+import {addExport} from "./exports.js"
 
 /* Name: Add NFS
  * Receives: Nothing 
@@ -416,7 +417,7 @@ function set_up_buttons() {
     });
     document.getElementById("hide-nfs-modal").addEventListener("click", () => {hideModal("nfs-modal")});
     document.getElementById("cancel-rm-client").addEventListener("click", () => {hideModal("rm-client-modal")});
-    document.getElementById("add-nfs-btn").addEventListener("click", add_nfs);
+    document.getElementById("add-nfs-btn").addEventListener("click", addExport);
     document.getElementById("add-client-btn").addEventListener("click", add_client);
 }
 
