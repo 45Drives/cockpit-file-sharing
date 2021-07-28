@@ -17,27 +17,7 @@
 
 // Import components from other scripts
 import {Notification, fatal_error} from "../components/notifications.js"
-
-/* Name: show_nfs_modal
- * Receives: Nothing 
- * Does: Shows "Add NFS" pop up
- * Returns: Nothing
- */
-function show_nfs_modal() {
-    var inputs = document.getElementsByTagName("input");
-    
-    for (var item in inputs) {
-        if(inputs[item].type == "text") {
-            inputs[item].value = "";
-        }
-    }
-
-    document.getElementById("clients").innerHTML = "";
-    add_client(false);
-
-    var modal = document.getElementById("nfs-modal");
-    modal.style.display = "block";
-}
+import {showModal, hideModal} from "../components/modals.js"
 
 /* Name: Add NFS
  * Receives: Nothing 
@@ -124,29 +104,10 @@ function add_nfs() {
     });
 }
 
-/* Name: hide_nfs_modal
- * Receives: Nothing 
- * Does: Hides "Add NFS" pop up
- * Returns: Nothing
- */
-function hide_nfs_modal() {
-    var modal = document.getElementById("nfs-modal");
-    modal.style.display = "none";
-}
 
-/* Name: clear_setup_spinner
- * Receives: Nothing 
- * Does: Clears spinner logo from screen
- * Returns: Nothing
- */
-function clear_setup_spinner() {
-    var wrapper = document.getElementById("blurred-screen");
-    wrapper.style.display = "none";
-}
-
-/* Name: create_nfs
- * Receives: name, path, client_info
- * Does: Takes inputted IP, and path and launches CLI command with said inputs
+/* Name: Create Nfs
+ * Receives: Name of export, export path, all the clients being added which includes their ip and permissions.
+ * Does: Takes inputted export name, path and clients, and launches CLI command with said inputs
  * Returns: Nothing
  */
 function create_nfs(name, path, client_info) {
@@ -158,15 +119,15 @@ function create_nfs(name, path, client_info) {
     proc.done(function () {
         populate_nfs_list();
         nfs_notification.set_success("Added " + name + " export to the server.");
-        hide_nfs_modal();
+        hideModal("nfs-modal");
     });
     proc.fail(function (data) {
         nfs_notification.set_error("Could not add export: " + data);
     });
 }
 
-/* Name: add_client
- * Receives: Nothing
+/* Name: Add Client
+ * Receives: Boolean for spacer to see if to add it or not
  * Does: Adds another ip and options input to add a new client
  * Returns: Nothing
  */
@@ -221,9 +182,9 @@ function add_client(spacer) {
     client_section.appendChild(options_row);
 }
 
-/* Name: rm_client
+/* Name: Remove Client
  * Receives: name
- * Does: Runs the nfs_remove script with inputted entry name to remove said NFS.
+ * Does: Runs the nfs_remove script with inputted entry name to remove said export IP.
  * Also removes elements list from table.
  * Returns: Nothing
  */
@@ -236,16 +197,16 @@ function rm_client(name, ip) {
     proc.done(function (data) {
         populate_nfs_list();
         nfs_notification.set_success("Removed client " + ip + " from " + name + ".");
-        hide_rm_client_modal();
+        hideModal("rm-client-modal");
     });
     proc.fail(function (data) {
         nfs_notification.set_error("Could not remove client " + ip + " from " + name + ":" + data);
-        hide_rm_client_modal();
+        hideModal("rm-client-modal");
     });
 }
 
-/* Name: show_rm_client_modal
- * Receives: entry_ip
+/* Name: Show Remove Client Modal
+ * Receives: Entry Name of the export and IP you want to remove in the export
  * Does: Shows remove NFS model
  * Returns: Nothing
  */
@@ -254,25 +215,16 @@ function show_rm_client_modal(entry_name, entry_ip) {
     for (let i = 0; i < client_to_rm.length; i++) {
         client_to_rm[i].innerText = entry_ip + " from " + entry_name;
     }
-    var modal = document.getElementById("rm-client-modal");
-    modal.style.display = "block";
+
+    showModal("rm-client-modal");
+
     var continue_rm_nfs = document.getElementById("continue-rm-client");
     continue_rm_nfs.onclick = function () {
         rm_client(entry_name, entry_ip);
     };
 }
 
-/* Name: hide_rm_client_modal
- * Receives: Nothing
- * Does: Hides remove NFS model
- * Returns: Nothing
- */
-function hide_rm_client_modal() {
-    var modal = document.getElementById("rm-client-modal");
-    modal.style.display = "none";
-}
-
-/* Name: create_list_entry
+/* Name: Create List Entry
  * Receives: name, path, ip, permissions, on_delete 
  * Does: Makes a entry for a list
  * Returns: entry
@@ -313,9 +265,9 @@ function create_list_entry(name, path, ip, permissions, on_delete, name_del) {
     return entry;
 }
 
-/* Name: populate_nfs_list
+/* Name: Populate Nfs List
  * Receives: Nothing 
- * Does: Populate the main table with list of current NFS(s).
+ * Does: Populate the main table with list of current exports.
  * Returns: Nothing
  */
 function populate_nfs_list() {
@@ -371,7 +323,7 @@ function populate_nfs_list() {
     });
 }
 
-/* Name: setup
+/* Name: Setup
  * Receives: Nothing 
  * Does: awaits populating the list of current NFS(s). Once finished setup buttons and clear branding
  * Returns: Nothing
@@ -379,10 +331,10 @@ function populate_nfs_list() {
 async function setup() {
     await populate_nfs_list();
     set_up_buttons();
-    clear_setup_spinner();
+    hideModal("blurred-screen");
 }
 
-/* Name: check_nfs
+/* Name: Check Nfs
  * Receives: Nothing 
  * Does: tries running `showmount -e` to check if nfs is installed, if successful, calls setup(), if unsuccessful,
  * shows error message and disables buttons
@@ -423,7 +375,7 @@ function check_sudo() {
     });
 }
 
-/* Name: check_permissions
+/* Name: Check Permissions
  * Receives: Nothing 
  * Does: Checks if user is root. If not, give a fatal error, if yes, call check_sudo.
  * Returns: Nothing
@@ -442,20 +394,33 @@ function check_permissions() {
 	)
 }
 
-/* Name: set_up_buttons
+/* Name: Set Up Buttons
  * Receives: Nothing 
- * Does: Sets up buttons
+ * Does: Initiallizes html buttons with functions
  * Returns: Nothing
  */
 function set_up_buttons() {
-    document.getElementById("show-nfs-modal").addEventListener("click", show_nfs_modal);
-    document.getElementById("hide-nfs-modal").addEventListener("click", hide_nfs_modal);
-    document.getElementById("cancel-rm-client").addEventListener("click", hide_rm_client_modal);
+    document.getElementById("show-nfs-modal").addEventListener("click", () => {
+        showModal("nfs-modal", () => {
+            var inputs = document.getElementsByTagName("input");
+    
+            for (var item in inputs) {
+                if(inputs[item].type == "text") {
+                    inputs[item].value = "";
+                }
+            }
+        
+            document.getElementById("clients").innerHTML = "";
+            add_client(false);
+        });
+    });
+    document.getElementById("hide-nfs-modal").addEventListener("click", () => {hideModal("nfs-modal")});
+    document.getElementById("cancel-rm-client").addEventListener("click", () => {hideModal("rm-client-modal")});
     document.getElementById("add-nfs-btn").addEventListener("click", add_nfs);
     document.getElementById("add-client-btn").addEventListener("click", add_client);
 }
 
-/* Name: main
+/* Name: Main
  * Receives: Nothing 
  * Does: Runs check_permissions to see if user is superuser
  * Returns: Nothing
