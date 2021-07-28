@@ -389,18 +389,43 @@ async function setup() {
  * Returns: Nothing
  */
 function check_nfs() {
-    var proc = cockpit.spawn(["showmount", "-e"], { superuser: "require" });
+    var proc = cockpit.spawn(["systemctl", "status", "nfs-server"], {
+        err: "out",
+        superuser: "require",
+    });
     proc.done(function () {
         setup()
     });
-    proc.fail(function (data) {
+    proc.fail(function () {
         fatal_error("Failed to load NFS services. Is NFS installed or enabled?")
+    });
+}
+
+/* Name: Check Sudo
+ * Receives: Nothing 
+ * Does: Checks if user can use sudo. If not, give a fatal error, if yes, call check_nfs.
+ * Returns: Nothing
+ */
+function check_sudo() {
+    let sudoTimeout = false
+    setTimeout(() => {
+        sudoTimeout = true
+    }, 1000)
+    var proc = cockpit.spawn(["sudo", "-v"], {
+        err: "out",
+        superuser: "require",
+    });
+    proc.done(function () {
+        if (sudoTimeout) {
+            fatal_error("Could not use sudo. Is the machine name in /etc/hosts?")
+        }
+        else {check_nfs();}
     });
 }
 
 /* Name: check_permissions
  * Receives: Nothing 
- * Does: Checks if user is root. If not, give a fatal error, if yes, call check_nfs.
+ * Does: Checks if user is root. If not, give a fatal error, if yes, call check_sudo.
  * Returns: Nothing
  */
 function check_permissions() {
@@ -409,7 +434,7 @@ function check_permissions() {
 		"changed", 
 		function() {
 			if(root_check.allowed){
-				check_nfs();
+                check_sudo();
 			}else{
 				fatal_error("You do not have administrator access.");
 			}
