@@ -63,8 +63,11 @@ def main():
                 fields = re.findall(r"^\"([^\"]+)\"(.+)$", lines[i])
                 path = fields[0][0]
                 all_clients = fields[0][1]
-                clients = re.findall(r"\s*([^\(]+)\(([^\)]+)\)", all_clients)
-                dic = {"Name":name, "Path":path, "Clients":clients}
+                raw_clients = re.findall(r"\s*([^\(]+)\(([^\)]+)\)", all_clients)
+                dic = {"Name":name, "Path":path, "Clients":[]}
+                for client in raw_clients:
+                    clients = {"Ip":client[0], "Permissions":client[1]}
+                    dic["Clients"].append(clients)
                 obj.append(dic)
     except OSError:
         print(OSError)

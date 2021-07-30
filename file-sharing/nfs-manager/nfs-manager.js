@@ -15,350 +15,37 @@
     along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.  
 */
 
-// Import components from other scripts
-import {Notification, fatal_error} from "../components/notifications.js"
+// Import components
+import {fatal_error} from "../components/notifications.js"
 import {showModal, hideModal} from "../components/modals.js"
-import {addExport} from "./exports.js"
+import {NfsExport, newExportEntry} from "./exports.js"
+import {populateExportList, displayExports} from "./list.js"
+import {Notification} from "../components/notifications.js"
 
-/* Name: Add NFS
- * Receives: Nothing 
- * Does: Collects all added clients, checks if user entered "valid values" and puts all clients into
- * a JSON and runs create NFS with JSON
- * Returns: Nothing
- */
-function add_nfs() {
-    var modal_notification = new Notification("nfs-modal")
+let exportsList = []
 
-    var name = document.getElementById("input-name").value;
-    var path = document.getElementById("input-path").value;
-
-    var client_info = []
-    var client_to_add = document.getElementsByClassName('client-to-add');
-
-    for (let i = 0; i < client_to_add.length; i++) {
-        client_info.push(client_to_add[i].value)
-    }
-
-    var is_clicked = document.getElementById("is-clicked");
-    var name_exist = false;
-
-    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_list.py"], {
-        err: "out",
-        superuser: "require",
-    });
-    proc.done(function(data) {
-        var obj = JSON.parse(data)
-
-        for (var items in obj) {
-            if (name == obj[items].Name) {
-                name_exist = true;
-            }
-        }
-
-        if (name == "") {
-            modal_notification.set_error("Enter a name.")
-        }
-        else if(name_exist) {
-            modal_notification.set_error("Name already exists.")
-        }
-        else if (path == "") {
-            modal_notification.set_error("Enter a path.")
-        }
-        else if (path[0] != "/") {
-            modal_notification.set_error("Path has to be absolute.")
-        }
-        else {     
-            // Check is IPs are empty
-            for (let i = 0; i < client_info.length; i++) {
-                //Check ips
-                if(i%2 == 0 || i == 0) {
-                    if (client_info[i] == "") {
-                        client_info[i] = "*";
-                    }
-                // Check options
-                } else {  
-                    if (client_info[i] == "") {
-                        client_info[i] = "rw,sync,no_subtree_check";
-                    } else {
-                        // If options string has white space... remove it.
-                        client_info[i] = client_info[i].replace(/\s/g, "");
-                    }
-                }
-            }
-
-            let client_obj = JSON.stringify(client_info)
-
-            if (is_clicked.value == path) {
-                create_nfs(name, path, client_obj);
-            }
-            else {
-                var proc = cockpit.spawn(["stat", path])
-                proc.done(function() {
-                    create_nfs(name, path, client_obj);
-                });
-                proc.fail(function() {
-                    is_clicked.value = path
-                    modal_notification.set_error("Path does not exist. Press 'Add' again to create.");
-                });
-            }
-        }
-    });
+// Start NFS Manager
+main();
+function main() {
+    check_permissions()
 }
 
-
-/* Name: Create Nfs
- * Receives: Name of export, export path, all the clients being added which includes their ip and permissions.
- * Does: Takes inputted export name, path and clients, and launches CLI command with said inputs
- * Returns: Nothing
- */
-function create_nfs(name, path, client_info) {
-    let nfs_notification = new Notification("nfs")
-    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_add.py", name, path, client_info], {
-        err: "out",
-        superuser: "require",
-    });
-    proc.done(function () {
-        populate_nfs_list();
-        nfs_notification.set_success("Added " + name + " export to the server.");
-        hideModal("nfs-modal");
-    });
-    proc.fail(function (data) {
-        nfs_notification.set_error("Could not add export: " + data);
-    });
+// Checks if user is root. If not, give a fatal error, if yes, call check_sudo.
+function check_permissions() {
+    let root_check = cockpit.permission({ admin: true });
+	root_check.addEventListener(
+		"changed", 
+		function() {
+			if(root_check.allowed){
+                check_sudo();
+			}else{
+				fatal_error("You do not have administrator access.");
+			}
+	 	}
+	)
 }
 
-/* Name: Add Client
- * Receives: Boolean for spacer to see if to add it or not
- * Does: Adds another ip and options input to add a new client
- * Returns: Nothing
- */
-function add_client(spacer) {
-    if ((spacer ?? null) === null) spacer = true;
-
-    let client_section = document.getElementById("clients");
-
-    let ip_row = document.createElement("div");
-    ip_row.classList.add("form-row");
-
-    let ip_label = document.createElement("label");
-    ip_label.classList.add("label-45d");
-    ip_label.classList.add("bold-text");
-    ip_label.innerText = "Client IP";
-
-    let ip_input = document.createElement("input");
-    ip_input.type = "text";
-    ip_input.classList.add("client-to-add")
-    ip_input.placeholder = "Will default to '*' if left empty"
-    
-    ip_row.appendChild(ip_label);
-    ip_row.appendChild(ip_input);
-
-    let options_row = document.createElement("div");
-    options_row.classList.add("form-row");
-
-    let options_label = document.createElement("label");
-    options_label.classList.add("label-45d");
-    options_label.classList.add("bold-text");
-    options_label.innerText = "Options";
-
-    let options_input = document.createElement("input");
-    options_input.type = "text";
-    options_input.placeholder = "Will default to 'rw,sync,no_subtree_check' if left empty";
-    options_input.classList.add("client-to-add")
-    
-    options_row.appendChild(options_label);
-    options_row.appendChild(options_input);
-
-    if (spacer) {
-        let divider = document.createElement("div");
-        divider.classList.add("pf-c-divider");
-        let spacer = document.createElement("div");
-        spacer.classList.add("vertical-spacer");
-
-        client_section.appendChild(divider);
-        client_section.appendChild(spacer);
-    }
-
-    client_section.appendChild(ip_row);
-    client_section.appendChild(options_row);
-}
-
-/* Name: Remove Client
- * Receives: name
- * Does: Runs the nfs_remove script with inputted entry name to remove said export IP.
- * Also removes elements list from table.
- * Returns: Nothing
- */
-function rm_client(name, ip) {
-    let nfs_notification = new Notification("nfs")
-    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_remove.py", name, ip], {
-        err: "out",
-        superuser: "require",
-    });
-    proc.done(function (data) {
-        populate_nfs_list();
-        nfs_notification.set_success("Removed client " + ip + " from " + name + ".");
-        hideModal("rm-client-modal");
-    });
-    proc.fail(function (data) {
-        nfs_notification.set_error("Could not remove client " + ip + " from " + name + ":" + data);
-        hideModal("rm-client-modal");
-    });
-}
-
-/* Name: Show Remove Client Modal
- * Receives: Entry Name of the export and IP you want to remove in the export
- * Does: Shows remove NFS model
- * Returns: Nothing
- */
-function show_rm_client_modal(entry_name, entry_ip) {
-    let client_to_rm = document.getElementsByClassName('client-to-remove');
-    for (let i = 0; i < client_to_rm.length; i++) {
-        client_to_rm[i].innerText = entry_ip + " from " + entry_name;
-    }
-
-    showModal("rm-client-modal");
-
-    var continue_rm_nfs = document.getElementById("continue-rm-client");
-    continue_rm_nfs.onclick = function () {
-        rm_client(entry_name, entry_ip);
-    };
-}
-
-/* Name: Create List Entry
- * Receives: name, path, ip, permissions, on_delete 
- * Does: Makes a entry for a list
- * Returns: entry
- */
-function create_list_entry(name, path, ip, permissions, on_delete, name_del) {
-    if ((name_del ?? null) === null) name_del = name;
-    
-    var entry = document.createElement("tr");
-    entry.classList.add("highlight-entry");
-
-    var entry_name = document.createElement("td");
-    entry_name.innerText = name;
-
-    var entry_path = document.createElement("td");
-    entry_path.innerText = path;
-
-    var entry_ip = document.createElement("td");
-    entry_ip.innerText = ip;
-
-    var entry_permissions = document.createElement("td");
-    entry_permissions.innerText = permissions;
-
-    var del = document.createElement("td");
-    del.style.padding = "2px"
-    del.style.textAlign = "right"
-    var del_div = document.createElement("span");
-    del_div.classList.add("circle-icon", "circle-icon-danger");
-    del_div.addEventListener("click", function () {
-        on_delete(name_del, ip);
-    });
-    del.appendChild(del_div);
-
-    entry.appendChild(entry_name);
-    entry.appendChild(entry_path);
-    entry.appendChild(entry_ip);
-    entry.appendChild(entry_permissions);
-    entry.appendChild(del);
-    return entry;
-}
-
-/* Name: Populate Nfs List
- * Receives: Nothing 
- * Does: Populate the main table with list of current exports.
- * Returns: Nothing
- */
-function populate_nfs_list() {
-    let nfs_notification = new Notification("nfs")
-    var nfs_list = document.getElementById("nfs-list")
-    
-    while (nfs_list.firstChild) {
-        nfs_list.removeChild(nfs_list.firstChild);
-    }
-
-    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_list.py"], {
-        err: "out",
-        superuser: "require",
-    });
-    proc.done(function (data) {
-        var obj = JSON.parse(data)
-
-        if (obj.length === 0) {
-            var msg = document.createElement("tr");
-            var name = document.createElement("td");
-            name.innerText = 'No exports. Click the "plus" to add one.';
-            var path = document.createElement("td");
-            var ip = document.createElement("td");
-            var perm = document.createElement("td");
-            var del = document.createElement("td");
-            msg.appendChild(name)
-            msg.appendChild(ip)
-            msg.appendChild(path)
-            msg.appendChild(perm)
-            msg.appendChild(del)
-            nfs_list.appendChild(msg);
-        }
-        else {
-            obj.forEach(function(obj) {
-                // Check if there is more clients, if so then iterate through and add new rows
-                let len = obj.Clients.length
-                for(let i = 0; i < len; i++) {
-                    // The very first entry will always go into the first column
-                    if (i == 0) {
-                        var new_client = create_list_entry(obj.Name, obj.Path, obj.Clients[0][0], obj.Clients[0][1], show_rm_client_modal)
-                    }
-                    // Entries after will go below first column
-                    else {
-                        var new_client = create_list_entry(" ", " ", obj.Clients[i][0], obj.Clients[i][1], show_rm_client_modal, obj.Name)
-                    }
-                    nfs_list.appendChild(new_client);
-                }
-            });
-        }
-    });
-    proc.fail(function (ex, data) {
-        nfs_notification.set_error("Error while populating nfs list: " + data);
-    });
-}
-
-/* Name: Setup
- * Receives: Nothing 
- * Does: awaits populating the list of current NFS(s). Once finished setup buttons and clear branding
- * Returns: Nothing
- */
-async function setup() {
-    await populate_nfs_list();
-    set_up_buttons();
-    hideModal("blurred-screen");
-}
-
-/* Name: Check Nfs
- * Receives: Nothing 
- * Does: tries running `showmount -e` to check if nfs is installed, if successful, calls setup(), if unsuccessful,
- * shows error message and disables buttons
- * Returns: Nothing
- */
-function check_nfs() {
-    var proc = cockpit.spawn(["systemctl", "status", "nfs-server"], {
-        err: "out",
-        superuser: "require",
-    });
-    proc.done(function () {
-        setup()
-    });
-    proc.fail(function () {
-        fatal_error("Failed to load NFS services. Is NFS installed or enabled?")
-    });
-}
-
-/* Name: Check Sudo
- * Receives: Nothing 
- * Does: Checks if user can use sudo. If not, give a fatal error, if yes, call check_nfs.
- * Returns: Nothing
- */
+// Checks if user can use sudo. If not, give a fatal error, if yes, call check_nfs.
 function check_sudo() {
     let sudoTimeout = false
     setTimeout(() => {
@@ -376,58 +63,96 @@ function check_sudo() {
     });
 }
 
-/* Name: Check Permissions
- * Receives: Nothing 
- * Does: Checks if user is root. If not, give a fatal error, if yes, call check_sudo.
- * Returns: Nothing
- */
-function check_permissions() {
-    let root_check = cockpit.permission({ admin: true });
-	root_check.addEventListener(
-		"changed", 
-		function() {
-			if(root_check.allowed){
-                check_sudo();
-			}else{
-				fatal_error("You do not have administrator access.");
-			}
-	 	}
-	)
-}
-
-/* Name: Set Up Buttons
- * Receives: Nothing 
- * Does: Initiallizes html buttons with functions
- * Returns: Nothing
- */
-function set_up_buttons() {
-    document.getElementById("show-nfs-modal").addEventListener("click", () => {
-        showModal("nfs-modal", () => {
-            var inputs = document.getElementsByTagName("input");
-    
-            for (var item in inputs) {
-                if(inputs[item].type == "text") {
-                    inputs[item].value = "";
-                }
-            }
-        
-            document.getElementById("clients").innerHTML = "";
-            add_client(false);
-        });
+// Tries running `showmount -e` to check if nfs is installed, if successful, calls setup(), if unsuccessful,
+// shows error message and disables buttons
+function check_nfs() {
+    var proc = cockpit.spawn(["systemctl", "status", "nfs-server"], {
+        err: "out",
+        superuser: "require",
     });
-    document.getElementById("hide-nfs-modal").addEventListener("click", () => {hideModal("nfs-modal")});
-    document.getElementById("cancel-rm-client").addEventListener("click", () => {hideModal("rm-client-modal")});
-    document.getElementById("add-nfs-btn").addEventListener("click", addExport);
-    document.getElementById("add-client-btn").addEventListener("click", add_client);
+    proc.done(function () {
+        setup()
+    });
+    proc.fail(function () {
+        fatal_error("Failed to load NFS services. Is NFS installed or enabled?")
+    });
 }
 
-/* Name: Main
- * Receives: Nothing 
- * Does: Runs check_permissions to see if user is superuser
- * Returns: Nothing
- */
-function main() {
-    check_permissions()
+// Awaits populating the list of current NFS(s). Once finished setup buttons and clear branding
+async function setup() {
+    try {
+        exportsList = await populateExportList();
+    }
+    catch (err) {
+        fatal_error(err)
+    }
+    displayExports(exportsList);
+    set_up_buttons();
+    hideModal("blurred-screen");
 }
 
-main();
+// Initiallizes html buttons with functions
+function set_up_buttons() {
+    document.getElementById("show-nfs-modal").addEventListener("click", () => { showModal("nfs-modal", nfsModal) } );
+    document.getElementById("hide-nfs-modal").addEventListener("click", () => { hideModal("nfs-modal", clearNfsModal) } );
+    document.getElementById("cancel-rm-client").addEventListener("click", () => { hideModal("rm-client-modal") } );
+}
+
+// Show "add a export" modal, this also clears all pervious inputs and adds first client as soon as function opens
+function nfsModal() {
+    // Create new NFSExport
+    let newExport = new NfsExport()
+    newExport.addClient(true)
+
+    // Add notifaction
+    let modalNotification = new Notification("nfs-modal")
+ 
+    // Add new event listeners to button for new export object 
+    document.getElementById("add-nfs-btn").addEventListener("click", async () => {
+        try {
+            // Retrive the structured entry and add to list
+            let listEntry = await newExportEntry(newExport, exportsList)
+            exportsList.push(listEntry);
+            displayExports(exportsList)
+            hideModal("nfs-modal")
+            // Clear all added info in modal
+            clearNfsModal()
+        }
+        catch (err) {
+            // Display error when it occurs
+            modalNotification.set_error(err)
+        }
+    });
+    // When + button is clicked in modal add a client object to export
+    document.getElementById("add-client-btn").addEventListener("click", () => {
+        newExport.addClient(true);
+    });
+}
+
+// Clear NFS modals contents
+function clearNfsModal() {
+    // Remove pervious event listeners from buttons
+    let addNfs = document.getElementById("add-nfs-btn")
+    addNfs.replaceWith(addNfs.cloneNode(true));
+
+    let addClient = document.getElementById("add-client-btn")
+    addClient.replaceWith(addClient.cloneNode(true));
+
+    // Finds all input tags and clears them
+    var inputs = document.getElementsByTagName("input");
+    for (var item in inputs) {
+        if(inputs[item].type == "text") {
+            inputs[item].value = "";
+        }
+    }
+
+    // Clears out all old clients, and adds one new client, without spacer.
+    document.getElementById("clients").innerHTML = "";
+
+    // Clear Notifications
+    let modalNotification = new Notification("nfs-modal");
+    modalNotification.clear_info();
+
+    // Clear path check
+    document.getElementById("is-clicked").value = "";
+}
