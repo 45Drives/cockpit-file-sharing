@@ -16,7 +16,6 @@
 
 // Import needed components
 import {NfsExport} from "./exports.js"
-import {showRmClientModal} from "./remove.js"
 
 // Create an array of export objects from list script
 export function populateExportList() {
@@ -75,57 +74,11 @@ export function displayExports(exportsList) {
     else {
         // Iterate through each export
         exportsList.forEach(function(obj) {
+            obj.listExport();
             // Iterate through exports clients and create an entry in the list for each
-            for (let i = 0; i < obj.clients.length; i++) {
-                let newClient = null
-                // The very first entry will always go into the first column
-                if (i == 0) {
-                    newClient = createListEntry(obj.name, obj.path, obj.clients[0].ip, obj.clients[0].permissions, showRmClientModal)
-                }
-                // Entries after will go below first column
-                else {
-                    newClient = createListEntry(" ", " ", obj.clients[i].ip, obj.clients[i].permissions, showRmClientModal, obj.name)
-                }
-                // Add entries to html Div
-                guiList.appendChild(newClient); 
-            }
+            obj.clients.forEach(function(client) {
+                client.listClient();
+            });
         });
     }
 } 
-
-// Create a row item to be insterted in a list div
-function createListEntry(name, path, ip, permissions, on_delete, name_del) {
-    if ((name_del ?? null) === null) name_del = name;
-    
-    var entry = document.createElement("tr");
-    entry.classList.add("highlight-entry");
-
-    var entry_name = document.createElement("td");
-    entry_name.innerText = name;
-
-    var entry_path = document.createElement("td");
-    entry_path.innerText = path;
-
-    var entry_ip = document.createElement("td");
-    entry_ip.innerText = ip;
-
-    var entry_permissions = document.createElement("td");
-    entry_permissions.innerText = permissions;
-
-    var del = document.createElement("td");
-    del.style.padding = "2px"
-    del.style.textAlign = "right"
-    var del_div = document.createElement("span");
-    del_div.classList.add("circle-icon", "circle-icon-danger");
-    del_div.addEventListener("click", () => {
-        on_delete(name_del, ip);
-    })
-    del.appendChild(del_div);
-
-    entry.appendChild(entry_name);
-    entry.appendChild(entry_path);
-    entry.appendChild(entry_ip);
-    entry.appendChild(entry_permissions);
-    entry.appendChild(del);
-    return entry
-}

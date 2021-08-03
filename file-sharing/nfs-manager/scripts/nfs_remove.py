@@ -51,12 +51,12 @@ def reset_config():
         print("Could not restart nfs, do you have it on your system?")
         sys.exit(1)
 
-# Name: remove_nfs
+# Name: remove_client
 # Receives: Name and del_dir
 # Does: Parses /etc/exports.d/cockpit-file-sharing.exports for the names of NFS(s) to be deleted, remove them from list.
 # Then rewrite /etc/exports.d/cockpit-file-sharing.exports with new file. Delete directroy if flagged.
 # Returns: Nothing
-def remove_nfs(name, ip):
+def remove_client(name, ip):
     try:
         ip_exist = False
         name_exist = False
@@ -99,6 +99,34 @@ def remove_nfs(name, ip):
         print(OSError)
         sys.exit(1) 
 
+# Remove the whole export line
+def remove_export(name):
+    try:
+        name_exist = False
+        file = open("/etc/exports.d/cockpit-file-sharing.exports", "r")
+        lines = file.readlines()
+        file.close()
+        for i in range(0, len(lines), 1):
+            if(("Name: " + name) in lines[i]):
+                name_exist = True
+                lines.remove(lines[i+1])
+                lines.remove(lines[i])
+                break
+                  
+        if name_exist:
+            print("Rewriting exports...")
+            file = open("/etc/exports.d/cockpit-file-sharing.exports", "w")
+            file.write("".join(lines))
+            file.close()
+            reset_config()
+        else:
+            print("That NFS Name does not exist.")
+            sys.exit(1)
+
+    except OSError:
+        print(OSError)
+        sys.exit(1) 
+
 # Name: main
 # Receives: nothing
 # Does: Checks all the arguments and flags. Makes sure the user entered enough
@@ -107,11 +135,12 @@ def remove_nfs(name, ip):
 def main():
     check_config()
     parser = OptionParser()
+    parser.add_option('--export', dest="isExport", action="store_true", default=False)
     (options, args) = parser.parse_args()
-    if len(args) < 2:
-        print("Not enough arguments!\nnfs_remove <name> <client ip>")
-        sys.exit(1)
-    remove_nfs(args[0], args[1])
+    if options.isExport:
+        remove_export(args[0])
+    else: 
+        remove_client(args[0], args[1])
 
 
 if __name__ == "__main__":

@@ -18,8 +18,8 @@
 // Import components
 import {fatal_error} from "../components/notifications.js"
 import {showModal, hideModal} from "../components/modals.js"
-import {NfsExport, newExportEntry} from "./exports.js"
-import {populateExportList, displayExports} from "./list.js"
+import {NfsExport, newExportEntry, createNfs} from "./exports.js"
+import {populateExportList, displayExports} from "./components/list.js"
 import {Notification} from "../components/notifications.js"
 
 let exportsList = []
@@ -76,17 +76,12 @@ function check_nfs() {
     proc.fail(function () {
         fatal_error("Failed to load NFS services. Is NFS installed or enabled?")
     });
+
 }
 
 // Awaits populating the list of current NFS(s). Once finished setup buttons and clear branding
 async function setup() {
-    try {
-        exportsList = await populateExportList();
-    }
-    catch (err) {
-        fatal_error(err)
-    }
-    displayExports(exportsList);
+    await refreshList();
     set_up_buttons();
     hideModal("blurred-screen");
 }
@@ -106,6 +101,7 @@ function nfsModal() {
 
     // Add notifaction
     let modalNotification = new Notification("nfs-modal")
+    let mainNotification = new Notification("nfs")
  
     // Add new event listeners to button for new export object 
     document.getElementById("add-nfs-btn").addEventListener("click", async () => {
@@ -113,9 +109,16 @@ function nfsModal() {
             // Retrive the structured entry and add to list
             let listEntry = await newExportEntry(newExport, exportsList)
             exportsList.push(listEntry);
+
+            // Add new entry to export file
+            let msg = Promise.resolve(createNfs(listEntry))
+            msg.then(value => {
+                mainNotification.set_success(value);
+            }) 
+
+            // Refresh export list, hide modal and clear modals info
             displayExports(exportsList)
             hideModal("nfs-modal")
-            // Clear all added info in modal
             clearNfsModal()
         }
         catch (err) {
@@ -155,4 +158,17 @@ function clearNfsModal() {
 
     // Clear path check
     document.getElementById("is-clicked").value = "";
+}
+
+// Reset the main page list
+export async function refreshList() {
+    try {
+        // Reset the exports list
+        exportsList = await populateExportList();
+    }
+    catch (err) {
+        fatal_error(err)
+    }
+    // Display the list
+    displayExports(exportsList);
 }

@@ -44,17 +44,16 @@ def create_dir(path):
 # Receives: Name, Path, Client IP and Options
 # Does: Enters name, path and clients ip into exports config.
 # Returns: Nothing
-def write_exports(name, path, info):
+def write_exports(name, path, clients):
     try:
-        client_info = json.loads(info)
-        clients = ""
-        for index in range(0, len(client_info), 2):
-            clients += " " + client_info[index] + "(" + client_info[index+1] + ")"
+        clientsString = ""
+        for client in clients :
+            clientsString += " " + client['ip'] + "(" + client['permissions'] + ")"
 
-        print(clients)
+        print(clientsString)
         print("Writing to /etc/exports.d/cockpit-file-sharing.exports")
         with open("/etc/exports.d/cockpit-file-sharing.exports", "a") as f:
-            f.write('# Name: ' + name + '\n"' + path + '"' + clients + '\n')
+            f.write('# Name: ' + name + '\n"' + path + '"' + clientsString + '\n')
     except Exception as err:
         print(err)
 
@@ -74,12 +73,12 @@ def reset_config():
 # Receives: Name, Path, IP and Options
 # Does: Runs all functions that launches certian commands to make nfs
 # Returns: Nothing
-def make_nfs(name, path, info):
-    create_dir(path)
-    write_exports(name, path, info)
+def make_nfs(entry):
+    create_dir(entry['path'])
+    write_exports(entry['name'], entry['path'], entry["clients"])
     reset_config()
-    print("Done! Please mount " + path + " to your directory of choosing on your own system!")
-    print("sudo mount <host-ip>:" + path + " <path to dir>")
+    print("Done! Please mount " + entry['path'] + " to your directory of choosing on your own system!")
+    print("sudo mount <host-ip>:" + entry['path'] + " <path to dir>")
 
 # Name: check_config
 # Receives: Nothing
@@ -107,10 +106,8 @@ def main():
     check_config()
     parser = OptionParser()
     (options, args) = parser.parse_args()
-    if len(args) < 3:
-        print("Not enough arguments!\nnfs_add <name> <path> <client-info-array>")
-        sys.exit(1)
-    make_nfs(args[0], args[1], args[2])
+    entry = json.loads(args[0])
+    make_nfs(entry)
 
 if __name__ == "__main__":
     main()
