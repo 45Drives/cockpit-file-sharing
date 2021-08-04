@@ -135,7 +135,7 @@ class Client {
         for (let i = 0; i < clientToRm.length; i++) {
             clientToRm[i].innerText = "client " + this.ip + " from " + this.parentExport;
         }
-            
+        
         showModal("rm-client-modal");
 
         // Add function to remove button
@@ -145,12 +145,12 @@ class Client {
                 // Proc remove function to see if it succeeds or fails
                 let msg = Promise.resolve(await this.removeClient());
                 msg.then(value => {
-                    nfsNotification.set_success(value)
+                    nfsNotification.setSuccess(value)
                 });
             }
             catch (err) {
                 // Error
-                nfsNotification.set_error(err)
+                nfsNotification.setError(err)
             }
             // Reset list and then hide modal
             await refreshList();
@@ -252,11 +252,11 @@ export class NfsExport {
             try {
                 let msg = Promise.resolve(await this.removeExport());
                 msg.then(value => {
-                    nfsNotification.set_success(value)
+                    nfsNotification.setSuccess(value)
                 });
             }
             catch (err) {
-                nfsNotification.set_error(err)
+                nfsNotification.setError(err)
             }
             // Reset list and hide modal
             await refreshList();

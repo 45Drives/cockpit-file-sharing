@@ -16,7 +16,7 @@
 */
 
 // Import components
-import {fatal_error} from "../components/notifications.js"
+import {fatalError} from "../components/notifications.js"
 import {showModal, hideModal} from "../components/modals.js"
 import {NfsExport, newExportEntry, createNfs} from "./exports.js"
 import {populateExportList, displayExports} from "./components/list.js"
@@ -39,7 +39,7 @@ function check_permissions() {
 			if(root_check.allowed){
                 check_sudo();
 			}else{
-				fatal_error("You do not have administrator access.");
+				fatalError("You do not have administrator access.");
 			}
 	 	}
 	)
@@ -57,7 +57,7 @@ function check_sudo() {
     });
     proc.done(function () {
         if (sudoTimeout) {
-            fatal_error("Could not use sudo. Is the machine name in /etc/hosts?")
+            fatalError("Could not use sudo. Is the machine name in /etc/hosts?")
         }
         else {check_nfs();}
     });
@@ -74,7 +74,7 @@ function check_nfs() {
         setup()
     });
     proc.fail(function () {
-        fatal_error("Failed to load NFS services. Is NFS installed or enabled?")
+        fatalError("Failed to load NFS services. Is NFS installed or enabled?")
     });
 
 }
@@ -113,7 +113,7 @@ function nfsModal() {
             // Add new entry to export file
             let msg = Promise.resolve(createNfs(listEntry))
             msg.then(value => {
-                mainNotification.set_success(value);
+                mainNotification.setSuccess(value);
             }) 
 
             // Refresh export list, hide modal and clear modals info
@@ -123,7 +123,7 @@ function nfsModal() {
         }
         catch (err) {
             // Display error when it occurs
-            modalNotification.set_error(err)
+            modalNotification.setError(err)
         }
     });
     // When + button is clicked in modal add a client object to export
@@ -154,7 +154,7 @@ function clearNfsModal() {
 
     // Clear Notifications
     let modalNotification = new Notification("nfs-modal");
-    modalNotification.clear_info();
+    modalNotification.clearInfo();
 
     // Clear path check
     document.getElementById("is-clicked").value = "";
@@ -167,7 +167,7 @@ export async function refreshList() {
         exportsList = await populateExportList();
     }
     catch (err) {
-        fatal_error(err)
+        fatalError(err)
     }
     // Display the list
     displayExports(exportsList);
