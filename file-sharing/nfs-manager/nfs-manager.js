@@ -16,11 +16,10 @@
 */
 
 // Import components
-import {fatalError} from "../components/notifications.js"
+import {fatalError, Notification} from "../components/notifications.js"
 import {showModal, hideModal} from "../components/modals.js"
-import {NfsExport, newExportEntry, createNfs} from "./exports.js"
+import {NfsExport, newExportEntry, createNfs} from "./components/exports.js"
 import {populateExportList, displayExports} from "./components/list.js"
-import {Notification} from "../components/notifications.js"
 
 let exportsList = []
 
