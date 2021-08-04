@@ -1663,7 +1663,7 @@ function show_samba_global_dialog() {
     
     showModal("samba-global-modal");
 
-    let sambaNotification = new Notification("samba-global-moda");
+    let sambaNotification = new Notification("samba-global-modal");
     sambaNotification.clearInfo();
 }
 
