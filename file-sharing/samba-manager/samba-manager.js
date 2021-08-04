@@ -14,22 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>. 
 
-var spinner_classes = ["spinner", "spinner-xs", "spinner-inline"];
-var success_icon_classes = ["pficon", "pficon-ok"];
-var failure_icon_classes = ["pficon", "pficon-error-circle-o"];
-var success_classes = ["alert", "alert-success"];
-var failure_classes = ["alert", "alert-danger"];
-var all_alert_classes = [...success_classes, ...failure_classes];
-var all_icon_classes = [
-    ...spinner_classes,
-    ...success_icon_classes,
-    ...failure_icon_classes,
-];
+// Import components
+import {fatalError, Notification} from "../components/notifications.js"
+import {showModal, hideModal} from "../components/modals.js"
+
 var selections = [];
-
-const timeout_ms = 3600; // info message timeout
-
-var info_timeout = {}; // object to hold timeouts returned from setTimeout
 
 var disallowed_groups = [];
 var valid_groups = [];
@@ -57,8 +46,8 @@ function get_global_conf() {
             global_samba_conf[key] = global_conf[key];
         }
     });
-    proc.fail(function (ex, data) {
-        set_error("main", "Failed to load smb.conf: " + data);
+    proc.fail(function (data) {
+        fatalError("Failed to load smb.conf: " + data);
     });
     return proc;
 }
@@ -90,90 +79,6 @@ function get_domain_range() {
     }
 }
 
-function clear_setup_spinner() {
-    var wrapper = document.getElementById("setup-spinner-wrapper");
-    wrapper.style.display = "none";
-}
-
-/* clear_info
- * Receives: id string for info fields in DOM
- * Does: clears alert
- * Returns: element objects for info div, icon, and text
- */
-function clear_info(id) {
-    var info = document.getElementById(id + "-info");
-    var info_icon = document.getElementById(id + "-info-icon");
-    var info_message = document.getElementById(id + "-info-text");
-    info.classList.remove(...all_alert_classes);
-    info_icon.classList.remove(...all_icon_classes);
-    info_message.innerText = "";
-    return [info, info_icon, info_message];
-}
-
-/* set_spinner
- * Receives: id string for info fields in DOM
- * Does: calls clear_info, sets icon to loading spinner
- * Returns: nothing
- */
-function set_spinner(id) {
-    [info, info_icon, info_message] = clear_info(id);
-    info_icon.classList.add(...spinner_classes);
-}
-
-/* set_error
- * Receives: id string for info fields in DOM, error message, optional timeout
- * time in milliseconds to clear message
- * Does: calls clear_info, sets icon and div to error classes, sets text to message,
- * clears old timeout, sets new timeout if passed.
- * Returns: nothing
- */
-function set_error(id, message, timeout = -1) {
-    [info, info_icon, info_message] = clear_info(id);
-    info_icon.classList.add(...failure_icon_classes);
-    info.classList.add(...failure_classes);
-    info_message.innerText = message;
-    if (typeof info_timeout[id] !== "undefined" && info_timeout[id] !== null)
-        clearTimeout(info_timeout[id]);
-    if (timeout > 0) {
-        info_timeout[id] = setTimeout(function () {
-            clear_info(id);
-        }, timeout);
-    }
-}
-
-/* set_success
- * Receives: id string for info fields in DOM, message, optional timeout time
- * in milliseconds to clear message
- * Does: calls clear_info, sets icon and div to success classes, sets text to message,
- * clears old timeout, sets new timeout if passed.
- * Returns: nothing
- */
-function set_success(id, message, timeout = -1) {
-    [info, info_icon, info_message] = clear_info(id);
-    info_icon.classList.add(...success_icon_classes);
-    info.classList.add(...success_classes);
-    info_message.innerText = message;
-    if (typeof info_timeout[id] !== "undefined" && info_timeout[id] !== null)
-        clearTimeout(info_timeout[id]);
-    if (timeout > 0) {
-        info_timeout[id] = setTimeout(function () {
-            clear_info(id);
-        }, timeout);
-    }
-}
-
-function fatal_error(message) {
-    set_error("main", message);
-    var all_buttons = document.getElementsByTagName("button");
-    var backScreen = document.getElementById("setup-spinner-wrapper");
-    var spinner = document.getElementById("spinner");
-    backScreen.style.display = "inline-flex";
-    spinner.style.display = "none";
-    for (let button of all_buttons) {
-        button.disabled = true;
-    }
-}
-
 /* set_current_user
  * Receives: DOM element object for selector list
  * Does: Calls `whoami`, uses return value to set default list selection to
@@ -197,7 +102,8 @@ function set_current_user(selector) {
  * Returns: nothing
  */
 function add_user_options() {
-    set_spinner("user-select");
+    let userNotification = new Notification("user-select")
+    userNotification.setSpinner();
     var selects = document.getElementsByClassName("user-selection");
     // clear existing
 	for(let select of selects){
@@ -238,10 +144,10 @@ function add_user_options() {
             option.remove();
         });
         set_current_user(document.getElementById("user-selection"));
-        clear_info("user-select");
+        userNotification.clearInfo();
     });
     proc.fail(function (ex, data) {
-        set_error("user-select", "Failed to get list of users: " + data);
+        userNotification.setError("Failed to get list of users: " + data);
     });
     return proc;
 }
@@ -269,7 +175,9 @@ function update_username_fields() {
  * Returns: nothing
  */
 async function add_group_options() {
-    set_spinner("add-group");
+    let groupNotification = new Notification("add-group");
+    groupNotification.setSpinner();
+
     var selects = document.getElementsByClassName("group-selection");
     var groups_list = document.getElementById("groups-list");
     var groups_list_for_user = document.getElementById("groups-list-for-user");
@@ -328,20 +236,13 @@ async function add_group_options() {
                 create_group_list_entry_for_selection(group)
             );
         });
-        clear_info("add-group");
+        groupNotification.clearInfo();
     });
     proc.fail(function (ex, data) {
-        set_error("add-group", "Failed to get list of groups: " + data);
+        groupNotification.setError("Failed to get list of groups: " + data);
     });
     return proc;
 }
-
-/* update_group_fields
- * Receives: nothing
- * Does: Replaces innerText of each element in class samba-group-45d with
- * the currently selected group
- * Returns: nothing
- */
 
 /* set_curr_user_group_list
  * Receives: nothing
@@ -350,7 +251,9 @@ async function add_group_options() {
  * Returns: nothing
  */
 function set_curr_user_group_list() {
-    set_spinner("user-select");
+    let userNotification = new Notification("user-select");
+    userNotification.setSpinner();
+    
     var user = document.getElementById("user-selection").value;
     var user_list = document.getElementById("user-group-list");
 
@@ -377,40 +280,13 @@ function set_curr_user_group_list() {
         group_list.forEach((group) =>
             user_list.appendChild(create_user_group_list_entry(group))
         );
-        clear_info("user-select");
+        userNotification.clearInfo();
     });
     proc.fail(function (ex, data) {
         document.getElementById("user-group-list").innerText =
             "Could not determine current groups.";
-        clear_info("user-select");
+        userNotification.clearInfo();
     });
-}
-
-/* show_group_to_user_dialog
- * Receives: nothing
- * Does: shows modal dialog to add groups to user
- * Returns: nothing
- */
-function show_group_to_user_dialog() {
-    // Clears
-    var elems = document.querySelectorAll(".checkmark");
-    [].forEach.call(elems, function (el) {
-        el.checked = false;
-    });
-    selections = [];
-
-    var modal = document.getElementById("add-user-group-modal");
-    modal.style.display = "block";
-}
-
-/* hide_group_to_user_dialog
- * Receives: nothing
- * Does: hides modal dialog to add groups to user
- * Returns: nothing
- */
-function hide_group_to_user_dialog() {
-    var modal = document.getElementById("add-user-group-modal");
-    modal.style.display = "none";
 }
 
 /* add_to_group
@@ -419,7 +295,9 @@ function hide_group_to_user_dialog() {
  * Returns: nothing
  */
 function add_to_group(new_list) {
-    set_spinner("add-group");
+    let groupNotification = new Notification("add-group");
+    groupNotification.setSpinner();
+
     selections = new_list;
     var user = document.getElementById("user-selection").value;
     var proc = cockpit.spawn(["usermod", "-aG", selections.join(","), user], {
@@ -427,16 +305,12 @@ function add_to_group(new_list) {
         superuser: "require",
     });
     proc.done(function (data) {
-        set_success(
-            "add-group",
-            "Successfully added " + user + " to " + selections.join(", ") + ".",
-            timeout_ms
-        );
+        groupNotification.setSuccess("Successfully added " + user + " to " + selections.join(", ") + ".");
         set_curr_user_group_list();
         selections = [];
     });
     proc.fail(function (ex, data) {
-        set_error("add-group", data, timeout_ms);
+        groupNotification.setError(data);
         selections = [];
     });
 }
@@ -448,6 +322,9 @@ function add_to_group(new_list) {
  * Returns: Nothing
  */
 function check_duplicates() {
+    let groupNotification = new Notification("add-group");
+    let failNotification = new Notification("fail-group");
+
     var user = document.getElementById("user-selection").value;
     var proc = cockpit.spawn(["groups", user], {
         err: "out",
@@ -474,17 +351,14 @@ function check_duplicates() {
 
         selections = selections.filter((group) => !duplicates.includes(group));
 
-        if (selections.length != 0) add_to_group(selections);
+        if (selections.length != 0) 
+            add_to_group(selections);
         if (duplicates != 0)
-            set_error(
-                "fail-group",
-                user + " is already in " + duplicates.join(", ") + ".",
-                timeout_ms
-            );
-        hide_group_to_user_dialog();
+            failNotification.setError(user + " is already in " + duplicates.join(", ") + ".");
+        hideModal("add-user-group-modal");
     });
     proc.fail(function (ex, data) {
-        set_error("add-group", data, timeout_ms);
+        groupNotification.setError(data);
     });
 }
 
@@ -501,8 +375,9 @@ function show_rm_from_group_dialog(group_name, element_list) {
         field.innerText = group_name;
     }
     var user = document.getElementById("user-selection").value;
-    var modal = document.getElementById("rm-from-group-modal");
-    modal.style.display = "block";
+
+    showModal("rm-from-group-modal");
+
     var continue_rm_from_group = document.getElementById(
         "continue-rm-from-group-btn"
     );
@@ -511,63 +386,29 @@ function show_rm_from_group_dialog(group_name, element_list) {
     };
 }
 
-/* hide_rm_from_group_dialog
- * Receives: nothing
- * Does: hides modal dialog to confirm before removing selected user from selected group
- * Returns: nothing
- */
-function hide_rm_from_group_dialog() {
-    var modal = document.getElementById("rm-from-group-modal");
-    modal.style.display = "none";
-}
-
 /* rm_from_group
  * Receives: nothing
  * Does: removes selected user from selected group by calling `gpasswd -d <user> <group>`
  * Returns: nothing
  */
 function rm_from_group(group, element_list) {
-    set_spinner("add-group");
+    let groupNotification = new Notification("add-group");
+    groupNotification.setSpinner();
+
     var user = document.getElementById("user-selection").value;
     var proc = cockpit.script(
         "gpasswd -d " + user + " " + group + " > /dev/null",
         { err: "out", superuser: "require" }
     );
     proc.done(function (data) {
-        set_success(
-            "add-group",
-            "Successfully removed " + user + " from " + group + ".",
-            timeout_ms
-        );
+        groupNotification.setSuccess("Successfully removed " + user + " from " + group + ".");
         element_list.forEach((elem) => elem.remove());
         set_curr_user_group_list();
     });
     proc.fail(function (ex, data) {
-        set_error("add-group", data, timeout_ms);
+        groupNotification.setError(data);
     });
-    hide_rm_from_group_dialog();
-}
-
-/* show_smbpasswd_dialog
- * Receives: nothing
- * Does: shows modal dialog to set smbpasswd
- * Returns: nothing
- */
-function show_smbpasswd_dialog() {
-    document.getElementById("smbpasswd-pw1").value = "";
-    document.getElementById("smbpasswd-pw2").value = "";
-    var modal = document.getElementById("smbpasswd-modal");
-    modal.style.display = "block";
-}
-
-/* hide_smbpasswd_dialog
- * Receives: nothing
- * Does: hides modal dialog to set smbpasswd
- * Returns: nothing
- */
-function hide_smbpasswd_dialog() {
-    var modal = document.getElementById("smbpasswd-modal");
-    modal.style.display = "none";
+    hideModal("rm-from-group-modal");
 }
 
 /* check_passwords
@@ -576,15 +417,17 @@ function hide_smbpasswd_dialog() {
  * Returns: [false, ""] if invalid, [true, "<password>"] if valid
  */
 function check_passwords() {
-    clear_info("smbpasswd-modal");
+    let passwdNotification = new Notification("smbpasswd-modal")
+    passwdNotification.clear_info();
+
     var pw1 = document.getElementById("smbpasswd-pw1").value;
     var pw2 = document.getElementById("smbpasswd-pw2").value;
     if (pw1.length == 0 || pw2.length == 0) {
-        set_error("smbpasswd-modal", "Password cannot be empty!");
+        passwdNotification.setError("Password cannot be empty!");
         return [false, ""];
     }
     if (pw1 !== pw2) {
-        set_error("smbpasswd-modal", "Passwords do not match!");
+        passwdNotification.setError("Passwords do not match!");
         return [false, ""];
     }
     return [true, pw1];
@@ -597,7 +440,9 @@ function check_passwords() {
  * Returns: nothing
  */
 function set_smbpasswd() {
-    set_spinner("smbpasswd-modal");
+    let passwdNotification = new Notification("smbpasswd-modal")
+    passwdNotification.setSpinner();
+
     var user = document.getElementById("user-selection").value;
     const [res, passwd] = check_passwords();
     if (res === true) {
@@ -607,44 +452,17 @@ function set_smbpasswd() {
         });
         proc.input(passwd + "\n" + passwd + "\n");
         proc.done(function () {
-            clear_info("smbpasswd-modal");
-            set_success(
-                "smbpasswd",
-                "Successfully set Samba password for " + user + ".",
-                timeout_ms
-            );
-            hide_smbpasswd_dialog();
+            passwdNotification.clearInfo();
+            passwdNotification.setSuccess("Successfully set Samba password for " + user + ".");
+            hideModal("smbpasswd-modal")
         });
         proc.fail(function (ex, data) {
             var why = "";
             if (ex.problem === "not-found") why = "smbpasswd not found.";
             else why = data;
-            set_error(
-                "smbpasswd-modal",
-                "Error setting samba password: " + why
-            );
+            passwdNotification.setError("Error setting samba password: " + why);
         });
     }
-}
-
-/* show_rm_smbpasswd_dialog
- * Receives: nothing
- * Does: shows modal dialog to confirm before removing smbpasswd from user
- * Returns: nothing
- */
-function show_rm_smbpasswd_dialog() {
-    var modal = document.getElementById("rm-smbpasswd-modal");
-    modal.style.display = "block";
-}
-
-/* hide_rm_smbpasswd_dialog
- * Receives: nothing
- * Does: hides modal dialog to confirm before removing smbpasswd from user
- * Returns: nothing
- */
-function hide_rm_smbpasswd_dialog() {
-    var modal = document.getElementById("rm-smbpasswd-modal");
-    modal.style.display = "none";
 }
 
 /* rm_smbpasswd
@@ -653,7 +471,9 @@ function hide_rm_smbpasswd_dialog() {
  * Returns: nothing
  */
 function rm_smbpasswd() {
-    set_spinner("smbpasswd");
+    let passwdNotification = new Notification("smbpasswd");
+    passwdNotification.setSpinner();
+
     var user = document.getElementById("user-selection").value;
 
     var proc = cockpit.script("smbpasswd -x " + user, {
@@ -661,16 +481,12 @@ function rm_smbpasswd() {
         superuser: "require",
     });
     proc.done(function (data) {
-        set_success(
-            "smbpasswd",
-            "Successfully removed Samba password for " + user + ".",
-            timeout_ms
-        );
+        passwdNotification.setSuccess("Successfully removed Samba password for " + user + ".");
     });
     proc.fail(function (ex, data) {
-        set_error("smbpasswd", data, timeout_ms);
+        passwdNotification.setError(data);
     });
-    hide_rm_smbpasswd_dialog();
+    hideModal("rm-smbpasswd-modal");
 }
 
 /* create_list_entry
@@ -791,22 +607,13 @@ function show_rm_group_dialog(group_name, element_list) {
     for (let field of group_name_fields) {
         field.innerText = group_name;
     }
-    var modal = document.getElementById("rm-group-modal");
-    modal.style.display = "block";
+
+    showModal("rm-group-modal");
+
     var continue_rm_group = document.getElementById("continue-rm-group");
     continue_rm_group.onclick = function () {
         rm_group(group_name, element_list);
     };
-}
-
-/* hide_rm_from_group_dialog
- * Receives: nothing
- * Does: hides modal dialog to confirm removing group from list and system
- * Returns: nothing
- */
-function hide_rm_group_dialog() {
-    var modal = document.getElementById("rm-group-modal");
-    modal.style.display = "none";
 }
 
 /* rm_group
@@ -816,45 +623,23 @@ function hide_rm_group_dialog() {
  * Returns: nothing
  */
 function rm_group(group_name, element_list) {
-    set_spinner("group");
+    let groupNotification = new Notification("group");
+    groupNotification.setSpinner();
+
     var proc = cockpit.spawn(["groupdel", group_name], {
         err: "out",
         superuser: "require",
     });
     proc.done(function (data) {
-        set_success(
-            "group",
-            "Successfully deleted " + group_name + ".",
-            timeout_ms
-        );
+        groupNotification.setSuccess("Successfully deleted " + group_name + ".");
         element_list.forEach((elem) => elem.remove());
         add_group_options();
         set_curr_user_group_list();
     });
     proc.fail(function (ex, data) {
-        set_error("group", data, timeout_ms);
+        groupNotification.setError(data);
     });
-    hide_rm_group_dialog();
-}
-
-/* show_add_group_dialog
- * Receives: nothing
- * Does: shows modal dialog to create a new group
- * Returns: nothing
- */
-function show_add_group_dialog() {
-    var modal = document.getElementById("add-group-modal");
-    modal.style.display = "block";
-}
-
-/* hide_add_group_dialog
- * Receives: nothing
- * Does: hides modal dialog to create a new group
- * Returns: nothing
- */
-function hide_add_group_dialog() {
-    var modal = document.getElementById("add-group-modal");
-    modal.style.display = "none";
+    hideModal("rm-group-modal");
 }
 
 /* add_group
@@ -863,25 +648,23 @@ function hide_add_group_dialog() {
  * Returns: nothing
  */
 function add_group() {
+    let groupNotification = new Notification("add-group-modal");
+
     var group_name = document.getElementById("new-group-name").value;
     if (check_group_name()) {
-        set_spinner("add-group-modal");
+        groupNotification.setSpinner();
         var proc = cockpit.spawn(["groupadd", group_name], {
             err: "out",
             superuser: "require",
         });
         proc.done(function (data) {
-            hide_add_group_dialog();
+            hideModal("add-group-modal");
             add_group_options();
-            clear_info("add-group-modal");
-            set_success(
-                "group",
-                "Successfully added " + group_name,
-                timeout_ms
-            );
+            groupNotification.clearInfo();
+            groupNotification.setSuccess("Successfully added " + group_name);
         });
         proc.fail(function (ex, data) {
-            set_error("add-group-modal", data);
+            groupNotification.setError(data);
         });
     }
 }
@@ -941,8 +724,8 @@ function parse_shares(lines) {
         }
         var option_match = line.match(/^([^=]+)=(.*)$/);
         if (option_match) {
-            key = option_match[1].toLowerCase().trim().replace(/\s+/g, "-");
-            value = option_match[2].trim();
+            let key = option_match[1].toLowerCase().trim().replace(/\s+/g, "-");
+            let value = option_match[2].trim();
             if (section.match(/^[Gg]lobal$/)) glob[key] = value;
             else shares[section][key] = value;
             continue;
@@ -1026,10 +809,12 @@ async function populate_share_list() {
         }
     }
     catch (err) {
-        set_error("share", err);
+        let shareNotification = new Notification("share");
+        shareNotification.setError(err);
     }
 }
 
+// Run Command will spawn a command and return a promise
 function run_command(args) {
     return new Promise((resolve,reject) => {
         let proc = cockpit.spawn(args, {
@@ -1051,16 +836,13 @@ function run_command(args) {
  * Does: shows share modal dialog and sets up buttons in modal dialog
  * Returns: nothing
  */
-function show_share_dialog(
-    create_or_edit,
-    share_name = "",
-    share_settings = {}
-) {
+function show_share_dialog(create_or_edit, share_name = "", share_settings = {}) {
     var old_path = "";
-    var modal = document.getElementById("share-modal");
+    let shareNotification = new Notification("share-modal");
     var func = document.getElementById("share-modal-function");
     var button = document.getElementById("continue-share");
     var text_area = document.getElementById("advanced-global-settings-input");
+
     text_area.style.height = "";
     text_area.style.height = Math.max(text_area.scrollHeight + 5, 50) + "px";
     if (create_or_edit === "create") {
@@ -1078,7 +860,7 @@ function show_share_dialog(
                     add_share();
                 });
                 proc.fail(function (ex, data) {
-                    set_error("share-modal", data, timeout_ms);
+                    shareNotification.setError(data);
                 });
             } else {
                 var proc = cockpit.spawn(["stat", path], {
@@ -1090,18 +872,14 @@ function show_share_dialog(
                 });
                 proc.fail(function (ex, data) {
                     old_path = path;
-                    set_error(
-                        "share-modal",
-                        path +
-                            ' does not exist. Press "Add Share" again to create the directory.',
-                        timeout_ms
-                    );
+                    shareNotification.setError(path + ' does not exist. Press "Add Share" again to create the directory.');
                 });
             }
         };
         button.innerText = "Add Share";
         document.getElementById("share-name").disabled = false;
         set_share_defaults();
+
     } else if (create_or_edit === "edit") {
         document.getElementById("share-name").value = share_name;
         func.innerText = "Edit";
@@ -1118,7 +896,7 @@ function show_share_dialog(
                     edit_share(share_name, share_settings, "updated");
                 });
                 proc.fail(function (ex, data) {
-                    set_error("share-modal", data, timeout_ms);
+                    shareNotification.setError(data);
                 });
             } else {
                 var proc = cockpit.spawn(["stat", path], {
@@ -1130,12 +908,7 @@ function show_share_dialog(
                 });
                 proc.fail(function (ex, data) {
                     old_path = path;
-                    set_error(
-                        "share-modal",
-                        path +
-                            ' does not exist. Press "Apply" again to create the directory.',
-                        timeout_ms
-                    );
+                    shareNotification.setError(path + ' does not exist. Press "Apply" again to create the directory.');
                 });
             }
         };
@@ -1151,17 +924,8 @@ function show_share_dialog(
     add_group_select.addEventListener("change", (event) => {
         if (event.target.value !== "") add_group_to_share(event.target.value);
     });
-    modal.style.display = "block";
-}
-
-/* hide_share_dialog
- * Receives: nothing
- * Does: hides share modal dialog
- * Returns: nothing
- */
-function hide_share_dialog() {
-    var modal = document.getElementById("share-modal");
-    modal.style.display = "none";
+    
+    showModal("share-modal");
 }
 
 /* set_share_defaults
@@ -1200,7 +964,10 @@ function set_share_defaults() {
  */
 function add_share() {
     if (!verify_share_settings()) return;
-    set_spinner("share-modal");
+
+    let shareNotification = new Notification("share-modal");
+    shareNotification.setSpinner();
+
     var name = document.getElementById("share-name").value;
     var path = document.getElementById("path").value;
     var proc = cockpit.spawn(["net", "conf", "addshare", name, path], {
@@ -1211,7 +978,7 @@ function add_share() {
         edit_share(name, {}, "created");
     });
     proc.fail(function (ex, data) {
-        set_error("share-modal", data);
+        shareNotification.setError(data);
     });
 }
 
@@ -1504,7 +1271,10 @@ function edit_share(share_name, settings, action) {
     /* Params have DOM id the same as net conf setparm <param>
      */
     if (!verify_share_settings()) return;
-    set_spinner("share-modal");
+
+    let shareNotification = new Notification("share-modal");
+    shareNotification.setSpinner();
+
     var params = document.getElementsByClassName("share-param");
     var changed_settings = {};
     for (let param of params) {
@@ -1550,7 +1320,9 @@ function edit_share(share_name, settings, action) {
         changed_settings,
         params_to_delete,
         action,
-        hide_share_dialog,
+        function() {
+            hideModal("share-modal");
+        },
         "share-modal"
     );
 
@@ -1603,13 +1375,10 @@ async function edit_parms(
  * Does: constructs payload object containing parameters to delete to pass to del_parms.py as JSON
  * Returns: promise
  */
-function del_parms(
-    share_name,
-    params_to_delete,
-    action,
-    hide_modal_func,
-    info_id
-) {
+function del_parms(share_name, params_to_delete, action, hide_modal_func, info_id) {
+    let notification = new Notification(info_id);
+    let shareNotification = new Notification("share");
+ 
     // delete parms first
     var payload = {};
     payload["section"] = share_name;
@@ -1623,15 +1392,11 @@ function del_parms(
     );
     proc.input(JSON.stringify(payload));
     proc.done(function (data) {
-        clear_info(info_id);
-        set_success(
-            "share",
-            "Successfully " + action + " " + share_name + ".",
-            timeout_ms
-        );
+        notification.clearInfo();
+        shareNotification.setSuccess("Successfully " + action + " " + share_name + ".");
     });
     proc.fail(function (ex, data) {
-        set_error(info_id, data);
+        shareNotification.setError(data);
     });
     return proc;
 }
@@ -1643,6 +1408,9 @@ function del_parms(
  * Returns: promise
  */
 function set_parms(share_name, params, action, hide_modal_func, info_id) {
+    let notification = new Notification(info_id);
+    let shareNotification = new Notification("share");
+    
     var payload = {};
     payload["section"] = share_name;
     payload["parms"] = params;
@@ -1655,17 +1423,13 @@ function set_parms(share_name, params, action, hide_modal_func, info_id) {
     );
     proc.input(JSON.stringify(payload));
     proc.done(function (data) {
-        clear_info(info_id);
-        set_success(
-            "share",
-            "Successfully " + action + " " + share_name + ".",
-            timeout_ms
-        );
+        notification.clearInfo();
+        shareNotification.setSuccess("Successfully " + action + " " + share_name + ".");
         populate_share_list();
         hide_modal_func();
     });
     proc.fail(function (ex, data) {
-        set_error(info_id, data);
+        notification.setError(data);
     });
     return proc;
 }
@@ -1854,22 +1618,11 @@ function show_rm_share_dialog(share_name, element_list) {
     for (let field of share_name_fields) {
         field.innerText = share_name;
     }
-    var modal = document.getElementById("rm-share-modal");
-    modal.style.display = "block";
+    showModal("rm-share-modal");
     var continue_rm_share = document.getElementById("continue-rm-share");
     continue_rm_share.onclick = function () {
         rm_share(share_name, element_list);
     };
-}
-
-/* hide_rm_share_dialog
- * Receives: nothing
- * Does: hides modal dialog to confirm removal of share
- * Returns: nothing
- */
-function hide_rm_share_dialog() {
-    var modal = document.getElementById("rm-share-modal");
-    modal.style.display = "none";
 }
 
 /* rm_share
@@ -1879,24 +1632,22 @@ function hide_rm_share_dialog() {
  * Returns: nothing
  */
 function rm_share(share_name, element_list) {
-    set_spinner("share");
+    let shareNotification = new Notification("share");
+    shareNotification.setSpinner("");
+
     var proc = cockpit.spawn(["net", "conf", "delshare", share_name], {
         err: "out",
         superuser: "require",
     });
     proc.done(function (data) {
         populate_share_list();
-        set_success(
-            "share",
-            "Successfully deleted " + share_name + ".",
-            timeout_ms
-        );
+        shareNotification.setSuccess("Successfully deleted " + share_name + ".");
         element_list.forEach((elem) => elem.remove());
     });
     proc.fail(function (ex, data) {
-        set_error("share", data, timeout_ms);
+        shareNotification.setError(data);
     });
-    hide_rm_share_dialog();
+    hideModal("rm-share-modal");
 }
 
 /* show_samba_global_dialog
@@ -1906,22 +1657,14 @@ function rm_share(share_name, element_list) {
  */
 function show_samba_global_dialog() {
     populate_samba_global();
-    var modal = document.getElementById("samba-global-modal");
     var text_area = document.getElementById("advanced-global-settings-input");
     text_area.style.height = "";
     text_area.style.height = Math.max(text_area.scrollHeight + 5, 50) + "px";
-    modal.style.display = "block";
-    clear_info("samba-global-modal");
-}
+    
+    showModal("samba-global-modal");
 
-/* hide_samba_modal_dialog
- * Receives: nothing
- * Does: hides samba global settings modal dialog
- * Returns: nothing
- */
-function hide_samba_modal_dialog() {
-    var modal = document.getElementById("samba-global-modal");
-    modal.style.display = "none";
+    let sambaNotification = new Notification("samba-global-moda");
+    sambaNotification.clearInfo();
 }
 
 /* toggle_advanced_global_settings
@@ -1993,7 +1736,8 @@ function populate_samba_global() {
             advanced_settings_list.join("\n");
     });
     proc.fail(function (ex, data) {
-        set_error("share", data);
+        let shareNotification = new Notification("share");
+        shareNotification.setError(data);
     });
 }
 
@@ -2018,7 +1762,9 @@ function check_enable_log_level_dropdown() {
  * Returns: nothing
  */
 async function edit_samba_global() {
-    set_spinner("samba-global-modal");
+    let sambaNotification = new Notification("samba-global-modal");
+    sambaNotification.setSpinner();
+
     var params = document.getElementsByClassName("global-param");
     var changed_settings = {};
     for (let param of params) {
@@ -2041,14 +1787,7 @@ async function edit_samba_global() {
     for (let param of params_to_delete) {
         if (param in extra_params) params_to_delete.delete(param);
     }
-    await edit_parms(
-        "global",
-        changed_settings,
-        params_to_delete,
-        "updated",
-        hide_samba_modal_dialog,
-        "samba-global-modal"
-    );
+    await edit_parms("global", changed_settings, params_to_delete, "updated", () => {hideModal("samba-global-modal")}, "samba-global-modal");
 }
 
 /* populate_privilege_list
@@ -2079,7 +1818,8 @@ function populate_privilege_list() {
         }
     });
     proc.fail(function (ex, data) {
-        set_error("privilege", "Failed to get list of privileges: " + data);
+        let privilegeNotification = new Notification("privilege");
+        privilegeNotification.setError("Failed to get list of privileges: " + data);
     });
     return proc;
 } 
@@ -2091,24 +1831,21 @@ function populate_privilege_list() {
  * Returns: Nothing
  */
 function rm_privilege(entry_name, element_list) {
-    set_spinner("privilege");
+    let privilegeNotification = new Notification("privilege");
+    privilegeNotification.setSpinner();
     var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/samba-manager/scripts/del_privileges.py", entry_name], {
         err: "out",
         superuser: "require",
     });
     proc.done(function () {
-        set_success(
-            "privilege",
-            "Successfully deleted " + entry_name + ".",
-            timeout_ms
-        );
+        privilegeNotification.setSuccess("Successfully deleted " + entry_name + ".");
         element_list.forEach((elem) => elem.remove());
         populate_privilege_list();
     });
     proc.fail(function (data) {
-        set_error("privilege", data, timeout_ms);
+        privilegeNotification.setError(data);
     });
-    hide_rm_privilege_dialog();
+    hideModal("rm-privilege-modal");
 }
 
 /* create_privilege_list_entry
@@ -2132,42 +1869,13 @@ function show_rm_privilege_dialog(entry_name, element_list) {
     for (let field of entry_name_fields) {
         field.innerText = entry_name;
     }
-    var modal = document.getElementById("rm-privilege-modal");
-    modal.style.display = "block";
+    
+    showModal("rm-privilege-modal");
+
     var continue_rm_privilege = document.getElementById("continue-rm-privilege");
     continue_rm_privilege.onclick = function () {
         rm_privilege(entry_name, element_list);
     };
-}
-
-/* hide_rm_privilege_dialog
- * Receives: Nothing
- * Does: hides remove privilege modal
- * Returns: Nothing
- */
-function hide_rm_privilege_dialog() {
-    var modal = document.getElementById("rm-privilege-modal");
-    modal.style.display = "none";
-}
-
-/* show_privilege_dialog
- * Receives: Nothing
- * Does: shows privilege modal
- * Returns: Nothing
- */
-function show_privilege_dialog() {
-    var modal = document.getElementById("privilege-modal");
-    modal.style.display = "block";
-}
-
-/* hide_privilege_dialog
- * Receives: Nothing
- * Does: shows privilege modal
- * Returns: Nothing
- */
-function hide_privilege_dialog() {
-    var modal = document.getElementById("privilege-modal");
-    modal.style.display = "none";
 }
 
 /* add_privilege
@@ -2178,17 +1886,20 @@ function hide_privilege_dialog() {
  * Returns: Nothing
  */
 async function add_privilege() {
+    let privilegeNotification = new Notification("privilege-group");
+
     var group = document.getElementById("privilege-group").value;
     var username = document.getElementById("privilege-username").value;
     var password = document.getElementById("privilege-password").value;
 
     if (group == "")
-        set_error("add-privilege", "Enter a group.", timeout_ms);
+        privilegeNotification.setError("Enter a group.");
     else if (username == "")
-        set_error("add-privilege", "Enter a username.", timeout_ms);
+        privilegeNotification.setError("Enter a username.");
     else if (password == "")
-        set_error("add-privilege", "Enter a password.", timeout_ms);
+        privilegeNotification.setError("Enter a password.");
     else {
+        let addNotification = new Notification("add-privilege");
 
         var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/samba-manager/scripts/set_privileges.py", group, username, password], {
             err: "out",
@@ -2196,16 +1907,16 @@ async function add_privilege() {
         });
         proc.done(function(data) {
             if (data != "") {
-                set_error("add-privilege", data, timeout_ms);
+                addNotification.setError(data);
             }
             else {
                 populate_privilege_list();
-                set_success("privilege", "Added privilege!", timeout_ms);
-                hide_privilege_dialog();
+                addNotification.setSuccess("Added privilege!");
+                hideModal("privilege-modal");
             }
         });
         proc.fail(function(data) {
-            set_error("add-privilege", "Could not set privileges: " + data, timeout_ms);
+            addNotification.setError("Could not set privileges: " + data);
         });
     }
 }
@@ -2217,129 +1928,73 @@ async function add_privilege() {
  */
 function set_up_buttons() {
     // User Management
-    document
-        .getElementById("user-selection")
-        .addEventListener("change", update_username_fields);
+    document.getElementById("user-selection").addEventListener("change", update_username_fields);
 
-    document
-        .getElementById("cancel-rm-from-group-btn")
-        .addEventListener("click", hide_rm_from_group_dialog);
+    document.getElementById("cancel-rm-from-group-btn").addEventListener("click", () => {hideModal("rm-from-group-modal");});
 
-    document
-        .getElementById("show-smbpasswd-dialog-btn")
-        .addEventListener("click", show_smbpasswd_dialog);
-    document
-        .getElementById("cancel-smbpasswd")
-        .addEventListener("click", hide_smbpasswd_dialog);
-    document
-        .getElementById("set-smbpasswd")
-        .addEventListener("click", set_smbpasswd);
+    document.getElementById("show-smbpasswd-dialog-btn").addEventListener("click", () => {showModal("smbpasswd-modal"), function() {
+            document.getElementById("smbpasswd-pw1").value = "";
+            document.getElementById("smbpasswd-pw2").value = "";
+        }});
+    document.getElementById("cancel-smbpasswd").addEventListener("click", () => {hideModal("smbpasswd-modal");});
+    document.getElementById("set-smbpasswd").addEventListener("click", set_smbpasswd);
 
-    document
-        .getElementById("show-rm-smbpasswd-btn")
-        .addEventListener("click", show_rm_smbpasswd_dialog);
-    document
-        .getElementById("cancel-rm-smbpasswd")
-        .addEventListener("click", hide_rm_smbpasswd_dialog);
-    document
-        .getElementById("continue-rm-smbpasswd")
-        .addEventListener("click", rm_smbpasswd);
+    document.getElementById("show-rm-smbpasswd-btn").addEventListener("click", () => {showModal("rm-smbpasswd-modal");});
+    document.getElementById("cancel-rm-smbpasswd").addEventListener("click", () => {hideModal("rm-smbpasswd-modal");});
+    document.getElementById("continue-rm-smbpasswd").addEventListener("click", rm_smbpasswd);
 
-    document
-        .getElementById("add-group-to-user")
-        .addEventListener("click", show_group_to_user_dialog);
-    document
-        .getElementById("add-to-group-btn")
-        .addEventListener("click", check_duplicates);
-    document
-        .getElementById("cancel-group-to-user")
-        .addEventListener("click", hide_group_to_user_dialog);
+    document.getElementById("add-group-to-user").addEventListener("click", () => {
+            showModal("add-user-group-modal", function() {
+                // Clears
+                var elems = document.querySelectorAll(".checkmark");
+                [].forEach.call(elems, function (el) {
+                    el.checked = false;
+                });
+                selections = [];
+            });
+        });
+    document.getElementById("add-to-group-btn").addEventListener("click", check_duplicates);
+    document.getElementById("cancel-group-to-user").addEventListener("click", () => {hideModal("add-user-group-modal");});
 
     // Group Management
-    document
-        .getElementById("cancel-rm-group")
-        .addEventListener("click", hide_rm_group_dialog);
+    document.getElementById("cancel-rm-group").addEventListener("click", () => {hideModal("rm-group-modal")});
 
-    document
-        .getElementById("add-group-btn")
-        .addEventListener("click", show_add_group_dialog);
-    document
-        .getElementById("cancel-add-group")
-        .addEventListener("click", hide_add_group_dialog);
-    document
-        .getElementById("continue-add-group")
-        .addEventListener("click", add_group);
-    document
-        .getElementById("new-group-name")
-        .addEventListener("input", check_group_name);
+    document.getElementById("add-group-btn").addEventListener("click", () => {showModal("add-group-modal")});
+    document.getElementById("cancel-add-group").addEventListener("click", () => {hideModal("add-group-modal")});
+    document.getElementById("continue-add-group").addEventListener("click", add_group);
+    document.getElementById("new-group-name").addEventListener("input", check_group_name);
 
     // Share Management
-    document
-        .getElementById("add-share-btn")
-        .addEventListener("click", function () {
+    document.getElementById("add-share-btn").addEventListener("click", function () {
             show_share_dialog("create");
         });
-    document
-        .getElementById("cancel-share")
-        .addEventListener("click", hide_share_dialog);
-    document
-        .getElementById("show-advanced-share-dropdown-btn")
-        .addEventListener("click", toggle_advanced_share_settings);
-    document
-        .getElementById("shadowcopy")
-        .addEventListener("click", check_shadow_copy);
-    document
-        .getElementById("macos")
-        .addEventListener("click", function() {
-                populate_advanced_share_settings("macos", "fruit:", "fruit:encoding = native\nfruit:metadata = stream", "catia fruit streams_xattr");
-            });
-    document
-        .getElementById("auditlogs")
-        .addEventListener("click", function() {
-                populate_advanced_share_settings("auditlogs", "full_audit:", "full_audit:priority = notice\nfull_audit:facility = local5\nfull_audit:success = connect disconnect mkdir rmdir read write rename\nfull_audit:failure = connect\nfull_audit:prefix = %u|%I|%S", "full_audit");
-            });
+    document.getElementById("cancel-share").addEventListener("click", () => {hideModal("share-modal")});
+    document.getElementById("show-advanced-share-dropdown-btn").addEventListener("click", toggle_advanced_share_settings);
+    document.getElementById("shadowcopy").addEventListener("click", check_shadow_copy);
+    document.getElementById("macos").addEventListener("click", function() {
+            populate_advanced_share_settings("macos", "fruit:", "fruit:encoding = native\nfruit:metadata = stream", "catia fruit streams_xattr");
+        });
+    document.getElementById("auditlogs").addEventListener("click", function() {
+            populate_advanced_share_settings("auditlogs", "full_audit:", "full_audit:priority = notice\nfull_audit:facility = local5\nfull_audit:success = connect disconnect mkdir rmdir read write rename\nfull_audit:failure = connect\nfull_audit:prefix = %u|%I|%S", "full_audit");
+        });
     document.getElementById("windows-acls").addEventListener("click", windows_acl);
-    document
-        .getElementById("share-name")
-        .addEventListener("input", verify_share_settings);
-    document
-        .getElementById("path")
-        .addEventListener("input", verify_share_settings);
+    document.getElementById("share-name").addEventListener("input", verify_share_settings);
+    document.getElementById("path").addEventListener("input", verify_share_settings);
 
-    document
-        .getElementById("cancel-rm-share")
-        .addEventListener("click", hide_rm_share_dialog);
+    document.getElementById("cancel-rm-share").addEventListener("click", () => {hideModal("rm-share-modal")});
 
-    document
-        .getElementById("samba-global-btn")
-        .addEventListener("click", show_samba_global_dialog);
-    document
-        .getElementById("cancel-samba-global")
-        .addEventListener("click", hide_samba_modal_dialog);
-    document
-        .getElementById("show-advanced-global-dropdown-btn")
-        .addEventListener("click", toggle_advanced_global_settings);
-    document
-        .getElementById("continue-samba-global")
-        .addEventListener("click", edit_samba_global);
-    document
-        .getElementById("advanced-global-settings-input")
-        .addEventListener("input", check_enable_log_level_dropdown);
+    document.getElementById("samba-global-btn").addEventListener("click", show_samba_global_dialog);
+    document.getElementById("cancel-samba-global").addEventListener("click", () => {hideModal("samba-global-modal");});
+    document.getElementById("show-advanced-global-dropdown-btn").addEventListener("click", toggle_advanced_global_settings);
+    document.getElementById("continue-samba-global").addEventListener("click", edit_samba_global);
+    document.getElementById("advanced-global-settings-input").addEventListener("input", check_enable_log_level_dropdown);
 
     document.getElementById("path").addEventListener("input", nav_bar_update_choices)
 
-    document
-        .getElementById("show-privilege-btn")
-        .addEventListener("click", show_privilege_dialog);
-    document
-        .getElementById("cancel-privilege-btn")
-        .addEventListener("click", hide_privilege_dialog);
-    document
-        .getElementById("add-privilege-btn")
-        .addEventListener("click", add_privilege);
-    document
-        .getElementById("cancel-rm-privilege")
-        .addEventListener("click", hide_rm_privilege_dialog);
+    document.getElementById("show-privilege-btn").addEventListener("click", () => {showModal("privilege-modal")});
+    document.getElementById("cancel-privilege-btn").addEventListener("click", () => {hideModal("privilege-modal")});
+    document.getElementById("add-privilege-btn").addEventListener("click", add_privilege);
+    document.getElementById("cancel-rm-privilege").addEventListener("click", () => {hideModal("rm-privilege-modal")});
 
 
     // Set callback to dynamically resize textareas to fit height of text
@@ -2408,7 +2063,7 @@ async function setup() {
     await add_user_options();
     await populate_privilege_list();
     set_up_buttons();
-    clear_setup_spinner();
+    hideModal("setup-spinner-wrapper");
 }
 
 /* main

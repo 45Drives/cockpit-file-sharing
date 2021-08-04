@@ -32,8 +32,10 @@ export class Notification {
         this.failureIconClasses = ["pficon", "pficon-error-circle-o"];
         this.successClasses = ["alert", "alert-success"];
         this.failureClasses = ["alert", "alert-danger"];
+        this.spinnerClasses = ["spinner", "spinner-xs", "spinner-inline"];
         this.allAlertClasses = [...this.successClasses, ...this.failureClasses];
         this.allIconClasses = [
+            ...this.spinnerClasses,
             ...this.successIconClasses,
             ...this.failureIconClasses,
         ];
@@ -83,6 +85,12 @@ export class Notification {
                 this.clearInfo(this.id);
             }, this.timeout);
         }
+    }
+
+    //calls clearInfo, sets icon to loading spinner
+    setSpinner() {
+        let [info, infoIcon, infoMessage] = this.clearInfo(this.id);
+        infoIcon.classList.add(...this.spinnerClasses);
     }
 
 }
