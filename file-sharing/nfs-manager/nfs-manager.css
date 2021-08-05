@@ -202,3 +202,48 @@ along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
     margin-top: 5px;
     margin-bottom: 5px;
 }
+
+.center {
+    text-align: center;
+    margin: auto;
+    width: 50%;
+}
+
+.arrow {
+    margin-left: 35px;
+    margin-top: 13px;
+    display: inline-block;
+    height: 3.75em;
+    width: 1.5em;
+    background-image: url(./components/arrow.svg);
+    background-size: contain;
+    filter: opacity(50%);
+}
+
+.allign {
+    display: grid;
+    grid-template-columns: 4.5em 1fr 3em;
+}
+
+.client-circle {
+    height: 30px;
+    width: 30px;
+    background-color: #ffffff00;
+    border: 2px solid grey;
+    border-radius: 50%;
+    text-align: center;
+    margin: auto;
+    display: inline-block;
+    font-size: 16px;
+}
+
+.center-plus {
+    text-align: center;
+    margin: auto;
+    margin-top: 4.4px;
+    color: grey;
+}
+
+.end-del {
+    justify-self: flex-end;
+}

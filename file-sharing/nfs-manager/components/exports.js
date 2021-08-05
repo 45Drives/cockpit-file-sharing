@@ -17,7 +17,7 @@
 // Import components
 import {showModal, hideModal} from "../../components/modals.js"
 import {Notification} from "../../components/notifications.js"
-import {refreshList} from "../nfs-manager.js";
+import {refreshList, showEdit} from "../nfs-manager.js";
 
 // Client object that is constructed with variables
 class Client {
@@ -32,18 +32,27 @@ class Client {
     inputClient() {
         let client_section = document.getElementById("clients");
 
+        let client_div = document.createElement("div");
+        client_div.classList.add("allign");
+
+        let arrow = document.createElement("div");
+        arrow.classList.add("arrow");
+
+        let inputs = document.createElement("div");
+
         let ip_row = document.createElement("div");
         ip_row.classList.add("form-row");
 
         let ip_label = document.createElement("label");
-        ip_label.classList.add("label-45d");
-        ip_label.classList.add("bold-text");
+        ip_label.classList.add("label-45d", "bold-text");
         ip_label.innerText = "Client IP";
 
+        let ipText = this.ip
         this.ip = document.createElement("input");
         this.ip.type = "text";
         this.ip.classList.add("client-to-add")
         this.ip.placeholder = "Will default to '*' if left empty"
+        this.ip.value = ipText;
         
         ip_row.appendChild(ip_label);
         ip_row.appendChild(this.ip);
@@ -52,20 +61,42 @@ class Client {
         options_row.classList.add("form-row");
 
         let options_label = document.createElement("label");
-        options_label.classList.add("label-45d");
-        options_label.classList.add("bold-text");
+        options_label.classList.add("label-45d", "bold-text");
         options_label.innerText = "Options";
 
+        let perText = this.permissions
         this.permissions = document.createElement("input");
         this.permissions.type = "text";
         this.permissions.placeholder = "Will default to 'rw,sync,no_subtree_check' if left empty";
         this.permissions.classList.add("client-to-add")
+        this.permissions.value = perText;
         
         options_row.appendChild(options_label);
         options_row.appendChild(this.permissions);
 
-        client_section.appendChild(ip_row);
-        client_section.appendChild(options_row);
+        inputs.appendChild(ip_row);
+        inputs.appendChild(options_row);
+
+        let spacer = document.createElement("div")
+        spacer.classList.add("vertical-spacer")
+
+        let del = document.createElement("div");
+        del.classList.add("end-del")
+        let del_div = document.createElement("flex")
+        del_div.classList.add("circle-icon", "circle-icon-danger");
+        del_div.addEventListener("click", () => {
+            client_section.removeChild(client_div);
+            client_section.removeChild(spacer);
+            this.parentExport.rmClientFromExport(this.name);
+        })
+        del.appendChild(del_div);
+
+        client_div.appendChild(arrow);
+        client_div.appendChild(inputs);
+        client_div.appendChild(del);
+
+        client_section.appendChild(client_div);
+        client_section.appendChild(spacer);
     }
 
     // HTML for the list of clients
@@ -165,12 +196,14 @@ export class NfsExport {
         this.name = name;
         this.path = path;
         this.clients = [];
+        this.clientNames = 0;
     }
 
     // Add clients
     addClient(html,ip=null, permissions=null) {
-        let clientName = "Client " + (this.clients.length+1)
-        let client = new Client(clientName, this.name, ip, permissions);
+        this.clientNames += 1;
+        let clientName = "Client " + (this.clientNames);
+        let client = new Client(clientName, this, ip, permissions);
         // Add input html if the client is being added in modal
         if (html) {
             client.inputClient()
@@ -204,7 +237,7 @@ export class NfsExport {
         let del_div = document.createElement("span");
         del_div.classList.add("circle-icon", "circle-icon-danger");
         del_div.addEventListener("click", () => {
-            this.showRmExport();
+            showEdit(this);
         })
         del.appendChild(del_div);
 
@@ -263,6 +296,17 @@ export class NfsExport {
             hideModal("rm-client-modal");
         };
     }
+
+    // Remove the client from export
+    rmClientFromExport(clientName) {
+        console.log("Removing "+clientName+". before remove");
+        console.log(this.clients)
+
+        this.clients = this.clients.filter((client) => {return client.name != clientName}); 
+
+        console.log("after remove");
+        console.log(this.clients);
+    }
 }
 
 // Check through input values in modal to add to export entry
@@ -295,6 +339,9 @@ export function newExportEntry(newExport, exportsList) {
         }
         else if (path[0] != "/") {
             reject("Path has to be absolute.")
+        }
+        else if (newExport.clients.length == 0) {
+            reject("Atleast one client is required.")
         }
         // Add clients user has added
         else if (is_clicked.value == path) {

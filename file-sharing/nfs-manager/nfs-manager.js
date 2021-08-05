@@ -133,6 +133,7 @@ function nfsModal() {
 
 // Clear NFS modals contents
 function clearNfsModal() {
+    console.log("cleared")
     // Remove pervious event listeners from buttons
     let addNfs = document.getElementById("add-nfs-btn")
     addNfs.replaceWith(addNfs.cloneNode(true));
@@ -170,4 +171,51 @@ export async function refreshList() {
     }
     // Display the list
     displayExports(exportsList);
+}
+
+// When user edits an export
+export function showEdit(exportToEdit) {
+    // Create new edited export
+    let editedExport = new NfsExport();
+
+    // Set values to current export
+    document.getElementById("input-name").value = exportToEdit.name
+    document.getElementById("input-path").value = exportToEdit.path
+
+    // Create new clients for each client in current export
+    exportToEdit.clients.forEach((client) => {
+        editedExport.addClient(true, client.ip, client.permissions);
+    })
+
+    // Add notifaction
+    let modalNotification = new Notification("nfs-modal")
+    let mainNotification = new Notification("nfs")
+
+    // Show modal and add button function to modals
+    showModal("nfs-modal", () => {
+        document.getElementById("add-nfs-btn").addEventListener("click", async () => {
+            try {
+                // Retrive the structured entry and add to list
+                let listEntry = await newExportEntry(editedExport, exportsList)
+
+                let index = exportsList.indexOf(exportToEdit);
+                exportsList[index] = listEntry
+
+                // Edit the export config here
+
+                // Refresh export list, hide modal and clear modals info
+                displayExports(exportsList)
+                hideModal("nfs-modal")
+                clearNfsModal()
+            }
+            catch (err) {
+                // Display error when it occurs
+                modalNotification.setError(err)
+            }
+        });
+        // When + button is clicked in modal add a client object to export
+        document.getElementById("add-client-btn").addEventListener("click", () => {
+            editedExport.addClient(true);
+        });
+    });
 }

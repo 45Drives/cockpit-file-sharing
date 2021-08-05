@@ -93,7 +93,7 @@
 		<div class="modal-dialog">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h2 class="pf-c-modal-box__tittle"><span class="pf-modal-box__title-text">Add NFS</span></h2>
+					<h2 class="pf-c-modal-box__tittle"><span class="pf-modal-box__title-text">Add Export</span></h2>
 				</div>
 				<div class="modal-body col-45d flex-45d-stretch">
                     <div class="form-row">
@@ -106,11 +106,13 @@
                     </div>
                     <div class="form-row">
                         <label class="label-45d bold-text" for="clients">Clients: </label>
-                        <button type="button" class="pf-c-button pf-m-primary" id="add-client-btn">
-                            <span class="fa fa-plus"></span>
-                        </button>
                     </div>
                     <div id="clients"></div>
+                    <div class="center">
+                        <button type="button" class="client-circle" id="add-client-btn">
+                            <span class="center-plus fa fa-plus"></span>
+                        </button>
+                    </div>
                     <br>
                     <div class="no-margin" id="nfs-modal-info">
                         <span id="nfs-modal-info-icon"></span>

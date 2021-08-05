@@ -76,9 +76,9 @@ export function displayExports(exportsList) {
         exportsList.forEach(function(obj) {
             obj.listExport();
             // Iterate through exports clients and create an entry in the list for each
-            obj.clients.forEach(function(client) {
-                client.listClient();
-            });
+            // obj.clients.forEach(function(client) {
+            //     client.listClient();
+            // });
         });
     }
 } 
