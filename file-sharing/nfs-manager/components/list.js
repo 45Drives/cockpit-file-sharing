@@ -61,13 +61,9 @@ export function displayExports(exportsList) {
         var name = document.createElement("td");
         name.innerText = 'No exports. Click the "plus" to add one.';
         var path = document.createElement("td");
-        var ip = document.createElement("td");
-        var perm = document.createElement("td");
         var del = document.createElement("td");
         msg.appendChild(name)
-        msg.appendChild(ip)
         msg.appendChild(path)
-        msg.appendChild(perm)
         msg.appendChild(del)
         guiList.appendChild(msg);
     }

@@ -106,12 +106,6 @@ class Client {
         let entry = document.createElement("tr");
         entry.classList.add("highlight-entry");
 
-        let entry_name = document.createElement("td");
-        entry_name.innerText = " ";
-
-        let entry_path = document.createElement("td");
-        entry_path.innerText = " ";
-
         let entry_ip = document.createElement("td");
         entry_ip.innerText = this.ip;
 
@@ -128,8 +122,6 @@ class Client {
         })
         del.appendChild(del_div);
 
-        entry.appendChild(entry_name);
-        entry.appendChild(entry_path);
         entry.appendChild(entry_ip);
         entry.appendChild(entry_permissions);
         entry.appendChild(del);
@@ -225,26 +217,36 @@ export class NfsExport {
         let entry_path = document.createElement("td");
         entry_path.innerText = this.path;
 
-        let entry_ip = document.createElement("td");
-        entry_ip.innerText = " ";
-
-        let entry_permissions = document.createElement("td");
-        entry_permissions.innerText = " ";
-
         let del = document.createElement("td");
+        del.classList.add("dropdown")
         del.style.padding = "2px"
         del.style.textAlign = "right"
-        let del_div = document.createElement("span");
-        del_div.classList.add("circle-icon", "circle-icon-danger");
-        del_div.addEventListener("click", () => {
+
+        let dropDown = document.createElement("div");
+        dropDown.classList.add("dropdown-content");
+        let remove = document.createElement("a");
+        remove.innerText = "Remove";
+        remove.addEventListener('click', () => {
+            this.showRmExport();
+        });
+        let edit = document.createElement("a");
+        edit.innerText = "Edit";
+        edit.addEventListener('click', () => {
             showEdit(this);
+        });
+        dropDown.appendChild(remove);
+        dropDown.appendChild(edit);
+        
+        let del_div = document.createElement("span");
+        del_div.classList.add("fa", "fa-ellipsis-v", "edit-export");
+        del_div.addEventListener("click", () => {
+            dropDown.classList.toggle("show");
         })
         del.appendChild(del_div);
+        del.appendChild(dropDown);
 
         entry.appendChild(entry_name);
         entry.appendChild(entry_path);
-        entry.appendChild(entry_ip);
-        entry.appendChild(entry_permissions);
         entry.appendChild(del);
         guiList.append(entry);
     }
