@@ -289,4 +289,9 @@ link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
   /* Change color of dropdown links on hover */
   .dropdown-content a:hover {background-color: #ddd}
 
+
   .show {display:block;}
+   
+.pulldown {
+    display: none;
+}

@@ -211,8 +211,27 @@ export class NfsExport {
         let entry = document.createElement("tr");
         entry.classList.add("highlight-entry");
 
+        let pullDownArrow = document.createElement("td");
+        let arrow = document.createElement("i")
+        arrow.classList.add("fa", "fa-chevron-right");
+        pullDownArrow.appendChild(arrow);      
+
         let entry_name = document.createElement("td");
         entry_name.innerText = this.name;
+        let pullDown = document.createElement("div");
+        pullDown.classList.add("pulldown");
+        pullDown.appendChild(document.createElement("p"))
+        for (let i = 0; i < this.clients.length; i++) {
+            let para = document.createElement("p");
+            para.innerHTML = "<i class='fa fa-arrow-right'></i>     " + this.clients[i].ip + " (" + this.clients[i].permissions + ")";
+            pullDown.appendChild(para);
+        }
+        entry_name.appendChild(pullDown);
+
+        // Add click to pull down
+        entry.addEventListener('click', () => {
+            pullDown.classList.toggle("show");
+        });
 
         let entry_path = document.createElement("td");
         entry_path.innerText = this.path;
@@ -245,6 +264,7 @@ export class NfsExport {
         del.appendChild(del_div);
         del.appendChild(dropDown);
 
+        entry.appendChild(pullDownArrow);
         entry.appendChild(entry_name);
         entry.appendChild(entry_path);
         entry.appendChild(del);

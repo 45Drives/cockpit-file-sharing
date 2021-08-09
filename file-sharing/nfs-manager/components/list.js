@@ -58,23 +58,21 @@ export function displayExports(exportsList) {
     // If there is no exports then display "help" message
     if (exportsList.length === 0) {
         var msg = document.createElement("tr");
+        var pullDown = document.createElement("td");
         var name = document.createElement("td");
         name.innerText = 'No exports. Click the "plus" to add one.';
         var path = document.createElement("td");
         var del = document.createElement("td");
-        msg.appendChild(name)
-        msg.appendChild(path)
-        msg.appendChild(del)
+        msg.appendChild(pullDown);
+        msg.appendChild(name);
+        msg.appendChild(path);
+        msg.appendChild(del);
         guiList.appendChild(msg);
     }
     else {
         // Iterate through each export
         exportsList.forEach(function(obj) {
             obj.listExport();
-            // Iterate through exports clients and create an entry in the list for each
-            // obj.clients.forEach(function(client) {
-            //     client.listClient();
-            // });
         });
     }
 } 
