@@ -56,6 +56,37 @@ def write_exports(name, path, clients):
             f.write('# Name: ' + name + '\n"' + path + '"' + clientsString + '\n')
     except Exception as err:
         print(err)
+        sys.exit(1)
+
+# Name: Edit Export
+# Receives: Name, Path, Client in JSON format and export name to edit
+# Does: Finds the export name to edit and then replaces old lines with new lines.
+# The file is then re-written with the new lines.
+# Returns: Nothing
+def edit_export(name, path, clients, edit_export_name):
+    try:
+        clientsString = ""
+        for client in clients :
+            clientsString += " " + client['ip'] + "(" + client['permissions'] + ")"
+
+        export_file = open("/etc/exports.d/cockpit-file-sharing.exports", "r")
+        lines = export_file.readlines()
+        export_file.close()
+
+        for i in range(0, len(lines)):
+            if edit_export_name in lines[i]:
+                lines[i] =  '# Name: ' + name + '\n'
+                i += 1
+                lines[i] = '"' + path + '"' + clientsString + '\n'
+                break
+
+        with open("/etc/exports.d/cockpit-file-sharing.exports", "w") as f:
+            for line in lines:
+                f.write(line)
+
+    except Exception as err:
+        print(err)
+        sys.exit(1)
 
 # Name: reset_config
 # Receives: Nothing
@@ -73,9 +104,12 @@ def reset_config():
 # Receives: Name, Path, IP and Options
 # Does: Runs all functions that launches certian commands to make nfs
 # Returns: Nothing
-def make_nfs(entry):
+def make_nfs(entry, edit_export_name=""):
     create_dir(entry['path'])
-    write_exports(entry['name'], entry['path'], entry["clients"])
+    if edit_export_name == "":
+        write_exports(entry['name'], entry['path'], entry["clients"])
+    else:
+        edit_export(entry['name'], entry['path'], entry["clients"], edit_export_name)
     reset_config()
     print("Done! Please mount " + entry['path'] + " to your directory of choosing on your own system!")
     print("sudo mount <host-ip>:" + entry['path'] + " <path to dir>")
@@ -105,9 +139,19 @@ def check_config():
 def main():
     check_config()
     parser = OptionParser()
+    parser.add_option("--edit", dest='edit', help="Add a name of an export to edit");
     (options, args) = parser.parse_args()
+    
+    if len(args) < 1:
+        print("Please enter an export in JSON format.")
+        sys.exit(1)
+
     entry = json.loads(args[0])
-    make_nfs(entry)
+
+    if options.edit:
+        make_nfs(entry, options.edit)
+    else:
+        make_nfs(entry)
 
 if __name__ == "__main__":
     main()

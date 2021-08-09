@@ -299,18 +299,12 @@ export class NfsExport {
 
     // Remove the client from export
     rmClientFromExport(clientName) {
-        console.log("Removing "+clientName+". before remove");
-        console.log(this.clients)
-
         this.clients = this.clients.filter((client) => {return client.name != clientName}); 
-
-        console.log("after remove");
-        console.log(this.clients);
     }
 }
 
 // Check through input values in modal to add to export entry
-export function newExportEntry(newExport, exportsList) {
+export function newExportEntry(newExport, exportsList, nameException="") {
     // Get inputed values
     let exportName = document.getElementById("input-name").value;
     let path = document.getElementById("input-path").value;
@@ -329,16 +323,16 @@ export function newExportEntry(newExport, exportsList) {
     // Check if user entered correct info
     return new Promise((resolve, reject) => {
         if (exportName == "") {
-            reject("Enter a name.")
+            reject("Enter a name.");
         }
-        else if(nameExist) {
-            reject("Name already exists.")
+        else if(nameExist && (exportName != nameException)) {
+            reject("Name already exists.");
         }
         else if (path == "") {
-            reject("Enter a path.")
+            reject("Enter a path.");
         }
         else if (path[0] != "/") {
-            reject("Path has to be absolute.")
+            reject("Path has to be absolute.");
         }
         else if (newExport.clients.length == 0) {
             reject("Atleast one client is required.")
@@ -404,6 +398,23 @@ export function createNfs(entry) {
         });
         proc.fail(function (data) {
             reject("Could not add export: " + data);
+        });
+    });
+}
+
+// Add a existing export and its clients in the export config
+export function editNfs(entry, oldExportName) {
+    // Proc the nfs add script in a promise to return a success or fail
+    return new Promise((resolve, reject) => {
+        var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_add.py", "--edit", oldExportName, JSON.stringify(entry)], {
+            err: "out",
+            superuser: "require",
+        });
+        proc.done(function () {
+            resolve("Edited " + oldExportName);
+        });
+        proc.fail(function (data) {
+            reject("Could edit export: " + data);
         });
     });
 }

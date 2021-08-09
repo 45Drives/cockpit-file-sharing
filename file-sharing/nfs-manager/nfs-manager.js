@@ -18,7 +18,7 @@
 // Import components
 import {fatalError, Notification} from "../components/notifications.js"
 import {showModal, hideModal} from "../components/modals.js"
-import {NfsExport, newExportEntry, createNfs} from "./components/exports.js"
+import {NfsExport, newExportEntry, createNfs, editNfs} from "./components/exports.js"
 import {populateExportList, displayExports} from "./components/list.js"
 
 let exportsList = []
@@ -102,8 +102,12 @@ function nfsModal() {
     let modalNotification = new Notification("nfs-modal")
     let mainNotification = new Notification("nfs")
  
+    // Change inner add button text to add 
+    let addBtn = document.getElementById("add-nfs-btn");
+    addBtn.innerText = "Add"
+
     // Add new event listeners to button for new export object 
-    document.getElementById("add-nfs-btn").addEventListener("click", async () => {
+    addBtn.addEventListener("click", async () => {
         try {
             // Retrive the structured entry and add to list
             let listEntry = await newExportEntry(newExport, exportsList)
@@ -133,7 +137,6 @@ function nfsModal() {
 
 // Clear NFS modals contents
 function clearNfsModal() {
-    console.log("cleared")
     // Remove pervious event listeners from buttons
     let addNfs = document.getElementById("add-nfs-btn")
     addNfs.replaceWith(addNfs.cloneNode(true));
@@ -178,9 +181,12 @@ export function showEdit(exportToEdit) {
     // Create new edited export
     let editedExport = new NfsExport();
 
+    // Retrive the name of the old export
+    let oldExportName = exportToEdit.name;
+
     // Set values to current export
-    document.getElementById("input-name").value = exportToEdit.name
-    document.getElementById("input-path").value = exportToEdit.path
+    document.getElementById("input-name").value = oldExportName;
+    document.getElementById("input-path").value = exportToEdit.path;
 
     // Create new clients for each client in current export
     exportToEdit.clients.forEach((client) => {
@@ -193,15 +199,26 @@ export function showEdit(exportToEdit) {
 
     // Show modal and add button function to modals
     showModal("nfs-modal", () => {
-        document.getElementById("add-nfs-btn").addEventListener("click", async () => {
+        // Change inner add button text to apply
+        let addBtn = document.getElementById("add-nfs-btn");
+        addBtn.innerText = "Apply"
+        
+        // Add in edit function to button
+        addBtn.addEventListener("click", async () => {
             try {
                 // Retrive the structured entry and add to list
-                let listEntry = await newExportEntry(editedExport, exportsList)
+                let listEntry = await newExportEntry(editedExport, exportsList, oldExportName)
 
                 let index = exportsList.indexOf(exportToEdit);
                 exportsList[index] = listEntry
 
                 // Edit the export config here
+                // Add an exception for when editing exports... maybe an edit scirpt? or flag?
+                // Add new entry to export file
+                let msg = Promise.resolve(editNfs(listEntry, oldExportName))
+                msg.then(value => {
+                    mainNotification.setSuccess(value);
+                }) 
 
                 // Refresh export list, hide modal and clear modals info
                 displayExports(exportsList)
