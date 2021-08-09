@@ -150,25 +150,13 @@ along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
 }
 
 .form-row {
-    display: -webkit-flex;
-    display: -ms-flexbox;
-    display: flex;
-    justify-content: flex-end;
+    display: grid;
     padding: 5px;
-    align-items: stretch;
-}
-
-.form-row > label {
-    flex: 1;
+    grid-template-columns: 125px 1fr;
 }
 
 .form-row > input {
-    flex: 3 0 1em;
     margin-bottom: 11pt;
-}
-
-.form-row > input[type="checkbox"] {
-    flex: 0;
 }
 
 .form-row > .input-feedback-group {
@@ -203,36 +191,29 @@ along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
     margin-bottom: 5px;
 }
 
+.pf-c-divider {
+    margin-bottom: 1em;
+}
+
 .center {
     text-align: center;
     margin: auto;
     width: 50%;
 }
 
-.arrow {
-    margin-left: 35px;
-    margin-top: 13px;
-    display: inline-block;
-    height: 3.75em;
-    width: 1.5em;
-    background-image: url(./components/arrow.svg);
-    background-size: contain;
-    filter: opacity(50%);
-}
-
 .allign {
     display: grid;
-    grid-template-columns: 4.5em 1fr 3em;
+    grid-template-columns: 1fr 30px;
 }
 
 .client-circle {
+    margin: 1em;
     height: 30px;
     width: 30px;
     background-color: #ffffff00;
     border: 2px solid grey;
     border-radius: 50%;
     text-align: center;
-    margin: auto;
     display: inline-block;
     font-size: 16px;
 }
@@ -250,13 +231,13 @@ along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
 
 .edit-export {
     padding-right: 1em;
-    padding-left: 1em;
+    padding-left: 2em;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
     align-content: center;
 }
 
-.edit-export:hover {
-    cursor: pointer;
-}
+.edit-export:hover {cursor: pointer;}
 
 /* Thank you w3schools for this CSS!
 link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
@@ -293,5 +274,22 @@ link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
   .show {display:block;}
    
 .pulldown {
-    display: none;
+    transition:height 0.5s ease-out;
+    height:0;
+    overflow:hidden;
 }
+
+.fa-chevron-right {
+    transform: rotate(0deg);
+    transition: transform 0.5s linear;
+}
+
+.fa-chevron-right.open {
+    transform: rotate(90deg);
+    transition: transform 0.5s linear;
+}
+
+.pulldown-hover:hover {
+    cursor: pointer;
+}
+  

@@ -35,9 +35,6 @@ class Client {
         let client_div = document.createElement("div");
         client_div.classList.add("allign");
 
-        let arrow = document.createElement("div");
-        arrow.classList.add("arrow");
-
         let inputs = document.createElement("div");
 
         let ip_row = document.createElement("div");
@@ -77,8 +74,8 @@ class Client {
         inputs.appendChild(ip_row);
         inputs.appendChild(options_row);
 
-        let spacer = document.createElement("div")
-        spacer.classList.add("vertical-spacer")
+        let divider = document.createElement("div")
+        divider.classList.add("pf-c-divider")
 
         let del = document.createElement("div");
         del.classList.add("end-del")
@@ -86,17 +83,16 @@ class Client {
         del_div.classList.add("circle-icon", "circle-icon-danger");
         del_div.addEventListener("click", () => {
             client_section.removeChild(client_div);
-            client_section.removeChild(spacer);
+            client_section.removeChild(divider);
             this.parentExport.rmClientFromExport(this.name);
         })
         del.appendChild(del_div);
 
-        client_div.appendChild(arrow);
         client_div.appendChild(inputs);
         client_div.appendChild(del);
 
+        client_section.appendChild(divider);
         client_section.appendChild(client_div);
-        client_section.appendChild(spacer);
     }
 
     // HTML for the list of clients
@@ -212,6 +208,7 @@ export class NfsExport {
         entry.classList.add("highlight-entry");
 
         let pullDownArrow = document.createElement("td");
+        pullDownArrow.classList.add("pulldown-hover")
         let arrow = document.createElement("i")
         arrow.classList.add("fa", "fa-chevron-right");
         pullDownArrow.appendChild(arrow);      
@@ -227,11 +224,6 @@ export class NfsExport {
             pullDown.appendChild(para);
         }
         entry_name.appendChild(pullDown);
-
-        // Add click to pull down
-        entry.addEventListener('click', () => {
-            pullDown.classList.toggle("show");
-        });
 
         let entry_path = document.createElement("td");
         entry_path.innerText = this.path;
@@ -260,9 +252,24 @@ export class NfsExport {
         del_div.classList.add("fa", "fa-ellipsis-v", "edit-export");
         del_div.addEventListener("click", () => {
             dropDown.classList.toggle("show");
-        })
+        });
         del.appendChild(del_div);
         del.appendChild(dropDown);
+        
+        // Add click to pull down
+        const slideDown = elem => elem.style.height = `${elem.scrollHeight}px`;
+        const slideUp = elem => elem.style.height = `0px`;
+        let isSlide = true;
+        pullDownArrow.addEventListener('click', () => {
+            if (isSlide) {
+                slideDown(pullDown);
+            } else {
+                slideUp(pullDown);
+            }
+            isSlide = !isSlide;
+
+            arrow.classList.toggle("open");
+        });
 
         entry.appendChild(pullDownArrow);
         entry.appendChild(entry_name);

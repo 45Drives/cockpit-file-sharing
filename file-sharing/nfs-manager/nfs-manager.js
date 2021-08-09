@@ -102,6 +102,10 @@ function nfsModal() {
     let modalNotification = new Notification("nfs-modal")
     let mainNotification = new Notification("nfs")
  
+    // Change title to add
+    let title = document.getElementById("modal-title");
+    title.innerText = "Add Export";
+    
     // Change inner add button text to add 
     let addBtn = document.getElementById("add-nfs-btn");
     addBtn.innerText = "Add"
@@ -199,6 +203,10 @@ export function showEdit(exportToEdit) {
 
     // Show modal and add button function to modals
     showModal("nfs-modal", () => {
+        // Change title to edit
+        let title = document.getElementById("modal-title");
+        title.innerText = "Editing " + oldExportName;
+
         // Change inner add button text to apply
         let addBtn = document.getElementById("add-nfs-btn");
         addBtn.innerText = "Apply"
@@ -237,6 +245,8 @@ export function showEdit(exportToEdit) {
     });
 }
 
+/* Thank you w3schools for this function!
+link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
 // Close the dropdown menu if the user clicks outside of it
 window.onclick = function(event) {
     if (!event.target.matches('.fa-ellipsis-v')) {
