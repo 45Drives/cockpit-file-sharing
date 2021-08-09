@@ -95,35 +95,6 @@ class Client {
         client_section.appendChild(client_div);
     }
 
-    // HTML for the list of clients
-    listClient() {
-        let guiList = document.getElementById("nfs-list")
-
-        let entry = document.createElement("tr");
-        entry.classList.add("highlight-entry");
-
-        let entry_ip = document.createElement("td");
-        entry_ip.innerText = this.ip;
-
-        let entry_permissions = document.createElement("td");
-        entry_permissions.innerText = this.permissions;
-
-        let del = document.createElement("td");
-        del.style.padding = "2px"
-        del.style.textAlign = "right"
-        let del_div = document.createElement("span");
-        del_div.classList.add("circle-icon", "circle-icon-danger");
-        del_div.addEventListener("click", () => {
-            this.showRmClient();
-        })
-        del.appendChild(del_div);
-
-        entry.appendChild(entry_ip);
-        entry.appendChild(entry_permissions);
-        entry.appendChild(del);
-        guiList.append(entry);
-    }
-
     // Remove client from config
     removeClient() {
         // Create a promise to give a success or error
@@ -202,65 +173,27 @@ export class NfsExport {
 
     // HTML for export in list
     listExport() {
-        let guiList = document.getElementById("nfs-list")
+        // Get element to put entry in
+        let guiList = document.getElementById("export-list")
 
-        let entry = document.createElement("tr");
-        entry.classList.add("highlight-entry");
+        let entry = document.createElement("div");
+        entry.classList.add("highlight-entry", "export-grid");
 
-        let pullDownArrow = document.createElement("td");
-        pullDownArrow.classList.add("pulldown-hover")
-        let arrow = document.createElement("i")
-        arrow.classList.add("fa", "fa-chevron-right");
-        pullDownArrow.appendChild(arrow);      
+        let header = document.createElement("div");
+        header.classList.add("grid-header")
 
-        let entry_name = document.createElement("td");
-        entry_name.innerText = this.name;
+        let arrow = document.createElement("i");
+        arrow.classList.add("fa", "fa-chevron-right", "grid-center");
+        header.appendChild(arrow);
+
         let pullDown = document.createElement("div");
-        pullDown.classList.add("pulldown");
-        pullDown.appendChild(document.createElement("p"))
-        for (let i = 0; i < this.clients.length; i++) {
-            let para = document.createElement("p");
-            para.innerHTML = "<i class='fa fa-arrow-right'></i>     " + this.clients[i].ip + " (" + this.clients[i].permissions + ")";
-            pullDown.appendChild(para);
-        }
-        entry_name.appendChild(pullDown);
+        pullDown.classList.add("pulldown")
+        pullDown.innerText = "Hello"
 
-        let entry_path = document.createElement("td");
-        entry_path.innerText = this.path;
-
-        let del = document.createElement("td");
-        del.classList.add("dropdown")
-        del.style.padding = "2px"
-        del.style.textAlign = "right"
-
-        let dropDown = document.createElement("div");
-        dropDown.classList.add("dropdown-content");
-        let remove = document.createElement("a");
-        remove.innerText = "Remove";
-        remove.addEventListener('click', () => {
-            this.showRmExport();
-        });
-        let edit = document.createElement("a");
-        edit.innerText = "Edit";
-        edit.addEventListener('click', () => {
-            showEdit(this);
-        });
-        dropDown.appendChild(remove);
-        dropDown.appendChild(edit);
-        
-        let del_div = document.createElement("span");
-        del_div.classList.add("fa", "fa-ellipsis-v", "edit-export");
-        del_div.addEventListener("click", () => {
-            dropDown.classList.toggle("show");
-        });
-        del.appendChild(del_div);
-        del.appendChild(dropDown);
-        
-        // Add click to pull down
         const slideDown = elem => elem.style.height = `${elem.scrollHeight}px`;
         const slideUp = elem => elem.style.height = `0px`;
         let isSlide = true;
-        pullDownArrow.addEventListener('click', () => {
+        arrow.addEventListener('click', () => {
             if (isSlide) {
                 slideDown(pullDown);
             } else {
@@ -270,11 +203,50 @@ export class NfsExport {
 
             arrow.classList.toggle("open");
         });
+        
+        let entryName = document.createElement("div");
+        entryName.innerText = this.name;
+        header.appendChild(entryName);
 
-        entry.appendChild(pullDownArrow);
-        entry.appendChild(entry_name);
-        entry.appendChild(entry_path);
-        entry.appendChild(del);
+        let entryPath = document.createElement("div");
+        entryPath.innerText = this.path;
+        header.appendChild(entryPath);
+
+        let settings = document.createElement("i");
+        settings.classList.add("fa", "fa-ellipsis-v", "grid-center", "dropdown");
+
+        let settingsContent = document.createElement("div");
+        settingsContent.classList.add("dropdown-content");
+
+        let remove = document.createElement("a");
+        remove.innerText = "Remove";
+        remove.addEventListener('click', () => {
+            this.showRmExport();
+        });
+
+        let edit = document.createElement("a");
+        edit.innerText = "Edit";
+        edit.addEventListener('click', () => {
+            showEdit(this);
+        });
+
+        settingsContent.appendChild(remove);
+        settingsContent.appendChild(edit);
+        settings.appendChild(settingsContent);
+        
+        settings.addEventListener("click", () => {
+            settingsContent.classList.toggle("show");
+        });
+
+        header.appendChild(settings);
+        
+        entry.appendChild(header);
+        entry.appendChild(pullDown);
+        
+        let divider = document.createElement("div");
+        divider.classList.add("pf-c-divider");
+        entry.appendChild(divider);
+
         guiList.append(entry);
     }
 

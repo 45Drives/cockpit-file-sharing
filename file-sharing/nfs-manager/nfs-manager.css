@@ -225,20 +225,6 @@ along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
     color: grey;
 }
 
-.end-del {
-    justify-self: flex-end;
-}
-
-.edit-export {
-    padding-right: 1em;
-    padding-left: 2em;
-    padding-top: 0.5em;
-    padding-bottom: 0.5em;
-    align-content: center;
-}
-
-.edit-export:hover {cursor: pointer;}
-
 /* Thank you w3schools for this CSS!
 link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
 
@@ -293,3 +279,47 @@ link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
     cursor: pointer;
 }
   
+
+.list-grid {
+    display: grid;
+    grid-template-rows: 25px 1px auto;
+    font-size: 14px;
+}
+
+.grid-header {
+    display: grid;
+    grid-template-columns: 5em 2fr 2fr 2em;
+    grid-column-gap: 8px;
+}
+
+.export-grid {
+    display: grid;
+    grid-template-rows: 25px 1fr 1px;
+}
+
+.grid-center {
+    text-align: center;
+    align-self: center;
+}
+
+.client-grid {
+    display: grid;
+    grid-template-rows: 25px 1px;
+    grid-row-gap: 8px;
+}
+
+.client-items {
+    display: grid;
+    grid-template-columns: 5em 2fr 2fr 2fr 5em;
+    grid-column-gap: 8px;
+}
+
+.client-divider {
+    display: grid;
+    grid-template-columns: 5em 1fr 5em;
+    grid-column-gap: 8px;
+}
+
+.alert {
+    margin-top: 24px;
+}

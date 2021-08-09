@@ -70,7 +70,7 @@ function check_nfs() {
         superuser: "require",
     });
     proc.done(function () {
-        setup()
+        refreshList()
     });
     proc.fail(function () {
         fatalError("Failed to load NFS services. Is NFS installed or enabled?")
@@ -78,9 +78,22 @@ function check_nfs() {
 
 }
 
-// Awaits populating the list of current NFS(s). Once finished setup buttons and clear branding
+// Reset the main page list
+export async function refreshList() {
+    try {
+        // Reset the exports list
+        exportsList = await populateExportList();
+        setup();
+    }
+    catch (err) {
+        fatalError("Hello")
+        fatalError(err)
+    }
+}
+
+// Displays list, setup buttons and clear branding
 async function setup() {
-    await refreshList();
+    displayExports(exportsList);
     set_up_buttons();
     hideModal("blurred-screen");
 }
@@ -167,19 +180,6 @@ function clearNfsModal() {
     document.getElementById("is-clicked").value = "";
 }
 
-// Reset the main page list
-export async function refreshList() {
-    try {
-        // Reset the exports list
-        exportsList = await populateExportList();
-    }
-    catch (err) {
-        fatalError(err)
-    }
-    // Display the list
-    displayExports(exportsList);
-}
-
 // When user edits an export
 export function showEdit(exportToEdit) {
     // Create new edited export
@@ -205,7 +205,7 @@ export function showEdit(exportToEdit) {
     showModal("nfs-modal", () => {
         // Change title to edit
         let title = document.getElementById("modal-title");
-        title.innerText = "Editing " + oldExportName;
+        title.innerText = "Editing Export" + oldExportName;
 
         // Change inner add button text to apply
         let addBtn = document.getElementById("add-nfs-btn");
@@ -247,7 +247,7 @@ export function showEdit(exportToEdit) {
 
 /* Thank you w3schools for this function!
 link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
-// Close the dropdown menu if the user clicks outside of it
+//Close the dropdown menu if the user clicks outside of it
 window.onclick = function(event) {
     if (!event.target.matches('.fa-ellipsis-v')) {
       var dropdowns = document.getElementsByClassName("dropdown-content");
@@ -259,4 +259,4 @@ window.onclick = function(event) {
         }
       }
     }
-  }
+}

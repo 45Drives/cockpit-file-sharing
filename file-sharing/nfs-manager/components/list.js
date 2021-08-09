@@ -52,21 +52,22 @@ export function populateExportList() {
 // Display all export objects in export list
 export function displayExports(exportsList) {
     // Retrive html div to put list in
-    let guiList = document.getElementById("nfs-list")
+    let guiList = document.getElementById("export-list")
     guiList.innerHTML = "";
 
     // If there is no exports then display "help" message
     if (exportsList.length === 0) {
-        var msg = document.createElement("tr");
-        var pullDown = document.createElement("td");
-        var name = document.createElement("td");
+        var msg = document.createElement("div");
+        var pullDown = document.createElement("div");
+        pullDown.innerText = ' ';
+        var name = document.createElement("div");
         name.innerText = 'No exports. Click the "plus" to add one.';
-        var path = document.createElement("td");
-        var del = document.createElement("td");
+        var path = document.createElement("div");
+        var settings = document.createElement("div");
         msg.appendChild(pullDown);
         msg.appendChild(name);
         msg.appendChild(path);
-        msg.appendChild(del);
+        msg.appendChild(settings);
         guiList.appendChild(msg);
     }
     else {
