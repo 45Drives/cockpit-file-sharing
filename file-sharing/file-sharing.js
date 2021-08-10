@@ -26,11 +26,13 @@ function switch_iframe(is_samba) {
         document.getElementById("nfs-btn").classList.remove("tab-selected");
         frame.src = "samba-manager/samba-manager.html"
         document.getElementById("samba-btn").classList.add("tab-selected");
+        localStorage.setItem("file_sharing_tab", "samba");
     }
     else {
         document.getElementById("samba-btn").classList.remove("tab-selected");
         frame.src = "nfs-manager/nfs-manager.html"
         document.getElementById("nfs-btn").classList.add("tab-selected");
+        localStorage.setItem("file_sharing_tab", "nfs");
     }
 }
 
@@ -59,6 +61,17 @@ function button_setup() {
  * Returns: Nothing
  */
 function main() {
+    let tab = localStorage.getItem("file_sharing_tab")
+    if (tab == null) {
+        localStorage.setItem("file_sharing_tab", "samba")
+    }
+
+    if (tab == "samba") {
+        switch_iframe(true);
+    } else {
+        switch_iframe(false);
+    }
+
     button_setup()
 }
 
