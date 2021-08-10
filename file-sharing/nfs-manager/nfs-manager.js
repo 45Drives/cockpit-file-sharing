@@ -69,8 +69,9 @@ function check_nfs() {
         err: "out",
         superuser: "require",
     });
-    proc.done(function () {
-        refreshList()
+    proc.done(async function () {
+        await refreshList()
+        setup()
     });
     proc.fail(function () {
         fatalError("Failed to load NFS services. Is NFS installed or enabled?")
@@ -83,17 +84,15 @@ export async function refreshList() {
     try {
         // Reset the exports list
         exportsList = await populateExportList();
-        setup();
+        displayExports(exportsList);
     }
     catch (err) {
-        fatalError("Hello")
         fatalError(err)
     }
 }
 
 // Displays list, setup buttons and clear branding
-async function setup() {
-    displayExports(exportsList);
+function setup() {
     set_up_buttons();
     hideModal("blurred-screen");
 }
@@ -134,10 +133,14 @@ function nfsModal() {
             let msg = Promise.resolve(createNfs(listEntry))
             msg.then(value => {
                 mainNotification.setSuccess(value);
+                // Refresh export list
+                displayExports(exportsList)
             }) 
+            msg.catch(value => {
+                mainNotification.setError(value);
+            })
 
-            // Refresh export list, hide modal and clear modals info
-            displayExports(exportsList)
+            // hide modal and clear modals info
             hideModal("nfs-modal")
             clearNfsModal()
         }
@@ -194,7 +197,7 @@ export function showEdit(exportToEdit) {
 
     // Create new clients for each client in current export
     exportToEdit.clients.forEach((client) => {
-        editedExport.addClient(true, client.ip, client.permissions);
+        editedExport.addClient(true, client.ip, client.permissions, client.name);
     })
 
     // Add notifaction

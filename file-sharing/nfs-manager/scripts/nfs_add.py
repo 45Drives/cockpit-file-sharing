@@ -40,20 +40,26 @@ def create_dir(path):
         print("Cannot make directory.")
         sys.exit(1)
 
+
+
 # Name: write_exports
 # Receives: Name, Path, Client IP and Options
 # Does: Enters name, path and clients ip into exports config.
 # Returns: Nothing
 def write_exports(name, path, clients):
     try:
+        clientsNames = []
         clientsString = ""
         for client in clients :
+            clientsNames.append(client['name'])
             clientsString += " " + client['ip'] + "(" + client['permissions'] + ")"
+
+        clientsNamesString = ", ".join(clientsNames)
 
         print(clientsString)
         print("Writing to /etc/exports.d/cockpit-file-sharing.exports")
         with open("/etc/exports.d/cockpit-file-sharing.exports", "a") as f:
-            f.write('# Name: ' + name + '\n"' + path + '"' + clientsString + '\n')
+            f.write('# Name: ' + name + '\n# Clients: ' + clientsNamesString + '\n"' + path + '"' + clientsString + '\n')
     except Exception as err:
         print(err)
         sys.exit(1)
@@ -65,9 +71,13 @@ def write_exports(name, path, clients):
 # Returns: Nothing
 def edit_export(name, path, clients, edit_export_name):
     try:
+        clientsNames = []
         clientsString = ""
         for client in clients :
+            clientsNames.append(client['name'])
             clientsString += " " + client['ip'] + "(" + client['permissions'] + ")"
+
+        clientsNamesString = ", ".join(clientsNames)
 
         export_file = open("/etc/exports.d/cockpit-file-sharing.exports", "r")
         lines = export_file.readlines()
@@ -76,6 +86,8 @@ def edit_export(name, path, clients, edit_export_name):
         for i in range(0, len(lines)):
             if edit_export_name in lines[i]:
                 lines[i] =  '# Name: ' + name + '\n'
+                i += 1
+                lines[i] = '# Clients: ' + clientsNamesString + '\n'
                 i += 1
                 lines[i] = '"' + path + '"' + clientsString + '\n'
                 break

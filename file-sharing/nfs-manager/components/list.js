@@ -35,7 +35,7 @@ export function populateExportList() {
             for (let i = 0; i < obj.length; i++) {
                 let newExport = new NfsExport(obj[i]["Name"], obj[i]["Path"])
                 for (let j = 0; j < obj[i]["Clients"].length; j++) {
-                    newExport.addClient(false, obj[i]["Clients"][j]["Ip"], obj[i]["Clients"][j]["Permissions"])
+                    newExport.addClient(false, obj[i]["Clients"][j]["Ip"], obj[i]["Clients"][j]["Permissions"], obj[i]["Clients"][j]["Name"])
                 }
                 
                 exportsList.push(newExport)

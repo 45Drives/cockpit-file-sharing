@@ -58,16 +58,25 @@ def main():
         file.close()
         for i in range(0, len(lines), 1):
             if("Name:" in lines[i]):
+                # Get name
                 name = lines[i][8:-1]
+
+                # Get Client names
+                i += 1
+                client_names = lines[i][11:-1].split(", ")
+    
+                # Get path, ip and permissions
                 i += 1
                 fields = re.findall(r"^\"([^\"]+)\"(.+)$", lines[i])
                 path = fields[0][0]
                 all_clients = fields[0][1]
                 raw_clients = re.findall(r"\s*([^\(]+)\(([^\)]+)\)", all_clients)
                 dic = {"Name":name, "Path":path, "Clients":[]}
-                for client in raw_clients:
-                    clients = {"Ip":client[0], "Permissions":client[1]}
+
+                for i in range(0, len(client_names)):
+                    clients = {"Name":client_names[i], "Ip":raw_clients[i][0], "Permissions":raw_clients[i][1]}
                     dic["Clients"].append(clients)
+
                 obj.append(dic)
     except OSError:
         print(OSError)

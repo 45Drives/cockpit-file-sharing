@@ -21,11 +21,12 @@ import {refreshList, showEdit} from "../nfs-manager.js";
 
 // Client object that is constructed with variables
 class Client {
-    constructor(name, parentExport="", ip="", permissions="") {
+    constructor(name="",parentExport="", ip="", permissions="") {
         this.name = name;
         this.parentExport = parentExport;
         this.ip = ip;
         this.permissions = permissions;
+        this.clientNum = parentExport.clients.length+1
     }
 
     // HTML when user is adding a client
@@ -36,6 +37,25 @@ class Client {
         client_div.classList.add("allign");
 
         let inputs = document.createElement("div");
+
+        let nameRow = document.createElement("div");
+        nameRow.classList.add("form-row");
+
+        let nameLabel = document.createElement("label");
+        nameLabel.classList.add("label-45d", "bold-text");
+        nameLabel.innerText = "Client Name";
+
+        let nameText = this.name
+
+        this.name = document.createElement("input");
+        this.name.type = "text";
+        this.name.classList.add("client-to-add")
+        this.name.value = nameText;
+        if (nameText == null) {
+            this.name.placeholder = "Will default to 'Client " + this.clientNum + "' if left empty";
+        }
+
+        nameRow.append(nameLabel, this.name);
 
         let ip_row = document.createElement("div");
         ip_row.classList.add("form-row");
@@ -71,6 +91,7 @@ class Client {
         options_row.appendChild(options_label);
         options_row.appendChild(this.permissions);
 
+        inputs.appendChild(nameRow);
         inputs.appendChild(ip_row);
         inputs.appendChild(options_row);
 
@@ -122,59 +143,6 @@ class Client {
         entry.append(arrowSpacer, clientName, clientIp, clientPermissions, settingsSpacer);
         return entry;
     }
-
-    // Remove client from config
-    removeClient() {
-        // Create a promise to give a success or error
-        return new Promise((resolve,reject) => {
-            // Proc nfs remove script passing clients parent and ip
-            var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_remove.py", this.parentExport, this.ip], {
-                err: "out",
-                superuser: "require",
-            });
-            proc.done(() => {
-                // Success
-                resolve("Removed client " + this.ip + " from " + this.parentExport + ".");
-            });
-            proc.fail((data) => {
-                // Error
-                reject("Failed to remove client: " + data);
-            });
-        }); 
-    }
-
-    // Show remove client modal
-    showRmClient() {
-        // Create a notification object for main page
-        let nfsNotification = new Notification("nfs")
-
-        // Get areas where to fill inner text with info of client to remove
-        let clientToRm = document.getElementsByClassName('client-to-remove');
-        for (let i = 0; i < clientToRm.length; i++) {
-            clientToRm[i].innerText = "client " + this.ip + " from " + this.parentExport;
-        }
-        
-        showModal("rm-client-modal");
-
-        // Add function to remove button
-        let continue_rm_nfs = document.getElementById("continue-rm-client");
-        continue_rm_nfs.onclick = async () => {
-            try {
-                // Proc remove function to see if it succeeds or fails
-                let msg = Promise.resolve(await this.removeClient());
-                msg.then(value => {
-                    nfsNotification.setSuccess(value)
-                });
-            }
-            catch (err) {
-                // Error
-                nfsNotification.setError(err)
-            }
-            // Reset list and then hide modal
-            await refreshList();
-            hideModal("rm-client-modal");
-        };
-    }
 }
 
 // Export object that holds a list of clients
@@ -183,20 +151,18 @@ export class NfsExport {
         this.name = name;
         this.path = path;
         this.clients = [];
-        this.clientNames = 0;
     }
 
     // Add clients
-    addClient(html,ip=null, permissions=null) {
-        this.clientNames += 1;
-        let clientName = "Client " + (this.clientNames);
-        let client = new Client(clientName, this, ip, permissions);
+    addClient(html,ip=null, permissions=null, name=null) {
+        let client = new Client(name, this, ip, permissions);
+        // add client to export's list
+        this.clients.push(client);
+
         // Add input html if the client is being added in modal
         if (html) {
             client.inputClient()
         }
-        // add client to export's list
-        this.clients.push(client);
     }
 
     // HTML for export sin list
@@ -311,7 +277,7 @@ export class NfsExport {
     removeExport() {
         // Pass the name of the export to nfs remove script
         return new Promise((resolve,reject) => {
-            var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_remove.py", "--export", this.name], {
+            var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_remove.py", this.name], {
                 err: "out",
                 superuser: "require",
             });
@@ -319,6 +285,7 @@ export class NfsExport {
                 resolve("Removed " + this.name);
             });
             proc.fail((data) => {
+                console.log(data)
                 reject("Failed to remove export: " + data);
             });
         }); 
@@ -340,17 +307,16 @@ export class NfsExport {
         // Add function to call remove export to continue remove button
         let continue_rm_nfs = document.getElementById("continue-rm-client");
         continue_rm_nfs.onclick = async () => {
-            try {
-                let msg = Promise.resolve(await this.removeExport());
-                msg.then(value => {
-                    nfsNotification.setSuccess(value)
-                });
-            }
-            catch (err) {
+            let msg = Promise.resolve(await this.removeExport());
+            msg.then(value => {
+                nfsNotification.setSuccess(value)
+            });
+            msg.catch(value => {
                 nfsNotification.setError(err)
-            }
+            });
+
             // Reset list and hide modal
-            await refreshList();
+            refreshList();
             hideModal("rm-client-modal");
         };
     }
@@ -435,6 +401,13 @@ function sendNewExport(newExport, exportName, path) {
         } 
 
         // Add the "real" values to client
+        if (client.name.value ==  "") {
+            client.name = "Client " + (client.clientNum);
+            console.log("Name is " + client.name)
+        } else {
+            client.name = client.name.value
+            console.log("Renaming to " + client.name)
+        }
         client.ip = ip
         client.permissions = permissions
         client.parentExport = exportName
@@ -446,6 +419,7 @@ function sendNewExport(newExport, exportName, path) {
 // Add a export and its clients to the export config
 export function createNfs(entry) {
     // Proc the nfs add script in a promise to return a success or fail
+    console.log(JSON.stringify(entry)) 
     return new Promise((resolve, reject) => {
         var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_add.py", JSON.stringify(entry)], {
             err: "out",
