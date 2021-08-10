@@ -127,7 +127,7 @@ def check_config():
         print("Could not open /etc/exports.d/cockpit-file-sharing.exports. Do you have nfs installed?")
         sys.exit(1)
     
-    if len(lines) == 0 or lines[0] != "# Formmated for cockpit-nfs-manager\n":
+    if len(lines) == 0 or lines[0] != "# Formmated by cockpit-file-sharing\n":
         print("Please run nfs_list.py for setup.")
         sys.exit(1)
 

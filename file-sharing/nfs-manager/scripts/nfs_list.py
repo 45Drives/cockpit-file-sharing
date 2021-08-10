@@ -42,7 +42,7 @@ def check_config():
     except OSError:
         child = subprocess.run(["mkdir", "/etc/exports.d"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         file = open("/etc/exports.d/cockpit-file-sharing.exports", "w")
-        file.write("# Formmated for cockpit-nfs-manager\n")
+        file.write("# Formmated by cockpit-file-sharing\n")
         file.close()
 
 # Name: main

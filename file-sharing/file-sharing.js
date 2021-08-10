@@ -60,7 +60,6 @@ function button_setup() {
  */
 function main() {
     button_setup()
-    switch_iframe(false) // ROMVE THIS!!
 }
 
 main()

@@ -58,8 +58,8 @@ export function displayExports(exportsList) {
     // If there is no exports then display "help" message
     if (exportsList.length === 0) {
         var msg = document.createElement("div");
+        msg.classList.add("grid-header");
         var pullDown = document.createElement("div");
-        pullDown.innerText = ' ';
         var name = document.createElement("div");
         name.innerText = 'No exports. Click the "plus" to add one.';
         var path = document.createElement("div");

@@ -95,6 +95,34 @@ class Client {
         client_section.appendChild(client_div);
     }
 
+    // List Client in client grid under exports
+    listClient() {
+        let entry = document.createElement("div");
+        entry.classList.add("client-items");
+        
+        let arrowSpacer = document.createElement("div");
+        
+        let clientNameDiv = document.createElement("div"); 
+        let clientName = document.createElement("span");
+        clientName.innerText = this.name;
+        clientNameDiv.appendChild(clientName);
+
+        let clientIpDiv = document.createElement("div");
+        let clientIp = document.createElement("span");
+        clientIp.innerText = this.ip;
+        clientIpDiv.appendChild(clientIp);
+
+        let clientPermissionsDiv = document.createElement("div");
+        let clientPermissions = document.createElement("span");
+        clientPermissions.innerText = this.permissions;
+        clientPermissionsDiv.appendChild(clientPermissions);
+        
+        let settingsSpacer = document.createElement("div");
+
+        entry.append(arrowSpacer, clientName, clientIp, clientPermissions, settingsSpacer);
+        return entry;
+    }
+
     // Remove client from config
     removeClient() {
         // Create a promise to give a success or error
@@ -171,13 +199,13 @@ export class NfsExport {
         this.clients.push(client);
     }
 
-    // HTML for export in list
+    // HTML for export sin list
     listExport() {
         // Get element to put entry in
         let guiList = document.getElementById("export-list")
 
         let entry = document.createElement("div");
-        entry.classList.add("highlight-entry", "export-grid");
+        entry.classList.add("export-grid");
 
         let header = document.createElement("div");
         header.classList.add("grid-header")
@@ -186,11 +214,36 @@ export class NfsExport {
         arrow.classList.add("fa", "fa-chevron-right", "grid-center");
         header.appendChild(arrow);
 
+        // Client items
         let pullDown = document.createElement("div");
-        pullDown.classList.add("pulldown")
-        pullDown.innerText = "Hello"
+        pullDown.classList.add("pulldown");
 
-        const slideDown = elem => elem.style.height = `${elem.scrollHeight}px`;
+        let clientGrid = document.createElement("div");
+        clientGrid.classList.add("client-grid");
+        
+        let clientHeader = document.createElement("div");
+        clientHeader.classList.add("client-items", "bold-text");
+        let arrowSpacer = document.createElement("div");
+        
+        let clientName = document.createElement("div");
+        clientName.innerText = "Name"; 
+
+        let clientIp = document.createElement("div");
+        clientIp.innerText = "IP";
+    
+        let clientPermissions = document.createElement("div");
+        clientPermissions.innerText = "Permissions";
+        
+        let settingsSpacer = document.createElement("div");        
+        clientHeader.append(arrowSpacer, clientName, clientIp, clientPermissions, settingsSpacer);
+
+        clientGrid.appendChild(clientHeader);
+
+        for (let i = 0; i < this.clients.length; i++) {
+            clientGrid.appendChild(this.clients[i].listClient());
+        }
+
+        const slideDown = elem => elem.style.height = `${elem.scrollHeight + 20}px`;
         const slideUp = elem => elem.style.height = `0px`;
         let isSlide = true;
         arrow.addEventListener('click', () => {
@@ -203,14 +256,22 @@ export class NfsExport {
 
             arrow.classList.toggle("open");
         });
-        
-        let entryName = document.createElement("div");
-        entryName.innerText = this.name;
-        header.appendChild(entryName);
 
-        let entryPath = document.createElement("div");
+        pullDown.appendChild(clientGrid);
+        
+        let entryNameDiv = document.createElement("div");
+        entryNameDiv.classList.add("vertical-align")
+        let entryName = document.createElement("span");
+        entryName.innerText = this.name;
+        entryNameDiv.appendChild(entryName);
+        header.appendChild(entryNameDiv);
+
+        let entryPathDiv = document.createElement("div");
+        entryPathDiv.classList.add("vertical-align")
+        let entryPath = document.createElement("span");
         entryPath.innerText = this.path;
-        header.appendChild(entryPath);
+        entryPathDiv.appendChild(entryPath);
+        header.appendChild(entryPathDiv);
 
         let settings = document.createElement("i");
         settings.classList.add("fa", "fa-ellipsis-v", "grid-center", "dropdown");
@@ -242,10 +303,6 @@ export class NfsExport {
         
         entry.appendChild(header);
         entry.appendChild(pullDown);
-        
-        let divider = document.createElement("div");
-        divider.classList.add("pf-c-divider");
-        entry.appendChild(divider);
 
         guiList.append(entry);
     }

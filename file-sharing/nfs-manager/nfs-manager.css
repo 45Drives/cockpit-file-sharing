@@ -279,10 +279,9 @@ link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
     cursor: pointer;
 }
   
-
 .list-grid {
     display: grid;
-    grid-template-rows: 25px 1px auto;
+    grid-template-rows: 25px auto;
     font-size: 14px;
 }
 
@@ -294,7 +293,8 @@ link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
 
 .export-grid {
     display: grid;
-    grid-template-rows: 25px 1fr 1px;
+    grid-template-rows: 50px 1fr;
+    border-bottom: 1px solid #ccc;
 }
 
 .grid-center {
@@ -302,24 +302,33 @@ link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
     align-self: center;
 }
 
-.client-grid {
-    display: grid;
-    grid-template-rows: 25px 1px;
-    grid-row-gap: 8px;
-}
-
 .client-items {
     display: grid;
-    grid-template-columns: 5em 2fr 2fr 2fr 5em;
-    grid-column-gap: 8px;
+    grid-template-columns: 7em 2fr 2fr 2fr 7em;
+    grid-template-rows: 30px;
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
-.client-divider {
-    display: grid;
-    grid-template-columns: 5em 1fr 5em;
-    grid-column-gap: 8px;
+.client-items > span {
+    border-top: 1px solid #ccc;
+    display: flex;
+    align-items: center;
 }
 
 .alert {
     margin-top: 24px;
+}
+
+.vertical-align {
+    display: flex;
+    align-items: center;
+}
+
+.header-border {
+    border-bottom: 1px solid #ccc;
+}
+
+.client-grid {
+    padding-top: 12px;
 }
