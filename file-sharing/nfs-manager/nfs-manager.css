@@ -274,10 +274,6 @@ link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
     transform: rotate(90deg);
     transition: transform 0.5s linear;
 }
-
-.pulldown-hover:hover {
-    cursor: pointer;
-}
   
 .list-grid {
     display: grid;
@@ -331,4 +327,28 @@ link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
 
 .client-grid {
     padding-top: 12px;
+}
+
+.pulldown-circle {
+    height: 50px;
+    width: 5em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pulldown-circle:hover {
+    cursor: pointer;
+}
+
+.settings-clickable {
+    width: 2em;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-clickable:hover {
+    cursor: pointer;
 }

@@ -176,9 +176,12 @@ export class NfsExport {
         let header = document.createElement("div");
         header.classList.add("grid-header")
 
+        let arrowDiv = document.createElement("span");
+        arrowDiv.classList.add("pulldown-circle");
         let arrow = document.createElement("i");
-        arrow.classList.add("fa", "fa-chevron-right", "grid-center");
-        header.appendChild(arrow);
+        arrow.classList.add("fa", "fa-chevron-right");
+        arrowDiv.appendChild(arrow);
+        header.appendChild(arrowDiv);
 
         // Client items
         let pullDown = document.createElement("div");
@@ -212,7 +215,7 @@ export class NfsExport {
         const slideDown = elem => elem.style.height = `${elem.scrollHeight + 20}px`;
         const slideUp = elem => elem.style.height = `0px`;
         let isSlide = true;
-        arrow.addEventListener('click', () => {
+        arrowDiv.addEventListener('click', () => {
             if (isSlide) {
                 slideDown(pullDown);
             } else {
@@ -239,8 +242,10 @@ export class NfsExport {
         entryPathDiv.appendChild(entryPath);
         header.appendChild(entryPathDiv);
 
+        let settingsDiv = document.createElement("div");
+        settingsDiv.classList.add("settings-clickable");
         let settings = document.createElement("i");
-        settings.classList.add("fa", "fa-ellipsis-v", "grid-center", "dropdown");
+        settings.classList.add("fa", "fa-ellipsis-v", "dropdown");
 
         let settingsContent = document.createElement("div");
         settingsContent.classList.add("dropdown-content");
@@ -260,12 +265,17 @@ export class NfsExport {
         settingsContent.appendChild(remove);
         settingsContent.appendChild(edit);
         settings.appendChild(settingsContent);
+        settingsDiv.appendChild(settings);
         
-        settings.addEventListener("click", () => {
+        settingsDiv.addEventListener("click", () => {
+            let dropdowns = document.getElementsByClassName("show");
+            for (let i = 0; i < dropdowns.length; i++) {
+                dropdowns[i].classList.remove("show");
+            }
             settingsContent.classList.toggle("show");
         });
 
-        header.appendChild(settings);
+        header.appendChild(settingsDiv);
         
         entry.appendChild(header);
         entry.appendChild(pullDown);

@@ -208,7 +208,7 @@ export function showEdit(exportToEdit) {
     showModal("nfs-modal", () => {
         // Change title to edit
         let title = document.getElementById("modal-title");
-        title.innerText = "Editing Export" + oldExportName;
+        title.innerText = "Editing Export " + oldExportName;
 
         // Change inner add button text to apply
         let addBtn = document.getElementById("add-nfs-btn");
@@ -223,13 +223,14 @@ export function showEdit(exportToEdit) {
                 let index = exportsList.indexOf(exportToEdit);
                 exportsList[index] = listEntry
 
-                // Edit the export config here
-                // Add an exception for when editing exports... maybe an edit scirpt? or flag?
                 // Add new entry to export file
                 let msg = Promise.resolve(editNfs(listEntry, oldExportName))
                 msg.then(value => {
                     mainNotification.setSuccess(value);
                 }) 
+                msg.catch(value => {
+                    fatalError(value);
+                })
 
                 // Refresh export list, hide modal and clear modals info
                 displayExports(exportsList)
@@ -248,18 +249,12 @@ export function showEdit(exportToEdit) {
     });
 }
 
-/* Thank you w3schools for this function!
-link: https://www.w3schools.com/howto/howto_js_dropdown.asp */
-//Close the dropdown menu if the user clicks outside of it
+// //Close the dropdown menu if the user clicks outside of it
 window.onclick = function(event) {
-    if (!event.target.matches('.fa-ellipsis-v')) {
-      var dropdowns = document.getElementsByClassName("dropdown-content");
-      var i;
-      for (i = 0; i < dropdowns.length; i++) {
-        var openDropdown = dropdowns[i];
-        if (openDropdown.classList.contains('show')) {
-          openDropdown.classList.remove('show');
+    if (!event.target.matches('.settings-clickable') && !event.target.matches('.fa-ellipsis-v')) {
+        let dropdowns = document.getElementsByClassName("show") ;
+        for (let i = 0; i < dropdowns.length; i++) {
+            dropdowns[i].classList.remove('show');
         }
-      }
     }
 }
