@@ -1,3 +1,3 @@
-## Cockpit File Sharing 2.0.1-1
+## Cockpit File Sharing 2.0.2-1
 
-* Fixed small bugs and typos.
+* Fixed small bugs

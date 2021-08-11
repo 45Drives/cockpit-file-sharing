@@ -2064,7 +2064,7 @@ async function setup() {
     await add_user_options();
     await populate_privilege_list();
     set_up_buttons();
-    hideModal("setup-spinner-wrapper");
+    hideModal("blurred-screen");
 }
 
 /* main
