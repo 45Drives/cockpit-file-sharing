@@ -26,5 +26,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Aug 11 2021 Sam Silver <ssilver@45drives.com> 2.0.0-1
+- A code refactor and UI redesign of NFS Manager.
+* Wed Aug 11 2021 Sam Silver <ssilver@45drives.com> 2.0.0-1
+- A code refactor and UI redesign of NFS Manager.
 * Mon Jul 05 2021 Sam Silver <ssilver@45drives.com> 1.0.0-1
 - Initial packaging

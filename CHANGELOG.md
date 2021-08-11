@@ -1,3 +1,3 @@
-## Cockpit File Sharing 1.0.0-1
+## Cockpit File Sharing 2.0.0-1
 
-* Initial packaging
+* A code refactor and UI redesign of NFS Manager.

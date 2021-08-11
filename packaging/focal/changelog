@@ -1,3 +1,9 @@
+cockpit-file-sharing (2.0.0-1focal) focal; urgency=medium
+
+  * A code refactor and UI redesign of NFS Manager.
+
+ -- Sam Silver <ssilver@45drives.com>  Wed, 11 Aug 2021 06:21:42 -0300
+
 cockpit-file-sharing (1.0.0-1focal) focal; urgency=medium
 
   * Initial packaging
