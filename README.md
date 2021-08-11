@@ -21,6 +21,11 @@ A Cockpit plugin to easily manage samba and NFS file sharing.
     * [User Management](#user-management)
     * [SeDiskOperatorPrivilege](#sediskopperatorprivilege)
 * [NFS Manager](#nfs-manager) 
+    * [Adding Exports](#adding-exports)
+    * [Editing Exports](#editing-exports)
+    * [Removing an Export](#removing-an-export)
+    * [Removing a Client](#removing-a-client)
+    * [Export File Syntax](#export-file-syntax)
 
 ## General
 
@@ -116,7 +121,6 @@ In the global settings, you can change the description of the server as well as 
 Adding a group is as simple as pressing the "+" button, name the group, then confirm. Removing the group is just as easy, click the "X" next to the group you would like to delete, then confirm.
 
 
-
 ### User Management
 ![User Management](img/samba/samba_user.gif)
 
@@ -127,7 +131,6 @@ Managing Samba Users in file sharing is as easy as can be. First you select the 
 Changing the password of a samba user is possible through the "Set Samba Password" button. You can remove the password by clicking the "Remove Password" button, then confirm.
 
 
-
 ### SeDiskOperatorPrivilege
 ![Add Privilege](img/samba/samba_privilege.gif)
 
@@ -136,8 +139,25 @@ You can add privileges by clicking on the "+" button. You will be greeted with t
 ## NFS Manager
 ![NFS](img/nfs/nfs.gif)
  
-You can add a NFS export by clicking "+" button. Within the nfs add menu, you have the options for name and path. There is also a section for clients. You may add a client by clicking the "+" button. This will give you another set of IP and options. The IP is who can access the particular export and the options are the permissions that IP has on the export. By adding multiple clients you can have multiple IP address accessing the same export, all having different permissions. 
+### Adding Exports
+You can add a NFS export by clicking "+" button. Within the export add menu, you have the options for export name and path. There is also a section for clients. You may add a client by clicking the "+" button. This will give you another set of Client Name, IP and Permissions. The IP is who can access the particular export and the permissions are the rules set for that IP on the export. By adding multiple clients you can have multiple IP address accessing the same export, all having different permissions.
 
 We have set the default IP to "*". This means that anyone can have access to that export. We have set defaults of permissions to rw,sync,no_tree_subcheck. If you want to enter your own permissions, do so by separating the options by commas (See out defaults for example). Check https://linux.die.net/man/5/nfs to see a full list of available options/permissions. 
 
-Removing a NFS is as easy as clicking the "X" beside the NFS you would like to delete, then confirm.
+### Editing Exports
+If you feel the need to change an export that is already added, you can click on the settings icon to the far right of the export. Clicking edit will bring you to the edit modal where you can change everything about your pre-exisitng export.
+
+### Removing an Export
+If you would like to remove a whole export, click on the settings icon, then click on remove. This will permently remove the whole export. This WILL NOT however remove the path that it is attached to.
+
+### Removing a Client
+If you like to a specific client from an export, go into the edit modal of the export. From the edit modal you can press the red "X" by the individual clients you would like to remove.
+
+### Export File Syntax
+NFS Manger uses the file /etc/exports.d/cockpit-file-sharing.exports to add exports to the NFS-server. In order for the UI portion to work there needs to be a certain syntax to the exports file.
+
+\# Name: Name of Export  
+\# Clients: Client 1 Name, Client 2 Name  
+"/path/to/export" client-1-ip(client,1,permissions) client-2-ip(client,2,permissions) 
+
+If any export does not follow this syntax, the UI will throw an error!
