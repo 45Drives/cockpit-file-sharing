@@ -33,7 +33,7 @@ def check_config():
         file.close()
     except OSError:
         print("Could not open /etc/exports. Do you have nfs installed?")
-        sys.exit(1)
+        sys.exit(3)
 
     try:
         file = open("/etc/exports.d/cockpit-file-sharing.exports")
@@ -78,9 +78,9 @@ def main():
                     dic["Clients"].append(clients)
 
                 obj.append(dic)
-    except OSError:
-        print(OSError)
-        sys.exit(1)
+    except Exception as err:
+        print(err)
+        sys.exit(4)
     
     obj = json.dumps(obj)
     print(obj)

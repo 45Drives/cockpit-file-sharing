@@ -44,7 +44,12 @@ export function populateExportList() {
             resolve(exportsList);
         });
         proc.fail(function (data) {
-            reject("Error while populating nfs list: " + data)
+            if (data.exit_status == 4) {
+                reject("Could not list /etc/exports.d/cockpit-file-sharing.exports. Is there a syntax error?");
+            }
+            else {
+                reject("Could not list exports: " + data);
+            }
         });
     });
 }

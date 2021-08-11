@@ -26,6 +26,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Aug 11 2021 Sam Silver <ssilver@45drives.com> 2.1.0-1
+- Added more error catching and better descriptions
+* Wed Aug 11 2021 Sam Silver <ssilver@45drives.com> 2.1.0-1
+- Added more error catching and better descriptions
 * Wed Aug 11 2021 Sam Silver <ssilver@45drives.com> 2.0.2-1
 - Fixed small bugs
 * Wed Aug 11 2021 Sam Silver <ssilver@45drives.com> 2.0.2-1

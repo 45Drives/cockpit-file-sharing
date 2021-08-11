@@ -70,8 +70,8 @@ function check_nfs() {
         superuser: "require",
     });
     proc.done(async function () {
-        await refreshList()
-        setup()
+        await refreshList();
+        setup();
     });
     proc.fail(function () {
         fatalError("Failed to load NFS services. Is NFS installed or enabled?")
@@ -81,14 +81,15 @@ function check_nfs() {
 
 // Reset the main page list
 export async function refreshList() {
-    try {
-        // Reset the exports list
-        exportsList = await populateExportList();
+    // Reset the exports list
+    let proc = Promise.resolve(populateExportList());
+    proc.then(value => {
+        exportsList = value;
         displayExports(exportsList);
-    }
-    catch (err) {
-        fatalError(err)
-    }
+    });
+    proc.catch(value => {
+        fatalError(value);
+    });
 }
 
 // Displays list, setup buttons and clear branding

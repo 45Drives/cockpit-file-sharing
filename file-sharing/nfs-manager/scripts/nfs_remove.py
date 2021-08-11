@@ -33,7 +33,7 @@ def check_config():
         file.close()
     except OSError:
         print("Could not open /etc/exports.d/cockpit-file-sharing.exports. Do you have nfs installed?")
-        sys.exit(1)
+        sys.exit(3)
     
     if len(lines) == 0 or lines[0] != "# Formmated by cockpit-file-sharing\n":
         print("Please run nfs_list.py for setup.")
@@ -49,7 +49,7 @@ def reset_config():
         print("Restarting nfs...")
     except OSError:
         print("Could not restart nfs, do you have it on your system?")
-        sys.exit(1)
+        sys.exit(4)
 
 # Remove the whole export line
 def remove_export(name):
@@ -74,7 +74,7 @@ def remove_export(name):
             reset_config()
         else:
             print("That NFS Name does not exist.")
-            sys.exit(1)
+            sys.exit(5)
 
     except OSError:
         print(OSError)

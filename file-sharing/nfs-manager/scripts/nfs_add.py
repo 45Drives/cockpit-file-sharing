@@ -38,7 +38,7 @@ def create_dir(path):
         subprocess.run(["mkdir", "-p", path])
     except OSError:
         print("Cannot make directory.")
-        sys.exit(1)
+        sys.exit(7)
 
 
 
@@ -62,7 +62,7 @@ def write_exports(name, path, clients):
             f.write('# Name: ' + name + '\n# Clients: ' + clientsNamesString + '\n"' + path + '"' + clientsString + '\n')
     except Exception as err:
         print(err)
-        sys.exit(1)
+        sys.exit(6)
 
 # Name: Edit Export
 # Receives: Name, Path, Client in JSON format and export name to edit
@@ -98,7 +98,7 @@ def edit_export(name, path, clients, edit_export_name):
 
     except Exception as err:
         print(err)
-        sys.exit(1)
+        sys.exit(5)
 
 # Name: reset_config
 # Receives: Nothing
@@ -110,7 +110,7 @@ def reset_config():
         print("Restarting nfs...")
     except OSError:
         print("Could not restart nfs, do you have it on your system?")
-        sys.exit(1)
+        sys.exit(4)
 
 # Name: make_nfs
 # Receives: Name, Path, IP and Options
@@ -137,7 +137,7 @@ def check_config():
         file.close()
     except OSError:
         print("Could not open /etc/exports.d/cockpit-file-sharing.exports. Do you have nfs installed?")
-        sys.exit(1)
+        sys.exit(3)
     
     if len(lines) == 0 or lines[0] != "# Formmated by cockpit-file-sharing\n":
         print("Please run nfs_list.py for setup.")

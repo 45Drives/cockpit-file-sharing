@@ -295,7 +295,13 @@ export class NfsExport {
                 resolve("Removed " + this.name);
             });
             proc.fail((data) => {
-                reject("Failed to remove export: " + data);
+                if (data.exit_status == 4) {
+                    reject("Could not restart nfs. Is it enabled?")
+                } else if (data.exit_status == 5) {
+                    reject("Could not find export name in /etc/exports.d/cockpit-file-sharing.exports. Is there a syntax error?")
+                } else {
+                    reject("Failed to remove export: " + data);
+                }
             });
         }); 
     }
@@ -315,17 +321,17 @@ export class NfsExport {
 
         // Add function to call remove export to continue remove button
         let continue_rm_nfs = document.getElementById("continue-rm-client");
-        continue_rm_nfs.onclick = async () => {
-            let msg = Promise.resolve(await this.removeExport());
+        continue_rm_nfs.onclick = () => {
+            let msg = Promise.resolve( this.removeExport());
             msg.then(value => {
                 nfsNotification.setSuccess(value)
+                // Reset list and hide modal
+                refreshList();
             });
             msg.catch(value => {
-                nfsNotification.setError(err)
+                nfsNotification.setError(value)
             });
 
-            // Reset list and hide modal
-            refreshList();
             hideModal("rm-client-modal");
         };
     }
@@ -435,7 +441,13 @@ export function createNfs(entry) {
             resolve("Added " + entry.name + " export to the server.");
         });
         proc.fail(function (data) {
-            reject("Could not add export: " + data);
+            if (data.exit_status == 4) {
+                reject("Could not restart nfs. Is it enabled?")
+            } else if (data.exit_status == 7) {
+                reject("Could not make directory.")
+            } else {
+                reject("Error occured when adding export: " + data)
+            } 
         });
     });
 }
@@ -452,7 +464,13 @@ export function editNfs(entry, oldExportName) {
             resolve("Edited " + oldExportName);
         });
         proc.fail(function (data) {
-            reject("Could edit export: " + data);
+            if (data.exit_status == 4) {
+                reject("Could not restart nfs. Is it enabled?")
+            } else if (data.exit_status == 7) {
+                reject("Could not make directory.")
+            } else {
+                reject("Error occured when editing export: " + data)
+            }
         });
     });
 }
