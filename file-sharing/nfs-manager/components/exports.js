@@ -295,7 +295,6 @@ export class NfsExport {
                 resolve("Removed " + this.name);
             });
             proc.fail((data) => {
-                console.log(data)
                 reject("Failed to remove export: " + data);
             });
         }); 
@@ -413,10 +412,8 @@ function sendNewExport(newExport, exportName, path) {
         // Add the "real" values to client
         if (client.name.value ==  "") {
             client.name = "Client " + (client.clientNum);
-            console.log("Name is " + client.name)
         } else {
-            client.name = client.name.value
-            console.log("Renaming to " + client.name)
+            client.name = client.name.value;
         }
         client.ip = ip
         client.permissions = permissions
@@ -429,7 +426,6 @@ function sendNewExport(newExport, exportName, path) {
 // Add a export and its clients to the export config
 export function createNfs(entry) {
     // Proc the nfs add script in a promise to return a success or fail
-    console.log(JSON.stringify(entry)) 
     return new Promise((resolve, reject) => {
         var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/nfs-manager/scripts/nfs_add.py", JSON.stringify(entry)], {
             err: "out",

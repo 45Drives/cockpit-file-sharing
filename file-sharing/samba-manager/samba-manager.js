@@ -1582,6 +1582,7 @@ async function nav_bar_update_choices() {
 function populate_advanced_share_settings(id, string_to_check, string, vfs_object) {
     var input = document.getElementById("advanced-share-settings-input");
     var pressed = document.getElementById("is-pressed-" + id);
+    let shareNotification = new Notification("share-modal");
 
     if(input.value.includes(string_to_check)) {
         if(pressed.innerText.includes("true")) {
@@ -1591,7 +1592,7 @@ function populate_advanced_share_settings(id, string_to_check, string, vfs_objec
             input.style.height = Math.max(input.scrollHeight + 5, 50) + "px";
         }
         else {
-            set_error("share-modal", "Parameters already contain " + id + " settings. Press again to clear all parameters and populate with JUST " + id + " settings.", timeout_ms);
+            shareNotification.setError("Parameters already contain " + id + " settings. Press again to clear all parameters and populate with JUST " + id + " settings.");
             pressed.innerText = true;
             setTimeout(function(){
                 pressed.innerText = false;
@@ -2020,10 +2021,10 @@ function check_permissions() {
     });
     proc.fail(function (ex, data) {
         if(ex.problem === "not-found") {
-            fatal_error("Samba is not installed. Please install...");
+            fatalError("Samba is not installed. Please install...");
         } 
         else {
-            fatal_error("User account lacks permission to configure Samba!");
+            fatalError("User account lacks permission to configure Samba!");
         }
     });
 }
@@ -2044,7 +2045,7 @@ function check_smb_conf() {
             !/#\s*include\s*=\s*registry/i.test(data);
         if (config_ok) setup();
         else
-            fatal_error(
+            fatalError(
                 "Samba must be configured to include registry. Add `include = registry` to the [global] section of /etc/samba/smb.conf"
             );
     });
