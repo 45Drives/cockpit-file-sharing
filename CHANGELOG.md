@@ -1,3 +1,3 @@
-## Cockpit File Sharing 2.1.0-1
+## Cockpit File Sharing 2.2.0-1
 
-* Added more error catching and better descriptions
+* Added a 'populate macOS shares' setting in the Samba global config.

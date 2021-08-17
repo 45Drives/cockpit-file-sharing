@@ -1,3 +1,9 @@
+cockpit-file-sharing (2.2.0-1focal) focal; urgency=medium
+
+  * Added a 'populate macOS shares' setting in the Samba global config.
+
+ -- Sam Silver <ssilver@45drives.com>  Tue, 17 Aug 2021 07:36:17 -0300
+
 cockpit-file-sharing (2.1.0-1focal) focal; urgency=medium
 
   * Added more error catching and better descriptions
