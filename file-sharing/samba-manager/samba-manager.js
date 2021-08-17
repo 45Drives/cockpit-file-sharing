@@ -12,11 +12,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License
-// along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>. 
+// along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
 
 // Import components
-import {fatalError, Notification} from "../components/notifications.js"
-import {showModal, hideModal} from "../components/modals.js"
+import { fatalError, Notification } from "../components/notifications.js";
+import { showModal, hideModal } from "../components/modals.js";
 
 var selections = [];
 
@@ -30,7 +30,7 @@ var domain_lower_limit;
 
 var windows_acl_parms = {
     "map-acl-inherit": "yes",
-    "acl_xattr:ignore-system-acl": "yes"
+    "acl_xattr:ignore-system-acl": "yes",
 };
 
 /* get_global_conf
@@ -102,20 +102,22 @@ function set_current_user(selector) {
  * Returns: nothing
  */
 function add_user_options() {
-    let userNotification = new Notification("user-select")
+    let userNotification = new Notification("user-select");
     userNotification.setSpinner();
     var selects = document.getElementsByClassName("user-selection");
     // clear existing
-	for(let select of selects){
-		var placeholder = null;
-		while (select.firstChild) {
-			if(select.firstChild.classList && select.firstChild.classList.contains("placeholder"))
-				placeholder = select.firstChild.cloneNode(true);
-			select.removeChild(select.firstChild);
-		}
-		if(placeholder)
-			select.appendChild(placeholder);
-	}
+    for (let select of selects) {
+        var placeholder = null;
+        while (select.firstChild) {
+            if (
+                select.firstChild.classList &&
+                select.firstChild.classList.contains("placeholder")
+            )
+                placeholder = select.firstChild.cloneNode(true);
+            select.removeChild(select.firstChild);
+        }
+        if (placeholder) select.appendChild(placeholder);
+    }
     var proc = cockpit.spawn(["getent", "passwd"], { err: "out" });
     proc.done(function (data) {
         var rows = data.split("\n");
@@ -253,7 +255,7 @@ async function add_group_options() {
 function set_curr_user_group_list() {
     let userNotification = new Notification("user-select");
     userNotification.setSpinner();
-    
+
     var user = document.getElementById("user-selection").value;
     var user_list = document.getElementById("user-group-list");
 
@@ -305,7 +307,9 @@ function add_to_group(new_list) {
         superuser: "require",
     });
     proc.done(function (data) {
-        groupNotification.setSuccess("Successfully added " + user + " to " + selections.join(", ") + ".");
+        groupNotification.setSuccess(
+            "Successfully added " + user + " to " + selections.join(", ") + "."
+        );
         set_curr_user_group_list();
         selections = [];
     });
@@ -351,10 +355,11 @@ function check_duplicates() {
 
         selections = selections.filter((group) => !duplicates.includes(group));
 
-        if (selections.length != 0) 
-            add_to_group(selections);
+        if (selections.length != 0) add_to_group(selections);
         if (duplicates != 0)
-            failNotification.setError(user + " is already in " + duplicates.join(", ") + ".");
+            failNotification.setError(
+                user + " is already in " + duplicates.join(", ") + "."
+            );
         hideModal("add-user-group-modal");
     });
     proc.fail(function (ex, data) {
@@ -401,7 +406,9 @@ function rm_from_group(group, element_list) {
         { err: "out", superuser: "require" }
     );
     proc.done(function (data) {
-        groupNotification.setSuccess("Successfully removed " + user + " from " + group + ".");
+        groupNotification.setSuccess(
+            "Successfully removed " + user + " from " + group + "."
+        );
         element_list.forEach((elem) => elem.remove());
         set_curr_user_group_list();
     });
@@ -417,7 +424,7 @@ function rm_from_group(group, element_list) {
  * Returns: [false, ""] if invalid, [true, "<password>"] if valid
  */
 function check_passwords() {
-    let passwdNotification = new Notification("smbpasswd-modal")
+    let passwdNotification = new Notification("smbpasswd-modal");
     passwdNotification.clear_info();
 
     var pw1 = document.getElementById("smbpasswd-pw1").value;
@@ -440,7 +447,7 @@ function check_passwords() {
  * Returns: nothing
  */
 function set_smbpasswd() {
-    let passwdNotification = new Notification("smbpasswd-modal")
+    let passwdNotification = new Notification("smbpasswd-modal");
     passwdNotification.setSpinner();
 
     var user = document.getElementById("user-selection").value;
@@ -453,8 +460,10 @@ function set_smbpasswd() {
         proc.input(passwd + "\n" + passwd + "\n");
         proc.done(function () {
             passwdNotification.clearInfo();
-            passwdNotification.setSuccess("Successfully set Samba password for " + user + ".");
-            hideModal("smbpasswd-modal")
+            passwdNotification.setSuccess(
+                "Successfully set Samba password for " + user + "."
+            );
+            hideModal("smbpasswd-modal");
         });
         proc.fail(function (ex, data) {
             var why = "";
@@ -481,7 +490,9 @@ function rm_smbpasswd() {
         superuser: "require",
     });
     proc.done(function (data) {
-        passwdNotification.setSuccess("Successfully removed Samba password for " + user + ".");
+        passwdNotification.setSuccess(
+            "Successfully removed Samba password for " + user + "."
+        );
     });
     proc.fail(function (ex, data) {
         passwdNotification.setError(data);
@@ -631,7 +642,9 @@ function rm_group(group_name, element_list) {
         superuser: "require",
     });
     proc.done(function (data) {
-        groupNotification.setSuccess("Successfully deleted " + group_name + ".");
+        groupNotification.setSuccess(
+            "Successfully deleted " + group_name + "."
+        );
         element_list.forEach((elem) => elem.remove());
         add_group_options();
         set_curr_user_group_list();
@@ -751,8 +764,8 @@ function create_share_list_entry(share_name, path, on_delete) {
     entry_path.innerText = path;
 
     var del = document.createElement("td");
-    del.style.padding = "2px"
-    del.style.textAlign = "right"
+    del.style.padding = "2px";
+    del.style.textAlign = "right";
     var del_div = document.createElement("span");
     del_div.classList.add("circle-icon", "circle-icon-danger");
     del_div.addEventListener("click", function () {
@@ -775,8 +788,8 @@ function create_share_list_entry(share_name, path, on_delete) {
 async function populate_share_list() {
     var shares_list = document.getElementById("shares-list");
 
-    shares_list.innerHTML = ""
-    
+    shares_list.innerHTML = "";
+
     try {
         var data = await run_command(["net", "conf", "list"]);
         const [shares, glob] = parse_shares(data.split("\n"));
@@ -786,9 +799,9 @@ async function populate_share_list() {
             name.innerText = 'No shares. Click the "plus" to add one.';
             var path = document.createElement("td");
             var del = document.createElement("td");
-            msg.appendChild(name)
-            msg.appendChild(path)
-            msg.appendChild(del)
+            msg.appendChild(name);
+            msg.appendChild(path);
+            msg.appendChild(del);
             shares_list.appendChild(msg);
         } else {
             Object.keys(shares).forEach(function (share_name) {
@@ -807,8 +820,7 @@ async function populate_share_list() {
         for (let key of Object.keys(glob)) {
             global_samba_conf[key] = glob[key];
         }
-    }
-    catch (err) {
+    } catch (err) {
         let shareNotification = new Notification("share");
         shareNotification.setError(err);
     }
@@ -816,18 +828,18 @@ async function populate_share_list() {
 
 // Run Command will spawn a command and return a promise
 function run_command(args) {
-    return new Promise((resolve,reject) => {
+    return new Promise((resolve, reject) => {
         let proc = cockpit.spawn(args, {
             err: "out",
             superuser: "require",
-        })
+        });
         proc.done((data) => {
-            resolve(data)
-        })
+            resolve(data);
+        });
         proc.fail((err, data) => {
-            reject(data)
-        })
-    })
+            reject(data);
+        });
+    });
 }
 
 /* show_share_dialog
@@ -836,7 +848,11 @@ function run_command(args) {
  * Does: shows share modal dialog and sets up buttons in modal dialog
  * Returns: nothing
  */
-function show_share_dialog(create_or_edit, share_name = "", share_settings = {}) {
+function show_share_dialog(
+    create_or_edit,
+    share_name = "",
+    share_settings = {}
+) {
     var old_path = "";
     let shareNotification = new Notification("share-modal");
     var func = document.getElementById("share-modal-function");
@@ -872,14 +888,16 @@ function show_share_dialog(create_or_edit, share_name = "", share_settings = {})
                 });
                 proc.fail(function (ex, data) {
                     old_path = path;
-                    shareNotification.setError(path + ' does not exist. Press "Add Share" again to create the directory.');
+                    shareNotification.setError(
+                        path +
+                            ' does not exist. Press "Add Share" again to create the directory.'
+                    );
                 });
             }
         };
         button.innerText = "Add Share";
         document.getElementById("share-name").disabled = false;
         set_share_defaults();
-
     } else if (create_or_edit === "edit") {
         document.getElementById("share-name").value = share_name;
         func.innerText = "Edit";
@@ -908,7 +926,10 @@ function show_share_dialog(create_or_edit, share_name = "", share_settings = {})
                 });
                 proc.fail(function (ex, data) {
                     old_path = path;
-                    shareNotification.setError(path + ' does not exist. Press "Apply" again to create the directory.');
+                    shareNotification.setError(
+                        path +
+                            ' does not exist. Press "Apply" again to create the directory.'
+                    );
                 });
             }
         };
@@ -924,7 +945,7 @@ function show_share_dialog(create_or_edit, share_name = "", share_settings = {})
     add_group_select.addEventListener("change", (event) => {
         if (event.target.value !== "") add_group_to_share(event.target.value);
     });
-    
+
     showModal("share-modal");
 }
 
@@ -1009,16 +1030,17 @@ function populate_share_settings(settings) {
     for (let param of Object.keys(windows_acl_parms)) {
         if (Object.hasOwnProperty.call(advanced_settings, param)) {
             delete advanced_settings[param];
-        }
-        else {
+        } else {
             is_windows_acl = false;
         }
     }
     if (is_windows_acl) {
         document.getElementById("windows-acls").setAttribute("checked", true);
-        advanced_settings["vfs-objects"] = advanced_settings["vfs-objects"].replace("acl_xattr", "")
+        advanced_settings["vfs-objects"] = advanced_settings[
+            "vfs-objects"
+        ].replace("acl_xattr", "");
         if (advanced_settings["vfs-objects"] == "") {
-            delete advanced_settings["vfs-objects"]
+            delete advanced_settings["vfs-objects"];
         }
     }
     advanced_share_settings_before_change = { ...advanced_settings };
@@ -1298,20 +1320,20 @@ function edit_share(share_name, settings, action) {
     }
 
     if (document.getElementById("windows-acls").checked) {
-        changed_settings = Object.assign(changed_settings, windows_acl_parms)
+        changed_settings = Object.assign(changed_settings, windows_acl_parms);
         if (!!changed_settings["vfs-objects"]) {
-            changed_settings["vfs-objects"] = changed_settings["vfs-objects"] + " acl_xattr";
+            changed_settings["vfs-objects"] =
+                changed_settings["vfs-objects"] + " acl_xattr";
         } else {
-            changed_settings["vfs-objects"] = "acl_xattr"
+            changed_settings["vfs-objects"] = "acl_xattr";
         }
-    }
-    else {
-        var temp_acl_parms = Object.keys(windows_acl_parms)
-        temp_acl_parms.push(... params_to_delete.values())
-        params_to_delete = temp_acl_parms
+    } else {
+        var temp_acl_parms = Object.keys(windows_acl_parms);
+        temp_acl_parms.push(...params_to_delete.values());
+        params_to_delete = temp_acl_parms;
 
         if (!changed_settings["vfs-objects"]) {
-            params_to_delete.push("vfs-objects")
+            params_to_delete.push("vfs-objects");
         }
     }
 
@@ -1320,13 +1342,11 @@ function edit_share(share_name, settings, action) {
         changed_settings,
         params_to_delete,
         action,
-        function() {
+        function () {
             hideModal("share-modal");
         },
         "share-modal"
     );
-
-    
 }
 
 /* edit_parms
@@ -1375,10 +1395,16 @@ async function edit_parms(
  * Does: constructs payload object containing parameters to delete to pass to del_parms.py as JSON
  * Returns: promise
  */
-function del_parms(share_name, params_to_delete, action, hide_modal_func, info_id) {
+function del_parms(
+    share_name,
+    params_to_delete,
+    action,
+    hide_modal_func,
+    info_id
+) {
     let notification = new Notification(info_id);
     let shareNotification = new Notification("share");
- 
+
     // delete parms first
     var payload = {};
     payload["section"] = share_name;
@@ -1393,7 +1419,9 @@ function del_parms(share_name, params_to_delete, action, hide_modal_func, info_i
     proc.input(JSON.stringify(payload));
     proc.done(function (data) {
         notification.clearInfo();
-        shareNotification.setSuccess("Successfully " + action + " " + share_name + ".");
+        shareNotification.setSuccess(
+            "Successfully " + action + " " + share_name + "."
+        );
     });
     proc.fail(function (ex, data) {
         shareNotification.setError(data);
@@ -1410,7 +1438,7 @@ function del_parms(share_name, params_to_delete, action, hide_modal_func, info_i
 function set_parms(share_name, params, action, hide_modal_func, info_id) {
     let notification = new Notification(info_id);
     let shareNotification = new Notification("share");
-    
+
     var payload = {};
     payload["section"] = share_name;
     payload["parms"] = params;
@@ -1424,7 +1452,9 @@ function set_parms(share_name, params, action, hide_modal_func, info_id) {
     proc.input(JSON.stringify(payload));
     proc.done(function (data) {
         notification.clearInfo();
-        shareNotification.setSuccess("Successfully " + action + " " + share_name + ".");
+        shareNotification.setSuccess(
+            "Successfully " + action + " " + share_name + "."
+        );
         populate_share_list();
         hide_modal_func();
     });
@@ -1456,14 +1486,27 @@ function toggle_advanced_share_settings() {
  */
 function check_shadow_copy() {
     var path = document.getElementById("path").value;
-    var notCephfs = "shadow: snapdir = .zfs/snapshot\nshadow: sort = desc\nshadow: format = %Y-%m-%d-%H%M%S";
+    var notCephfs =
+        "shadow: snapdir = .zfs/snapshot\nshadow: sort = desc\nshadow: format = %Y-%m-%d-%H%M%S";
 
-    var proc = cockpit.spawn(["getfattr", "-n", "ceph.dir.entries", path], {err:"ignore"});
-    proc.done(function() {
-        populate_advanced_share_settings("shadowcopy", "ceph_snapshosts", "", "ceph_snapshosts");
+    var proc = cockpit.spawn(["getfattr", "-n", "ceph.dir.entries", path], {
+        err: "ignore",
     });
-    proc.fail(function() {
-        populate_advanced_share_settings("shadowcopy", "shadow:", notCephfs, "shadow_copy2");
+    proc.done(function () {
+        populate_advanced_share_settings(
+            "shadowcopy",
+            "ceph_snapshosts",
+            "",
+            "ceph_snapshosts"
+        );
+    });
+    proc.fail(function () {
+        populate_advanced_share_settings(
+            "shadowcopy",
+            "shadow:",
+            notCephfs,
+            "shadow_copy2"
+        );
     });
 }
 
@@ -1473,12 +1516,12 @@ function check_shadow_copy() {
  * Returns: string
  */
 function find_vfs_object(input, vfs_object) {
-    if(input.value.includes("vfs objects")) {
-        var lines = input.value.split('\n');
-        for(var line in lines) {
-            if(lines[line].includes("vfs object")) {
-                lines[line] += " " + vfs_object
-                return lines.join("\n")
+    if (input.value.includes("vfs objects")) {
+        var lines = input.value.split("\n");
+        for (var line in lines) {
+            if (lines[line].includes("vfs object")) {
+                lines[line] += " " + vfs_object;
+                return lines.join("\n");
             }
         }
     } else {
@@ -1495,15 +1538,14 @@ function windows_acl() {
     var user = document.getElementById("add-user-to-share");
     var group = document.getElementById("add-group-to-share");
     var users_selected = document.getElementById("selected-users");
-    var groups_selected = document.getElementById("selected-groups")
+    var groups_selected = document.getElementById("selected-groups");
 
-    if(document.getElementById("windows-acls").checked == true) {
+    if (document.getElementById("windows-acls").checked == true) {
         user.disabled = true;
         group.disabled = true;
 
         while (users_selected.firstChild) {
             users_selected.removeChild(users_selected.firstChild);
-            
         }
         while (groups_selected.firstChild) {
             groups_selected.removeChild(groups_selected.firstChild);
@@ -1513,8 +1555,7 @@ function windows_acl() {
         share_valid_groups.clear();
 
         update_users_in_share();
-    }
-    else {
+    } else {
         user.disabled = false;
         group.disabled = false;
     }
@@ -1527,22 +1568,21 @@ function windows_acl() {
  */
 async function check_dir(path) {
     children = [];
-	var proc = cockpit.spawn(
-		["/usr/share/cockpit/file-sharing/samba-manager/scripts/ls.py", path],
-		{err:"out", superuser: "try"}
-	);
-	proc.fail((e, data) => {
-		return [];
-	});
-	var data = await proc;
-	var response = JSON.parse(data);
-	this.stat = response["."]["stat"];
-	var entries = response["children"];
-	entries.forEach((entry) => {
-		if(entry["isdir"])
-			children.push(entry["filename"]);
-	});
-	return children;
+    var proc = cockpit.spawn(
+        ["/usr/share/cockpit/file-sharing/samba-manager/scripts/ls.py", path],
+        { err: "out", superuser: "try" }
+    );
+    proc.fail((e, data) => {
+        return [];
+    });
+    var data = await proc;
+    var response = JSON.parse(data);
+    this.stat = response["."]["stat"];
+    var entries = response["children"];
+    entries.forEach((entry) => {
+        if (entry["isdir"]) children.push(entry["filename"]);
+    });
+    return children;
 }
 
 /* nav_bar_update_choices
@@ -1552,26 +1592,24 @@ async function check_dir(path) {
  */
 async function nav_bar_update_choices() {
     var list = document.getElementById("possible-paths");
-	var partial_path_str = document.getElementById("path").value;
-	var last_delim = partial_path_str.lastIndexOf('/');
+    var partial_path_str = document.getElementById("path").value;
+    var last_delim = partial_path_str.lastIndexOf("/");
     var old_path = document.getElementById("old-path");
-	if(last_delim === -1)
-		return;
-	var parent_path_str = partial_path_str.slice(0, last_delim);
-	if(old_path.value === parent_path_str)
-		return;
-	old_path.value = parent_path_str;
+    if (last_delim === -1) return;
+    var parent_path_str = partial_path_str.slice(0, last_delim);
+    if (old_path.value === parent_path_str) return;
+    old_path.value = parent_path_str;
     var error = false;
-	var objs = await check_dir(parent_path_str).catch(() => {error = true});
-    if(error)
-        return;
-	while(list.firstChild)
-		list.removeChild(list.firstChild);
-	objs.forEach((obj) => {
-		var option = document.createElement("option");
-		option.value = parent_path_str + "/" + obj
-		list.appendChild(option);
-	});
+    var objs = await check_dir(parent_path_str).catch(() => {
+        error = true;
+    });
+    if (error) return;
+    while (list.firstChild) list.removeChild(list.firstChild);
+    objs.forEach((obj) => {
+        var option = document.createElement("option");
+        option.value = parent_path_str + "/" + obj;
+        list.appendChild(option);
+    });
 }
 
 /* populate_advanced_share_settings
@@ -1579,33 +1617,82 @@ async function nav_bar_update_choices() {
  * Does: Populates advanced share settings depending on the id and string_to_check with string received
  * Returns: nothing
  */
-function populate_advanced_share_settings(id, string_to_check, string, vfs_object) {
+function populate_advanced_share_settings(
+    id,
+    string_to_check,
+    string,
+    vfs_object
+) {
     var input = document.getElementById("advanced-share-settings-input");
     var pressed = document.getElementById("is-pressed-" + id);
     let shareNotification = new Notification("share-modal");
 
-    if(input.value.includes(string_to_check)) {
-        if(pressed.innerText.includes("true")) {
+    if (input.value.includes(string_to_check)) {
+        if (pressed.innerText.includes("true")) {
             input.value = "vfs objects = " + vfs_object + "\n\n" + string;
             pressed.innerText = false;
             input.style.height = "";
             input.style.height = Math.max(input.scrollHeight + 5, 50) + "px";
-        }
-        else {
-            shareNotification.setError("Parameters already contain " + id + " settings. Press again to clear all parameters and populate with JUST " + id + " settings.");
+        } else {
+            shareNotification.setError(
+                "Parameters already contain " +
+                    id +
+                    " settings. Press again to clear all parameters and populate with JUST " +
+                    id +
+                    " settings."
+            );
             pressed.innerText = true;
-            setTimeout(function(){
+            setTimeout(function () {
                 pressed.innerText = false;
             }, timeout_ms + 1000);
         }
-    }
-    else {
+    } else {
         input.value = find_vfs_object(input, vfs_object) + "\n\n" + string;
         input.style.height = "";
         input.style.height = Math.max(input.scrollHeight + 5, 50) + "px";
     }
 }
 
+/* populate_advanced_global_settings
+ * Receives: id, string_to_check, string, and vfs_object
+ * Does: Populates advanced share settings depending on the id and string_to_check with string received
+ * Returns: nothing
+ */
+function populate_advanced_global_settings(
+    id,
+    string_to_check,
+    string,
+    vfs_object
+) {
+    var input = document.getElementById("advanced-global-settings-input");
+    var pressed = document.getElementById("is-pressed-" + id);
+    let shareNotification = new Notification("samba-global-modal");
+
+    if (input.value.includes(string_to_check)) {
+        if (pressed.innerText.includes("true")) {
+            input.value = "vfs objects = " + vfs_object + "\n\n" + string;
+            pressed.innerText = false;
+            input.style.height = "";
+            input.style.height = Math.max(input.scrollHeight + 5, 50) + "px";
+        } else {
+            shareNotification.setError(
+                "Parameters already contain " +
+                    id +
+                    " settings. Press again to clear all parameters and populate with JUST " +
+                    id +
+                    " settings."
+            );
+            pressed.innerText = true;
+            setTimeout(function () {
+                pressed.innerText = false;
+            }, timeout_ms + 1000);
+        }
+    } else {
+        input.value = find_vfs_object(input, vfs_object) + "\n\n" + string;
+        input.style.height = "";
+        input.style.height = Math.max(input.scrollHeight + 5, 50) + "px";
+    }
+}
 
 /* show_rm_share_dialog
  * Receives: name of share as string, list of elements to delete
@@ -1642,7 +1729,9 @@ function rm_share(share_name, element_list) {
     });
     proc.done(function (data) {
         populate_share_list();
-        shareNotification.setSuccess("Successfully deleted " + share_name + ".");
+        shareNotification.setSuccess(
+            "Successfully deleted " + share_name + "."
+        );
         element_list.forEach((elem) => elem.remove());
     });
     proc.fail(function (ex, data) {
@@ -1661,7 +1750,7 @@ function show_samba_global_dialog() {
     var text_area = document.getElementById("advanced-global-settings-input");
     text_area.style.height = "";
     text_area.style.height = Math.max(text_area.scrollHeight + 5, 50) + "px";
-    
+
     showModal("samba-global-modal");
 
     let sambaNotification = new Notification("samba-global-modal");
@@ -1788,7 +1877,16 @@ async function edit_samba_global() {
     for (let param of params_to_delete) {
         if (param in extra_params) params_to_delete.delete(param);
     }
-    await edit_parms("global", changed_settings, params_to_delete, "updated", () => {hideModal("samba-global-modal")}, "samba-global-modal");
+    await edit_parms(
+        "global",
+        changed_settings,
+        params_to_delete,
+        "updated",
+        () => {
+            hideModal("samba-global-modal");
+        },
+        "samba-global-modal"
+    );
 }
 
 /* populate_privilege_list
@@ -1798,18 +1896,22 @@ async function edit_samba_global() {
  * Returns: Nothing
  */
 function populate_privilege_list() {
-    var list = document.getElementById("privilege-list")
+    var list = document.getElementById("privilege-list");
 
     while (list.firstChild) {
         list.removeChild(list.firstChild);
     }
 
-    var proc = cockpit.spawn(["net", "sam", "rights", "list", "SeDiskOperatorPrivilege"], { err: "out", superuser: "require" });
+    var proc = cockpit.spawn(
+        ["net", "sam", "rights", "list", "SeDiskOperatorPrivilege"],
+        { err: "out", superuser: "require" }
+    );
     proc.done(function (data) {
-        if(data == "") {
+        if (data == "") {
             var emptyList = document.createElement("div");
-            emptyList.innerText = 'No privileges set. Click the "plus" to add one.';
-            list.appendChild(emptyList)
+            emptyList.innerText =
+                'No privileges set. Click the "plus" to add one.';
+            list.appendChild(emptyList);
         } else {
             var rows = data.split("\n");
             rows.pop();
@@ -1820,11 +1922,12 @@ function populate_privilege_list() {
     });
     proc.fail(function (ex, data) {
         let privilegeNotification = new Notification("privilege");
-        privilegeNotification.setError("Failed to get list of privileges: " + data);
+        privilegeNotification.setError(
+            "Failed to get list of privileges: " + data
+        );
     });
     return proc;
-} 
-
+}
 
 /* rm_privilege
  * Receives: entry_name, element_list
@@ -1834,12 +1937,20 @@ function populate_privilege_list() {
 function rm_privilege(entry_name, element_list) {
     let privilegeNotification = new Notification("privilege");
     privilegeNotification.setSpinner();
-    var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/samba-manager/scripts/del_privileges.py", entry_name], {
-        err: "out",
-        superuser: "require",
-    });
+    var proc = cockpit.spawn(
+        [
+            "/usr/share/cockpit/file-sharing/samba-manager/scripts/del_privileges.py",
+            entry_name,
+        ],
+        {
+            err: "out",
+            superuser: "require",
+        }
+    );
     proc.done(function () {
-        privilegeNotification.setSuccess("Successfully deleted " + entry_name + ".");
+        privilegeNotification.setSuccess(
+            "Successfully deleted " + entry_name + "."
+        );
         element_list.forEach((elem) => elem.remove());
         populate_privilege_list();
     });
@@ -1855,7 +1966,7 @@ function rm_privilege(entry_name, element_list) {
  * Returns: Nothing
  */
 function create_privilege_list_entry(entry_name) {
-    var entry = create_list_entry(entry_name, show_rm_privilege_dialog)
+    var entry = create_list_entry(entry_name, show_rm_privilege_dialog);
     entry.classList.add("row-45d", "flex-45d-space-between", "flex-45d-center");
     return entry;
 }
@@ -1866,14 +1977,18 @@ function create_privilege_list_entry(entry_name) {
  * Returns: Nothing
  */
 function show_rm_privilege_dialog(entry_name, element_list) {
-    var entry_name_fields = document.getElementsByClassName("privilege-to-remove");
+    var entry_name_fields = document.getElementsByClassName(
+        "privilege-to-remove"
+    );
     for (let field of entry_name_fields) {
         field.innerText = entry_name;
     }
-    
+
     showModal("rm-privilege-modal");
 
-    var continue_rm_privilege = document.getElementById("continue-rm-privilege");
+    var continue_rm_privilege = document.getElementById(
+        "continue-rm-privilege"
+    );
     continue_rm_privilege.onclick = function () {
         rm_privilege(entry_name, element_list);
     };
@@ -1893,8 +2008,7 @@ async function add_privilege() {
     var username = document.getElementById("privilege-username").value;
     var password = document.getElementById("privilege-password").value;
 
-    if (group == "")
-        privilegeNotification.setError("Enter a group.");
+    if (group == "") privilegeNotification.setError("Enter a group.");
     else if (username == "")
         privilegeNotification.setError("Enter a username.");
     else if (password == "")
@@ -1902,21 +2016,28 @@ async function add_privilege() {
     else {
         let addNotification = new Notification("add-privilege");
 
-        var proc = cockpit.spawn(["/usr/share/cockpit/file-sharing/samba-manager/scripts/set_privileges.py", group, username, password], {
-            err: "out",
-            superuser: "require",
-        });
-        proc.done(function(data) {
+        var proc = cockpit.spawn(
+            [
+                "/usr/share/cockpit/file-sharing/samba-manager/scripts/set_privileges.py",
+                group,
+                username,
+                password,
+            ],
+            {
+                err: "out",
+                superuser: "require",
+            }
+        );
+        proc.done(function (data) {
             if (data != "") {
                 addNotification.setError(data);
-            }
-            else {
+            } else {
                 populate_privilege_list();
                 addNotification.setSuccess("Added privilege!");
                 hideModal("privilege-modal");
             }
         });
-        proc.fail(function(data) {
+        proc.fail(function (data) {
             addNotification.setError("Could not set privileges: " + data);
         });
     }
@@ -1929,23 +2050,52 @@ async function add_privilege() {
  */
 function set_up_buttons() {
     // User Management
-    document.getElementById("user-selection").addEventListener("change", update_username_fields);
+    document
+        .getElementById("user-selection")
+        .addEventListener("change", update_username_fields);
 
-    document.getElementById("cancel-rm-from-group-btn").addEventListener("click", () => {hideModal("rm-from-group-modal");});
+    document
+        .getElementById("cancel-rm-from-group-btn")
+        .addEventListener("click", () => {
+            hideModal("rm-from-group-modal");
+        });
 
-    document.getElementById("show-smbpasswd-dialog-btn").addEventListener("click", () => {showModal("smbpasswd-modal"), function() {
-            document.getElementById("smbpasswd-pw1").value = "";
-            document.getElementById("smbpasswd-pw2").value = "";
-        }});
-    document.getElementById("cancel-smbpasswd").addEventListener("click", () => {hideModal("smbpasswd-modal");});
-    document.getElementById("set-smbpasswd").addEventListener("click", set_smbpasswd);
+    document
+        .getElementById("show-smbpasswd-dialog-btn")
+        .addEventListener("click", () => {
+            showModal("smbpasswd-modal"),
+                function () {
+                    document.getElementById("smbpasswd-pw1").value = "";
+                    document.getElementById("smbpasswd-pw2").value = "";
+                };
+        });
+    document
+        .getElementById("cancel-smbpasswd")
+        .addEventListener("click", () => {
+            hideModal("smbpasswd-modal");
+        });
+    document
+        .getElementById("set-smbpasswd")
+        .addEventListener("click", set_smbpasswd);
 
-    document.getElementById("show-rm-smbpasswd-btn").addEventListener("click", () => {showModal("rm-smbpasswd-modal");});
-    document.getElementById("cancel-rm-smbpasswd").addEventListener("click", () => {hideModal("rm-smbpasswd-modal");});
-    document.getElementById("continue-rm-smbpasswd").addEventListener("click", rm_smbpasswd);
+    document
+        .getElementById("show-rm-smbpasswd-btn")
+        .addEventListener("click", () => {
+            showModal("rm-smbpasswd-modal");
+        });
+    document
+        .getElementById("cancel-rm-smbpasswd")
+        .addEventListener("click", () => {
+            hideModal("rm-smbpasswd-modal");
+        });
+    document
+        .getElementById("continue-rm-smbpasswd")
+        .addEventListener("click", rm_smbpasswd);
 
-    document.getElementById("add-group-to-user").addEventListener("click", () => {
-            showModal("add-user-group-modal", function() {
+    document
+        .getElementById("add-group-to-user")
+        .addEventListener("click", () => {
+            showModal("add-user-group-modal", function () {
                 // Clears
                 var elems = document.querySelectorAll(".checkmark");
                 [].forEach.call(elems, function (el) {
@@ -1954,49 +2104,120 @@ function set_up_buttons() {
                 selections = [];
             });
         });
-    document.getElementById("add-to-group-btn").addEventListener("click", check_duplicates);
-    document.getElementById("cancel-group-to-user").addEventListener("click", () => {hideModal("add-user-group-modal");});
+    document
+        .getElementById("add-to-group-btn")
+        .addEventListener("click", check_duplicates);
+    document
+        .getElementById("cancel-group-to-user")
+        .addEventListener("click", () => {
+            hideModal("add-user-group-modal");
+        });
 
     // Group Management
-    document.getElementById("cancel-rm-group").addEventListener("click", () => {hideModal("rm-group-modal")});
+    document.getElementById("cancel-rm-group").addEventListener("click", () => {
+        hideModal("rm-group-modal");
+    });
 
-    document.getElementById("add-group-btn").addEventListener("click", () => {showModal("add-group-modal")});
-    document.getElementById("cancel-add-group").addEventListener("click", () => {hideModal("add-group-modal")});
-    document.getElementById("continue-add-group").addEventListener("click", add_group);
-    document.getElementById("new-group-name").addEventListener("input", check_group_name);
+    document.getElementById("add-group-btn").addEventListener("click", () => {
+        showModal("add-group-modal");
+    });
+    document
+        .getElementById("cancel-add-group")
+        .addEventListener("click", () => {
+            hideModal("add-group-modal");
+        });
+    document
+        .getElementById("continue-add-group")
+        .addEventListener("click", add_group);
+    document
+        .getElementById("new-group-name")
+        .addEventListener("input", check_group_name);
 
     // Share Management
-    document.getElementById("add-share-btn").addEventListener("click", function () {
+    document
+        .getElementById("add-share-btn")
+        .addEventListener("click", function () {
             show_share_dialog("create");
         });
-    document.getElementById("cancel-share").addEventListener("click", () => {hideModal("share-modal")});
-    document.getElementById("show-advanced-share-dropdown-btn").addEventListener("click", toggle_advanced_share_settings);
-    document.getElementById("shadowcopy").addEventListener("click", check_shadow_copy);
-    document.getElementById("macos").addEventListener("click", function() {
-            populate_advanced_share_settings("macos", "fruit:", "fruit:encoding = native\nfruit:metadata = stream", "catia fruit streams_xattr");
+    document.getElementById("cancel-share").addEventListener("click", () => {
+        hideModal("share-modal");
+    });
+    document
+        .getElementById("show-advanced-share-dropdown-btn")
+        .addEventListener("click", toggle_advanced_share_settings);
+    document
+        .getElementById("shadowcopy")
+        .addEventListener("click", check_shadow_copy);
+    document.getElementById("macos").addEventListener("click", function () {
+        populate_advanced_global_settings(
+            "macos",
+            "fruit:",
+            "fruit:encoding = native\nfruit:metadata = stream\nfruit:zero_file_id = yes\nfruit:nfs_aces = no",
+            "catia fruit streams_xattr"
+        );
+    });
+    document.getElementById("auditlogs").addEventListener("click", function () {
+        populate_advanced_share_settings(
+            "auditlogs",
+            "full_audit:",
+            "full_audit:priority = notice\nfull_audit:facility = local5\nfull_audit:success = connect disconnect mkdir rmdir read write rename\nfull_audit:failure = connect\nfull_audit:prefix = %u|%I|%S",
+            "full_audit"
+        );
+    });
+    document
+        .getElementById("windows-acls")
+        .addEventListener("click", windows_acl);
+    document
+        .getElementById("share-name")
+        .addEventListener("input", verify_share_settings);
+    document
+        .getElementById("path")
+        .addEventListener("input", verify_share_settings);
+
+    document.getElementById("cancel-rm-share").addEventListener("click", () => {
+        hideModal("rm-share-modal");
+    });
+
+    document
+        .getElementById("samba-global-btn")
+        .addEventListener("click", show_samba_global_dialog);
+    document
+        .getElementById("cancel-samba-global")
+        .addEventListener("click", () => {
+            hideModal("samba-global-modal");
         });
-    document.getElementById("auditlogs").addEventListener("click", function() {
-            populate_advanced_share_settings("auditlogs", "full_audit:", "full_audit:priority = notice\nfull_audit:facility = local5\nfull_audit:success = connect disconnect mkdir rmdir read write rename\nfull_audit:failure = connect\nfull_audit:prefix = %u|%I|%S", "full_audit");
+    document
+        .getElementById("show-advanced-global-dropdown-btn")
+        .addEventListener("click", toggle_advanced_global_settings);
+    document
+        .getElementById("continue-samba-global")
+        .addEventListener("click", edit_samba_global);
+    document
+        .getElementById("advanced-global-settings-input")
+        .addEventListener("input", check_enable_log_level_dropdown);
+
+    document
+        .getElementById("path")
+        .addEventListener("input", nav_bar_update_choices);
+
+    document
+        .getElementById("show-privilege-btn")
+        .addEventListener("click", () => {
+            showModal("privilege-modal");
         });
-    document.getElementById("windows-acls").addEventListener("click", windows_acl);
-    document.getElementById("share-name").addEventListener("input", verify_share_settings);
-    document.getElementById("path").addEventListener("input", verify_share_settings);
-
-    document.getElementById("cancel-rm-share").addEventListener("click", () => {hideModal("rm-share-modal")});
-
-    document.getElementById("samba-global-btn").addEventListener("click", show_samba_global_dialog);
-    document.getElementById("cancel-samba-global").addEventListener("click", () => {hideModal("samba-global-modal");});
-    document.getElementById("show-advanced-global-dropdown-btn").addEventListener("click", toggle_advanced_global_settings);
-    document.getElementById("continue-samba-global").addEventListener("click", edit_samba_global);
-    document.getElementById("advanced-global-settings-input").addEventListener("input", check_enable_log_level_dropdown);
-
-    document.getElementById("path").addEventListener("input", nav_bar_update_choices)
-
-    document.getElementById("show-privilege-btn").addEventListener("click", () => {showModal("privilege-modal")});
-    document.getElementById("cancel-privilege-btn").addEventListener("click", () => {hideModal("privilege-modal")});
-    document.getElementById("add-privilege-btn").addEventListener("click", add_privilege);
-    document.getElementById("cancel-rm-privilege").addEventListener("click", () => {hideModal("rm-privilege-modal")});
-
+    document
+        .getElementById("cancel-privilege-btn")
+        .addEventListener("click", () => {
+            hideModal("privilege-modal");
+        });
+    document
+        .getElementById("add-privilege-btn")
+        .addEventListener("click", add_privilege);
+    document
+        .getElementById("cancel-rm-privilege")
+        .addEventListener("click", () => {
+            hideModal("rm-privilege-modal");
+        });
 
     // Set callback to dynamically resize textareas to fit height of text
     var text_areas = document.getElementsByTagName("textarea");
@@ -2020,10 +2241,9 @@ function check_permissions() {
         check_smb_conf();
     });
     proc.fail(function (ex, data) {
-        if(ex.problem === "not-found") {
+        if (ex.problem === "not-found") {
             fatalError("Samba is not installed. Please install...");
-        } 
-        else {
+        } else {
             fatalError("User account lacks permission to configure Samba!");
         }
     });
