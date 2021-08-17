@@ -26,6 +26,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Aug 17 2021 Sam Silver <ssilver@45drives.com> 2.2.1-1
+- Added 'populate macos share' to single share settings as well as global settings
+* Tue Aug 17 2021 Sam Silver <ssilver@45drives.com> 2.2.1-1
+- Added 'populate macos share' to single share settings as well as global settings
 * Tue Aug 17 2021 Sam Silver <ssilver@45drives.com> 2.2.0-1
 - Added a 'populate macOS shares' setting in the Samba global config.
 * Tue Aug 17 2021 Sam Silver <ssilver@45drives.com> 2.2.0-1
