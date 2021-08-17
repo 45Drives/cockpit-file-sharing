@@ -1665,7 +1665,7 @@ function populate_advanced_global_settings(
     vfs_object
 ) {
     var input = document.getElementById("advanced-global-settings-input");
-    var pressed = document.getElementById("is-pressed-" + id);
+    var pressed = document.getElementById("is-pressed-global-" + id);
     let shareNotification = new Notification("samba-global-modal");
 
     if (input.value.includes(string_to_check)) {
@@ -2148,8 +2148,18 @@ function set_up_buttons() {
     document
         .getElementById("shadowcopy")
         .addEventListener("click", check_shadow_copy);
+    document
+        .getElementById("macos-global")
+        .addEventListener("click", function () {
+            populate_advanced_global_settings(
+                "macos",
+                "fruit:",
+                "fruit:encoding = native\nfruit:metadata = stream\nfruit:zero_file_id = yes\nfruit:nfs_aces = no",
+                "catia fruit streams_xattr"
+            );
+        });
     document.getElementById("macos").addEventListener("click", function () {
-        populate_advanced_global_settings(
+        populate_advanced_share_settings(
             "macos",
             "fruit:",
             "fruit:encoding = native\nfruit:metadata = stream\nfruit:zero_file_id = yes\nfruit:nfs_aces = no",
