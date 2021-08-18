@@ -1,3 +1,9 @@
+cockpit-file-sharing (2.3.0-1focal) focal; urgency=medium
+
+  * Changed how users are filtered
+
+ -- Sam Silver <ssilver@45drives.com>  Wed, 18 Aug 2021 08:07:55 -0300
+
 cockpit-file-sharing (2.2.1-1focal) focal; urgency=medium
 
   * Added 'populate macos share' to single share settings as well as global settings
