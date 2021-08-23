@@ -120,30 +120,24 @@ function add_user_options() {
     }
     var proc = cockpit.spawn(["getent", "passwd"], { err: "out" });
     proc.done(function (data) {
-        var rows = data.split("\n");
-        var users = rows.filter(
-            (row) =>
-                row.length != 0 &&
-                !row.match("nologin$") &&
-                !row.match("^ntp:") &&
-                !row.match("^git:")
-        );
-        users = users.sort();
-        users.forEach(function (user_row) {
-            var fields = user_row.split(":");
+        var rows = data.split("\n").sort().filter((row) => row.length);
+        rows.forEach(function (row) {
+            var fields = row.split(":");
             var user = fields[0];
             var uid = parseInt(fields[2]);
-            var option = document.createElement("option");
-            option.value = user;
-            option.innerHTML = user;
-            for (let select of selects)
-                if (
-                    !using_domain ||
-                    uid < domain_lower_limit ||
-                    select.classList.contains("use-domain")
-                )
-                    select.add(option.cloneNode(true));
-            option.remove();
+            if (uid >= 1000) { // get normal users with uid >= 1000
+                var option = document.createElement("option");
+                option.value = user;
+                option.innerHTML = user;
+                for (let select of selects)
+                    if (
+                        !using_domain ||
+                        uid < domain_lower_limit ||
+                        select.classList.contains("use-domain")
+                    )
+                        select.add(option.cloneNode(true));
+                option.remove();
+            }
         });
         set_current_user(document.getElementById("user-selection"));
         userNotification.clearInfo();
