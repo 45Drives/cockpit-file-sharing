@@ -26,6 +26,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Aug 23 2021 Sam Silver <ssilver@45drives.com> 2.3.1-1
+- Fixed a bug where the 'set samba password' loader would not clear.
+* Mon Aug 23 2021 Sam Silver <ssilver@45drives.com> 2.3.1-1
+- Fixed a bug where the 'set samba password' loader would not clear.
 * Wed Aug 18 2021 Sam Silver <ssilver@45drives.com> 2.3.0-1
 - Changed how users are filtered
 * Wed Aug 18 2021 Sam Silver <ssilver@45drives.com> 2.3.0-1

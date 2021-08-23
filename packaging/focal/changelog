@@ -1,3 +1,9 @@
+cockpit-file-sharing (2.3.1-1focal) focal; urgency=medium
+
+  * Fixed a bug where the 'set samba password' loader would not clear.
+
+ -- Sam Silver <ssilver@45drives.com>  Mon, 23 Aug 2021 06:58:55 -0300
+
 cockpit-file-sharing (2.3.0-1focal) focal; urgency=medium
 
   * Changed how users are filtered

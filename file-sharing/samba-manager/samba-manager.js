@@ -425,7 +425,7 @@ function rm_from_group(group, element_list) {
  */
 function check_passwords() {
     let passwdNotification = new Notification("smbpasswd-modal");
-    passwdNotification.clear_info();
+    passwdNotification.clearInfo();
 
     var pw1 = document.getElementById("smbpasswd-pw1").value;
     var pw2 = document.getElementById("smbpasswd-pw2").value;

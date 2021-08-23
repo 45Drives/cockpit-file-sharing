@@ -1,3 +1,3 @@
-## Cockpit File Sharing 2.3.0-1
+## Cockpit File Sharing 2.3.1-1
 
-* Changed how users are filtered
+* Fixed a bug where the 'set samba password' loader would not clear.
