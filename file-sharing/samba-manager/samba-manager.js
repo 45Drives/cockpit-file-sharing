@@ -1504,6 +1504,58 @@ function check_shadow_copy() {
     });
 }
 
+async function isCephFS(path, validPath) {
+    try {
+        await run_command(['getfattr', '-n', 'ceph.dir.entries', path]);
+
+        const currentPath = path.replace(/[\/]{1,}$/, '');
+
+        return isCephFS(currentPath.split('/').slice(0, -1).join('/'), currentPath);
+    } catch (error) {
+        if (typeof validPath === 'string') {
+            return [true, validPath];
+        }
+
+        if (error.trim().endsWith('No such file or directory') && path.length > 2) {
+            return isCephFS(path.split('/').slice(0, -1).join('/'));
+        }
+
+        return [false, null];
+    }
+}
+
+async function checkCeph() {
+    const path = document.querySelector('#path').value;
+    
+    const quotaBlock = document.querySelector('#share-quota-input');
+
+    const isCeph = await isCephFS(path);
+
+    console.log(isCeph);
+    
+    if (!isCeph[0]) {
+        quotaBlock.classList.add('hidden');
+        return;
+    }
+
+    quotaBlock.classList.remove('hidden');
+
+    const userspaceCephPath = `${isCeph[1]}/`;
+
+    const cephFsgwPath = path.substring(userspaceCephPath.length);
+
+    console.log(cephFsgwPath);
+
+    // {{{localpath}}} service file for mnt point
+
+    // mkdir /mnt/cephfs/test3
+    // setfattr -n ceph.quota.max_bytes -v 100000000 /mnt/cephfs/test3
+    // cp /etc/systemd/system/mnt-fsgw-test2.mount /etc/systemd/system/mnt-fsgw-test3.mount 
+    // vim /etc/systemd/system/mnt-fsgw-test3.mount 
+    // mkdir /mnt/fsgw/test3
+    // systemctl enable --now mnt-fsgw-test3.mount
+}
+
 /* find_vfs_object
  * Receives: vfs_object
  * Does: Checks to see if vfs objects is already in the string. If so, add vfs_object to it
@@ -2203,6 +2255,10 @@ function set_up_buttons() {
     document
         .getElementById("path")
         .addEventListener("input", nav_bar_update_choices);
+
+    document
+        .getElementById("path")
+        .addEventListener("input", checkCeph);
 
     document
         .getElementById("show-privilege-btn")
