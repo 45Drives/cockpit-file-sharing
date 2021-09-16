@@ -977,15 +977,30 @@ function set_share_defaults() {
  * `net conf addshare <share name> <share path>`
  * Returns: nothing
  */
-function add_share() {
+async function add_share() {
     if (!verify_share_settings()) return;
 
     let shareNotification = new Notification("share-modal");
     shareNotification.setSpinner();
 
-    var name = document.getElementById("share-name").value;
-    var path = document.getElementById("path").value;
-    var proc = cockpit.spawn(["net", "conf", "addshare", name, path], {
+    const cephDirectory = await checkCeph(false);
+
+    let isCeph = false;
+    let path = null;
+
+    if (typeof cephDirectory === 'object' && cephDirectory?.length && cephDirectory.length === 4 && cephDirectory[0] !== true) isCeph = true;
+
+    if (isCeph) {
+        path = `${cephDirectory[2]}${cephDirectory[3]}`;
+        await run_command(['mkdir', '-p', path]);
+    } else {
+        path = document.getElementById("path").value;
+    }
+
+    const name = document.getElementById("share-name").value;
+    const quota = document.getElementById("quota").value;
+
+    const proc = cockpit.spawn(["net", "conf", "addshare", name, path], {
         err: "out",
         superuser: "require",
     });
@@ -995,6 +1010,38 @@ function add_share() {
     proc.fail(function (ex, data) {
         shareNotification.setError(data);
     });
+
+    let quotaBytes = 0;
+
+    try {
+        quotaBytes = Number(quota);
+    } catch (error) {
+        quotaBytes = 0;
+    } finally {
+        quotaBytes = quotaBytes * (1000**3);
+    }
+
+    try {
+        const templatePath = `/usr/share/cockpit/file-sharing/samba-manager/templates/mnt-fsgw.mount`;
+        const systemdPath = `/etc/systemd/system/mnt-fsgw-${cephDirectory[3]?.match(/[A-Za-z0-9-_]/g).join('')}.mount`;
+
+        let templateData = await run_command(['cat', templatePath]);
+        templateData = templateData.replace(/\{\{\{localpath\}\}\}/g, cephDirectory[3]);
+        
+        const systemdFile = cockpit.file(systemdPath, {
+            superuser: 'require',
+        });
+
+        console.log(await systemdFile.replace(templateData));
+
+        console.log(await run_command(['systemctl', 'enable', '--now', `/etc/systemd/system/mnt-fsgw-${cephDirectory[3].match(/[A-Za-z0-9-_]/g).join('')}.mount`]));
+
+        if (quotaBytes > 0) {
+            console.log(await run_command(['setfattr', '-n', 'ceph.quota.max_bytes', '-v', quotaBytes, `${cephDirectory[2]}${cephDirectory[3]}`]));
+        }
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 // object to store settings before changes to figure out which options were removed
@@ -1524,27 +1571,27 @@ async function isCephFS(path, validPath) {
     }
 }
 
-async function checkCeph() {
+async function checkCeph(checkOnly = true) {
     const path = document.querySelector('#path').value;
     
     const quotaBlock = document.querySelector('#share-quota-input');
 
-    const isCeph = await isCephFS(path);
+    const cephStats = await isCephFS(path);
 
-    console.log(isCeph);
+    const currentPath = path.replace(/[\/]{1,}$/, '');
     
-    if (!isCeph[0]) {
+    if (!cephStats[0] || currentPath === cephStats[1]) {
         quotaBlock.classList.add('hidden');
         return;
     }
 
     quotaBlock.classList.remove('hidden');
 
-    const userspaceCephPath = `${isCeph[1]}/`;
+    const userspaceCephPath = `${cephStats[1]}/`;
 
     const cephFsgwPath = path.substring(userspaceCephPath.length);
 
-    console.log(cephFsgwPath);
+    if (!checkOnly) return [true, userspaceCephPath, '/mnt/fsgw/', cephFsgwPath];
 
     // {{{localpath}}} service file for mnt point
 
