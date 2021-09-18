@@ -993,10 +993,11 @@ async function add_share() {
         const cephDirectory = await checkCeph(false);
     }
 
-    if (typeof cephDirectory === 'object' && cephDirectory?.length && cephDirectory.length === 4 && cephDirectory[0] !== true) isCeph = true;
+    if (typeof cephDirectory === 'object' && cephDirectory?.length && cephDirectory.length === 4 && cephDirectory[0] == true) isCeph = true;
 
     if (isCeph) {
         path = `${cephDirectory[2]}${cephDirectory[3]}`;
+        document.getElementById("path").value = path;
         await run_command(['mkdir', '-p', path]);
     } else {
         path = document.getElementById("path").value;
@@ -1016,23 +1017,7 @@ async function add_share() {
     proc.fail(function (ex, data) {
         shareNotification.setError(data);
     });
-    
-/*    if (isCeph) {
-        let process = {
-            command: ["net", "conf", "setparm", name, "path", path]
-        };
 
-        console.log({ command: process.command });
-    
-        return cockpit.spawn(process.command, { err: "out" })
-            .done((data) => {
-                console.log("Successfully reset cephfs share path")
-            })
-            .fail((message, data) => {
-                console.log("Failed to re-set cephfs share path to fsgw mount" + process.command + (data ? data : message));
-            });
-    }
-*/
     let quotaBytes = 0;
 
     try {
@@ -1838,11 +1823,24 @@ function rm_share(share_name, element_list) {
     let shareNotification = new Notification("share");
     shareNotification.setSpinner("");
 
+
+    let sharePath = await run_command(['net', 'conf', 'getparm', share_name, 'path']);
+
     var proc = cockpit.spawn(["net", "conf", "delshare", share_name], {
         err: "out",
         superuser: "require",
     });
     proc.done(function (data) {
+        try {
+            if (typeof sharePath === 'string') {
+                let localPath = sharePath.substring(10).match(/[A-Za-z0-9-_]/g).join('');
+                const systemdPath = `/etc/systemd/system/mnt-fsgw-${localPath}.mount`;
+                await run_command(['systemctl', 'disable', '--now', systemdPath]);
+                await run_command(['rm', '-f', systemdPath]);
+            }
+        } catch (error) {
+            console.error(error);
+        }
         populate_share_list();
         shareNotification.setSuccess(
             "Successfully deleted " + share_name + "."
