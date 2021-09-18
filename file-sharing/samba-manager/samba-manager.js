@@ -983,15 +983,10 @@ async function add_share() {
     let shareNotification = new Notification("share-modal");
     shareNotification.setSpinner();
 
+    const cephDirectory = await checkCeph(false);
+
     let isCeph = false;
     let path = null;
-    let pathCheck = false;
-
-    const path = document.querySelector('#path').value;
-    const pathCheck = await isCephFS(path);
-    if (pathCheck) {
-        const cephDirectory = await checkCeph(false);
-    }
 
     if (typeof cephDirectory === 'object' && cephDirectory?.length && cephDirectory.length === 4 && cephDirectory[0] == true) isCeph = true;
 
