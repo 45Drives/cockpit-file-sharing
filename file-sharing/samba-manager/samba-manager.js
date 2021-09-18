@@ -983,10 +983,15 @@ async function add_share() {
     let shareNotification = new Notification("share-modal");
     shareNotification.setSpinner();
 
-    const cephDirectory = await checkCeph(false);
-
     let isCeph = false;
     let path = null;
+    let pathCheck = false;
+
+    const path = document.querySelector('#path').value;
+    const pathCheck = await isCephFS(path);
+    if (pathCheck) {
+        const cephDirectory = await checkCeph(false);
+    }
 
     if (typeof cephDirectory === 'object' && cephDirectory?.length && cephDirectory.length === 4 && cephDirectory[0] !== true) isCeph = true;
 
@@ -1005,12 +1010,29 @@ async function add_share() {
         superuser: "require",
     });
     proc.done(function (data) {
+        document.getElementById("path").value = path
         edit_share(name, {}, "created");
-    });
+    });        
     proc.fail(function (ex, data) {
         shareNotification.setError(data);
     });
+    
+/*    if (isCeph) {
+        let process = {
+            command: ["net", "conf", "setparm", name, "path", path]
+        };
 
+        console.log({ command: process.command });
+    
+        return cockpit.spawn(process.command, { err: "out" })
+            .done((data) => {
+                console.log("Successfully reset cephfs share path")
+            })
+            .fail((message, data) => {
+                console.log("Failed to re-set cephfs share path to fsgw mount" + process.command + (data ? data : message));
+            });
+    }
+*/
     let quotaBytes = 0;
 
     try {
