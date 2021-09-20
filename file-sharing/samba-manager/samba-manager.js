@@ -1818,23 +1818,23 @@ async function rm_share(share_name, element_list) {
     let shareNotification = new Notification("share");
     shareNotification.setSpinner("");
 
-    let sharePath = await run_command(['net', 'conf', 'getparm', share_name, 'path']);
+    try {
+        let sharePath = await run_command(['net', 'conf', 'getparm', share_name, 'path']);
+        if (typeof sharePath === 'string') {
+            let localPath = sharePath.substring(10).match(/[A-Za-z0-9-_]/g).join('');
+            const systemdPath = `/etc/systemd/system/mnt-fsgw-${localPath}.mount`;
+            await run_command(['systemctl', 'disable', '--now', systemdPath]);
+            await run_command(['rm', '-f', systemdPath]);
+        }
+    } catch (error) {
+        console.error(error);
+    }
 
     var proc = cockpit.spawn(["net", "conf", "delshare", share_name], {
         err: "out",
         superuser: "require",
     });
     proc.done(function (data) {
-        try {
-            if (typeof sharePath === 'string') {
-                let localPath = sharePath.substring(10).match(/[A-Za-z0-9-_]/g).join('');
-                const systemdPath = `/etc/systemd/system/mnt-fsgw-${localPath}.mount`;
-                await run_command(['systemctl', 'disable', '--now', systemdPath]);
-                await run_command(['rm', '-f', systemdPath]);
-            }
-        } catch (error) {
-            console.error(error);
-        }
         populate_share_list();
         shareNotification.setSuccess(
             "Successfully deleted " + share_name + "."

@@ -12,6 +12,7 @@ Before=ctdb.service
 [Mount]
 What=:/fsgw/{{{localpath}}}
 Where=/mnt/fsgw/{{{localpath}}}
+LazyUnmount=true
 Type=ceph
 Options=name=samba,secretfile=/etc/ceph/samba.secret
 
