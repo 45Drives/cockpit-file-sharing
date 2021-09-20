@@ -26,6 +26,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Sep 20 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-1
+- rework cephfs mounts
+* Mon Sep 20 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-1
+- rework cephfs mounts
 * Mon Aug 23 2021 Sam Silver <ssilver@45drives.com> 2.3.1-1
 - Fixed a bug where the 'set samba password' loader would not clear.
 * Mon Aug 23 2021 Sam Silver <ssilver@45drives.com> 2.3.1-1

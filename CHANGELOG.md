@@ -1,3 +1,3 @@
-## Cockpit File Sharing 2.3.1-1
+## Cockpit File Sharing 2.4.0-1
 
-* Fixed a bug where the 'set samba password' loader would not clear.
+* rework cephfs mounts
