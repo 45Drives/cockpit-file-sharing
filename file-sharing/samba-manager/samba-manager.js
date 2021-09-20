@@ -1023,27 +1023,54 @@ async function add_share() {
         quotaBytes = quotaBytes * (1000**3);
     }
 
-    try {
-        const templatePath = `/usr/share/cockpit/file-sharing/samba-manager/templates/mnt-fsgw.mount`;
-        const systemdPath = `/etc/systemd/system/mnt-fsgw-${cephDirectory[3]?.match(/[A-Za-z0-9-_]/g).join('')}.mount`;
+    if (isCeph) {
+        let ctdbNodes = await get_ctdb_nodes();
+        try {
+            // Set quota first to /mnt/cephfs/.. mountpoint
+            if (quotaBytes > 0) {
+                console.log(await run_command(['setfattr', '-n', 'ceph.quota.max_bytes', '-v', quotaBytes, `${cephDirectory[1]}${cephDirectory[3]}`]));
+            }
 
-        let templateData = await run_command(['cat', templatePath]);
-        templateData = templateData.replace(/\{\{\{localpath\}\}\}/g, cephDirectory[3]);
-        
-        const systemdFile = cockpit.file(systemdPath, {
-            superuser: 'require',
+            // Create systemd file from template
+            const templatePath = `/usr/share/cockpit/file-sharing/samba-manager/templates/mnt-fsgw.mount`;
+            const systemdPath = `/etc/systemd/system/mnt-fsgw-${cephDirectory[3]?.match(/[A-Za-z0-9-_]/g).join('')}.mount`;
+            let templateData = await run_command(['cat', templatePath]);
+            templateData = templateData.replace(/\{\{\{localpath\}\}\}/g, cephDirectory[3]);
+
+            // loop ctdbNodes array and place systmd.mount file and enable it on each node
+            for (var i = 0; i< ctdbNodes.length; i++) {
+                const systemdFile = cockpit.file(systemdPath, {
+                    superuser: 'require',
+                    host: ctdbNodes[i],
+                });
+                console.log(await systemdFile.replace(templateData));
+                const proc = cockpit.spawn(["systemctl", "enable", "--now", `/etc/systemd/system/mnt-fsgw-${cephDirectory[3].match(/[A-Za-z0-9-_]/g).join('')}.mount`], {
+                    err: "out",
+                    superuser: "require",
+                    host: ctdbNodes[i],
+                });      
+                proc.fail(function (ex, data) {
+                    console.log(data);
+                });
+            }
+            } catch (error) {
+                console.error(error);
+            }
+        }   
+}
+
+async function get_ctdb_nodes(){
+    let ctdbFile = await get_ctdb_nodes_file();
+    var nodes = ctdbFile.split("\n").filter(n => n);
+    return nodes;
+}
+
+async function get_ctdb_nodes_file() {
+    const nodeFile = cockpit.file("/etc/ctdb/nodes").read()
+        .fail(function (message) {
+            console.error(message);
         });
-
-        console.log(await systemdFile.replace(templateData));
-
-        console.log(await run_command(['systemctl', 'enable', '--now', `/etc/systemd/system/mnt-fsgw-${cephDirectory[3].match(/[A-Za-z0-9-_]/g).join('')}.mount`]));
-
-        if (quotaBytes > 0) {
-            console.log(await run_command(['setfattr', '-n', 'ceph.quota.max_bytes', '-v', quotaBytes, `${cephDirectory[2]}${cephDirectory[3]}`]));
-        }
-    } catch (error) {
-        console.error(error);
-    }
+    return nodeFile;
 }
 
 // object to store settings before changes to figure out which options were removed
