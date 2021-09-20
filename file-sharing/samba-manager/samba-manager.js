@@ -1844,23 +1844,40 @@ async function rm_share(share_name, element_list) {
     let shareNotification = new Notification("share");
     shareNotification.setSpinner("");
 
-    try {
-        let sharePath = await run_command(['net', 'conf', 'getparm', share_name, 'path']);
-        if (typeof sharePath === 'string') {
-            let localPath = sharePath.substring(10).match(/[A-Za-z0-9-_]/g).join('');
-            const systemdPath = `/etc/systemd/system/mnt-fsgw-${localPath}.mount`;
-            await run_command(['systemctl', 'disable', '--now', systemdPath]);
-            await run_command(['rm', '-f', systemdPath]);
-        }
-    } catch (error) {
-        console.error(error);
-    }
+    let sharePath = await run_command(['net', 'conf', 'getparm', share_name, 'path']);
+    let ctdbNodes = await get_ctdb_nodes();
 
     var proc = cockpit.spawn(["net", "conf", "delshare", share_name], {
         err: "out",
         superuser: "require",
     });
     proc.done(function (data) {
+        try {
+            if (typeof sharePath === 'string') {
+                let localPath = sharePath.substring(10).match(/[A-Za-z0-9-_]/g).join('');
+                const systemdPath = `/etc/systemd/system/mnt-fsgw-${localPath}.mount`;
+                for (var i = 0; i< ctdbNodes.length; i++) {
+                    const disableMount = cockpit.spawn(["systemctl", "disable", "--now", systemdPath], {
+                        err: "out",
+                        superuser: "require",
+                        host: ctdbNodes[i],
+                    });
+                    disableMount.fail(function (ex, data) {
+                        console.log(data);
+                    });
+                    const removeMount = cockpit.spawn(["rm", "-f", systemdPath], {
+                        err: "out",
+                        superuser: "require",
+                        host: ctdbNodes[i],
+                    });      
+                    removeMount.fail(function (ex, data) {
+                        console.log(data);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error(error);
+        }
         populate_share_list();
         shareNotification.setSuccess(
             "Successfully deleted " + share_name + "."
