@@ -993,7 +993,6 @@ async function add_share() {
     if (isCeph) {
         path = `${cephDirectory[2]}${cephDirectory[3]}`;
         document.getElementById("path").value = path;
-        await run_command(['mkdir', '-p', path]);
     } else {
         path = document.getElementById("path").value;
     }
