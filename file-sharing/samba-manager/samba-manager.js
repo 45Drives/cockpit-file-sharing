@@ -1012,24 +1012,27 @@ async function add_share() {
         shareNotification.setError(data);
     });
 
-    let quotaBytes = 0;
-
-    try {
-        quotaBytes = Number(quota);
-    } catch (error) {
-        quotaBytes = 0;
-    } finally {
-        quotaBytes = quotaBytes * (1000**3);
-    }
-
+    //if cephfs set quota
     if (isCeph) {
-        let ctdbNodes = await get_ctdb_nodes();
-        try {
-            // Set quota first to /mnt/cephfs/.. mountpoint
+        try{
+            let quotaBytes = 0;
+
+            try {
+                quotaBytes = Number(quota);
+            } catch (error) {
+                quotaBytes = 0;
+            } finally {
+                quotaBytes = quotaBytes * (1000**3);
+            }
             if (quotaBytes > 0) {
                 console.log(await run_command(['setfattr', '-n', 'ceph.quota.max_bytes', '-v', quotaBytes, `${cephDirectory[1]}${cephDirectory[3]}`]));
             }
+        } catch (error) {
+            console.error("Error setting quota :" + error);
+        }
 
+        let ctdbNodes = await get_ctdb_nodes();
+        try {
             // Create systemd file from template
             const templatePath = `/usr/share/cockpit/file-sharing/samba-manager/templates/mnt-fsgw.mount`;
             const systemdPath = `/etc/systemd/system/mnt-fsgw-${cephDirectory[3]?.match(/[A-Za-z0-9-_]/g).join('')}.mount`;
@@ -1052,8 +1055,8 @@ async function add_share() {
                     console.log(data);
                 });
             }
-            } catch (error) {
-                console.error(error);
+        } catch (error) {
+                console.error("Error mounting cephfs share :" + error);
             }
         }   
 }
@@ -1067,7 +1070,7 @@ async function get_ctdb_nodes(){
 async function get_ctdb_nodes_file() {
     const nodeFile = cockpit.file("/etc/ctdb/nodes").read()
         .fail(function (message) {
-            console.error(message);
+            console.error("Error reading ctdb nodes file :" + message);
         });
     return nodeFile;
 }
