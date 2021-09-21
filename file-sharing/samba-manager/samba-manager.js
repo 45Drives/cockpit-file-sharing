@@ -999,6 +999,7 @@ function set_share_defaults() {
  * Receives: nothing
  * Does: checks share settings with verify_share_settings(), if valid, calls
  * `net conf addshare <share name> <share path>`
+ * checks if path is a ceph filesystem, if so create separate mount point on each ctdb node
  * Returns: nothing
  */
 async function add_share() {
@@ -1068,8 +1069,11 @@ async function add_share() {
             }
         } catch (error) {
                 console.error("Error mounting cephfs share :" + error);
+                shareNotification.setError(error);
+                document.getElementById("continue-share").disabled = true;
+                return;
             }
-        }
+    }
 
     const proc = cockpit.spawn(["net", "conf", "addshare", name, path], {
         err: "out",
@@ -1082,54 +1086,6 @@ async function add_share() {
     proc.fail(function (ex, data) {
         shareNotification.setError(data);
     });
-
-    //if cephfs set quota
-    if (isCeph) {
-        try{
-            let quotaBytes = 0;
-
-            try {
-                quotaBytes = Number(quota);
-            } catch (error) {
-                quotaBytes = 0;
-            } finally {
-                quotaBytes = quotaBytes * (1000**3);
-            }
-            if (quotaBytes > 0) {
-                console.log(await run_command(['setfattr', '-n', 'ceph.quota.max_bytes', '-v', quotaBytes, `${cephDirectory[1]}${cephDirectory[3]}`]));
-            }
-        } catch (error) {
-            console.error("Error setting quota :" + error);
-        }
-
-        let ctdbNodes = await get_ctdb_nodes();
-        try {
-            // Create systemd file from template
-            const templatePath = `/usr/share/cockpit/file-sharing/samba-manager/templates/mnt-fsgw.mount`;
-            const systemdPath = `/etc/systemd/system/mnt-fsgw-${cephDirectory[3]?.match(/[A-Za-z0-9-_]/g).join('')}.mount`;
-            let templateData = await run_command(['cat', templatePath]);
-            templateData = templateData.replace(/\{\{\{localpath\}\}\}/g, cephDirectory[3]);
-
-            // loop ctdbNodes array and place systmd.mount file and enable it on each node
-            for (var i = 0; i< ctdbNodes.length; i++) {
-                const systemdFile = cockpit.file(systemdPath, {
-                    superuser: 'require',
-                    host: ctdbNodes[i],
-                });
-                console.log(await systemdFile.replace(templateData));
-                const proc = cockpit.spawn(["systemctl", "enable", "--now", `/etc/systemd/system/mnt-fsgw-${cephDirectory[3].match(/[A-Za-z0-9-_]/g).join('')}.mount`], {
-                    err: "out",
-                    superuser: "require",
-                    host: ctdbNodes[i],
-                });      
-                proc.fail(function (ex, data) {
-                    console.log(data);
-                });
-            }
-        } catch (error) {
-                console.error("Error mounting cephfs share :" + error);
-            }
-        }   
 }
 
 async function get_ctdb_nodes(){
@@ -1937,7 +1893,7 @@ async function rm_share(share_name, element_list) {
                         host: ctdbNodes[i],
                     });
                     disableMount.fail(function (ex, data) {
-                        console.log(data);
+                        console.error(data);
                     });
                     const removeMount = cockpit.spawn(["rm", "-f", systemdPath], {
                         err: "out",
@@ -1945,7 +1901,7 @@ async function rm_share(share_name, element_list) {
                         host: ctdbNodes[i],
                     });      
                     removeMount.fail(function (ex, data) {
-                        console.log(data);
+                        console.error(data);
                     });
                 }
             }
