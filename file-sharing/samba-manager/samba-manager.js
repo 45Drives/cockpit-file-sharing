@@ -1594,9 +1594,9 @@ function check_shadow_copy() {
     proc.done(function () {
         populate_advanced_share_settings(
             "shadowcopy",
-            "ceph_snapshosts",
+            "ceph_snapshots",
             "",
-            "ceph_snapshosts"
+            "ceph_snapshots"
         );
     });
     proc.fail(function () {
