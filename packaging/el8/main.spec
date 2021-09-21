@@ -26,6 +26,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Sep 21 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-2
+- improved error handling
+* Tue Sep 21 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-2
+- improved error handling
 * Mon Sep 20 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-1
 - rework cephfs mounts
 * Mon Sep 20 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-1

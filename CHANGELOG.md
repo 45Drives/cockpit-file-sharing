@@ -1,3 +1,3 @@
-## Cockpit File Sharing 2.4.0-1
+## Cockpit File Sharing 2.4.0-2
 
-* rework cephfs mounts
+* improved error handling
