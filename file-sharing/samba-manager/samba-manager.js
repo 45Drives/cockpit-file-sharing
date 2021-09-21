@@ -859,7 +859,18 @@ function show_share_dialog(
         func.innerText = "Add New";
         button.onclick = function () {
             var path = document.getElementById("path").value;
-
+            var proc = cockpit.spawn(["mkdir", "-p", path], {
+                err: "out",
+                superuser: "require",
+            });
+            proc.done(function (data) {
+                console.log("Directory " + path + " made");
+                add_share();
+            });
+            proc.fail(function (ex, data) {
+                shareNotification.setError(data);
+            });
+/*
             if (path == old_path) {
                 var proc = cockpit.spawn(["mkdir", path], {
                     err: "out",
@@ -888,6 +899,7 @@ function show_share_dialog(
                     );
                 });
             }
+*/
         };
         button.innerText = "Add Share";
         document.getElementById("share-name").disabled = false;
@@ -897,7 +909,18 @@ function show_share_dialog(
         func.innerText = "Edit";
         button.onclick = function () {
             var path = document.getElementById("path").value;
-
+            var proc = cockpit.spawn(["mkdir", "-p", path], {
+                err: "out",
+                superuser: "try",
+            });
+            proc.done(function (data) {
+                console.log("Directory " + path + " made");
+                edit_share(share_name, share_settings, "updated");
+            });
+            proc.fail(function (ex, data) {
+                shareNotification.setError(data);
+            });
+/*
             if (path == old_path) {
                 var proc = cockpit.spawn(["mkdir", path], {
                     err: "out",
@@ -926,6 +949,7 @@ function show_share_dialog(
                     );
                 });
             }
+*/
         };
         button.innerText = "Apply";
         document.getElementById("share-name").disabled = true;
@@ -999,6 +1023,53 @@ async function add_share() {
 
     const name = document.getElementById("share-name").value;
     const quota = document.getElementById("quota").value;
+
+    if (isCeph) {
+        try{
+            let quotaBytes = 0;
+
+            try {
+                quotaBytes = Number(quota);
+            } catch (error) {
+                quotaBytes = 0;
+            } finally {
+                quotaBytes = quotaBytes * (1000**3);
+            }
+            if (quotaBytes > 0) {
+                console.log(await run_command(['setfattr', '-n', 'ceph.quota.max_bytes', '-v', quotaBytes, `${cephDirectory[1]}${cephDirectory[3]}`]));
+            }
+        } catch (error) {
+            console.error("Error setting quota :" + error);
+        }
+
+        let ctdbNodes = await get_ctdb_nodes();
+        try {
+            // Create systemd file from template
+            const templatePath = `/usr/share/cockpit/file-sharing/samba-manager/templates/mnt-fsgw.mount`;
+            const systemdPath = `/etc/systemd/system/mnt-fsgw-${cephDirectory[3]?.match(/[A-Za-z0-9-_]/g).join('')}.mount`;
+            let templateData = await run_command(['cat', templatePath]);
+            templateData = templateData.replace(/\{\{\{localpath\}\}\}/g, cephDirectory[3]);
+
+            // loop ctdbNodes array and place systmd.mount file and enable it on each node
+            for (var i = 0; i< ctdbNodes.length; i++) {
+                const systemdFile = cockpit.file(systemdPath, {
+                    superuser: 'require',
+                    host: ctdbNodes[i],
+                });
+                console.log(await systemdFile.replace(templateData));
+                const proc = cockpit.spawn(["systemctl", "enable", "--now", `/etc/systemd/system/mnt-fsgw-${cephDirectory[3].match(/[A-Za-z0-9-_]/g).join('')}.mount`], {
+                    err: "out",
+                    superuser: "require",
+                    host: ctdbNodes[i],
+                });      
+                proc.fail(function (ex, data) {
+                    console.log(data);
+                });
+            }
+        } catch (error) {
+                console.error("Error mounting cephfs share :" + error);
+            }
+        }
 
     const proc = cockpit.spawn(["net", "conf", "addshare", name, path], {
         err: "out",
