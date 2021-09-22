@@ -26,6 +26,20 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Sep 22 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-3
+- Reworked how cephfs shares are created to allow quotas to appears correctly when
+  mounting samba in windows
+- Allows for cephfs quotas to be set from file-sharing module without going to the
+  ceph dashboard or terminal
+- Removed error message and need for second click when adding a new directory
+- Fixed Typo when populating ceph_snapshots vfs object
+* Wed Sep 22 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-3
+- Reworked how cephfs shares are created to allow quotas to appears correctly when
+  mounting samba in windows
+- Allows for cephfs quotas to be set from file-sharing module without going to the
+  ceph dashboard or terminal
+- Removed error message and need for second click when adding a new directory
+- Fixed Typo when populating ceph_snapshots vfs object
 * Tue Sep 21 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-2
 - improved error handling
 * Tue Sep 21 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-2

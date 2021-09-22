@@ -2,9 +2,9 @@
     "__version": "45D-R1",
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
-    "prerelease": true,
+    "prerelease": false,
     "version": "2.4.0",
-    "buildVersion": "2",
+    "buildVersion": "3",
     "author": "Sam Silver <ssilver@45drives.com>",
     "url": "https://github.com/45Drives/cockpit-file-sharing",
     "category": "utils",
@@ -55,10 +55,10 @@
     "changelog": {
         "urgency": "medium",
         "version": "2.4.0",
-        "buildVersion": "2",
+        "buildVersion": "3",
         "ignore": [],
         "date": null,
-        "packager": "Brett Kelly <bkelly@45drives.com>",
+        "packager": "Sam Silver <ssilver@45drives.com>",
         "changes": []
     }
 }
