@@ -1,3 +1,3 @@
-## Cockpit File Sharing 2.4.0-2
+## Cockpit File Sharing 2.4.1-1
 
-* improved error handling
+* change cephfs quotas after share creation
