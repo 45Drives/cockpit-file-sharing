@@ -847,7 +847,6 @@ function show_share_dialog(
     share_name = "",
     share_settings = {}
 ) {
-    var old_path = "";
     let shareNotification = new Notification("share-modal");
     var func = document.getElementById("share-modal-function");
     var button = document.getElementById("continue-share");
@@ -870,36 +869,6 @@ function show_share_dialog(
             proc.fail(function (ex, data) {
                 shareNotification.setError(data);
             });
-/*
-            if (path == old_path) {
-                var proc = cockpit.spawn(["mkdir", path], {
-                    err: "out",
-                    superuser: "require",
-                });
-                proc.done(function (data) {
-                    console.log("Directory " + path + " made");
-                    add_share();
-                });
-                proc.fail(function (ex, data) {
-                    shareNotification.setError(data);
-                });
-            } else {
-                var proc = cockpit.spawn(["stat", path], {
-                    err: "out",
-                    superuser: "require",
-                });
-                proc.done(function (data) {
-                    add_share();
-                });
-                proc.fail(function (ex, data) {
-                    old_path = path;
-                    shareNotification.setError(
-                        path +
-                            ' does not exist. Press "Add Share" again to create the directory.'
-                    );
-                });
-            }
-*/
         };
         button.innerText = "Add Share";
         document.getElementById("share-name").disabled = false;
@@ -920,40 +889,12 @@ function show_share_dialog(
             proc.fail(function (ex, data) {
                 shareNotification.setError(data);
             });
-/*
-            if (path == old_path) {
-                var proc = cockpit.spawn(["mkdir", path], {
-                    err: "out",
-                    superuser: "try",
-                });
-                proc.done(function (data) {
-                    console.log("Directory " + path + " made");
-                    edit_share(share_name, share_settings, "updated");
-                });
-                proc.fail(function (ex, data) {
-                    shareNotification.setError(data);
-                });
-            } else {
-                var proc = cockpit.spawn(["stat", path], {
-                    err: "out",
-                    superuser: "try",
-                });
-                proc.done(function (data) {
-                    edit_share(share_name, share_settings, "updated");
-                });
-                proc.fail(function (ex, data) {
-                    old_path = path;
-                    shareNotification.setError(
-                        path +
-                            ' does not exist. Press "Apply" again to create the directory.'
-                    );
-                });
-            }
-*/
         };
         button.innerText = "Apply";
         document.getElementById("share-name").disabled = true;
         populate_share_settings(share_settings);
+        checkCeph();
+        showQuota();
     }
     var add_user_select = document.getElementById("add-user-to-share");
     add_user_select.addEventListener("change", (event) => {
@@ -965,6 +906,35 @@ function show_share_dialog(
     });
 
     showModal("share-modal");
+}
+
+/* showQuota
+ * Receives: Nothing
+ * Does: fills in existing quota of cephfs path if present
+ * Returns: nothing
+ */ 
+async function showQuota(){
+    const path = document.querySelector('#path').value;
+    let quotaGbytes = 0;
+
+    try{
+        var quotaValue = await run_command(['getfattr', '-n', 'ceph.quota.max_bytes', path, '--only-values', '--absolute-names']);
+        try {
+            quotaGbytes = Number(quotaValue);
+        } catch (error) {
+            quotaGbytes = 0;
+        } finally {
+            quotaGbytes = quotaValue / (1000**3);
+        }
+        if (quotaGbytes > 0) {
+            document.getElementById("quota").value = quotaGbytes;
+        }
+    }catch (error) {
+        var quotaResponse = error.split(": ");
+        if (quotaResponse[2].includes("No such attribute")){
+            document.getElementById("quota").value = "";
+        }
+    }
 }
 
 /* set_share_defaults
@@ -1026,22 +996,7 @@ async function add_share() {
     const quota = document.getElementById("quota").value;
 
     if (isCeph) {
-        try{
-            let quotaBytes = 0;
-
-            try {
-                quotaBytes = Number(quota);
-            } catch (error) {
-                quotaBytes = 0;
-            } finally {
-                quotaBytes = quotaBytes * (1000**3);
-            }
-            if (quotaBytes > 0) {
-                console.log(await run_command(['setfattr', '-n', 'ceph.quota.max_bytes', '-v', quotaBytes, `${cephDirectory[1]}${cephDirectory[3]}`]));
-            }
-        } catch (error) {
-            console.error("Error setting quota :" + error);
-        }
+        setQuota(path,quota);
 
         let ctdbNodes = await get_ctdb_nodes();
         try {
@@ -1388,13 +1343,18 @@ function verify_share_path() {
  * calls edit_parms to apply changed settings
  * Returns: nothing
  */
-function edit_share(share_name, settings, action) {
+async function edit_share(share_name, settings, action) {
     /* Params have DOM id the same as net conf setparm <param>
      */
     if (!verify_share_settings()) return;
 
     let shareNotification = new Notification("share-modal");
     shareNotification.setSpinner();
+
+    const path = document.getElementById("path").value;
+    const quota = document.getElementById("quota").value;
+
+    setQuota(path, quota);
 
     var params = document.getElementsByClassName("share-param");
     var changed_settings = {};
@@ -1446,6 +1406,35 @@ function edit_share(share_name, settings, action) {
         },
         "share-modal"
     );
+}
+
+/* setQuota
+ * Receives: path to set quota on, quota value in GB
+ * callback function to hide modal dialog, id string for info message
+ * Does: sets quota on cephfs path
+ * Returns: nothing
+ */
+async function setQuota(path, quota){
+
+    let quotaBytes = 0;
+
+    try {
+        quotaBytes = Number(quota);
+    } catch (error) {
+        quotaBytes = 0;
+    } finally {
+        quotaBytes = quotaBytes * (1000**3);
+    }
+    if (quotaBytes >= 0) {
+        try{
+            console.log(await run_command(['setfattr', '-n', 'ceph.quota.max_bytes', '-v', quotaBytes, path ]));
+        } catch(error){
+            var quotaResponse = error.split(": ");
+            if (quotaResponse[2].includes("Operation not supported")){
+                console.log("Not a cephfs path, not setting quota");
+            }   
+        }
+    }
 }
 
 /* edit_parms
@@ -1624,7 +1613,6 @@ async function isCephFS(path, validPath) {
         if (error.trim().endsWith('No such file or directory') && path.length > 2) {
             return isCephFS(path.split('/').slice(0, -1).join('/'));
         }
-
         return [false, null];
     }
 }
@@ -1636,9 +1624,7 @@ async function checkCeph(checkOnly = true) {
 
     const cephStats = await isCephFS(path);
 
-    const currentPath = path.replace(/[\/]{1,}$/, '');
-    
-    if (!cephStats[0] || currentPath === cephStats[1]) {
+    if (!cephStats[0]) {
         quotaBlock.classList.add('hidden');
         return;
     }
@@ -1650,15 +1636,6 @@ async function checkCeph(checkOnly = true) {
     const cephFsgwPath = path.substring(userspaceCephPath.length);
 
     if (!checkOnly) return [true, userspaceCephPath, '/mnt/fsgw/', cephFsgwPath];
-
-    // {{{localpath}}} service file for mnt point
-
-    // mkdir /mnt/cephfs/test3
-    // setfattr -n ceph.quota.max_bytes -v 100000000 /mnt/cephfs/test3
-    // cp /etc/systemd/system/mnt-fsgw-test2.mount /etc/systemd/system/mnt-fsgw-test3.mount 
-    // vim /etc/systemd/system/mnt-fsgw-test3.mount 
-    // mkdir /mnt/fsgw/test3
-    // systemctl enable --now mnt-fsgw-test3.mount
 }
 
 /* find_vfs_object
