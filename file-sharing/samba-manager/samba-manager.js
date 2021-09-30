@@ -1629,8 +1629,21 @@ async function isCephFS(path, validPath) {
     }
 }
 
+async function isCephSubDir(path) {
+    try {
+        await run_command(['getfattr', '-n', 'ceph.dir.entries', path]);
+        return true;
+    } catch (error) {
+        if (error.trim().endsWith('No such file or directory') && path.length > 2) {
+            console.log(error);
+            return isCephFS(path.split('/').slice(0, -1).join('/'));
+        }
+        return false;
+    }
+}
+
 async function checkCeph(checkOnly = true) {
-    const path = document.querySelector('#path').value;
+    const path = typeof checkOnly === "string" ?checkOnly: document.querySelector('#path').value;
     
     const quotaBlock = document.querySelector('#share-quota-input');
 
@@ -1649,7 +1662,7 @@ async function checkCeph(checkOnly = true) {
 
     const cephFsgwPath = path.substring(userspaceCephPath.length);
 
-    if (!checkOnly) return [true, userspaceCephPath, '/mnt/fsgw/', cephFsgwPath];
+    if (!checkOnly || typeof checkOnly === "string") return [true, userspaceCephPath, '/mnt/fsgw/', cephFsgwPath];
 
     // {{{localpath}}} service file for mnt point
 
@@ -1875,38 +1888,47 @@ async function rm_share(share_name, element_list) {
     shareNotification.setSpinner("");
 
     let sharePath = await run_command(['net', 'conf', 'getparm', share_name, 'path']);
-    let ctdbNodes = await get_ctdb_nodes();
+    sharePath = sharePath.trim()
+
+    const cephDirectory = await isCephSubDir(sharePath);
+
+    let isCeph = false;
+
+    if (cephDirectory == true) isCeph = true;
 
     var proc = cockpit.spawn(["net", "conf", "delshare", share_name], {
         err: "out",
         superuser: "require",
     });
-    proc.done(function (data) {
-        try {
-            if (typeof sharePath === 'string') {
-                let localPath = sharePath.substring(10).match(/[A-Za-z0-9-_]/g).join('');
-                const systemdPath = `/etc/systemd/system/mnt-fsgw-${localPath}.mount`;
-                for (var i = 0; i< ctdbNodes.length; i++) {
-                    const disableMount = cockpit.spawn(["systemctl", "disable", "--now", systemdPath], {
-                        err: "out",
-                        superuser: "require",
-                        host: ctdbNodes[i],
-                    });
-                    disableMount.fail(function (ex, data) {
-                        console.error(data);
-                    });
-                    const removeMount = cockpit.spawn(["rm", "-f", systemdPath], {
-                        err: "out",
-                        superuser: "require",
-                        host: ctdbNodes[i],
-                    });      
-                    removeMount.fail(function (ex, data) {
-                        console.error(data);
-                    });
+    proc.done(async function (data) {
+        if(isCeph){
+            try {
+                if (typeof sharePath === 'string') {
+                    let ctdbNodes = await get_ctdb_nodes();
+                    let localPath = sharePath.substring(10).match(/[A-Za-z0-9-_]/g).join('');
+                    const systemdPath = `/etc/systemd/system/mnt-fsgw-${localPath}.mount`;
+                    for (var i = 0; i< ctdbNodes.length; i++) {
+                        const disableMount = cockpit.spawn(["systemctl", "disable", "--now", systemdPath], {
+                            err: "out",
+                            superuser: "require",
+                            host: ctdbNodes[i],
+                        });
+                        disableMount.fail(function (ex, data) {
+                            console.error(data);
+                        });
+                        const removeMount = cockpit.spawn(["rm", "-f", systemdPath], {
+                            err: "out",
+                            superuser: "require",
+                            host: ctdbNodes[i],
+                        });      
+                        removeMount.fail(function (ex, data) {
+                            console.error(data);
+                        });
+                    }
                 }
+            } catch (error) {
+                console.error(error);
             }
-        } catch (error) {
-            console.error(error);
         }
         populate_share_list();
         shareNotification.setSuccess(
