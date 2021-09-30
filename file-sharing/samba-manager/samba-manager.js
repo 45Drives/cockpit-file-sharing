@@ -895,6 +895,8 @@ function show_share_dialog(
         populate_share_settings(share_settings);
         checkCeph();
         showQuota();
+//        showLayout();
+
     }
     var add_user_select = document.getElementById("add-user-to-share");
     add_user_select.addEventListener("change", (event) => {
@@ -933,6 +935,25 @@ async function showQuota(){
         var quotaResponse = error.split(": ");
         if (quotaResponse[2].includes("No such attribute")){
             document.getElementById("quota").value = "";
+        }
+    }
+}
+
+/* showLayout
+ * Receives: Nothing
+ * Does: fills in existing layout of cephfs path if present
+ * Returns: nothing
+ */ 
+async function showLayout(){
+    const layoutpools = document.getElementById("layoutpool");
+
+    try{
+        var layoutValue = await run_command(['getfattr', '-n', 'ceph.dir.layout.pool', path, '--only-values', '--absolute-names']);
+        layoutpools.selectedIndex = 2;
+    }catch (error) {
+        var quotaResponse = error.split(": ");
+        if (quotaResponse[2].includes("No such attribute")){
+            layoutpools.options[layoutpools.selectedIndex].value = 2;
         }
     }
 }
@@ -993,11 +1014,8 @@ async function add_share() {
     }
 
     const name = document.getElementById("share-name").value;
-    const quota = document.getElementById("quota").value;
 
     if (isCeph) {
-        setQuota(path,quota);
-
         let ctdbNodes = await get_ctdb_nodes();
         try {
             // Create systemd file from template
@@ -1353,8 +1371,13 @@ async function edit_share(share_name, settings, action) {
 
     const path = document.getElementById("path").value;
     const quota = document.getElementById("quota").value;
+    const layoutpools = document.getElementById("layoutpool");
+    const layoutpool = layoutpools.options[layoutpools.selectedIndex].value;
+
+    console.log("Selected Layout Pool :" + layoutpool );
 
     setQuota(path, quota);
+    setCephfsPool(path,layoutpool);
 
     var params = document.getElementsByClassName("share-param");
     var changed_settings = {};
@@ -1431,11 +1454,61 @@ async function setQuota(path, quota){
         } catch(error){
             var quotaResponse = error.split(": ");
             if (quotaResponse[2].includes("Operation not supported")){
-                console.log("Not a cephfs path, not setting quota");
             }   
         }
     }
 }
+
+
+async function listCephfsPools(){
+    const layoutpool = document.querySelector('#layoutpool');
+
+    var values = await getCephfsPools();
+
+    for (const val of values)
+    {
+        var option = document.createElement("option");
+        option.value = val;
+        option.innerHTML = val;
+        layoutpool.appendChild(option);   
+    }
+}
+
+/* getPools
+ * Receives: nothing
+ * Does: gets json list of pools in ceph filesystem with ceph cli tool
+ * Returns: pools
+ */
+async function getCephfsPools(){
+    let ceph_fs_status = JSON.parse(await run_command(['ceph', 'fs', 'status', '--format', 'json']));
+    let ceph_fs_pools = ceph_fs_status.pools;
+    let layout_pools = [];
+    for (var i = 0; i< ceph_fs_pools.length; i++) {
+        if( ceph_fs_pools[i].type !== "metadata") {
+            layout_pools.push(ceph_fs_pools[i].name)
+        }
+    }
+    return layout_pools;
+}
+
+/* setCephfsPool
+ * Receives: nothing
+ * Does: uses setfattr to set layout pool of cephfs directory
+ * Returns: pools
+ */
+async function setCephfsPool(path, layoutpool){
+    try{
+        console.log('setfattr ' + '-n ' + 'ceph.dir.layout.pool ' + '-v ' + layoutpool + path);
+        console.log(await run_command(['setfattr', '-n', 'ceph.dir.layout.pool', '-v', layoutpool, path ]));
+    } catch(error){
+        console.log(error);
+        var quotaResponse = error.split(": ");
+        if (quotaResponse[2].includes("Operation not supported")){
+            console.log("Not a cephfs path, not setting layout pool");
+        }   
+    }
+}
+
 
 /* edit_parms
  * Receives: name of share to edit, changed parameters, removed advanced paramters, string with "created" or "updated",
@@ -1621,15 +1694,18 @@ async function checkCeph(checkOnly = true) {
     const path = document.querySelector('#path').value;
     
     const quotaBlock = document.querySelector('#share-quota-input');
+    const layoutpool = document.querySelector('#share-pool-layout-list');
 
     const cephStats = await isCephFS(path);
 
     if (!cephStats[0]) {
         quotaBlock.classList.add('hidden');
+        layoutpool.classList.add('hidden');
         return;
     }
 
     quotaBlock.classList.remove('hidden');
+    layoutpool.classList.remove('hidden');
 
     const userspaceCephPath = `${cephStats[1]}/`;
 
@@ -1870,7 +1946,7 @@ async function rm_share(share_name, element_list) {
                         host: ctdbNodes[i],
                     });
                     disableMount.fail(function (ex, data) {
-                        console.error(data);
+                        console.log(data);
                     });
                     const removeMount = cockpit.spawn(["rm", "-f", systemdPath], {
                         err: "out",
@@ -1878,7 +1954,7 @@ async function rm_share(share_name, element_list) {
                         host: ctdbNodes[i],
                     });      
                     removeMount.fail(function (ex, data) {
-                        console.error(data);
+                        console.log(data);
                     });
                 }
             }
@@ -2370,7 +2446,6 @@ function set_up_buttons() {
     document
         .getElementById("path")
         .addEventListener("input", checkCeph);
-
     document
         .getElementById("show-privilege-btn")
         .addEventListener("click", () => {
@@ -2456,6 +2531,7 @@ async function setup() {
     await populate_privilege_list();
     set_up_buttons();
     hideModal("blurred-screen");
+    listCephfsPools();
 }
 
 /* main
