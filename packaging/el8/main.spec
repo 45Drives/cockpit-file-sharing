@@ -26,6 +26,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Sep 27 2021 Brett Kelly <bkelly@45drives.com> 2.4.1-1
+- change cephfs quotas after share creation
+* Mon Sep 27 2021 Brett Kelly <bkelly@45drives.com> 2.4.1-1
+- change cephfs quotas after share creation
 * Tue Sep 21 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-2
 - improved error handling
 * Tue Sep 21 2021 Brett Kelly <bkelly@45drives.com> 2.4.0-2

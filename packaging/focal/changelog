@@ -1,3 +1,9 @@
+cockpit-file-sharing (2.4.1-1focal) focal; urgency=medium
+
+  * change cephfs quotas after share creation
+
+ -- Brett Kelly <bkelly@45drives.com>  Mon, 27 Sep 2021 14:30:09 -0300
+
 cockpit-file-sharing (2.4.0-2focal) focal; urgency=medium
 
   * improved error handling
