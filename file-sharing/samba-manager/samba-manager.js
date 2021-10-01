@@ -1474,7 +1474,7 @@ async function listCephfsPools(){
     }
 }
 
-/* getPools
+/* getCephfsPools
  * Receives: nothing
  * Does: gets json list of pools in ceph filesystem with ceph cli tool
  * Returns: pools
