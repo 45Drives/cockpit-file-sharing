@@ -49,21 +49,17 @@ A Cockpit plugin to easily manage samba and NFS file sharing.
 ### From 45Drives Repo
 #### Ubuntu
 ```bash
-$ wget -qO - http://images.45drives.com/repo/keys/aptpubkey.asc | apt-key add -
-$ curl -o /etc/apt/sources.list.d/45drives.list http://images.45drives.com/repo/debian/45drives.list
-$ apt update
+$ curl -sSL https://repo.45drives.com/setup | sudo bash
 $ apt install cockpit-file-sharing
 ```
 #### Rocky
 ```bash
-$ curl -o /etc/yum.repos.d/45drives.repo http://images.45drives.com/repo/centos/45drives-centos.repo
-$ dnf clean all && dnf makecache
+$ curl -sSL https://repo.45drives.com/setup | sudo bash
 $ dnf install cockpit-file-sharing
 ```
 #### CentOS 7
 ```bash
-$ curl -o /etc/yum.repos.d/45drives.repo http://images.45drives.com/repo/centos/45drives-centos.repo
-$ yum clean all && yum makecache
+$ curl -sSL https://repo.45drives.com/setup | sudo bash
 $ yum install cockpit-file-sharing
 ```
 
