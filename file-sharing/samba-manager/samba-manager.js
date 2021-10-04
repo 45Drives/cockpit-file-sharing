@@ -895,8 +895,7 @@ function show_share_dialog(
         populate_share_settings(share_settings);
         checkCeph();
         showQuota();
-//        showLayout();
-
+        showLayout();
     }
     var add_user_select = document.getElementById("add-user-to-share");
     add_user_select.addEventListener("change", (event) => {
@@ -945,15 +944,24 @@ async function showQuota(){
  * Returns: nothing
  */ 
 async function showLayout(){
-    const layoutpools = document.getElementById("layoutpool");
+    const layoutSelect = document.getElementById("layoutpool");
+    const path = document.querySelector('#path').value;
+    const layoutPools = await getCephfsPools();
 
     try{
-        var layoutValue = await run_command(['getfattr', '-n', 'ceph.dir.layout.pool', path, '--only-values', '--absolute-names']);
-        layoutpools.selectedIndex = 2;
+        var currentLayout = await run_command(['getfattr', '-n', 'ceph.dir.layout.pool', path, '--only-values', '--absolute-names']);
+        for (var i = 0; i< layoutPools.length; i++) {
+            if (layoutPools[i] === currentLayout){
+                 layoutSelect.selectedIndex = ++i;
+                 layoutSelect.disabled = true;
+                 return;
+            }
+        }
     }catch (error) {
         var quotaResponse = error.split(": ");
         if (quotaResponse[2].includes("No such attribute")){
-            layoutpools.options[layoutpools.selectedIndex].value = 2;
+            layoutSelect.selectedIndex = 0;
+            layoutSelect.disabled = true;
         }
     }
 }
@@ -1014,9 +1022,20 @@ async function add_share() {
     }
 
     const name = document.getElementById("share-name").value;
-
+    
     if (isCeph) {
+        const layoutpools = document.getElementById("layoutpool");
+        const layoutpool = layoutpools.options[layoutpools.selectedIndex].value;
+
+        setCephfsPool(`${cephDirectory[1]}${cephDirectory[3]}`,layoutpool);
+        
         let ctdbNodes = await get_ctdb_nodes();
+       
+        // TODO
+        // Loop through each ctdb node and try to ping and get a reponse
+        // if node does not respond then remove from ctdbNodes
+        // throw error stating which node is down and let them continue if button press again
+
         try {
             // Create systemd file from template
             const templatePath = `/usr/share/cockpit/file-sharing/samba-manager/templates/mnt-fsgw.mount`;
@@ -1371,13 +1390,8 @@ async function edit_share(share_name, settings, action) {
 
     const path = document.getElementById("path").value;
     const quota = document.getElementById("quota").value;
-    const layoutpools = document.getElementById("layoutpool");
-    const layoutpool = layoutpools.options[layoutpools.selectedIndex].value;
-
-    console.log("Selected Layout Pool :" + layoutpool );
 
     setQuota(path, quota);
-    setCephfsPool(path,layoutpool);
 
     var params = document.getElementsByClassName("share-param");
     var changed_settings = {};
@@ -1429,6 +1443,8 @@ async function edit_share(share_name, settings, action) {
         },
         "share-modal"
     );
+
+    location.reload();
 }
 
 /* setQuota
@@ -1463,7 +1479,7 @@ async function setQuota(path, quota){
 async function listCephfsPools(){
     const layoutpool = document.querySelector('#layoutpool');
 
-    var values = await getCephfsPools();
+    const values = await getCephfsPools();
 
     for (const val of values)
     {
@@ -1498,7 +1514,6 @@ async function getCephfsPools(){
  */
 async function setCephfsPool(path, layoutpool){
     try{
-        console.log('setfattr ' + '-n ' + 'ceph.dir.layout.pool ' + '-v ' + layoutpool + path);
         console.log(await run_command(['setfattr', '-n', 'ceph.dir.layout.pool', '-v', layoutpool, path ]));
     } catch(error){
         console.log(error);
