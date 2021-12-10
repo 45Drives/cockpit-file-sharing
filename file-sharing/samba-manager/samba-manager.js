@@ -1610,7 +1610,7 @@ async function isCephFS(path, validPath) {
             return [true, validPath];
         }
 
-        if (error.trim().endsWith('No such file or directory') && path.length > 2) {
+        if (error?.trim().endsWith('No such file or directory') && path.length > 2) {
             return isCephFS(path.split('/').slice(0, -1).join('/'));
         }
         return [false, null];
