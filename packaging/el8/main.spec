@@ -26,6 +26,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri Dec 10 2021 Joshua Boudreau <jboudreau@45drives.com> 2.4.2-1
+- Use optional chaining operator while checking output on error in isCephFS()
+* Fri Dec 10 2021 Joshua Boudreau <jboudreau@45drives.com> 2.4.2-1
+- Use optional chaining operator while checking output on error in isCephFS()
 * Mon Sep 27 2021 Brett Kelly <bkelly@45drives.com> 2.4.1-1
 - change cephfs quotas after share creation
 * Mon Sep 27 2021 Brett Kelly <bkelly@45drives.com> 2.4.1-1

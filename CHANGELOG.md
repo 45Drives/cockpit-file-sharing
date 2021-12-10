@@ -1,3 +1,3 @@
-## Cockpit File Sharing 2.4.1-1
+## Cockpit File Sharing 2.4.2-1
 
-* change cephfs quotas after share creation
+* Use optional chaining operator while checking output on error in isCephFS()

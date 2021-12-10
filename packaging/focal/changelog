@@ -1,3 +1,9 @@
+cockpit-file-sharing (2.4.2-1focal) focal; urgency=medium
+
+  * Use optional chaining operator while checking output on error in isCephFS()
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 10 Dec 2021 07:30:28 -0400
+
 cockpit-file-sharing (2.4.1-1focal) focal; urgency=medium
 
   * change cephfs quotas after share creation
