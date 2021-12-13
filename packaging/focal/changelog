@@ -1,3 +1,9 @@
+cockpit-file-sharing (2.4.3-1focal) focal; urgency=medium
+
+  * Use optional chaining operator while checking output on error in isCephSubDir()
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 13 Dec 2021 05:43:36 -0400
+
 cockpit-file-sharing (2.4.2-1focal) focal; urgency=medium
 
   * Use optional chaining operator while checking output on error in isCephFS()

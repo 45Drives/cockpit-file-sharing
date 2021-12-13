@@ -26,6 +26,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Dec 13 2021 Joshua Boudreau <jboudreau@45drives.com> 2.4.3-1
+- Use optional chaining operator while checking output on error in isCephSubDir()
+* Mon Dec 13 2021 Joshua Boudreau <jboudreau@45drives.com> 2.4.3-1
+- Use optional chaining operator while checking output on error in isCephSubDir()
 * Fri Dec 10 2021 Joshua Boudreau <jboudreau@45drives.com> 2.4.2-1
 - Use optional chaining operator while checking output on error in isCephFS()
 * Fri Dec 10 2021 Joshua Boudreau <jboudreau@45drives.com> 2.4.2-1
