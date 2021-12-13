@@ -1622,7 +1622,7 @@ async function isCephSubDir(path) {
         await run_command(['getfattr', '-n', 'ceph.dir.entries', path]);
         return true;
     } catch (error) {
-        if (error.trim().endsWith('No such file or directory') && path.length > 2) {
+        if (error?.trim().endsWith('No such file or directory') && path.length > 2) {
             console.log(error);
             return isCephFS(path.split('/').slice(0, -1).join('/'));
         }
