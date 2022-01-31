@@ -20,6 +20,7 @@ A Cockpit plugin to easily manage samba and NFS file sharing.
     * [Group Management](#group-management)
     * [User Management](#user-management)
     * [SeDiskOperatorPrivilege](#sediskopperatorprivilege)
+    * [Import Shares from smb.conf](#import-shares-from-smb-conf)
 * [NFS Manager](#nfs-manager) 
     * [Adding Exports](#adding-exports)
     * [Editing Exports](#editing-exports)
@@ -131,6 +132,15 @@ Changing the password of a samba user is possible through the "Set Samba Passwor
 ![Add Privilege](img/samba/samba_privilege.gif)
 
 You can add privileges by clicking on the "+" button. You will be greeted with the menu above, you can set the group of the privilege and you can add a username and password. Remove privileges by clicking the "X" besides the privilege.
+
+### Import Shares from smb.conf
+To allow Cockpit File Sharing to manage existing shares defined in smb.conf, do the following steps:
+1. Create a backup copy of smb.conf: `cp /etc/samba/smb.conf /etc/samba/smb.conf.bak`
+2. Ensure that `include = registry` is NOT present in smb.conf: `sed -i '/include = registry/d' /etc/samba/smb.conf`
+2. Run `net conf import /etc/samba/smb.conf`
+3. Check that your shares are now in the registry with `net conf list`
+4. Replace contents of smb.conf: `echo "[Global]\n\tinclude = registry" > /etc/samba/smb.conf`
+5. Restart Samba: `systemctl restart smb.service`
 
 ## NFS Manager
 ![NFS](img/nfs/nfs.gif)
