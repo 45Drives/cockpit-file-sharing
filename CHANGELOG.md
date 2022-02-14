@@ -1,3 +1,3 @@
-## Cockpit File Sharing 2.4.3-1
+## Cockpit File Sharing 2.4.4-1
 
-* Use optional chaining operator while checking output on error in isCephSubDir()
+* added support for setting per share pool layout when using cephfs

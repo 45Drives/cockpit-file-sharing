@@ -1,3 +1,9 @@
+cockpit-file-sharing (2.4.4-1focal) focal; urgency=medium
+
+  * added support for setting per share pool layout when using cephfs
+
+ -- Brett Kelly <bkelly@45drives.com>  Mon, 14 Feb 2022 06:51:25 -0400
+
 cockpit-file-sharing (2.4.3-1focal) focal; urgency=medium
 
   * Use optional chaining operator while checking output on error in isCephSubDir()
