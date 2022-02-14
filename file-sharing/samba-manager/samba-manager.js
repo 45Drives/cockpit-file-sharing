@@ -852,6 +852,13 @@ function show_share_dialog(
     var button = document.getElementById("continue-share");
     var text_area = document.getElementById("advanced-global-settings-input");
 
+    const layoutPoolSelect = document.querySelector('#layoutpool');
+    const layoutPoolOptions = layoutPoolSelect.querySelectorAll(':scope option');
+
+    layoutPoolSelect.removeAttribute('disabled');
+    [...layoutPoolOptions].forEach(el => el.removeAttribute('selected'));
+    layoutPoolOptions[0].selected = true;
+
     text_area.style.height = "";
     text_area.style.height = Math.max(text_area.scrollHeight + 5, 50) + "px";
     if (create_or_edit === "create") {
@@ -893,10 +900,11 @@ function show_share_dialog(
         button.innerText = "Apply";
         document.getElementById("share-name").disabled = true;
         populate_share_settings(share_settings);
-        checkCeph();
         showQuota();
         showLayout();
     }
+    checkCeph();
+
     var add_user_select = document.getElementById("add-user-to-share");
     add_user_select.addEventListener("change", (event) => {
         if (event.target.value !== "") add_user_to_share(event.target.value);
@@ -1443,8 +1451,6 @@ async function edit_share(share_name, settings, action) {
         },
         "share-modal"
     );
-
-    location.reload();
 }
 
 /* setQuota
