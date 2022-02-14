@@ -852,6 +852,13 @@ function show_share_dialog(
     var button = document.getElementById("continue-share");
     var text_area = document.getElementById("advanced-global-settings-input");
 
+    const layoutPoolSelect = document.querySelector('#layoutpool');
+    const layoutPoolOptions = layoutPoolSelect.querySelectorAll(':scope option');
+
+    layoutPoolSelect.removeAttribute('disabled');
+    [...layoutPoolOptions].forEach(el => el.removeAttribute('selected'));
+    layoutPoolOptions[0].selected = true;
+
     text_area.style.height = "";
     text_area.style.height = Math.max(text_area.scrollHeight + 5, 50) + "px";
     if (create_or_edit === "create") {
@@ -893,9 +900,11 @@ function show_share_dialog(
         button.innerText = "Apply";
         document.getElementById("share-name").disabled = true;
         populate_share_settings(share_settings);
-        checkCeph();
         showQuota();
+        showLayout();
     }
+    checkCeph();
+
     var add_user_select = document.getElementById("add-user-to-share");
     add_user_select.addEventListener("change", (event) => {
         if (event.target.value !== "") add_user_to_share(event.target.value);
@@ -933,6 +942,34 @@ async function showQuota(){
         var quotaResponse = error.split(": ");
         if (quotaResponse[2].includes("No such attribute")){
             document.getElementById("quota").value = "";
+        }
+    }
+}
+
+/* showLayout
+ * Receives: Nothing
+ * Does: fills in existing layout of cephfs path if present
+ * Returns: nothing
+ */ 
+async function showLayout(){
+    const layoutSelect = document.getElementById("layoutpool");
+    const path = document.querySelector('#path').value;
+    const layoutPools = await getCephfsPools();
+
+    try{
+        var currentLayout = await run_command(['getfattr', '-n', 'ceph.dir.layout.pool', path, '--only-values', '--absolute-names']);
+        for (var i = 0; i< layoutPools.length; i++) {
+            if (layoutPools[i] === currentLayout){
+                 layoutSelect.selectedIndex = ++i;
+                 layoutSelect.disabled = true;
+                 return;
+            }
+        }
+    }catch (error) {
+        var quotaResponse = error.split(": ");
+        if (quotaResponse[2].includes("No such attribute")){
+            layoutSelect.selectedIndex = 0;
+            layoutSelect.disabled = true;
         }
     }
 }
@@ -993,12 +1030,20 @@ async function add_share() {
     }
 
     const name = document.getElementById("share-name").value;
-    const quota = document.getElementById("quota").value;
-
+    
     if (isCeph) {
-        setQuota(path,quota);
+        const layoutpools = document.getElementById("layoutpool");
+        const layoutpool = layoutpools.options[layoutpools.selectedIndex].value;
 
+        setCephfsPool(`${cephDirectory[1]}${cephDirectory[3]}`,layoutpool);
+        
         let ctdbNodes = await get_ctdb_nodes();
+       
+        // TODO
+        // Loop through each ctdb node and try to ping and get a reponse
+        // if node does not respond then remove from ctdbNodes
+        // throw error stating which node is down and let them continue if button press again
+
         try {
             // Create systemd file from template
             const templatePath = `/usr/share/cockpit/file-sharing/samba-manager/templates/mnt-fsgw.mount`;
@@ -1431,11 +1476,60 @@ async function setQuota(path, quota){
         } catch(error){
             var quotaResponse = error.split(": ");
             if (quotaResponse[2].includes("Operation not supported")){
-                console.log("Not a cephfs path, not setting quota");
             }   
         }
     }
 }
+
+
+async function listCephfsPools(){
+    const layoutpool = document.querySelector('#layoutpool');
+
+    const values = await getCephfsPools();
+
+    for (const val of values)
+    {
+        var option = document.createElement("option");
+        option.value = val;
+        option.innerHTML = val;
+        layoutpool.appendChild(option);   
+    }
+}
+
+/* getCephfsPools
+ * Receives: nothing
+ * Does: gets json list of pools in ceph filesystem with ceph cli tool
+ * Returns: pools
+ */
+async function getCephfsPools(){
+    let ceph_fs_status = JSON.parse(await run_command(['ceph', 'fs', 'status', '--format', 'json']));
+    let ceph_fs_pools = ceph_fs_status.pools;
+    let layout_pools = [];
+    for (var i = 0; i< ceph_fs_pools.length; i++) {
+        if( ceph_fs_pools[i].type !== "metadata") {
+            layout_pools.push(ceph_fs_pools[i].name)
+        }
+    }
+    return layout_pools;
+}
+
+/* setCephfsPool
+ * Receives: nothing
+ * Does: uses setfattr to set layout pool of cephfs directory
+ * Returns: pools
+ */
+async function setCephfsPool(path, layoutpool){
+    try{
+        console.log(await run_command(['setfattr', '-n', 'ceph.dir.layout.pool', '-v', layoutpool, path ]));
+    } catch(error){
+        console.log(error);
+        var quotaResponse = error.split(": ");
+        if (quotaResponse[2].includes("Operation not supported")){
+            console.log("Not a cephfs path, not setting layout pool");
+        }   
+    }
+}
+
 
 /* edit_parms
  * Receives: name of share to edit, changed parameters, removed advanced paramters, string with "created" or "updated",
@@ -1634,15 +1728,18 @@ async function checkCeph(checkOnly = true) {
     const path = typeof checkOnly === "string" ?checkOnly: document.querySelector('#path').value;
     
     const quotaBlock = document.querySelector('#share-quota-input');
+    const layoutpool = document.querySelector('#share-pool-layout-list');
 
     const cephStats = await isCephFS(path);
 
     if (!cephStats[0]) {
         quotaBlock.classList.add('hidden');
+        layoutpool.classList.add('hidden');
         return;
     }
 
     quotaBlock.classList.remove('hidden');
+    layoutpool.classList.remove('hidden');
 
     const userspaceCephPath = `${cephStats[1]}/`;
 
@@ -2392,7 +2489,6 @@ function set_up_buttons() {
     document
         .getElementById("path")
         .addEventListener("input", checkCeph);
-
     document
         .getElementById("show-privilege-btn")
         .addEventListener("click", () => {
@@ -2478,6 +2574,7 @@ async function setup() {
     await populate_privilege_list();
     set_up_buttons();
     hideModal("blurred-screen");
+    listCephfsPools();
 }
 
 /* main
