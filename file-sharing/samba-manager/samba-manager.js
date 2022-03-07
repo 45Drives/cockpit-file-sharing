@@ -980,6 +980,19 @@ function set_share_defaults() {
     document.getElementById("continue-share").disabled = false;
 }
 
+async function create_share_dir(path){
+    const proc = cockpit.spawn(["mkdir", "-p", path], {
+        err: "out",
+        superuser: "require",
+    });
+    proc.done(function (data) {
+        console.log("Cephfs Directory " + path + " made");
+    });
+    proc.fail(function (ex, data) {
+        shareNotification.setError(data);
+    });
+}
+
 /* add_share
  * Receives: nothing
  * Does: checks share settings with verify_share_settings(), if valid, calls
@@ -997,24 +1010,13 @@ async function add_share() {
 
     let isCeph = false;
     let path = null;
-    let fsgwPath = null;
 
     if (typeof cephDirectory === 'object' && cephDirectory?.length && cephDirectory.length === 4 && cephDirectory[0] == true) isCeph = true;
 
     if (isCeph) {
-        path = document.getElementById("path").value;
-        const proc = cockpit.spawn(["mkdir", "-p", path], {
-            err: "out",
-            superuser: "require",
-        });
-        proc.done(function (data) {
-            console.log("Cephfs Directory " + path + " made");
-        });
-        proc.fail(function (ex, data) {
-            shareNotification.setError(data);
-        });
-        fsgwPath = `${cephDirectory[2]}${cephDirectory[3]}`;
-        document.getElementById("path").value = fsgwPath;
+        await create_share_dir(document.getElementById("path").value);
+        path = `${cephDirectory[2]}${cephDirectory[3]}`;
+        document.getElementById("path").value = path;
     } else {
         path = document.getElementById("path").value;
     }
