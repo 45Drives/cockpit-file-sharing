@@ -864,18 +864,7 @@ function show_share_dialog(
     if (create_or_edit === "create") {
         func.innerText = "Add New";
         button.onclick = function () {
-            var path = document.getElementById("path").value;
-            var proc = cockpit.spawn(["mkdir", "-p", path], {
-                err: "out",
-                superuser: "require",
-            });
-            proc.done(function (data) {
-                console.log("Directory " + path + " made");
-                add_share();
-            });
-            proc.fail(function (ex, data) {
-                shareNotification.setError(data);
-            });
+            add_share();
         };
         button.innerText = "Add Share";
         document.getElementById("share-name").disabled = false;
@@ -884,18 +873,7 @@ function show_share_dialog(
         document.getElementById("share-name").value = share_name;
         func.innerText = "Edit";
         button.onclick = function () {
-            var path = document.getElementById("path").value;
-            var proc = cockpit.spawn(["mkdir", "-p", path], {
-                err: "out",
-                superuser: "try",
-            });
-            proc.done(function (data) {
-                console.log("Directory " + path + " made");
-                edit_share(share_name, share_settings, "updated");
-            });
-            proc.fail(function (ex, data) {
-                shareNotification.setError(data);
-            });
+            edit_share(share_name, share_settings, "updated");
         };
         button.innerText = "Apply";
         document.getElementById("share-name").disabled = true;
@@ -1002,6 +980,19 @@ function set_share_defaults() {
     document.getElementById("continue-share").disabled = false;
 }
 
+async function create_share_dir(path){
+    const proc = cockpit.spawn(["mkdir", "-p", path], {
+        err: "out",
+        superuser: "require",
+    });
+    proc.done(function (data) {
+        console.log("Cephfs Directory " + path + " made");
+    });
+    proc.fail(function (ex, data) {
+        shareNotification.setError(data);
+    });
+}
+
 /* add_share
  * Receives: nothing
  * Does: checks share settings with verify_share_settings(), if valid, calls
@@ -1023,6 +1014,7 @@ async function add_share() {
     if (typeof cephDirectory === 'object' && cephDirectory?.length && cephDirectory.length === 4 && cephDirectory[0] == true) isCeph = true;
 
     if (isCeph) {
+        await create_share_dir(document.getElementById("path").value);
         path = `${cephDirectory[2]}${cephDirectory[3]}`;
         document.getElementById("path").value = path;
     } else {
