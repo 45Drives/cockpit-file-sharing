@@ -1,3 +1,3 @@
-## Cockpit File Sharing 2.4.4-1
+## Cockpit File Sharing 2.4.5-1
 
-* added support for setting per share pool layout when using cephfs
+* add support for using samba varibles in path names

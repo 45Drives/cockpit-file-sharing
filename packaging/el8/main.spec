@@ -26,6 +26,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Mar 08 2022 Brett Kelly <bkelly@45drives.com> 2.4.5-1
+- add support for using samba varibles in path names
+* Tue Mar 08 2022 Brett Kelly <bkelly@45drives.com> 2.4.5-1
+- add support for using samba varibles in path names
 * Mon Feb 14 2022 Brett Kelly <bkelly@45drives.com> 2.4.4-1
 - added support for setting per share pool layout when using cephfs
 * Mon Feb 14 2022 Brett Kelly <bkelly@45drives.com> 2.4.4-1
