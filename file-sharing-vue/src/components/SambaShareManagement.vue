@@ -41,7 +41,7 @@ export default {
 				return;
 			try {
 				// run net conf commands
-				console.log(`net conf delshare ${share.name}`);
+				console.log(['net', 'conf', 'delshare', share.name]);
 				this.shares = this.shares.filter((a) => a !== share);
 			} catch (err) {
 				alert(err);
@@ -50,7 +50,7 @@ export default {
 		async addShare(share) {
 			try {
 				// run net conf commands
-				console.log(`net conf addshare ${share.name} "${share.path}"`);
+				console.log(['net', 'conf', 'addshare', share.name, share.path]);
 				await this.applyShareChanges(null, share);
 				this.shares = [...this.shares, share];
 			} catch (err) {
@@ -71,10 +71,10 @@ export default {
 			let add, remove;
 			({ add, remove } = generateConfDiff(share, newShare));
 			add.forEach((args) => {
-				console.log(`net conf setparm ${newShare.name} ` + args.map((arg) => arg !== "" && arg.indexOf(' ') === -1 ? arg : `"${arg}"`).join(" "));
+				console.log(['net', 'conf', 'setparm', newShare.name, ...args]);
 			});
 			remove.forEach((args) => {
-				console.log(`net conf delparm ${newShare.name} ` + args.map((arg) => arg !== "" && arg.indexOf(' ') === -1 ? arg : `"${arg}"`).join(" "));
+				console.log(['net', 'conf', 'delparm', newShare.name, ...args]);
 			});
 		},
 	}
