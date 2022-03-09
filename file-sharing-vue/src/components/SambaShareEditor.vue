@@ -8,7 +8,7 @@
 		<label for="description-field">
 			Description:
 			<input
-				v-model="tmpShare.description"
+				v-model="tmpShare.comment"
 				id="description-field"
 				placeholder="Share Description"
 			/>
@@ -39,15 +39,15 @@
 			Read Only:
 			<input type="checkbox" true-value="yes" false-value="no" v-model="tmpShare.readOnly" id="readOnly-field" />
 		</label>
-		<label for="browsable-field">
-			Browsable:
-			<input type="checkbox" true-value="yes" false-value="no" v-model="tmpShare.browsable" id="browsable-field" />
+		<label for="browseable-field">
+			Browseable:
+			<input type="checkbox" true-value="yes" false-value="no" v-model="tmpShare.browseable" id="browseable-field" />
 		</label>
 		<div @click="showAdvanced = !showAdvanced" class="clickable">
 			Advanced Settings
 			<span :class="[showAdvanced ? 'rotated' : '']">&#x25BE;</span>
 		</div>
-		<textarea v-if="showAdvanced" v-model="tmpShare.advancedSettings" />
+		<textarea v-if="showAdvanced" v-model="shareAdvancedSettingsStr" />
 		<button @click="apply">Confirm</button>
 	</div>
 </template>
@@ -71,27 +71,30 @@ export default {
 			groups: ["root", "sudo", "test"],
 			shareValidUsers: [],
 			shareValidGroups: [],
+			shareAdvancedSettingsStr: "",
 		};
 	},
 	created() {
 		if (this.share === null) {
 			this.tmpShare = {
 				name: "",
-				description: "",
+				comment: "",
 				path: "",
 				windowsAcls: "no",
 				validUsers: "",
 				guestOk: "no",
 				readOnly: "no",
-				browsable: "yes",
-				advancedSettings: ""
+				browseable: "yes",
+				advancedSettings: []
 			};
 		}
 		[this.shareValidUsers, this.shareValidGroups] = this.splitValidUsers(this.tmpShare.validUsers);
+		this.shareAdvancedSettingsStr = this.joinAdvancedSettings(this.tmpShare.advancedSettings);
 	},
 	methods: {
 		apply() {
 			this.tmpShare.validUsers = this.joinValidUsers(this.shareValidUsers, this.shareValidGroups);
+			this.tmpShare.advancedSettings = this.splitAdvancedSettings(this.shareAdvancedSettingsStr);
 			let errors = "";
 			if ((errors = this.validate()) !== "") {
 				alert("Applying share failed:\n" + errors);
@@ -124,7 +127,7 @@ export default {
 		splitValidUsers(validUsersStr) {
 			let validUsers = [];
 			let validGroups = [];
-			validUsersStr.split(' ').forEach((entity) => {
+			validUsersStr.split(/\s*,?\s+/).forEach((entity) => {
 				if (entity.at(0) === '@')
 					validGroups.push(entity.substring(1));
 				else if (entity)
@@ -133,7 +136,13 @@ export default {
 			return [validUsers, validGroups];
 		},
 		joinValidUsers(validUsers, validGroups) {
-			return [...validUsers.sort(), ...validGroups.sort().map(group => `@${group}`)].join(" ");
+			return [...validGroups.sort().map(group => `@${group}`), ...validUsers.sort()].join(" ");
+		},
+		joinAdvancedSettings(advancedSettings) {
+			return advancedSettings.filter(a => !/^\s*$/.test(a)).join("\n");
+		},
+		splitAdvancedSettings(advancedSettings) {
+			return advancedSettings.split('\n').filter(a => !/^\s*$/.test(a) && /\S+\s*=\s*\S+/.test(a));
 		}
 	},
 	emits: [
