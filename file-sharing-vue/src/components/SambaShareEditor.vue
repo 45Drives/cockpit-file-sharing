@@ -55,6 +55,7 @@
 <script>
 import BlobList from "./BlobList.vue";
 import DropdownSelector from "./DropdownSelector.vue";
+import { splitAdvancedSettings, joinAdvancedSettings } from "../functions";
 export default {
 	props: {
 		share: {
@@ -89,12 +90,13 @@ export default {
 			};
 		}
 		[this.shareValidUsers, this.shareValidGroups] = this.splitValidUsers(this.tmpShare.validUsers);
-		this.shareAdvancedSettingsStr = this.joinAdvancedSettings(this.tmpShare.advancedSettings);
+		this.shareAdvancedSettingsStr = joinAdvancedSettings(this.tmpShare.advancedSettings);
 	},
 	methods: {
 		apply() {
 			this.tmpShare.validUsers = this.joinValidUsers(this.shareValidUsers, this.shareValidGroups);
-			this.tmpShare.advancedSettings = this.splitAdvancedSettings(this.shareAdvancedSettingsStr);
+			this.tmpShare.advancedSettings = splitAdvancedSettings(this.shareAdvancedSettingsStr);
+			this.shareAdvancedSettingsStr = joinAdvancedSettings(this.tmpShare.advancedSettings);
 			let errors = "";
 			if ((errors = this.validate()) !== "") {
 				alert("Applying share failed:\n" + errors);
@@ -138,12 +140,6 @@ export default {
 		joinValidUsers(validUsers, validGroups) {
 			return [...validGroups.sort().map(group => `@${group}`), ...validUsers.sort()].join(" ");
 		},
-		joinAdvancedSettings(advancedSettings) {
-			return advancedSettings.filter(a => !/^\s*$/.test(a)).join("\n");
-		},
-		splitAdvancedSettings(advancedSettings) {
-			return advancedSettings.split('\n').filter(a => !/^\s*$/.test(a) && /\S+\s*=\s*\S+/.test(a));
-		}
 	},
 	emits: [
 		"apply-share"

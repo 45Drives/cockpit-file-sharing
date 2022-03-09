@@ -1,11 +1,11 @@
 <template>
 	<div>
-		<SambaShareManagement />
+		<SambaManager />
 	</div>
 </template>
 
 <script setup>
-import SambaShareManagement from './components/SambaShareManagement.vue';
+import SambaManager from './components/SambaManager.vue';
 </script>
 
 <style>
@@ -16,5 +16,27 @@ import SambaShareManagement from './components/SambaShareManagement.vue';
   text-align: center;
   color: #2c3e50;
   margin-top: 60px;
+}
+
+button {
+	font-weight: bold;
+	border: 1px solid;
+	border-radius: 5px;
+	margin: 2px;
+	display: inline-block;
+	width: 100px;
+	padding: 5px;
+	background-color: white;
+	color: rgb(79, 79, 255);
+	border-color: rgb(79, 79, 255);
+	box-sizing: border-box;
+}
+
+button:hover {
+	cursor: pointer;
+	border-width: 2px;
+	margin-top: 1px;
+	margin-bottom: 1px;
+	background-color: rgb(210, 210, 255);
 }
 </style>
