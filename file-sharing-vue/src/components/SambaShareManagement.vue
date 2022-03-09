@@ -115,8 +115,4 @@ export default {
 	flex-direction: column;
 	overflow: auto;
 }
-
-.clickable:hover {
-	cursor: pointer;
-}
 </style>

@@ -43,4 +43,8 @@ button:hover {
 	margin-bottom: 1px;
 	background-color: rgb(210, 210, 255);
 }
+
+.clickable:hover {
+	cursor: pointer;
+}
 </style>
