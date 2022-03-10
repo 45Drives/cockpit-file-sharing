@@ -1,6 +1,12 @@
 <template>
-	<SambaGlobalManagement :initialGlobalConfig="globalConfig" />
-	<SambaShareManagement :initialShares="shares" />
+	<div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+		<div class="card">
+			<SambaGlobalManagement :initialGlobalConfig="globalConfig" />
+		</div>
+		<div class="card">
+			<SambaShareManagement :initialShares="shares" />
+		</div>
+	</div>
 </template>
 
 <script>
@@ -93,6 +99,6 @@ export default {
 				this.shares.push({ ...share, advancedSettings: [...share.advancedSettings] });
 		},
 	},
-    components: { SambaShareManagement, SambaGlobalManagement }
+	components: { SambaShareManagement, SambaGlobalManagement }
 }
 </script>

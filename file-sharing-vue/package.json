@@ -11,7 +11,13 @@
     "vue": "^3.2.25"
   },
   "devDependencies": {
+    "@headlessui/vue": "^1.5.0",
+    "@heroicons/vue": "^1.0.6",
+    "@tailwindcss/forms": "^0.5.0",
     "@vitejs/plugin-vue": "^2.2.0",
+    "autoprefixer": "^10.4.2",
+    "postcss": "^8.4.8",
+    "tailwindcss": "^3.0.23",
     "vite": "^2.8.0"
   }
 }

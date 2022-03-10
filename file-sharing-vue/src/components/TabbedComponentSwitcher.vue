@@ -1,14 +1,16 @@
 <template>
-	<div>
-		<div class="header">
+	<div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+		<div class="tabbed-switcher-header">
 			<div
 				v-for="(entry, index) in components"
-				:class="['tab', currentTab === index ? 'selected' : '']"
+				:class="['tabbed-switcher-tab', currentTab === index ? 'bg-gray-50' : '']"
 				@click="switchTab(index)"
 			>{{ entry.title }}</div>
 		</div>
-		<div class="container">
-			<component :is="components[currentTab].component" />
+		<div class="bg-gray-50 overflow-hidden sm:rounded-lg">
+			<div class="px-4 py-5 sm:p-6">
+				<component :is="components[currentTab].component" />
+			</div>
 		</div>
 	</div>
 </template>
@@ -43,7 +45,7 @@ export default {
 </script>
 
 <style scoped>
-.header {
+.tabbed-switcher-header {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -52,19 +54,9 @@ export default {
 	text-align: center;
 }
 
-.tab {
+.tabbed-switcher-tab {
 	padding: 20px 30px 10px 30px;
 	cursor: pointer;
 	text-align: center;
-}
-
-.tab.selected {
-	background-color: #ececec;
-	cursor: auto;
-}
-
-.container {
-	background-color: #ececec;
-	padding: 5px;
 }
 </style>

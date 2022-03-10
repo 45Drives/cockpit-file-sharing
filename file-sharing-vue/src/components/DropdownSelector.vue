@@ -1,5 +1,8 @@
 <template>
-	<select @change="select($event)">
+	<select
+		@change="select($event)"
+		class="mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+	>
 		<option value disabled selected hidden>{{ placeholder }}</option>
 		<option v-for="(option, index) in options" :value="option">{{ option }}</option>
 	</select>

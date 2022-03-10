@@ -1,13 +1,29 @@
 <template>
-	<div class="outer-container">
-		<div class="row">
-			<div class="share-name row-item">{{ share.name }}</div>
-			<div class="share-path row-item">{{ share.path }}</div>
-			<button class="row-item" @click="showEditor = !showEditor">{{ showEditor ? 'Cancel' : 'Edit' }}</button>
-			<button class="row-item" @click="$emit('delete-share', share)">Delete</button>
-		</div>
-		<SambaShareEditor v-if="showEditor" :share="share" @apply-share="updateShare" />
-	</div>
+	<tr :class="index % 2 === 0 ? undefined : 'bg-gray-50'">
+		<td
+			class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8"
+		>{{ share.name }}</td>
+		<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ share.path }}</td>
+		<td
+			class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
+		>
+			<a @click="showEditor = !showEditor" class="text-indigo-600 hover:text-indigo-900 cursor-pointer">
+				{{ showEditor ? 'Cancel' : 'Edit' }}
+				<span class="sr-only">, {{ share.name }}</span>
+			</a>
+		</td>
+		<td
+			class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
+		>
+			<a @click="$emit('delete-share', share)" class="text-indigo-600 hover:text-indigo-900 cursor-pointer">
+				Delete
+				<span class="sr-only">, {{ share.name }}</span>
+			</a>
+		</td>
+	</tr>
+	<tr v-if="showEditor" :class="index % 2 === 0 ? undefined : 'bg-gray-50'">
+		<td colspan="4"><SambaShareEditor :share="share" @apply-share="updateShare" @hide="showEditor = false" /></td>
+	</tr>
 </template>
 
 <script>
@@ -19,7 +35,8 @@ export default {
 		};
 	},
 	props: {
-		share: Object
+		share: Object,
+		index: Number
 	},
 	methods: {
 		updateShare(newShare) {
@@ -36,7 +53,7 @@ export default {
 </script>
 
 <style scoped>
-.row {
+/* .row {
 	display: flex;
 	flex-direction: row;
 	align-items: baseline;
@@ -49,15 +66,5 @@ export default {
 
 .row > div {
 	flex-basis: 100px;
-}
-
-button {
-	background-color: white;
-	color: maroon;
-	border-color: maroon;
-}
-
-button:hover {
-	background-color: pink;
-}
+} */
 </style>

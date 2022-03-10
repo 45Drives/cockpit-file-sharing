@@ -1,5 +1,5 @@
 <template>
-	<div class="list">
+	<div class="flex flex-row flex-wrap space-x-2">
 		<BlobListItem v-for="(item, index) in list" :item="item" @remove-item="$emit('remove-item', item)"/>
 	</div>
 </template>
@@ -18,8 +18,4 @@ export default {
 </script>
 
 <style scoped>
-.list {
-	display: inline-flex;
-	flex-flow: row wrap;
-}
 </style>

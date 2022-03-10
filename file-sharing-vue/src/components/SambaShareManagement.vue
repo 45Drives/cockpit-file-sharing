@@ -1,21 +1,46 @@
 <template>
-	<div class="samba-share-management">
-		<div class="header">
-			<h2>Share Management</h2>
-			<div>
-				<button @click="showAddShare = !showAddShare">{{ showAddShare ? 'Cancel' : 'Add Share' }}</button>
+	<div class="card-header flex flex-row items-center justify-between">
+		<h3 class="text-lg leading-6 font-medium text-gray-900">Share Management</h3>
+		<button
+			class="btn-primary"
+			@click="showAddShare = !showAddShare"
+		>{{ showAddShare ? 'Cancel' : 'Add Share' }}</button>
+	</div>
+	<div class="card-body">
+		<SambaShareEditor v-if="showAddShare" @apply-share="addShare" @hide="showAddShare = false" />
+		<div class="mt-8 flex flex-col">
+			<div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
+				<div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+					<div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+						<table class="min-w-full divide-y divide-gray-300">
+							<thead class="bg-gray-50">
+								<tr>
+									<th
+										scope="col"
+										class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
+									>Name</th>
+									<th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Path</th>
+									<th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6 lg:pr-8">
+										<span class="sr-only">Edit</span>
+									</th>
+									<th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6 lg:pr-8">
+										<span class="sr-only">Delete</span>
+									</th>
+								</tr>
+							</thead>
+							<tbody class="bg-white">
+								<SambaShare
+									v-for="(share, index) in shares"
+									:share="share"
+									:index="index"
+									@delete-share="deleteShare"
+									@update-share="updateShare"
+								/>
+							</tbody>
+						</table>
+					</div>
+				</div>
 			</div>
-		</div>
-		<div>
-			<SambaShareEditor v-if="showAddShare" @apply-share="addShare" />
-		</div>
-		<div class="list">
-			<SambaShare
-				v-for="(share, index) in shares"
-				:share="share"
-				@delete-share="deleteShare"
-				@update-share="updateShare"
-			/>
 		</div>
 	</div>
 </template>
@@ -82,13 +107,10 @@ export default {
 </script>
 
 <style scoped>
-.samba-share-management {
+/* .samba-share-management {
 	display: flex;
 	flex-direction: column;
 	padding: 5px;
-	background-color: white;
-	border: 1px solid lightgrey;
-	border-radius: 5px;
 }
 
 .header {
@@ -99,20 +121,9 @@ export default {
 	padding: 0 10px 0 10px;
 }
 
-.header > div > button {
-	background-color: white;
-	color: green;
-	border-color: green;
-}
-
-.header > div > button:hover {
-	background-color: lightgreen;
-}
-
 .list {
-	background-color: white;
 	display: flex;
 	flex-direction: column;
 	overflow: auto;
-}
+} */
 </style>
