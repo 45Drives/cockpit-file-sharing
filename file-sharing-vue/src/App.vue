@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div class="dark h-full">
 		<TabbedComponentSwitcher :components="tabs" :saveState="true" />
 	</div>
 </template>
@@ -8,8 +8,9 @@
 import TabbedComponentSwitcher from './components/TabbedComponentSwitcher.vue';
 import SambaManager from './components/SambaManager.vue'
 import NfsManager from './components/NfsManager.vue';
+import AfpManager from './components/AfpManager.vue';
 
-const tabs = [{ title: 'Samba', component: SambaManager }, { title: 'NFS', component: NfsManager }];
+const tabs = [{ title: 'Samba', component: SambaManager }, { title: 'NFS', component: NfsManager }, { title: 'AFP', component: AfpManager }];
 </script>
 
 <style>
