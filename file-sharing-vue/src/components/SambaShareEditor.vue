@@ -131,8 +131,8 @@
 				</Switch>
 			</SwitchGroup>
 		</div>
-		<div @click="showAdvanced = !showAdvanced" class="clickable">
-			<label for="advanced-settings" class="block text-sm font-medium text-gray-700">
+		<div @click="showAdvanced = !showAdvanced">
+			<label for="advanced-settings" class="block text-sm font-medium text-gray-700 cursor-pointer">
 				Advanced Settings
 				<ChevronDownIcon
 					:style="{ display: 'inline-block', transition: '0.5s', transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0)' }"
