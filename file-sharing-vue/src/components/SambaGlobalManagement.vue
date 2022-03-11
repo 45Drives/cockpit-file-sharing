@@ -95,7 +95,6 @@ export default {
 	},
 	created() {
 		this.globalConfigAdvancedSettingsStr = joinAdvancedSettings(this.tmpGlobalConfig.advancedSettings);
-		console.log(this.globalConfig);
 	},
 	methods: {
 		async apply() {
