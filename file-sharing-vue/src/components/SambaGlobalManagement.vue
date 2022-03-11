@@ -10,9 +10,10 @@
 					type="text"
 					name="server-string"
 					id="server-string"
-					class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 rounded-md"
 					placeholder="Description of Server"
 					v-model="tmpGlobalConfig.serverString"
+					@input="changesMade = true"
 				/>
 			</div>
 		</div>
@@ -23,9 +24,10 @@
 					type="text"
 					name="workgroup"
 					id="workgroup"
-					class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 rounded-md"
 					placeholder="Workgroup"
 					v-model="tmpGlobalConfig.workgroup"
+					@input="changesMade = true"
 				/>
 			</div>
 		</div>
@@ -34,8 +36,9 @@
 			<select
 				id="log-level"
 				name="log-level"
-				class="mt-1 block w-20 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+				class="mt-1 block w-20 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 focus:border-gray-500 sm:text-sm rounded-md"
 				v-model="tmpGlobalConfig.logLevel"
+				@change="changesMade = true"
 			>
 				<option value="5">5</option>
 				<option value="4">4</option>
@@ -62,12 +65,14 @@
 				name="advanced-settings"
 				rows=4
 				v-model="globalConfigAdvancedSettingsStr"
-				class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-1/2 sm:text-sm border-gray-300 rounded-md"
+				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 rounded-md"
+				@input="changesMade = true"
 			/>
 		</div>
 	</div>
-	<div class="card-footer">
-		<button class="btn-primary" @click="apply">Apply</button>
+	<div class="card-footer flex flex-row justify-end space-x-3">
+		<button class="btn-primary" @click="resetChanges" v-if="changesMade">Cancel</button>
+		<button class="btn-green" @click="apply" :disabled="!changesMade">Apply</button>
 	</div>
 </template>
 
@@ -85,6 +90,7 @@ export default {
 			tmpGlobalConfig: { ...this.initialGlobalConfig, advancedSettings: [...this.initialGlobalConfig.advancedSettings] },
 			showAdvanced: false,
 			globalConfigAdvancedSettingsStr: "",
+			changesMade: false,
 		};
 	},
 	created() {
@@ -110,8 +116,9 @@ export default {
 					console.log("net conf delparm global " + args.map((arg) => arg !== "" && arg.indexOf(' ') === -1 ? arg : `"${arg}"`).join(" "));
 				});
 				Object.assign(this.globalConfig, this.tmpGlobalConfig);
+				this.changesMade = false;
 			} catch (err) {
-				Object.assign(this.tmpGlobalConfig, this.globalConfig);
+				this.resetChanges();
 				alert(err);
 			}
 		},
@@ -119,8 +126,13 @@ export default {
 			let errors = "";
 			return errors;
 		},
+		resetChanges() {
+			Object.assign(this.tmpGlobalConfig, this.globalConfig);
+			this.globalConfigAdvancedSettingsStr = joinAdvancedSettings(this.tmpGlobalConfig.advancedSettings);
+			this.changesMade = false;
+		}
 	},
-	components: { DropdownSelector, ChevronDownIcon }
+	components: { DropdownSelector, ChevronDownIcon },
 }
 </script>
 

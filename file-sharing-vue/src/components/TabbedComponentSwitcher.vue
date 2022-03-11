@@ -1,5 +1,5 @@
 <template>
-	<div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+	<div class="mx-auto h-full flex flex-col">
 		<div class="tabbed-switcher-header">
 			<div
 				v-for="(entry, index) in components"
@@ -7,7 +7,7 @@
 				@click="switchTab(index)"
 			>{{ entry.title }}</div>
 		</div>
-		<div class="bg-gray-50 overflow-hidden sm:rounded-lg">
+		<div class="bg-gray-50 overflow-y-scroll grow">
 			<div class="px-4 py-5 sm:p-6">
 				<component :is="components[currentTab].component" />
 			</div>

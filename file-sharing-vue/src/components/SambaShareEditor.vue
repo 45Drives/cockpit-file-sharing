@@ -8,7 +8,7 @@
 					type="text"
 					name="name"
 					id="name"
-					class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md disabled:bg-gray-100 disabled:text-gray-500"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 rounded-md disabled:bg-gray-100 disabled:text-gray-500"
 					placeholder="Share Name"
 					v-model="tmpShare.name"
 					:disabled="share"
@@ -22,7 +22,7 @@
 					type="text"
 					name="description"
 					id="description"
-					class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 rounded-md"
 					placeholder="Share Name"
 					v-model="tmpShare.comment"
 				/>
@@ -35,7 +35,7 @@
 					type="text"
 					name="path"
 					id="path"
-					class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 rounded-md"
 					placeholder="Share Path/Directory"
 					v-model="tmpShare.path"
 				/>
@@ -52,7 +52,7 @@
 			<DropdownSelector :options="groups" placeholder="Add Group" @select="addValidGroup" />
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/2">
+			<SwitchGroup as="div" class="flex items-center justify-between w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium text-gray-700" passive>Windows ACLs</SwitchLabel>
 					<!-- <SwitchDescription
@@ -62,7 +62,7 @@
 				</span>
 				<Switch
 					v-model="tmpShare.windowsAcls"
-					:class="[tmpShare.windowsAcls ? 'bg-indigo-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500']"
+					:class="[tmpShare.windowsAcls ? 'bg-red-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
@@ -72,7 +72,7 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/2">
+			<SwitchGroup as="div" class="flex items-center justify-between w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium text-gray-700" passive>Guest OK</SwitchLabel>
 					<!-- <SwitchDescription
@@ -82,7 +82,7 @@
 				</span>
 				<Switch
 					v-model="tmpShare.guestOk"
-					:class="[tmpShare.guestOk ? 'bg-indigo-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500']"
+					:class="[tmpShare.guestOk ? 'bg-red-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
@@ -92,7 +92,7 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/2">
+			<SwitchGroup as="div" class="flex items-center justify-between w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium text-gray-700" passive>Read Only</SwitchLabel>
 					<!-- <SwitchDescription
@@ -102,7 +102,7 @@
 				</span>
 				<Switch
 					v-model="tmpShare.readOnly"
-					:class="[tmpShare.readOnly ? 'bg-indigo-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500']"
+					:class="[tmpShare.readOnly ? 'bg-red-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
@@ -112,7 +112,7 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/2">
+			<SwitchGroup as="div" class="flex items-center justify-between w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium text-gray-700" passive>Browseable</SwitchLabel>
 					<!-- <SwitchDescription
@@ -122,7 +122,7 @@
 				</span>
 				<Switch
 					v-model="tmpShare.browseable"
-					:class="[tmpShare.browseable ? 'bg-indigo-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500']"
+					:class="[tmpShare.browseable ? 'bg-red-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
@@ -148,10 +148,10 @@
 				name="advanced-settings"
 				rows="4"
 				v-model="shareAdvancedSettingsStr"
-				class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-1/2 sm:text-sm border-gray-300 rounded-md"
+				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 rounded-md"
 			/>
 		</div>
-		<div class="flex flex-row justify-end space-x-4">
+		<div class="flex flex-row justify-end space-x-3">
 			<button class="btn-primary" @click="$emit('hide')">Cancel</button>
 			<button class="btn-green" @click="apply">Confirm</button>
 		</div>
@@ -171,6 +171,8 @@ export default {
 			required: false,
 			default: null
 		},
+		users: Array[String],
+		groups: Array[String],
 	},
 	data() {
 		return {
@@ -184,8 +186,6 @@ export default {
 				}
 				: null,
 			showAdvanced: false,
-			users: ["root", "test"],
-			groups: ["root", "sudo", "test"],
 			shareValidUsers: [],
 			shareValidGroups: [],
 			shareAdvancedSettingsStr: "",

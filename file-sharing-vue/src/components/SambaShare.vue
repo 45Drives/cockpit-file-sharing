@@ -7,7 +7,10 @@
 		<td
 			class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
 		>
-			<a @click="showEditor = !showEditor" class="text-indigo-600 hover:text-indigo-900 cursor-pointer">
+			<a
+				@click="showEditor = !showEditor"
+				class="uppercase text-lime-500 hover:text-lime-800 cursor-pointer"
+			>
 				{{ showEditor ? 'Cancel' : 'Edit' }}
 				<span class="sr-only">, {{ share.name }}</span>
 			</a>
@@ -15,14 +18,19 @@
 		<td
 			class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
 		>
-			<a @click="$emit('delete-share', share)" class="text-indigo-600 hover:text-indigo-900 cursor-pointer">
+			<a
+				@click="$emit('delete-share', share)"
+				class="uppercase text-red-600 hover:text-red-900 cursor-pointer"
+			>
 				Delete
 				<span class="sr-only">, {{ share.name }}</span>
 			</a>
 		</td>
 	</tr>
 	<tr v-if="showEditor" :class="index % 2 === 0 ? undefined : 'bg-gray-50'">
-		<td colspan="4"><SambaShareEditor :share="share" @apply-share="updateShare" @hide="showEditor = false" /></td>
+		<td colspan="4">
+			<SambaShareEditor :share="share" @apply-share="updateShare" @hide="showEditor = false" :users="users" :groups="groups" />
+		</td>
 	</tr>
 </template>
 
@@ -36,7 +44,9 @@ export default {
 	},
 	props: {
 		share: Object,
-		index: Number
+		index: Number,
+		users: Array[String],
+		groups: Array[String],
 	},
 	methods: {
 		updateShare(newShare) {

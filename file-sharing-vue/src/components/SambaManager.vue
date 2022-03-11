@@ -4,7 +4,15 @@
 			<SambaGlobalManagement :initialGlobalConfig="globalConfig" />
 		</div>
 		<div class="card">
-			<SambaShareManagement :initialShares="shares" />
+			<SambaShareManagement
+				:initialShares="shares"
+				@refresh-shares="parseNetConf"
+				:groups="groups"
+				:users="users"
+			/>
+		</div>
+		<div class="card">
+			<SambaUserManagement :groups="groups" :users="users" />
 		</div>
 	</div>
 </template>
@@ -13,18 +21,118 @@
 import SambaShareManagement from "./SambaShareManagement.vue";
 import { camelize } from "../functions";
 import SambaGlobalManagement from "./SambaGlobalManagement.vue";
+import SambaUserManagement from "./SambaUserManagement.vue";
+
 export default {
 	data() {
 		return {
 			shares: [],
 			globalConfig: { advancedSettings: [] },
+			users: [],
+			groups: [],
 		}
 	},
-	created() {
+	async created() {
 		this.parseNetConf();
 		this.shares.sort((a, b) => a.name.localeCompare(b.name));
+		this.users = await this.getUsers();
+		this.groups = await this.getGroups();
 	},
 	methods: {
+		async getUsers() {
+			console.log(['getent','passwd'])
+			return [
+				'root',
+				'jdoe',
+				'test'
+			];
+		},
+		async getGroups() {
+			console.log(['getent', 'group']);
+			return [
+				"root",
+				"adm",
+				"wheel",
+				"kmem",
+				"tty",
+				"utmp",
+				"audio",
+				"disk",
+				"input",
+				"kvm",
+				"lp",
+				"optical",
+				"render",
+				"storage",
+				"uucp",
+				"video",
+				"users",
+				"sys",
+				"mem",
+				"ftp",
+				"mail",
+				"log",
+				"smmsp",
+				"proc",
+				"games",
+				"lock",
+				"network",
+				"floppy",
+				"scanner",
+				"power",
+				"systemd-journal",
+				"rfkill",
+				"nobody",
+				"dbus",
+				"bin",
+				"daemon",
+				"http",
+				"systemd-journal-remote",
+				"systemd-network",
+				"systemd-resolve",
+				"systemd-timesync",
+				"systemd-coredump",
+				"uuidd",
+				"dhcpcd",
+				"dnsmasq",
+				"rpc",
+				"adbusers",
+				"ntp",
+				"avahi",
+				"colord",
+				"cups",
+				"flatpak",
+				"geoclue",
+				"git",
+				"mpd",
+				"nm-openconnect",
+				"nm-openvpn",
+				"polkitd",
+				"rtkit",
+				"sddm",
+				"tss",
+				"usbmux",
+				"jboudreau",
+				"libvirt",
+				"cockpit-ws",
+				"cockpit-wsinstance",
+				"openvpn",
+				"nvidia-persistenced",
+				"saned",
+				"docker",
+				"autotier",
+				"test",
+				"libvirt-qemu",
+				"sgx",
+				"systemd-oom",
+				"libvirtdbus",
+				"brlapi",
+				"brltty",
+				"gluster",
+				"ceph",
+				"i2c",
+			];
+		},
 		async parseNetConf() {
 			this.shares = [];
 			const simpleSettingsShare = [
@@ -99,6 +207,6 @@ export default {
 				this.shares.push({ ...share, advancedSettings: [...share.advancedSettings] });
 		},
 	},
-	components: { SambaShareManagement, SambaGlobalManagement }
+	components: { SambaShareManagement, SambaGlobalManagement, SambaUserManagement }
 }
 </script>
