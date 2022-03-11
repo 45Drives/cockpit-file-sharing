@@ -1,6 +1,6 @@
 <template>
 	<div class="card-header">
-		<h3 class="text-lg leading-6 font-medium text-gray-900">User Management</h3>
+		<h3 class="text-lg leading-6 font-medium text-gray-900">Users</h3>
 	</div>
 	<div class="card-body">
 		<div

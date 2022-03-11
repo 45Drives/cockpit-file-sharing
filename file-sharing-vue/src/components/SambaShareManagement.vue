@@ -1,6 +1,6 @@
 <template>
 	<div class="card-header flex flex-row items-center justify-between">
-		<h3 class="text-lg leading-6 font-medium text-gray-900">Share Management</h3>
+		<h3 class="text-lg leading-6 font-medium text-gray-900">Shares</h3>
 		<button
 			class="btn-primary"
 			@click="showAddShare = !showAddShare"
