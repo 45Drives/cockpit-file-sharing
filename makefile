@@ -13,20 +13,16 @@
 # You should have received a copy of the GNU General Public License
 # along with Cockpit File Sharing.  If not, see <https://www.gnu.org/licenses/>.
 default:
+	npm run --prefix file-sharing-vue build
 
-target=file-sharing
-
-all:
-
+all: default
 
 # system install, requires `systemctl restart cockpit.socket`
 install:
-	mkdir -p $(DESTDIR)/usr/share/cockpit
-	cp -rpf $(target) $(DESTDIR)/usr/share/cockpit
+	mkdir -p $(DESTDIR)/usr/share/cockpit/file-sharing
+	cp -rpf file-sharing-vue/dist/* $(DESTDIR)/usr/share/cockpit
 
 # install to ~/.local, can test plugin without restarting cockpit
 install-local:
-	mkdir -p $(HOME)/.local/share/cockpit
-	cp -rpf $(target) $(HOME)/.local/share/cockpit
-	find $(HOME)/.local/share/cockpit/$(target)/nfs-manager -name '*.js' -exec sed -i "s#\"/usr/share/\(cockpit/$(target)/nfs-manager/scripts/.*\)\"#\"$(HOME)/.local/share/\1\"#g" {} \;
-	find $(HOME)/.local/share/cockpit/$(target)/samba-manager -name '*.js' -exec sed -i "s#\"/usr/share/\(cockpit/$(target)/samba-manager/scripts/.*\)\"#\"$(HOME)/.local/share/\1\"#g" {} \;
+	mkdir -p $(HOME)/.local/share/cockpit/file-sharing
+	cp -rpf file-sharing-vue/dist/* $(HOME)/.local/share/cockpit/file-sharing
