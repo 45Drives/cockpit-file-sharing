@@ -1,5 +1,6 @@
 <template>
-	<div class="dark h-full">
+	<div class="h-full flex flex-col overflow-hidden">
+		<FfdHeader />
 		<TabbedComponentSwitcher :components="tabs" :saveState="true" />
 	</div>
 </template>
@@ -9,6 +10,7 @@ import TabbedComponentSwitcher from './components/TabbedComponentSwitcher.vue';
 import SambaManager from './components/SambaManager.vue'
 import NfsManager from './components/NfsManager.vue';
 import AfpManager from './components/AfpManager.vue';
+import FfdHeader from './components/FfdHeader.vue';
 
 const tabs = [{ title: 'Samba', component: SambaManager }, { title: 'NFS', component: NfsManager }, { title: 'AFP', component: AfpManager }];
 </script>
