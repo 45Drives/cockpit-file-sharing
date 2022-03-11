@@ -4,7 +4,7 @@
     "menu": {
         "file-sharing": {
             "label": "File Sharing",
-            "path": "file-sharing.html",
+            "path": "index.html",
             "order": 116,
             "docs": [
                 {
