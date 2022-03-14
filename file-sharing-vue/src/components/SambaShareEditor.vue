@@ -41,15 +41,20 @@
 				/>
 			</div>
 		</div>
-		<div>
-			<label class="block text-sm font-medium">Valid Users</label>
-			<PillList :list="shareValidUsers" @remove-item="removeValidUser" />
-			<DropdownSelector :options="users" placeholder="Add User" @select="addValidUser" />
-		</div>
-		<div>
-			<label class="block text-sm font-medium">Valid Groups</label>
-			<PillList :list="shareValidGroups" @remove-item="removeValidGroup" />
-			<DropdownSelector :options="groups" placeholder="Add Group" @select="addValidGroup" />
+		<div
+			class="space-y-5"
+			:style="{ 'max-height': !shareWindowsAcls ? '500px' : '0', transition: !shareWindowsAcls ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out', overflow: 'hidden' }"
+		>
+			<div>
+				<label class="block text-sm font-medium">Valid Users</label>
+				<PillList :list="shareValidUsers" @remove-item="removeValidUser" />
+				<DropdownSelector :options="users" placeholder="Add User" @select="addValidUser" />
+			</div>
+			<div>
+				<label class="block text-sm font-medium">Valid Groups</label>
+				<PillList :list="shareValidGroups" @remove-item="removeValidGroup" />
+				<DropdownSelector :options="groups" placeholder="Add Group" @select="addValidGroup" />
+			</div>
 		</div>
 		<div>
 			<SwitchGroup as="div" class="flex items-center justify-between w-full">
@@ -132,7 +137,7 @@
 			</SwitchGroup>
 		</div>
 		<div @click="showAdvanced = !showAdvanced">
-			<label for="advanced-settings" class="block text-sm font-medium cursor-pointer">
+			<label class="block text-sm font-medium cursor-pointer">
 				Advanced Settings
 				<ChevronDownIcon
 					:style="{ display: 'inline-block', transition: '0.5s', transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0)' }"
@@ -177,11 +182,11 @@ export default {
 	},
 	setup(props, { emit }) {
 		const tmpShare = reactive(props.share ? {
-				...props.share,
-				"guest ok": strToBool(props.share?.["guest ok"]),
-				"read only": strToBool(props.share?.["read only"]),
-				"browseable": strToBool(props.share?.["browseable"])
-			}
+			...props.share,
+			"guest ok": strToBool(props.share?.["guest ok"]),
+			"read only": strToBool(props.share?.["read only"]),
+			"browseable": strToBool(props.share?.["browseable"])
+		}
 			: {
 				"name": "",
 				"comment": "",
@@ -231,10 +236,10 @@ export default {
 				shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=vfs objects =.*)acl_xattr ?(?=.*)/, "");
 			}
 			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n');
-		}, {lazy: false});
+		}, { lazy: false });
 
 		const apply = () => {
-			tmpShare["valid users"] = [...shareValidGroups.value.sort().map(group => `@${group}`), ...shareValidUsers.value.sort()].join(" ");
+			tmpShare["valid users"] = shareWindowsAcls.value ? "" : [...shareValidGroups.value.sort().map(group => `@${group}`), ...shareValidUsers.value.sort()].join(" ");
 			tmpShare.advancedSettings = splitAdvancedSettings(shareAdvancedSettingsStr.value);
 			shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
 			emit("apply-share", {
