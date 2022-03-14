@@ -7,11 +7,23 @@
 		>{{ showAddShare ? 'Cancel' : 'Add Share' }}</button>
 	</div>
 	<div class="card-body">
-		<SambaShareEditor v-if="showAddShare" @apply-share="addShare" @hide="showAddShare = false" :users="users" :groups="groups" />
+		<div
+			class="overflow-hidden"
+			:style="{ 'max-height': showAddShare ? '1000px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
+		>
+			<SambaShareEditor
+				@apply-share="addShare"
+				@hide="showAddShare = false"
+				:users="users"
+				:groups="groups"
+			/>
+		</div>
 		<div class="mt-8 flex flex-col">
 			<div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
 				<div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-					<div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
+					<div
+						class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg"
+					>
 						<table class="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
 							<thead class="bg-neutral-50 dark:bg-neutral-800">
 								<tr>
@@ -27,7 +39,10 @@
 										<span class="sr-only">Delete</span>
 									</th>
 									<div class="relative">
-										<RefreshIcon @click="$emit('refresh-shares')" class="w-5 h-5 absolute right-3 top-3.5 cursor-pointer text-gray-500" />
+										<RefreshIcon
+											@click="$emit('refresh-shares')"
+											class="w-5 h-5 absolute right-3 top-3.5 cursor-pointer text-gray-500"
+										/>
 									</div>
 								</tr>
 							</thead>
@@ -42,9 +57,10 @@
 									:groups="groups"
 								/>
 								<tr v-if="shares.length === 0">
-									<td colspan="4" class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-500 sm:pl-6 lg:pl-8">
-										No shares. Click "Add Share" to add one.
-									</td>
+									<td
+										colspan="4"
+										class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-500 sm:pl-6 lg:pl-8"
+									>No shares. Click "Add Share" to add one.</td>
 								</tr>
 							</tbody>
 						</table>
@@ -117,7 +133,7 @@ export default {
 			// throw("test error");
 		},
 	},
-	emits: [ 'refresh-shares' ],
+	emits: ['refresh-shares'],
 	watch: {
 		initialShares(newShares) {
 			this.shares = newShares;
