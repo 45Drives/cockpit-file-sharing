@@ -8,7 +8,7 @@
 			<h1 class="text-2xl">
 				<span
 					class="text-red-800 dark:text-white font-bold"
-					:style="{ 'font-family': ['Source Sans Pro', 'sans-serif'] }"
+					:style="{ 'font-family': 'Source Sans Pro', 'font-size': '1.6rem' }"
 				>45</span>
 				<span class="text-gray-800 dark:text-red-600">Drives</span>
 			</h1>
