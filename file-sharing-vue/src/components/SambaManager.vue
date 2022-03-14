@@ -137,7 +137,6 @@ export default {
 			const simpleSettingsShare = [
 				"comment",
 				"path",
-				"windows acls",
 				"valid users",
 				"guest ok",
 				"read only",
