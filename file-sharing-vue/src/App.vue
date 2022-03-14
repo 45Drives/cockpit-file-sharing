@@ -1,6 +1,6 @@
 <template>
 	<div class="h-full flex flex-col overflow-hidden">
-		<FfdHeader />
+		<FfdHeader moduleName="File Sharing" />
 		<TabbedComponentSwitcher :components="tabs" :saveState="true" />
 	</div>
 </template>
