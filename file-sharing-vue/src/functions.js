@@ -19,6 +19,12 @@ export function generateConfDiff(conf, newConf) {
 		confDiff.remove = confAdvancedSettingsKeysOnly
 			.filter(key => !newConfAdvancedSettingsKeysOnly.includes(key))
 			.map(key => [key]);
+	} else {
+		confDiff.add = [
+			...confDiff.add,
+			...newConf.advancedSettings
+				.map((str) => [...str.split('=').map(a => a.trim())])
+		];
 	}
 	return confDiff;
 }
