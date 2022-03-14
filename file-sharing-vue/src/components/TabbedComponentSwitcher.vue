@@ -1,12 +1,12 @@
 <template>
-	<div class="flex flex-row grow-0 dark:bg-gray-800">
+	<div class="flex flex-row grow-0 dark:bg-neutral-800">
 		<div
 			v-for="(entry, index) in components"
-			:class="['px-5 py-3 cursor-default', currentTab === index ? 'bg-gray-50 dark:bg-gray-900' : 'hover:bg-gray-50 dark:hover:bg-gray-900 dark:bg-gray-800']"
+			:class="['px-5 py-3 cursor-default', currentTab === index ? 'bg-neutral-50 dark:bg-neutral-900' : 'hover:bg-neutral-50 dark:hover:bg-neutral-900 dark:bg-neutral-800']"
 			@click="switchTab(index)"
 		>{{ entry.title }}</div>
 	</div>
-	<div class="bg-gray-50 dark:bg-gray-900 overflow-y-scroll grow">
+	<div class="bg-neutral-50 dark:bg-neutral-900 overflow-y-scroll grow">
 		<div class="px-4 py-5 sm:p-6">
 			<component :is="components[currentTab].component" />
 		</div>

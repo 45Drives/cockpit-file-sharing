@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="border border-gray-300 flex flex-row items-center space-x-1 bg-gray-50 pl-4 pr-3 py-1 my-1 rounded-full dark:bg-gray-700 dark:border-gray-700"
+		class="border border-gray-300 flex flex-row items-center space-x-1 bg-neutral-50 pl-4 pr-3 py-1 my-1 rounded-full dark:bg-neutral-700 dark:border-gray-700"
 	>
 		<span>{{ item }}</span>
 		<XIcon

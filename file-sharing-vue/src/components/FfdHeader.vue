@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="p-2 flex items-baseline justify-between bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700"
+		class="p-2 flex items-baseline justify-between bg-neutral-50 dark:bg-neutral-900 border-b border-gray-200 dark:border-gray-700"
 		:style="{ 'font-family': 'Red Hat Text' }"
 	>
 		<div class="flex flex-row items-baseline">
@@ -18,7 +18,7 @@
 			@click="darkMode = !darkMode"
 			id="theme-toggle"
 			type="button"
-			class="text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none rounded-lg text-sm p-2.5 justify-self-end w-10 h-10"
+			class="text-gray-500 dark:text-gray-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 focus:outline-none rounded-lg text-sm p-2.5 justify-self-end w-10 h-10"
 		>
 			<MoonIcon v-if="!darkMode" />
 			<SunIcon v-else />

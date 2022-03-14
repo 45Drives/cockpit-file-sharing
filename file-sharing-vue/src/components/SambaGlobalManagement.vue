@@ -10,7 +10,7 @@
 					type="text"
 					name="server-string"
 					id="server-string"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
 					placeholder="Description of Server"
 					v-model="tmpGlobalConfig.serverString"
 					@input="changesMade = true"
@@ -24,7 +24,7 @@
 					type="text"
 					name="workgroup"
 					id="workgroup"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
 					placeholder="Workgroup"
 					v-model="tmpGlobalConfig.workgroup"
 					@input="changesMade = true"
@@ -36,7 +36,7 @@
 			<select
 				id="log-level"
 				name="log-level"
-				class="mt-1 block w-20 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-800 focus:border-gray-500 sm:text-sm rounded-md"
+				class="mt-1 block w-20 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-neutral-800 focus:border-gray-500 sm:text-sm rounded-md"
 				v-model="tmpGlobalConfig.logLevel"
 				@change="changesMade = true"
 			>
@@ -65,7 +65,7 @@
 				name="advanced-settings"
 				rows=4
 				v-model="globalConfigAdvancedSettingsStr"
-				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
+				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
 				@input="changesMade = true"
 			/>
 		</div>

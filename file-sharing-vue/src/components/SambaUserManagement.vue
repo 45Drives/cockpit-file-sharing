@@ -11,7 +11,7 @@
 				<select
 					id="user-select"
 					name="user-select"
-					class="mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-0 focus:border-gray-500 sm:text-sm rounded-md dark:bg-gray-800"
+					class="mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-0 focus:border-gray-500 sm:text-sm rounded-md dark:bg-neutral-800"
 					v-model="user"
 					@change="switchUser"
 				>
@@ -41,7 +41,7 @@
 						type="password"
 						name="samba-password1"
 						id="samba-password1"
-						class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
+						class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
 						v-model="sambaPassword1"
 					/>
 				</div>
@@ -56,7 +56,7 @@
 						type="password"
 						name="samba-password2"
 						id="samba-password2"
-						class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
+						class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
 						v-model="sambaPassword2"
 					/>
 				</div>
@@ -71,7 +71,7 @@
 				<div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
 					<div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
 						<table class="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-							<thead class="bg-gray-50 dark:bg-gray-800">
+							<thead class="bg-neutral-50 dark:bg-neutral-800">
 								<tr>
 									<th
 										scope="col"
@@ -89,10 +89,10 @@
 									</div>
 								</tr>
 							</thead>
-							<tbody class="dark:bg-gray-800">
+							<tbody class="dark:bg-neutral-800">
 								<tr
 									v-for="(group, index) in userGroups"
-									:class="index % 2 === 0 ? undefined : 'bg-gray-50 dark:bg-gray-700'"
+									:class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'"
 								>
 									<td
 										class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6 lg:pl-8"

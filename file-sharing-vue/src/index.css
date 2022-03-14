@@ -13,10 +13,10 @@
 		@apply py-2 px-4 bg-green-500 dark:bg-green-800 text-white dark:text-gray-100 font-semibold rounded-lg shadow-md hover:bg-green-700 dark:hover:bg-green-900 focus:outline-none focus:ring-0;
 	}
 	button:disabled {
-		@apply bg-gray-300 dark:bg-gray-700 hover:bg-gray-300 text-gray-100 dark:text-gray-500 cursor-not-allowed
+		@apply bg-neutral-300 dark:bg-neutral-700 hover:bg-neutral-300 text-gray-100 dark:text-gray-500 cursor-not-allowed
 	}
 	.card {
-		@apply bg-white dark:bg-gray-800 overflow-hidden shadow divide-y divide-gray-200 dark:divide-gray-700;
+		@apply bg-white dark:bg-neutral-800 overflow-hidden shadow divide-y divide-gray-200 dark:divide-gray-700;
 	}
 	.card-header {
 		@apply px-4 py-5 sm:px-6;

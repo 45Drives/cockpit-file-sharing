@@ -8,7 +8,7 @@
 					type="text"
 					name="name"
 					id="name"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md disabled:bg-neutral-100 disabled:text-gray-500 disabled:cursor-not-allowed"
 					placeholder="Share Name"
 					v-model="tmpShare.name"
 					:disabled="share"
@@ -22,7 +22,7 @@
 					type="text"
 					name="description"
 					id="description"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
 					placeholder="Share Name"
 					v-model="tmpShare.comment"
 				/>
@@ -35,7 +35,7 @@
 					type="text"
 					name="path"
 					id="path"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
 					placeholder="Share Path/Directory"
 					v-model="tmpShare.path"
 				/>
@@ -62,11 +62,11 @@
 				</span>
 				<Switch
 					v-model="tmpShare.windowsAcls"
-					:class="[tmpShare.windowsAcls ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-200 dark:bg-gray-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+					:class="[tmpShare.windowsAcls ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
-						:class="[tmpShare.windowsAcls ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-gray-600 shadow transform ring-0 transition ease-in-out duration-200']"
+						:class="[tmpShare.windowsAcls ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
 					/>
 				</Switch>
 			</SwitchGroup>
@@ -82,11 +82,11 @@
 				</span>
 				<Switch
 					v-model="tmpShare.guestOk"
-					:class="[tmpShare.guestOk ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-200 dark:bg-gray-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+					:class="[tmpShare.guestOk ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
-						:class="[tmpShare.guestOk ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-gray-600 shadow transform ring-0 transition ease-in-out duration-200']"
+						:class="[tmpShare.guestOk ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
 					/>
 				</Switch>
 			</SwitchGroup>
@@ -102,11 +102,11 @@
 				</span>
 				<Switch
 					v-model="tmpShare.readOnly"
-					:class="[tmpShare.readOnly ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-200 dark:bg-gray-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+					:class="[tmpShare.readOnly ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
-						:class="[tmpShare.readOnly ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-gray-600 shadow transform ring-0 transition ease-in-out duration-200']"
+						:class="[tmpShare.readOnly ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
 					/>
 				</Switch>
 			</SwitchGroup>
@@ -122,11 +122,11 @@
 				</span>
 				<Switch
 					v-model="tmpShare.browseable"
-					:class="[tmpShare.browseable ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-200 dark:bg-gray-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+					:class="[tmpShare.browseable ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
-						:class="[tmpShare.browseable ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-gray-600 shadow transform ring-0 transition ease-in-out duration-200']"
+						:class="[tmpShare.browseable ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
 					/>
 				</Switch>
 			</SwitchGroup>
@@ -148,7 +148,7 @@
 				name="advanced-settings"
 				rows="4"
 				v-model="shareAdvancedSettingsStr"
-				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
+				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
 			/>
 		</div>
 		<div class="flex flex-row justify-end space-x-3">

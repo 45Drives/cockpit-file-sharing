@@ -1,5 +1,5 @@
 <template>
-	<tr :class="index % 2 === 0 ? undefined : 'bg-gray-50 dark:bg-gray-700'">
+	<tr :class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'">
 		<td
 			class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6 lg:pl-8"
 		>{{ share.name }}</td>
@@ -27,7 +27,7 @@
 			</a>
 		</td>
 	</tr>
-	<tr v-if="showEditor" :class="index % 2 === 0 ? undefined : 'bg-gray-50'">
+	<tr v-if="showEditor" :class="index % 2 === 0 ? undefined : 'bg-neutral-50'">
 		<td colspan="4">
 			<SambaShareEditor :share="share" @apply-share="updateShare" @hide="showEditor = false" :users="users" :groups="groups" />
 		</td>
