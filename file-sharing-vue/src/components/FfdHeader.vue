@@ -12,16 +12,17 @@
 				>45</span>
 				<span class="text-gray-800 dark:text-red-600">Drives</span>
 			</h1>
+			<h1 v-if="!centerName" class="ml-5 justify-self-start text-red-800 dark:text-white text-2xl">{{ moduleName }}</h1>
 		</div>
-		<h1 class="text-red-800 dark:text-white text-2xl">{{ moduleName }}</h1>
+		<h1 v-if="centerName" class="justify-self-start text-red-800 dark:text-white text-2xl">{{ moduleName }}</h1>
 		<button
 			@click="darkMode = !darkMode"
 			id="theme-toggle"
 			type="button"
 			class="text-gray-500 dark:text-gray-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 focus:outline-none rounded-lg text-sm p-2.5 justify-self-end w-10 h-10"
 		>
-			<MoonIcon v-if="!darkMode" />
-			<SunIcon v-else />
+			<SunIcon v-if="darkMode" />
+			<MoonIcon v-else />
 		</button>
 	</div>
 </template>
@@ -36,6 +37,7 @@ import { ref, watch } from "vue";
 export default {
 	props: {
 		moduleName: String,
+		centerName: Boolean
 	},
 	setup(props) {
 		const darkMode = ref(true);
@@ -55,7 +57,6 @@ export default {
 			document.documentElement.classList.remove("dark");
 		}
 		watch(() => darkMode.value, (darkMode, oldDarkMode) => {
-			console.log("switching theme");
 			localStorage.setItem("color-theme", darkMode ? "dark" : "light");
 			if (darkMode) {
 				document.documentElement.classList.add("dark");

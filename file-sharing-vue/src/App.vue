@@ -1,6 +1,6 @@
 <template>
 	<div class="h-full flex flex-col overflow-hidden text-gray-700 dark:text-gray-200">
-		<FfdHeader moduleName="File Sharing" />
+		<FfdHeader moduleName="File Sharing" centerName />
 		<TabbedComponentSwitcher :components="tabs" :saveState="true" />
 	</div>
 </template>
