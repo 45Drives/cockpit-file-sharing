@@ -61,12 +61,12 @@
 					>Nulla amet tempus sit accumsan. Aliquet turpis sed sit lacinia.</SwitchDescription>-->
 				</span>
 				<Switch
-					v-model="tmpShare.windowsAcls"
-					:class="[tmpShare.windowsAcls ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+					v-model="shareWindowsAcls"
+					:class="[shareWindowsAcls ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
-						:class="[tmpShare.windowsAcls ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
+						:class="[shareWindowsAcls ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
 					/>
 				</Switch>
 			</SwitchGroup>
@@ -81,12 +81,12 @@
 					>Allow guests in share.</SwitchDescription>-->
 				</span>
 				<Switch
-					v-model="tmpShare.guestOk"
-					:class="[tmpShare.guestOk ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+					v-model="tmpShare['guest ok']"
+					:class="[tmpShare['guest ok'] ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
-						:class="[tmpShare.guestOk ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
+						:class="[tmpShare['guest ok'] ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
 					/>
 				</Switch>
 			</SwitchGroup>
@@ -101,12 +101,12 @@
 					>Make share read only.</SwitchDescription>-->
 				</span>
 				<Switch
-					v-model="tmpShare.readOnly"
-					:class="[tmpShare.readOnly ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+					v-model="tmpShare['read only']"
+					:class="[tmpShare['read only'] ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
-						:class="[tmpShare.readOnly ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
+						:class="[tmpShare['read only'] ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
 					/>
 				</Switch>
 			</SwitchGroup>
@@ -164,6 +164,7 @@ import DropdownSelector from "./DropdownSelector.vue";
 import { splitAdvancedSettings, joinAdvancedSettings, strToBool } from "../functions";
 import { Switch, SwitchDescription, SwitchGroup, SwitchLabel } from '@headlessui/vue'
 import { ChevronDownIcon } from "@heroicons/vue/solid";
+import { ref, reactive, watch } from "vue";
 export default {
 	props: {
 		share: {
@@ -174,99 +175,106 @@ export default {
 		users: Array[String],
 		groups: Array[String],
 	},
-	data() {
+	setup(props, { emit }) {
+		const tmpShare = reactive(props.share ? {
+				...props.share,
+				"guest ok": strToBool(props.share?.["guest ok"]),
+				"read only": strToBool(props.share?.["read only"]),
+				"browseable": strToBool(props.share?.["browseable"])
+			}
+			: {
+				"name": "",
+				"comment": "",
+				"path": "",
+				"valid users": "",
+				"guest ok": false,
+				"read only": false,
+				"browseable": true,
+				advancedSettings: []
+			});
+		const showAdvanced = ref(false);
+		const shareValidUsers = ref([]);
+		const shareValidGroups = ref([]);
+		const shareAdvancedSettingsStr = ref("");
+		const shareWindowsAcls = ref(false);
+
+		tmpShare["valid users"].split(/\s*,?\s+/).forEach((entity) => {
+			if (entity.at(0) === '@')
+				shareValidGroups.value.push(entity.substring(1));
+			else if (entity)
+				shareValidUsers.value.push(entity);
+		});
+
+		shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
+		shareWindowsAcls.value = /map acl inherit = (yes|true|1)/.test(shareAdvancedSettingsStr.value)
+			&& /acl_xattr:ignore system acl = (yes|true|1)/.test(shareAdvancedSettingsStr.value)
+			&& /vfs objects = .*acl_xattr.*/.test(shareAdvancedSettingsStr.value);
+
+		watch(shareWindowsAcls, (value, oldValue) => {
+			if (value) {
+				showAdvanced.value = true;
+				if (/map acl inherit/.test(shareAdvancedSettingsStr.value))
+					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=map acl inherit = ).*/, "yes");
+				else
+					shareAdvancedSettingsStr.value += "\nmap acl inherit = yes";
+				if (/acl_xattr:ignore system acl/.test(shareAdvancedSettingsStr.value))
+					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=acl_xattr:ignore system acl = ).*/, "yes");
+				else
+					shareAdvancedSettingsStr.value += "\nacl_xattr:ignore system acl = yes";
+				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
+					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=vfs objects = )(?!.*acl_xattr.*)/, "acl_xattr ");
+				else
+					shareAdvancedSettingsStr.value += "\nvfs objects = acl_xattr";
+			} else {
+				shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/map acl inherit = .*/, "");
+				shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/acl_xattr:ignore system acl = .*/, "");
+				shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=vfs objects =.*)acl_xattr ?(?=.*)/, "");
+			}
+			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n');
+		}, {lazy: false});
+
+		const apply = () => {
+			tmpShare["valid users"] = [...shareValidGroups.value.sort().map(group => `@${group}`), ...shareValidUsers.value.sort()].join(" ");
+			tmpShare.advancedSettings = splitAdvancedSettings(shareAdvancedSettingsStr.value);
+			shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
+			emit("apply-share", {
+				...tmpShare,
+				"guest ok": tmpShare["guest ok"] ? "yes" : "no",
+				"read only": tmpShare["read only"] ? "yes" : "no",
+				"browseable": tmpShare["browseable"] ? "yes" : "no",
+			});
+		};
+
+		const addValidUser = (user) => {
+			shareValidUsers.value = [...new Set([...shareValidUsers.value, user])];
+		};
+
+		const removeValidUser = (user) => {
+			shareValidUsers.value = shareValidUsers.value.filter((a) => a !== user);
+		};
+
+		const addValidGroup = (group) => {
+			shareValidGroups.value = [...new Set([...shareValidGroups.value, group])];
+		};
+
+		const removeValidGroup = (group) => {
+			shareValidGroups.value = shareValidGroups.value.filter((a) => a !== group);
+		};
+
 		return {
-			tmpShare: this.share
-				? {
-					...this.share,
-					windowsAcls: strToBool(this.share?.windowsAcls),
-					guestOk: strToBool(this.share?.guesOk),
-					readOnly: strToBool(this.share?.readOnly),
-					browseable: strToBool(this.share?.browseable)
-				}
-				: null,
-			showAdvanced: false,
-			shareValidUsers: [],
-			shareValidGroups: [],
-			shareAdvancedSettingsStr: "",
+			tmpShare,
+			showAdvanced,
+			shareValidUsers,
+			shareValidGroups,
+			shareAdvancedSettingsStr,
+			shareWindowsAcls,
+			apply,
+			addValidUser,
+			removeValidUser,
+			addValidGroup,
+			removeValidGroup,
 		};
 	},
-	created() {
-		if (this.share === null) {
-			this.tmpShare = {
-				name: "",
-				comment: "",
-				path: "",
-				windowsAcls: false,
-				validUsers: "",
-				guestOk: false,
-				readOnly: false,
-				browseable: true,
-				advancedSettings: []
-			};
-		}
-		[this.shareValidUsers, this.shareValidGroups] = this.splitValidUsers(this.tmpShare.validUsers);
-		this.shareAdvancedSettingsStr = joinAdvancedSettings(this.tmpShare.advancedSettings);
-	},
-	methods: {
-		apply() {
-			this.tmpShare.validUsers = this.joinValidUsers(this.shareValidUsers, this.shareValidGroups);
-			this.tmpShare.advancedSettings = splitAdvancedSettings(this.shareAdvancedSettingsStr);
-			this.shareAdvancedSettingsStr = joinAdvancedSettings(this.tmpShare.advancedSettings);
-			let errors = "";
-			if ((errors = this.validate()) !== "") {
-				alert("Applying share failed:\n" + errors);
-				return;
-			}
-			this.$emit("apply-share", {
-				...this.tmpShare,
-				windowsAcls: this.tmpShare.windowsAcls ? "yes" : "no",
-				guestOk: this.tmpShare.guestOk ? "yes" : "no",
-				readOnly: this.tmpShare.readOnly ? "yes" : "no",
-				browseable: this.tmpShare.browseable ? "yes" : "no",
-			});
-		},
-		validate() {
-			let errors = "";
-			if (this.tmpShare.name === "") {
-				errors += "Name is empty.\n";
-			}
-			if (this.tmpShare.path == "") {
-				errors += "Path is empty.\n";
-			}
-			return errors;
-		},
-		addValidUser(user) {
-			this.shareValidUsers = [...new Set([...this.shareValidUsers, user])];
-		},
-		removeValidUser(user) {
-			this.shareValidUsers = this.shareValidUsers.filter((a) => a !== user);
-		},
-		addValidGroup(group) {
-			this.shareValidGroups = [...new Set([...this.shareValidGroups, group])];
-		},
-		removeValidGroup(group) {
-			this.shareValidGroups = this.shareValidGroups.filter((a) => a !== group);
-		},
-		splitValidUsers(validUsersStr) {
-			let validUsers = [];
-			let validGroups = [];
-			validUsersStr.split(/\s*,?\s+/).forEach((entity) => {
-				if (entity.at(0) === '@')
-					validGroups.push(entity.substring(1));
-				else if (entity)
-					validUsers.push(entity);
-			});
-			return [validUsers, validGroups];
-		},
-		joinValidUsers(validUsers, validGroups) {
-			return [...validGroups.sort().map(group => `@${group}`), ...validUsers.sort()].join(" ");
-		},
-	},
-	emits: [
-		"apply-share",
-		"hide"
-	],
 	components: {
 		PillList,
 		DropdownSelector,
