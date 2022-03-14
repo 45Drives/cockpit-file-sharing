@@ -12,7 +12,7 @@
 					id="server-string"
 					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
 					placeholder="Description of Server"
-					v-model="tmpGlobalConfig.serverString"
+					v-model="tmpGlobalConfig['server string']"
 					@input="changesMade = true"
 				/>
 			</div>
@@ -37,7 +37,7 @@
 				id="log-level"
 				name="log-level"
 				class="mt-1 block w-20 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-neutral-800 focus:border-gray-500 sm:text-sm rounded-md"
-				v-model="tmpGlobalConfig.logLevel"
+				v-model="tmpGlobalConfig['log level']"
 				@change="changesMade = true"
 			>
 				<option value="5">5</option>
@@ -49,7 +49,7 @@
 			</select>
 		</div>
 		<div @click="showAdvanced = !showAdvanced">
-			<label for="advanced-settings" class="block text-sm font-medium cursor-pointer">
+			<label for="global-advanced-settings" class="block text-sm font-medium cursor-pointer">
 				Advanced Settings
 				<ChevronDownIcon
 					:style="{ display: 'inline-block', transition: '0.5s', transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0)' }"
@@ -61,8 +61,8 @@
 			:style="{ 'max-height': showAdvanced ? '500px' : '0', transition: showAdvanced ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out', overflow: 'hidden' }"
 		>
 			<textarea
-				id="advanced-settings"
-				name="advanced-settings"
+				id="global-advanced-settings"
+				name="global-advanced-settings"
 				rows=4
 				v-model="globalConfigAdvancedSettingsStr"
 				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"

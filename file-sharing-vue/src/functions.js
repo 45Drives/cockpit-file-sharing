@@ -1,14 +1,8 @@
-export function camelize(str) {
-	return str.replace(/(?:^\w|[A-Z]|\b\w)/g, function (word, index) {
-		return index === 0 ? word.toLowerCase() : word.toUpperCase();
-	}).replace(/\s+/g, '');
-}
-
 export function generateConfDiff(conf, newConf) {
 	let confDiff = { add: [], remove: [] };
 	Object.keys(newConf).filter((key) => key !== 'name' && key !== 'advancedSettings').forEach((key) => {
 		if (conf === null || newConf[key] !== conf[key]) {
-			confDiff.add.push([key.replace(/([A-Z])/g, " $1").toLowerCase(), newConf[key]]);
+			confDiff.add.push([key, newConf[key]]);
 		}
 	})
 	if (conf) {

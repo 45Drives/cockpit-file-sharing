@@ -19,7 +19,6 @@
 
 <script>
 import SambaShareManagement from "./SambaShareManagement.vue";
-import { camelize } from "../functions";
 import SambaGlobalManagement from "./SambaGlobalManagement.vue";
 import SambaUserManagement from "./SambaUserManagement.vue";
 
@@ -150,14 +149,13 @@ export default {
 				"log level",
 			];
 			const shareTemplate = {
-				name: "",
-				comment: "",
-				path: "",
-				windowsAcls: "no",
-				validUsers: "",
-				guestOk: "no",
-				readOnly: "no",
-				browseable: "yes",
+				"name": "",
+				"comment": "",
+				"path": "",
+				"valid users": "",
+				"guest ok": "no",
+				"read only": "no",
+				"browseable": "yes",
 				advancedSettings: []
 			};
 			let share = null;
@@ -198,7 +196,7 @@ export default {
 					let value = match[2].trim();
 					if ((share === this.globalConfig && simpleSettingsGlobal.includes(key))
 						|| (share !== this.globalConfig && simpleSettingsShare.includes(key)))
-						share[camelize(key)] = value;
+						share[key] = value;
 					else
 						share.advancedSettings.push(`${key} = ${value}`);
 				}
