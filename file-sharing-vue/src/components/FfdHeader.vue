@@ -1,10 +1,13 @@
 <template>
 	<div
 		class="p-2 flex items-baseline justify-between bg-neutral-50 dark:bg-neutral-900 border-b border-gray-200 dark:border-gray-700"
-		:style="{ 'font-family': 'Red Hat Text' }"
+		:style="{ 'font-family': 'Red Hat Text', position: 'relative' }"
 	>
 		<div class="flex flex-row items-baseline">
-			<img class="w-6 h-6 text-gray-50 mr-0.5 self-center" :src="darkMode ? '45d-fan-dark.svg' : '45d-fan-light.svg'" />
+			<img
+				class="w-6 h-6 text-gray-50 mr-0.5 self-center"
+				:src="darkMode ? '45d-fan-dark.svg' : '45d-fan-light.svg'"
+			/>
 			<h1 class="text-2xl">
 				<span
 					class="text-red-800 dark:text-white font-bold"
@@ -12,9 +15,9 @@
 				>45</span>
 				<span class="text-gray-800 dark:text-red-600">Drives</span>
 			</h1>
-			<h1 v-if="!centerName" class="ml-5 justify-self-start text-red-800 dark:text-white text-2xl">{{ moduleName }}</h1>
+			<h1 v-if="!centerName" class="ml-5 text-red-800 dark:text-white text-2xl">{{ moduleName }}</h1>
 		</div>
-		<h1 v-if="centerName" class="justify-self-start text-red-800 dark:text-white text-2xl">{{ moduleName }}</h1>
+		<h1 v-if="centerName" class="text-red-800 dark:text-white text-2xl" :style="{position: 'absolute', left: '50%', top: '50%', transform: 'translateX(-50%) translateY(-50%)'}">{{ moduleName }}</h1>
 		<button
 			@click="darkMode = !darkMode"
 			id="theme-toggle"
