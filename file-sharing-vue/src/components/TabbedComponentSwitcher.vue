@@ -2,11 +2,11 @@
 	<div class="flex flex-row grow-0">
 		<div
 			v-for="(entry, index) in components"
-			:class="['px-5 py-3 cursor-default', currentTab === index ? 'bg-gray-100' : 'hover:bg-gray-50']"
+			:class="['px-5 py-3 cursor-default', currentTab === index ? 'bg-gray-50' : 'hover:bg-gray-50']"
 			@click="switchTab(index)"
 		>{{ entry.title }}</div>
 	</div>
-	<div class="bg-gray-100 overflow-y-scroll grow">
+	<div class="bg-gray-50 overflow-y-scroll grow">
 		<div class="px-4 py-5 sm:p-6">
 			<component :is="components[currentTab].component" />
 		</div>
