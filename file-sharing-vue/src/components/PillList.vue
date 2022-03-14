@@ -1,16 +1,16 @@
 <template>
 	<div class="flex flex-row flex-wrap space-x-2">
-		<BlobListItem v-for="(item, index) in list" :item="item" @remove-item="$emit('remove-item', item)"/>
+		<PillListItem v-for="(item, index) in list" :item="item" @remove-item="$emit('remove-item', item)"/>
 	</div>
 </template>
 
 <script>
-import BlobListItem from "./BlobListItem.vue";
+import PillListItem from "./PillListItem.vue";
 export default {
     props: {
         list: Array
     },
-    components: { BlobListItem },
+    components: { PillListItem },
 	emits: [
 		'remove-item'
 	]

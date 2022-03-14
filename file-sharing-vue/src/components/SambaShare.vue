@@ -1,9 +1,9 @@
 <template>
-	<tr :class="index % 2 === 0 ? undefined : 'bg-gray-50'">
+	<tr :class="index % 2 === 0 ? undefined : 'bg-gray-50 dark:bg-gray-700'">
 		<td
-			class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8"
+			class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6 lg:pl-8"
 		>{{ share.name }}</td>
-		<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ share.path }}</td>
+		<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{{ share.path }}</td>
 		<td
 			class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
 		>

@@ -1,6 +1,6 @@
 <template>
 	<div class="card-header flex flex-row items-center justify-between">
-		<h3 class="text-lg leading-6 font-medium text-gray-900">Shares</h3>
+		<h3 class="text-lg leading-6 font-medium">Shares</h3>
 		<button
 			class="btn-primary"
 			@click="showAddShare = !showAddShare"
@@ -11,15 +11,15 @@
 		<div class="mt-8 flex flex-col">
 			<div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
 				<div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-					<div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-						<table class="min-w-full divide-y divide-gray-300">
-							<thead class="bg-gray-50">
+					<div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
+						<table class="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+							<thead class="bg-gray-50 dark:bg-gray-800">
 								<tr>
 									<th
 										scope="col"
-										class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
+										class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold sm:pl-6 lg:pl-8"
 									>Name</th>
-									<th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Path</th>
+									<th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold">Path</th>
 									<th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6 lg:pr-8">
 										<span class="sr-only">Edit</span>
 									</th>
@@ -31,7 +31,7 @@
 									</div>
 								</tr>
 							</thead>
-							<tbody class="bg-white">
+							<tbody class="bg-white dark:bg-gray-800">
 								<SambaShare
 									v-for="(share, index) in shares"
 									:share="share"

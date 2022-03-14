@@ -2,13 +2,13 @@
 	<div class="space-y-5 px-4 pb-4">
 		<h3 v-if="!share">New Share</h3>
 		<div>
-			<label for="name" class="block text-sm font-medium text-gray-700">Share Name</label>
+			<label for="name" class="block text-sm font-medium">Share Name</label>
 			<div class="mt-1">
 				<input
 					type="text"
 					name="name"
 					id="name"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 rounded-md disabled:bg-gray-100 disabled:text-gray-500"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
 					placeholder="Share Name"
 					v-model="tmpShare.name"
 					:disabled="share"
@@ -16,45 +16,45 @@
 			</div>
 		</div>
 		<div>
-			<label for="description" class="block text-sm font-medium text-gray-700">Share Description</label>
+			<label for="description" class="block text-sm font-medium">Share Description</label>
 			<div class="mt-1">
 				<input
 					type="text"
 					name="description"
 					id="description"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
 					placeholder="Share Name"
 					v-model="tmpShare.comment"
 				/>
 			</div>
 		</div>
 		<div>
-			<label for="path" class="block text-sm font-medium text-gray-700">Path</label>
+			<label for="path" class="block text-sm font-medium">Path</label>
 			<div class="mt-1">
 				<input
 					type="text"
 					name="path"
 					id="path"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
 					placeholder="Share Path/Directory"
 					v-model="tmpShare.path"
 				/>
 			</div>
 		</div>
 		<div>
-			<label class="block text-sm font-medium text-gray-700">Valid Users</label>
-			<BlobList :list="shareValidUsers" @remove-item="removeValidUser" />
+			<label class="block text-sm font-medium">Valid Users</label>
+			<PillList :list="shareValidUsers" @remove-item="removeValidUser" />
 			<DropdownSelector :options="users" placeholder="Add User" @select="addValidUser" />
 		</div>
 		<div>
-			<label class="block text-sm font-medium text-gray-700">Valid Groups</label>
-			<BlobList :list="shareValidGroups" @remove-item="removeValidGroup" />
+			<label class="block text-sm font-medium">Valid Groups</label>
+			<PillList :list="shareValidGroups" @remove-item="removeValidGroup" />
 			<DropdownSelector :options="groups" placeholder="Add Group" @select="addValidGroup" />
 		</div>
 		<div>
 			<SwitchGroup as="div" class="flex items-center justify-between w-full">
 				<span class="flex-grow flex flex-col">
-					<SwitchLabel as="span" class="text-sm font-medium text-gray-700" passive>Windows ACLs</SwitchLabel>
+					<SwitchLabel as="span" class="text-sm font-medium" passive>Windows ACLs</SwitchLabel>
 					<!-- <SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
@@ -62,11 +62,11 @@
 				</span>
 				<Switch
 					v-model="tmpShare.windowsAcls"
-					:class="[tmpShare.windowsAcls ? 'bg-red-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+					:class="[tmpShare.windowsAcls ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-200 dark:bg-gray-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
-						:class="[tmpShare.windowsAcls ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200']"
+						:class="[tmpShare.windowsAcls ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-gray-600 shadow transform ring-0 transition ease-in-out duration-200']"
 					/>
 				</Switch>
 			</SwitchGroup>
@@ -74,7 +74,7 @@
 		<div>
 			<SwitchGroup as="div" class="flex items-center justify-between w-full">
 				<span class="flex-grow flex flex-col">
-					<SwitchLabel as="span" class="text-sm font-medium text-gray-700" passive>Guest OK</SwitchLabel>
+					<SwitchLabel as="span" class="text-sm font-medium" passive>Guest OK</SwitchLabel>
 					<!-- <SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
@@ -82,11 +82,11 @@
 				</span>
 				<Switch
 					v-model="tmpShare.guestOk"
-					:class="[tmpShare.guestOk ? 'bg-red-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+					:class="[tmpShare.guestOk ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-200 dark:bg-gray-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
-						:class="[tmpShare.guestOk ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200']"
+						:class="[tmpShare.guestOk ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-gray-600 shadow transform ring-0 transition ease-in-out duration-200']"
 					/>
 				</Switch>
 			</SwitchGroup>
@@ -94,7 +94,7 @@
 		<div>
 			<SwitchGroup as="div" class="flex items-center justify-between w-full">
 				<span class="flex-grow flex flex-col">
-					<SwitchLabel as="span" class="text-sm font-medium text-gray-700" passive>Read Only</SwitchLabel>
+					<SwitchLabel as="span" class="text-sm font-medium" passive>Read Only</SwitchLabel>
 					<!-- <SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
@@ -102,11 +102,11 @@
 				</span>
 				<Switch
 					v-model="tmpShare.readOnly"
-					:class="[tmpShare.readOnly ? 'bg-red-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+					:class="[tmpShare.readOnly ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-200 dark:bg-gray-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
-						:class="[tmpShare.readOnly ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200']"
+						:class="[tmpShare.readOnly ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-gray-600 shadow transform ring-0 transition ease-in-out duration-200']"
 					/>
 				</Switch>
 			</SwitchGroup>
@@ -114,7 +114,7 @@
 		<div>
 			<SwitchGroup as="div" class="flex items-center justify-between w-full">
 				<span class="flex-grow flex flex-col">
-					<SwitchLabel as="span" class="text-sm font-medium text-gray-700" passive>Browseable</SwitchLabel>
+					<SwitchLabel as="span" class="text-sm font-medium" passive>Browseable</SwitchLabel>
 					<!-- <SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
@@ -122,17 +122,17 @@
 				</span>
 				<Switch
 					v-model="tmpShare.browseable"
-					:class="[tmpShare.browseable ? 'bg-red-600' : 'bg-gray-200', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+					:class="[tmpShare.browseable ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-200 dark:bg-gray-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
 						aria-hidden="true"
-						:class="[tmpShare.browseable ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200']"
+						:class="[tmpShare.browseable ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-gray-600 shadow transform ring-0 transition ease-in-out duration-200']"
 					/>
 				</Switch>
 			</SwitchGroup>
 		</div>
 		<div @click="showAdvanced = !showAdvanced">
-			<label for="advanced-settings" class="block text-sm font-medium text-gray-700 cursor-pointer">
+			<label for="advanced-settings" class="block text-sm font-medium cursor-pointer">
 				Advanced Settings
 				<ChevronDownIcon
 					:style="{ display: 'inline-block', transition: '0.5s', transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0)' }"
@@ -148,7 +148,7 @@
 				name="advanced-settings"
 				rows="4"
 				v-model="shareAdvancedSettingsStr"
-				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 rounded-md"
+				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
 			/>
 		</div>
 		<div class="flex flex-row justify-end space-x-3">
@@ -159,7 +159,7 @@
 </template>
 
 <script>
-import BlobList from "./BlobList.vue";
+import PillList from "./PillList.vue";
 import DropdownSelector from "./DropdownSelector.vue";
 import { splitAdvancedSettings, joinAdvancedSettings, strToBool } from "../functions";
 import { Switch, SwitchDescription, SwitchGroup, SwitchLabel } from '@headlessui/vue'
@@ -268,7 +268,7 @@ export default {
 		"hide"
 	],
 	components: {
-		BlobList,
+		PillList,
 		DropdownSelector,
 		Switch,
 		SwitchDescription,

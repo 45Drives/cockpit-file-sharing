@@ -1,5 +1,5 @@
 <template>
-	<div class="h-full flex flex-col overflow-hidden">
+	<div class="h-full flex flex-col overflow-hidden text-gray-700 dark:text-gray-200">
 		<FfdHeader moduleName="File Sharing" />
 		<TabbedComponentSwitcher :components="tabs" :saveState="true" />
 	</div>
@@ -20,6 +20,5 @@ const tabs = [{ title: 'Samba', component: SambaManager }, { title: 'NFS', compo
 	font-family: Avenir, Helvetica, Arial, sans-serif;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
-	color: #2c3e50;
 }
 </style>

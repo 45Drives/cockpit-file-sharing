@@ -1,16 +1,16 @@
 <template>
 	<div class="card-header">
-		<h3 class="text-lg leading-6 font-medium text-gray-900">Global</h3>
+		<h3 class="text-lg leading-6 font-medium">Global</h3>
 	</div>
 	<div class="card-body space-y-5">
 		<div>
-			<label for="server-string" class="block text-sm font-medium text-gray-700">Server Description</label>
+			<label for="server-string" class="block text-sm font-medium">Server Description</label>
 			<div class="mt-1">
 				<input
 					type="text"
 					name="server-string"
 					id="server-string"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
 					placeholder="Description of Server"
 					v-model="tmpGlobalConfig.serverString"
 					@input="changesMade = true"
@@ -18,13 +18,13 @@
 			</div>
 		</div>
 		<div>
-			<label for="workgroup" class="block text-sm font-medium text-gray-700">Workgroup</label>
+			<label for="workgroup" class="block text-sm font-medium">Workgroup</label>
 			<div class="mt-1">
 				<input
 					type="text"
 					name="workgroup"
 					id="workgroup"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
 					placeholder="Workgroup"
 					v-model="tmpGlobalConfig.workgroup"
 					@input="changesMade = true"
@@ -32,11 +32,11 @@
 			</div>
 		</div>
 		<div>
-			<label for="log-level" class="block text-sm font-medium text-gray-700">Log Level</label>
+			<label for="log-level" class="block text-sm font-medium">Log Level</label>
 			<select
 				id="log-level"
 				name="log-level"
-				class="mt-1 block w-20 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 focus:border-gray-500 sm:text-sm rounded-md"
+				class="mt-1 block w-20 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-800 focus:border-gray-500 sm:text-sm rounded-md"
 				v-model="tmpGlobalConfig.logLevel"
 				@change="changesMade = true"
 			>
@@ -49,7 +49,7 @@
 			</select>
 		</div>
 		<div @click="showAdvanced = !showAdvanced">
-			<label for="advanced-settings" class="block text-sm font-medium text-gray-700 cursor-pointer">
+			<label for="advanced-settings" class="block text-sm font-medium cursor-pointer">
 				Advanced Settings
 				<ChevronDownIcon
 					:style="{ display: 'inline-block', transition: '0.5s', transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0)' }"
@@ -65,7 +65,7 @@
 				name="advanced-settings"
 				rows=4
 				v-model="globalConfigAdvancedSettingsStr"
-				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 rounded-md"
+				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-md"
 				@input="changesMade = true"
 			/>
 		</div>
