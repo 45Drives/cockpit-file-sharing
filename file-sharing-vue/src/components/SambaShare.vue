@@ -31,7 +31,7 @@
 		<td colspan="4">
 			<div
 				class="overflow-hidden"
-				:style="{ 'max-height': showEditor ? '1000px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
+				:style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
 			>
 				<SambaShareEditor
 					:share="share"
