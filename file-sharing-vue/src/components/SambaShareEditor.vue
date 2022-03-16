@@ -57,7 +57,7 @@
 			</div>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-full">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Guest OK</SwitchLabel>
 					<!-- <SwitchDescription
@@ -77,7 +77,7 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-full">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Read Only</SwitchLabel>
 					<!-- <SwitchDescription
@@ -97,7 +97,7 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-full">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Browseable</SwitchLabel>
 					<!-- <SwitchDescription
@@ -117,13 +117,13 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-full">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Windows ACLs</SwitchLabel>
-					<!-- <SwitchDescription
+					<SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
-					>Nulla amet tempus sit accumsan. Aliquet turpis sed sit lacinia.</SwitchDescription>-->
+					>Set up Windows Access Control Lists</SwitchDescription>
 				</span>
 				<Switch
 					v-model="shareWindowsAcls"
@@ -138,13 +138,13 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-full">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Shadow Copy</SwitchLabel>
-					<!-- <SwitchDescription
+					<SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
-					>Nulla amet tempus sit accumsan. Aliquet turpis sed sit lacinia.</SwitchDescription>-->
+					>Shadow Copy settings for ZFS</SwitchDescription>
 				</span>
 				<Switch
 					v-model="shareShadowCopy"
@@ -159,13 +159,13 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-full">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>MacOS Share</SwitchLabel>
-					<!-- <SwitchDescription
+					<SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
-					>Nulla amet tempus sit accumsan. Aliquet turpis sed sit lacinia.</SwitchDescription>-->
+					>Allow MacOS users to use share</SwitchDescription>
 				</span>
 				<Switch
 					v-model="shareMacOsShare"
@@ -180,13 +180,13 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-full">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Audit Logs</SwitchLabel>
-					<!-- <SwitchDescription
+					<SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
-					>Nulla amet tempus sit accumsan. Aliquet turpis sed sit lacinia.</SwitchDescription>-->
+					>Turn on audit logging</SwitchDescription>
 				</span>
 				<Switch
 					v-model="shareAuditLogs"
