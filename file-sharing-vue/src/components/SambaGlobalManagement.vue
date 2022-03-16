@@ -49,6 +49,27 @@
 				<option value="0">0</option>
 			</select>
 		</div>
+		<div>
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
+				<span class="flex-grow flex flex-col">
+					<SwitchLabel as="span" class="text-sm font-medium" passive>Global MacOS Shares</SwitchLabel>
+					<SwitchDescription
+							as="span"
+							class="text-sm text-gray-500"
+					>Allow MacOS users to use all shares</SwitchDescription>
+				</span>
+				<Switch
+					v-model="globalMacOsShare"
+					@click="switchMacOsShare(globalMacOsShare)"
+					:class="[globalMacOsShare ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
+				>
+					<span
+						aria-hidden="true"
+						:class="[globalMacOsShare ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
+					/>
+				</Switch>
+			</SwitchGroup>
+		</div>
 		<div @click="showAdvanced = !showAdvanced">
 			<label for="global-advanced-settings" class="block text-sm font-medium cursor-pointer">
 				Advanced Settings
@@ -62,27 +83,6 @@
 			class="space-y-5"
 			:style="{ 'max-height': showAdvanced ? '500px' : '0', transition: showAdvanced ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out', overflow: 'hidden' }"
 		>
-			<div>
-				<SwitchGroup as="div" class="flex items-center justify-between w-1/4">
-					<span class="flex-grow flex flex-col">
-						<SwitchLabel as="span" class="text-sm font-medium" passive>Global MacOS Shares</SwitchLabel>
-						<!-- <SwitchDescription
-							as="span"
-							class="text-sm text-gray-500"
-						>Nulla amet tempus sit accumsan. Aliquet turpis sed sit lacinia.</SwitchDescription>-->
-					</span>
-					<Switch
-						v-model="globalMacOsShare"
-						@click="switchMacOsShare(globalMacOsShare)"
-						:class="[globalMacOsShare ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
-					>
-						<span
-							aria-hidden="true"
-							:class="[globalMacOsShare ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
-						/>
-					</Switch>
-				</SwitchGroup>
-			</div>
 			<textarea
 				id="global-advanced-settings"
 				name="global-advanced-settings"
