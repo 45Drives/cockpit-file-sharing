@@ -37,16 +37,6 @@ export function splitAdvancedSettings(advancedSettings) {
 	return advancedSettings.split('\n').filter(a => !/^\s*$/.test(a) && /[^\s#]+\s*=\s*[^\s#]+/.test(a)).map(line => line.replace(/\s*#.*$/, '').replace(/\s*=\s*/, ' = ').trim());
 }
 
-export function runCommand(argv) {
-	document.getElementById('command-argv').innderText = JSON.stringify(argv);
-	return;
-	return new Promise(async (resolve, reject) => {
-		let proc = cockpit.spawn(argv);
-		proc.done((stdout) => resolve(data));
-		proc.fail((e, stderr) => reject(stderr));
-	})
-}
-
 export function strToBool(str) {
 	const trueStrings = [
 		"yes",
