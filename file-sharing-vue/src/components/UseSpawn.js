@@ -1,14 +1,5 @@
 import { reactive, watch } from 'vue';
 
-if (typeof cockpit === 'undefined') {
-	window.cockpit = {
-		spawn: (argv, opts) => {
-			console.log("spawn", argv)
-			return new Promise((resolve, reject) => resolve(""));
-		}
-	}
-}
-
 /**
  * 
  * @param {string[]} argv
