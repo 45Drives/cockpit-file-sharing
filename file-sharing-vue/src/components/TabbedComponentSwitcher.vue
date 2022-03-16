@@ -7,9 +7,7 @@
 		>{{ entry.title }}</div>
 	</div>
 	<div class="bg-neutral-50 dark:bg-neutral-900 overflow-y-scroll grow">
-		<div class="px-4 py-5 sm:p-6">
-			<component :is="components[currentTab].component" />
-		</div>
+		<component :is="components[currentTab].component" />
 	</div>
 </template>
 
@@ -41,11 +39,3 @@ export default {
 	}
 }
 </script>
-
-<style scoped>
-
-.tabbed-switcher-tab {
-	padding: 20px 30px 10px 30px;
-	cursor: pointer;
-}
-</style>
