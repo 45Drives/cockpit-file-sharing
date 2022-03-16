@@ -47,29 +47,34 @@
 
 <script>
 import SambaShareEditor from "./SambaShareEditor.vue";
+import { ref } from "vue";
 export default {
-	data() {
-		return {
-			showEditor: false,
-		};
-	},
 	props: {
 		share: Object,
 		index: Number,
 		users: Array[String],
 		groups: Array[String],
 	},
-	methods: {
-		updateShare(newShare) {
-			this.$emit('update-share', this.share, newShare);
-			this.showEditor = false;
+	setup(props, { emit }) {
+		const showEditor = ref(false);
+		const index = ref(props.index);
+		const users = ref(props.users);
+		const groups = ref(props.groups);
+
+		const updateShare = (newShare) => {
+			emit('update-share', props.share, newShare);
+			showEditor.value = false;
+		}
+
+		return {
+			showEditor,
+			index,
+			users,
+			groups,
+			updateShare,
 		}
 	},
 	components: { SambaShareEditor },
-	emits: [
-		'delete-share',
-		'update-share'
-	]
 }
 </script>
 
