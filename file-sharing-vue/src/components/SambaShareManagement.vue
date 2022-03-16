@@ -1,10 +1,9 @@
 <template>
 	<div class="card-header flex flex-row items-center justify-between">
-		<h3 class="text-lg leading-6 font-medium">Shares</h3>
-		<button
-			class="btn-primary"
-			@click="showAddShare = !showAddShare"
-		>{{ showAddShare ? 'Cancel' : 'Add Share' }}</button>
+		<div class="flex flex-row space-x-3">
+			<h3 class="text-lg leading-6 font-medium">Shares</h3>
+			<LoadingSpinner v-if="!loaded" class="w-5 h-5" />
+		</div>
 	</div>
 	<div class="card-body">
 		<div
@@ -18,7 +17,7 @@
 				:groups="groups"
 			/>
 		</div>
-		<div class="mt-8 flex flex-col">
+		<div class="flex flex-col">
 			<div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
 				<div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
 					<div
@@ -39,8 +38,8 @@
 										<span class="sr-only">Delete</span>
 									</th>
 									<div class="relative">
-										<RefreshIcon
-											@click="$emit('refresh-shares')"
+										<PlusIcon
+											@click="showAddShare = !showAddShare"
 											class="w-5 h-5 absolute right-3 top-3.5 cursor-pointer text-gray-500"
 										/>
 									</div>
@@ -49,7 +48,7 @@
 							<tbody class="bg-white dark:bg-neutral-800">
 								<SambaShare
 									v-for="(share, index) in shares"
-									:share="share"
+									:share="shares[index]"
 									:index="index"
 									@delete-share="deleteShare"
 									@update-share="updateShare"
@@ -60,7 +59,7 @@
 									<td
 										colspan="4"
 										class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-500 sm:pl-6 lg:pl-8"
-									>No shares. Click "Add Share" to add one.</td>
+									>No shares. Click "+" to add one.</td>
 								</tr>
 							</tbody>
 						</table>
@@ -75,91 +74,82 @@
 import SambaShare from "./SambaShare.vue";
 import SambaShareEditor from "./SambaShareEditor.vue";
 import { generateConfDiff } from "../functions";
-import { RefreshIcon } from "@heroicons/vue/solid";
+import { PlusIcon } from "@heroicons/vue/solid";
+import useSpawn from "./UseSpawn";
+import { ref } from "vue";
+import LoadingSpinner from "./LoadingSpinner.vue";
+
+const spawnOpts = {
+	superuser: 'require',
+	promise: true
+}
+
 export default {
-	data() {
-		return {
-			shares: this.initialShares,
-			showAddShare: false,
-		};
-	},
 	props: {
-		initialShares: Array[Object],
+		shares: Array[Object],
 		users: Array[String],
 		groups: Array[String],
+		loaded: Boolean,
 	},
-	components: { SambaShare, SambaShareEditor, RefreshIcon },
-	methods: {
-		async deleteShare(share) {
+	setup(props, { emit }) {
+		const showAddShare = ref(false);
+
+		const deleteShare = async (share) => {
 			if (!confirm("Are you sure?"))
 				return;
 			try {
 				// run net conf commands
-				console.log(['net', 'conf', 'delshare', share.name]);
-				this.shares = this.shares.filter((a) => a !== share);
-			} catch (err) {
-				alert(err);
+				await useSpawn(['net', 'conf', 'delshare', share.name], spawnOpts);
+				props.shares = props.shares.filter((a) => a !== share);
+			} catch (state) {
+				alert(state.stderr);
+				emit('refresh-shares');
 			}
-		},
-		async addShare(share) {
-			try {
-				// run net conf commands
-				console.log(['net', 'conf', 'addshare', share.name, share.path]);
-				await this.applyShareChanges(null, share);
-				this.shares = [...this.shares, share];
-			} catch (err) {
-				alert(err);
-			}
-			this.showAddShare = false;
-		},
-		async updateShare(share, newShare) {
-			try {
-				// run net conf commands
-				await this.applyShareChanges(share, newShare);
-				Object.assign(share, newShare);
-			} catch (err) {
-				alert(err);
-			}
-		},
-		async applyShareChanges(share, newShare) {
+		}
+
+		const applyShareChanges = async (share, newShare) => {
 			let add, remove;
 			({ add, remove } = generateConfDiff(share, newShare));
-			add.forEach((args) => {
-				console.log(['net', 'conf', 'setparm', newShare.name, ...args]);
-			});
-			remove.forEach((args) => {
-				console.log(['net', 'conf', 'delparm', newShare.name, ...args]);
-			});
-			// throw("test error");
-		},
-	},
-	emits: ['refresh-shares'],
-	watch: {
-		initialShares(newShares) {
-			this.shares = newShares;
+			for (const args of add) {
+				await useSpawn(['net', 'conf', 'setparm', newShare.name, ...args], spawnOpts);
+			}
+			for (const args of remove) {
+				await useSpawn(['net', 'conf', 'delparm', newShare.name, ...args], spawnOpts);
+			}
 		}
-	}
+
+		const addShare = async (share) => {
+			try {
+				// run net conf commands
+				await useSpawn(['net', 'conf', 'addshare', share.name, share.path], spawnOpts);
+				await applyShareChanges(null, share);
+				props.shares = [...props.shares, share];
+			} catch (state) {
+				alert(state.stderr);
+				emit('refresh-shares');
+			}
+			showAddShare.value = false;
+		}
+
+		const updateShare = async (share, newShare) => {
+			try {
+				// run net conf commands
+				await applyShareChanges(share, newShare);
+				Object.assign(share, newShare);
+			} catch (state) {
+				alert(state.stderr);
+				emit('refresh-shares');
+			}
+		}
+
+		return {
+			showAddShare,
+			deleteShare,
+			applyShareChanges,
+			addShare,
+			updateShare,
+		}
+	},
+	components: { SambaShare, SambaShareEditor, PlusIcon, LoadingSpinner },
 }
 </script>
-
-<style scoped>
-/* .samba-share-management {
-	display: flex;
-	flex-direction: column;
-	padding: 5px;
-}
-
-.header {
-	display: flex;
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: baseline;
-	padding: 0 10px 0 10px;
-}
-
-.list {
-	display: flex;
-	flex-direction: column;
-	overflow: auto;
-} */
-</style>

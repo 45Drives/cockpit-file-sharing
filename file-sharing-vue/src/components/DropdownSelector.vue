@@ -14,14 +14,12 @@ export default {
 		placeholder: String,
 		options: Array,
 	},
-	methods: {
-		select(e) {
-			this.$emit('select', e.target.value);
+	setup(props, { emit }) {
+		const select = (e) => {
+			emit('select', e.target.value);
 			e.srcElement[0].selected = true;
 		}
-	},
-	emits: [
-		'select'
-	]
+		return { select };
+	}
 }
 </script>

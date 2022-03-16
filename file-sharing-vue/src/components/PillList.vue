@@ -11,9 +11,6 @@ export default {
         list: Array
     },
     components: { PillListItem },
-	emits: [
-		'remove-item'
-	]
 }
 </script>
 

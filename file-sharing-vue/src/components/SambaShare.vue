@@ -1,19 +1,19 @@
 <template>
 	<tr :class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'">
-		<td
-			class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6 lg:pl-8"
-		>{{ share.name }}</td>
+		<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6 lg:pl-8">{{ share.name }}</td>
 		<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{{ share.path }}</td>
 		<td
 			class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
 		>
-			<a
-				@click="showEditor = !showEditor"
-				class="uppercase text-lime-500 hover:text-lime-800 cursor-pointer"
-			>
-				{{ showEditor ? 'Cancel' : 'Edit' }}
-				<span class="sr-only">, {{ share.name }}</span>
-			</a>
+			<div class="inline-block w-20 text-left">
+				<a
+					@click="showEditor = !showEditor"
+					class="uppercase text-lime-500 hover:text-lime-800 cursor-pointer"
+				>
+					{{ showEditor ? 'Cancel' : 'Edit' }}
+					<span class="sr-only">, {{ share.name }}</span>
+				</a>
+			</div>
 		</td>
 		<td
 			class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
@@ -27,9 +27,20 @@
 			</a>
 		</td>
 	</tr>
-	<tr v-if="showEditor" :class="index % 2 === 0 ? undefined : 'bg-neutral-50'">
+	<tr :class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'">
 		<td colspan="4">
-			<SambaShareEditor :share="share" @apply-share="updateShare" @hide="showEditor = false" :users="users" :groups="groups" />
+			<div
+				class="overflow-hidden"
+				:style="{ 'max-height': showEditor ? '1000px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
+			>
+				<SambaShareEditor
+					:share="share"
+					@apply-share="updateShare"
+					@hide="showEditor = false"
+					:users="users"
+					:groups="groups"
+				/>
+			</div>
 		</td>
 	</tr>
 </template>

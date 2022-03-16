@@ -16,9 +16,6 @@ export default {
 	props: {
 		item: String
 	},
-	emits: [
-		'remove-item'
-	],
 	components: {
 		XIcon,
 	}
