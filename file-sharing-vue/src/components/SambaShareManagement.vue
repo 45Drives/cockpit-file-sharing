@@ -8,7 +8,7 @@
 	<div class="card-body">
 		<div
 			class="overflow-hidden"
-			:style="{ 'max-height': showAddShare ? '1000px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
+			:style="{ 'max-height': showAddShare ? '1500px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
 		>
 			<SambaShareEditor
 				@apply-share="addShare"
@@ -95,7 +95,7 @@ export default {
 		const showAddShare = ref(false);
 
 		const deleteShare = async (share) => {
-			if (!confirm("Are you sure?"))
+			if (!confirm(`Permanently delete ${share.name}?`))
 				return;
 			try {
 				// run net conf commands
