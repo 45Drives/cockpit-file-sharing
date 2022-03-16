@@ -6,7 +6,7 @@
 					<XCircleIcon class="h-5 w-5 text-red-400" aria-hidden="true" />
 				</div>
 				<div class="ml-3">
-					<h3 class="text-sm font-medium text-red-800" :style="{'white-space': 'pre'}">{{fatalError}}</h3>
+					<h3 class="text-sm font-medium text-red-800" :style="{ 'white-space': 'pre' }">{{ fatalError }}</h3>
 				</div>
 			</div>
 		</div>
@@ -36,7 +36,7 @@ import useSpawn from "./UseSpawn";
 import { ref, reactive, watch } from "vue";
 
 const spawnOpts = {
-	superuser: 'require',
+	superuser: 'try',
 	promise: true
 }
 
@@ -77,7 +77,7 @@ export default {
 			};
 			let share = null;
 			try {
-				const netConfOutput = (await useSpawn(['net', 'conf', 'list'], spawnOpts)).stdout;
+				const netConfOutput = (await useSpawn(['net', 'conf', 'list'], { ...spawnOpts, superuser: 'require' })).stdout;
 				let match;
 				netConfOutput.split('\n').forEach((line) => {
 					if ((match = line.match(/\[([^\]]+)]/))) {
@@ -102,7 +102,7 @@ export default {
 				if (share && share !== globalConfig)
 					shares.value.push({ ...share, advancedSettings: [...share.advancedSettings] });
 			} catch (state) {
-				fatalError.value += "Error while getting shares:\n" + state.stderr + '\n';
+				fatalError.value += "Error while getting shares: " + state.stderr + '\n';
 			}
 		};
 
@@ -118,7 +118,7 @@ export default {
 						users.value.push(user);
 				})
 			} catch (state) {
-				fatalError.value += "Error while getting users:\n" + state.stderr + '\n';
+				fatalError.value += "Error while getting users: " + state.stderr + '\n';
 			}
 		}
 
@@ -134,7 +134,33 @@ export default {
 						groups.value.push(group);
 				})
 			} catch (state) {
-				fatalError.value += "Error while getting groups:\n" + state.stderr + '\n';
+				fatalError.value += "Error while getting groups: " + state.stderr + '\n';
+			}
+		}
+
+		const checkConf = async () => {
+			try {
+				const smbConfFile = cockpit.file("/etc/samba/smb.conf", { superuser: 'try' });
+				const smbConf = await smbConfFile.read();
+				if (!/(?<=\[ ?global ?\][^\[\]]*)^\s*include ?= ?registry/mg.test(smbConf)) {
+					if (confirm("`include = registry` is missing from the global section of /etc/samba/smb.conf. Insert it now?")) {
+						if (!/\[ ?global ?\]/.test(smbConf)) {
+							await smbConfFile.modify((content) => {
+								return "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + content;
+							});
+						} else {
+							await smbConfFile.modify((content) => {
+								return content.replace(/(?<=\[ ?global ?\])/mi, "\n\tinclude = registry # inserted by cockpit-file-sharing");
+							});
+						}
+						useSpawn(['smbcontrol','all','reload-config'], { superuser: 'require' });
+					} else
+						fatalError.value += "`include = registry` missing from /etc/samba/smb.conf\n";
+				}
+				smbConfFile.close();
+			} catch (error) {
+				fatalError.value += "Failed to read /etc/smb.conf: " + error?.message ?? error;
+				console.log(error);
 			}
 		}
 
@@ -144,6 +170,7 @@ export default {
 			procs.push(parseNetConf());
 			procs.push(getUsers());
 			procs.push(getGroups());
+			procs.push(checkConf());
 			for (let proc of procs)
 				await proc;
 			shares.value.sort((a, b) => a.name.localeCompare(b.name));
