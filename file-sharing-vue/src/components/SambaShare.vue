@@ -7,7 +7,7 @@
 		>
 			<div class="inline-block w-20 text-left">
 				<a
-					@click="showEditor = !showEditor"
+					@click="showEditor ? editorRef.cancel() : showEditor = true"
 					class="uppercase text-lime-500 hover:text-lime-800 cursor-pointer"
 				>
 					{{ showEditor ? 'Cancel' : 'Edit' }}
@@ -39,6 +39,7 @@
 					@hide="showEditor = false"
 					:users="users"
 					:groups="groups"
+					ref="editorRef"
 				/>
 			</div>
 		</td>
@@ -56,6 +57,7 @@ export default {
 		groups: Array[String],
 	},
 	setup(props, { emit }) {
+		const editorRef = ref();
 		const showEditor = ref(false);
 		const index = ref(props.index);
 		const users = ref(props.users);
@@ -72,6 +74,7 @@ export default {
 			users,
 			groups,
 			updateShare,
+			editorRef,
 		}
 	},
 	components: { SambaShareEditor },
