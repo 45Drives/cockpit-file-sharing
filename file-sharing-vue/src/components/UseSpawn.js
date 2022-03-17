@@ -1,5 +1,27 @@
 import { reactive, watch } from 'vue';
 
+if (typeof cockpit === 'undefined') {
+	window.cockpit = {
+		spawn: () => {
+			return new Promise((resolve, reject) => resolve(""));
+		},
+		file: () => {
+			return {
+				read: () => {
+					return new Promise((resolve, reject) => resolve(""));
+				},
+				replace: () => {
+					return new Promise((resolve, reject) => resolve());
+				},
+				modify: () => {
+					return new Promise((resolve, reject) => resolve());
+				},
+				close: () => {}
+			}
+		}
+	}
+}
+
 /**
  * 
  * @param {string[]} argv
