@@ -112,9 +112,7 @@ export default {
 				const result = (await useSpawn(['realm', 'list'], spawnOpts)).stdout;
 				if (result)
 					return true;
-			} catch (state) {
-				console.log(state);
-			}
+			} catch (state) {} // ignore, not using domain if realm not installed
 			return false;
 		}
 
