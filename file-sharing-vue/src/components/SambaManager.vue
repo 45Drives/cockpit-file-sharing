@@ -48,6 +48,7 @@ export default {
 		const groups = ref([]);
 		const loaded = ref(false);
 		const fatalError = ref("");
+		const domainJoined = ref(false);
 
 		const parseNetConf = async () => {
 			shares.value = [];
@@ -106,6 +107,17 @@ export default {
 			}
 		};
 
+		const checkIsDomain = async () => {
+			try {
+				const result = (await useSpawn(['realm', 'list'], spawnOpts)).stdout;
+				if (result)
+					return true;
+			} catch (state) {
+				console.log(state);
+			}
+			return false;
+		}
+
 		const getUsers = async () => {
 			users.value = [];
 			try {
@@ -115,8 +127,14 @@ export default {
 					const user = fields[0];
 					const uid = fields[2];
 					if (uid >= 1000)
-						users.value.push(user);
+						users.value.push({ user: user, domain: false, pretty: user });
 				})
+				if (domainJoined.value) {
+					const domainUsersDB = (await useSpawn(['wbinfo', '-u'], spawnOpts)).stdout
+					domainUsersDB.split('\n').forEach((record) => {
+						users.value.push({ user: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + "(domain)" });
+					})
+				}
 			} catch (state) {
 				fatalError.value += "Error while getting users: " + state.stderr + '\n';
 			}
@@ -129,10 +147,16 @@ export default {
 				groupDB.split('\n').forEach((record) => {
 					const fields = record.split(':');
 					const group = fields[0];
-					const gid = fields[2]; ``
+					const gid = fields[2];
 					if (gid >= 1000)
-						groups.value.push(group);
+						groups.value.push({ group: group, domain: false, pretty: group });
 				})
+				if (domainJoined.value) {
+					const domainGroupsDB = (await useSpawn(['wbinfo', '-g'], spawnOpts)).stdout
+					domainGroupsDB.split('\n').forEach((record) => {
+						groups.value.push({ group: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + "(domain)" });
+					})
+				}
 			} catch (state) {
 				fatalError.value += "Error while getting groups: " + state.stderr + '\n';
 			}
@@ -153,7 +177,7 @@ export default {
 								return content.replace(/(?<=\[ ?global ?\])/mi, "\n\tinclude = registry # inserted by cockpit-file-sharing");
 							});
 						}
-						useSpawn(['smbcontrol','all','reload-config'], { superuser: 'require' });
+						useSpawn(['smbcontrol', 'all', 'reload-config'], { superuser: 'require' });
 					} else
 						fatalError.value += "`include = registry` missing from /etc/samba/smb.conf\n";
 				}
@@ -166,6 +190,7 @@ export default {
 
 		const refresh = async () => {
 			loaded.value = false;
+			domainJoined.value = await checkIsDomain();
 			const procs = [];
 			procs.push(parseNetConf());
 			procs.push(getUsers());

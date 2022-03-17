@@ -243,8 +243,8 @@ export default {
 			required: false,
 			default: null
 		},
-		users: Array[String],
-		groups: Array[String],
+		users: Array[Object],
+		groups: Array[Object],
 	},
 	setup(props, { emit }) {
 		const tmpShare = reactive({});
@@ -306,9 +306,9 @@ export default {
 				})
 			tmpShare["valid users"].split(/\s*,?\s+/).forEach((entity) => {
 				if (entity.at(0) === '@')
-					shareValidGroups.value.push(entity.substring(1));
+					shareValidGroups.value.push(props.groups.find(group => group.group === entity.substring(1)));
 				else if (entity)
-					shareValidUsers.value.push(entity);
+					shareValidUsers.value.push(props.users.find(user => user.user === entity));
 			});
 
 			shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
@@ -438,7 +438,7 @@ export default {
 		};
 
 		const apply = () => {
-			tmpShare["valid users"] = shareWindowsAcls.value ? "" : [...shareValidGroups.value.sort().map(group => `@${group}`), ...shareValidUsers.value.sort()].join(" ");
+			tmpShare["valid users"] = shareWindowsAcls.value ? "" : [...shareValidGroups.value.map(group => `@${group.group}`).sort(), ...shareValidUsers.value.map(user => user.user).sort()].join(" ");
 			tmpShare.advancedSettings = splitAdvancedSettings(shareAdvancedSettingsStr.value);
 			shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
 			emit("apply-share", {
