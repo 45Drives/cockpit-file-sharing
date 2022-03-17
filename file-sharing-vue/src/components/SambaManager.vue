@@ -6,7 +6,7 @@
 					<XCircleIcon class="h-5 w-5 text-red-400" aria-hidden="true" />
 				</div>
 				<div class="ml-3">
-					<h3 class="text-sm font-medium text-red-800" :style="{ 'white-space': 'pre' }">{{ fatalError }}</h3>
+					<h3 class="text-sm font-medium text-red-800 whitespace-pre">{{ fatalError }}</h3>
 				</div>
 			</div>
 		</div>
@@ -166,7 +166,7 @@ export default {
 
 		const refresh = async () => {
 			loaded.value = false;
-			let procs = [];
+			const procs = [];
 			procs.push(parseNetConf());
 			procs.push(getUsers());
 			procs.push(getGroups());
