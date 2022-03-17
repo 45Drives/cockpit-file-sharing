@@ -2,7 +2,7 @@
 	<div class="space-y-5 px-4 pb-4">
 		<h3 v-if="!share">New Share</h3>
 		<div>
-			<label for="name" class="block text-sm font-medium">Share Name</label>
+			<label class="block text-sm font-medium">Share Name</label>
 			<div class="mt-1">
 				<input
 					type="text"
@@ -16,7 +16,7 @@
 			</div>
 		</div>
 		<div>
-			<label for="description" class="block text-sm font-medium">Share Description</label>
+			<label class="block text-sm font-medium">Share Description</label>
 			<div class="mt-1">
 				<input
 					type="text"
@@ -29,7 +29,7 @@
 			</div>
 		</div>
 		<div>
-			<label for="path" class="block text-sm font-medium">Path</label>
+			<label class="block text-sm font-medium">Path</label>
 			<div class="mt-1">
 				<input
 					type="text"
@@ -123,7 +123,7 @@
 					<SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
-					>Set up Windows Access Control Lists</SwitchDescription>
+					>Administer Share Permissions from Windows</SwitchDescription>
 				</span>
 				<Switch
 					v-model="shareWindowsAcls"
@@ -144,7 +144,7 @@
 					<SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
-					>Shadow Copy settings for ZFS</SwitchDescription>
+					>Expose Per-File Snapshots to Users</SwitchDescription>
 				</span>
 				<Switch
 					v-model="shareShadowCopy"
@@ -165,7 +165,7 @@
 					<SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
-					>Allow MacOS users to use share</SwitchDescription>
+					>Optmize Share for MacOS</SwitchDescription>
 				</span>
 				<Switch
 					v-model="shareMacOsShare"
@@ -186,7 +186,7 @@
 					<SwitchDescription
 						as="span"
 						class="text-sm text-gray-500"
-					>Turn on audit logging</SwitchDescription>
+					>Turn on Audit Logging</SwitchDescription>
 				</span>
 				<Switch
 					v-model="shareAuditLogs"
@@ -247,22 +247,7 @@ export default {
 		groups: Array[String],
 	},
 	setup(props, { emit }) {
-		const tmpShare = reactive(props.share ? {
-			...props.share,
-			"guest ok": strToBool(props.share?.["guest ok"]),
-			"read only": strToBool(props.share?.["read only"]),
-			"browseable": strToBool(props.share?.["browseable"])
-		}
-			: {
-				"name": "",
-				"comment": "",
-				"path": "",
-				"valid users": "",
-				"guest ok": false,
-				"read only": false,
-				"browseable": true,
-				advancedSettings: []
-			});
+		const tmpShare = reactive({});
 		const showAdvanced = ref(false);
 		const shareValidUsers = ref([]);
 		const shareValidGroups = ref([]);
@@ -300,6 +285,8 @@ export default {
 		}
 
 		const tmpShareInit = () => {
+			shareValidUsers.value = [];
+			shareValidGroups.value = [];
 			Object.assign(tmpShare, props.share
 				? {
 					...props.share,

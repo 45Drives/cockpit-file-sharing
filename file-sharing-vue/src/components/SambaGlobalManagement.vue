@@ -56,7 +56,7 @@
 					<SwitchDescription
 							as="span"
 							class="text-sm text-gray-500"
-					>Allow MacOS users to use all shares</SwitchDescription>
+					>Optmize All Shares for MacOS</SwitchDescription>
 				</span>
 				<Switch
 					v-model="globalMacOsShare"
