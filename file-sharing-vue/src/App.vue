@@ -12,7 +12,7 @@ import NfsManager from './components/NfsManager.vue';
 import AfpManager from './components/AfpManager.vue';
 import FfdHeader from './components/FfdHeader.vue';
 
-const tabs = [{ title: 'Samba', component: SambaManager }, { title: 'NFS', component: NfsManager }, { title: 'AFP', component: AfpManager }];
+const tabs = [{ title: 'Samba', component: SambaManager }, { title: 'NFS', component: NfsManager }];
 </script>
 
 <style>
