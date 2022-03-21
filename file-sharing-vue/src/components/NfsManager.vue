@@ -107,6 +107,7 @@ export default {
 			} catch (err) {
 				fatalError.value += "Failed to load share configuration: " + err.message;
 			}
+			shares.value.sort((a,b) => a.path.localeCompare(b.path));
 		};
 
 		const init = async () => {
@@ -122,9 +123,8 @@ export default {
 		const writeExports = async () => {
 			await exportsFile.replace(shares.value);
 			try {
-				await useSpawn(['exportfs', '-ra'], { superuser: 'try', promise: true });
+				await useSpawn(['exportfs', '-ra'], { superuser: 'try' }).promise();
 			} catch (state) {
-				console.log(state);
 				throw new Error(state.stderr);
 			}
 		}
@@ -148,6 +148,7 @@ export default {
 				}
 				await writeExports();
 			}
+			shares.value.sort((a,b) => a.path.localeCompare(b.path));
 		}
 
 		const addShare = async (newShare) => {
@@ -176,7 +177,6 @@ export default {
 			reader.onload = async (event) => {
 				const content = event.target.result;
 				let oldShares = shares.value.map((share) => { return { ...share } });
-				console.log(content);
 				try {
 					shares.value = NfsExportSyntax.parse(content);
 					await writeExports();
@@ -185,44 +185,37 @@ export default {
 					shares.value = oldShares;
 				}
 			}
+			shares.value.sort((a,b) => a.path.localeCompare(b.path));
 			reader.readAsText(file);
 		}
 
 		const exportConfig = () => {
-			// const filename = "cockpit-file-sharing_nfs_exported.exports";
-			// let query = window.btoa(JSON.stringify({
-			// 	payload: 'fsread1',
-			// 	binary: 'raw',
-			// 	path: exportsFile.path,
-			// 	superuser: false,
-			// 	max_read_size: 1024 * 1024,
-			// 	external: {
-			// 		'content-disposition': 'attachment; filename="' + filename + '"',
-			// 		'content-type': 'application/x-xz, application/octet-stream'
-			// 	},
-			// }));
-			// let prefix = (new URL(cockpit.transport.uri('channel/' + cockpit.transport.csrf_token))).pathname;
-			// var a = document.createElement("a");
-			// a.href = prefix + "?" + query;
-			// a.style.display = "none";
-			// a.download = filename;
-			// document.body.appendChild(a);
-			// var event = new MouseEvent('click', {
-			// 	'view': window,
-			// 	'bubbles': false,
-			// 	'cancelable': true
-			// });
-			// a.dispatchEvent(event);
-			// let a = document.createElement("a");
-			// a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(NfsExportSyntax.stringify(shares.value));
-			// a.download = "cockpit-file-sharing_nfs_exported.exports";
-			// document.body.appendChild(a);
-			// var event = new MouseEvent('click', {
-			// 	'view': window,
-			// 	'bubbles': false,
-			// 	'cancelable': true
-			// });
-			// a.dispatchEvent(event);
+			const date = new Date();
+			const filename = `cockpit-file-sharing_nfs_exported_${date.toISOString().replace(/:/g, '-').replace(/T/,'_')}.exports`;
+			let query = window.btoa(JSON.stringify({
+				payload: 'fsread1',
+				binary: 'raw',
+				path: exportsFile.path,
+				superuser: false,
+				max_read_size: 1024 * 1024,
+				external: {
+					'content-disposition': 'attachment; filename="' + filename + '"',
+					'content-type': 'application/x-xz, application/octet-stream'
+				},
+			}));
+			let prefix = (new URL(cockpit.transport.uri('channel/' + cockpit.transport.csrf_token))).pathname;
+			var a = document.createElement("a");
+			a.href = prefix + "?" + query;
+			a.style.display = "none";
+			a.download = filename;
+			document.body.appendChild(a);
+			var event = new MouseEvent('click', {
+				'view': window,
+				'bubbles': false,
+				'cancelable': true
+			});
+			a.dispatchEvent(event);
+			document.body.removeChild(a);
 		}
 
 		return {
