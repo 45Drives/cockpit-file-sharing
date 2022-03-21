@@ -81,7 +81,6 @@ import LoadingSpinner from "./LoadingSpinner.vue";
 
 const spawnOpts = {
 	superuser: 'require',
-	promise: true
 }
 
 export default {
@@ -99,7 +98,7 @@ export default {
 				return;
 			try {
 				// run net conf commands
-				await useSpawn(['net', 'conf', 'delshare', share.name], spawnOpts);
+				await useSpawn(['net', 'conf', 'delshare', share.name], spawnOpts).promise();
 				props.shares = props.shares.filter((a) => a !== share);
 			} catch (state) {
 				alert(state.stderr);
@@ -111,17 +110,17 @@ export default {
 			let add, remove;
 			({ add, remove } = generateConfDiff(share, newShare));
 			for (const args of add) {
-				await useSpawn(['net', 'conf', 'setparm', newShare.name, ...args], spawnOpts);
+				await useSpawn(['net', 'conf', 'setparm', newShare.name, ...args], spawnOpts).promise();
 			}
 			for (const args of remove) {
-				await useSpawn(['net', 'conf', 'delparm', newShare.name, ...args], spawnOpts);
+				await useSpawn(['net', 'conf', 'delparm', newShare.name, ...args], spawnOpts).promise();
 			}
 		}
 
 		const addShare = async (share) => {
 			try {
 				// run net conf commands
-				await useSpawn(['net', 'conf', 'addshare', share.name, share.path], spawnOpts);
+				await useSpawn(['net', 'conf', 'addshare', share.name, share.path], spawnOpts).promise();
 				await applyShareChanges(null, share);
 				props.shares = [...props.shares, share];
 			} catch (state) {

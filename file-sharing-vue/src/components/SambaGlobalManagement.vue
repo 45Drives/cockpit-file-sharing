@@ -111,7 +111,6 @@ import { Switch, SwitchDescription, SwitchGroup, SwitchLabel } from '@headlessui
 
 const spawnOpts = {
 	superuser: 'require',
-	promise: true
 }
 
 export default {
@@ -188,14 +187,12 @@ export default {
 			globalConfigAdvancedSettingsStr.value = joinAdvancedSettings(tmpGlobalConfig.advancedSettings);
 			let add, remove;
 			({ add, remove } = generateConfDiff(props.globalConfig, tmpGlobalConfig));
-			console.log("add", add);
-			console.log("remove", remove);
 			try {
 				for (const args of add) {
-					await useSpawn(['net', 'conf', 'setparm', 'global', ...args], spawnOpts);
+					await useSpawn(['net', 'conf', 'setparm', 'global', ...args], spawnOpts).promise();
 				}
 				for (const args of remove) {
-					await useSpawn(['net', 'conf', 'delparm', 'global', ...args], spawnOpts);
+					await useSpawn(['net', 'conf', 'delparm', 'global', ...args], spawnOpts).promise();
 				}
 				Object.assign(props.globalConfig, tmpGlobalConfig);
 				changesMade.value = false;
