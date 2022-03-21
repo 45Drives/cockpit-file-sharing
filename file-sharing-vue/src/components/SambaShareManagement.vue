@@ -85,6 +85,7 @@ const spawnOpts = {
 
 export default {
 	props: {
+		modalPopup: Object,
 		shares: Array[Object],
 		users: Array[String],
 		groups: Array[String],
@@ -94,14 +95,14 @@ export default {
 		const showAddShare = ref(false);
 
 		const deleteShare = async (share) => {
-			if (!confirm(`Permanently delete ${share.name}?`))
+			if (!await props.modalPopup.confirm(`Permanently delete ${share.name}?`, "This cannot be undone.", { danger: true }))
 				return;
 			try {
 				// run net conf commands
 				await useSpawn(['net', 'conf', 'delshare', share.name], spawnOpts).promise();
 				props.shares = props.shares.filter((a) => a !== share);
 			} catch (state) {
-				alert(state.stderr);
+				await props.modalPopup.alert("Failed to delete share", state.stderr, { danger: true });
 				emit('refresh-shares');
 			}
 		}
@@ -124,7 +125,7 @@ export default {
 				await applyShareChanges(null, share);
 				props.shares = [...props.shares, share];
 			} catch (state) {
-				alert(state.stderr);
+				await props.modalPopup.alert("Failed to add share", state.stderr, { danger: true });
 				emit('refresh-shares');
 			}
 			showAddShare.value = false;
@@ -136,7 +137,7 @@ export default {
 				await applyShareChanges(share, newShare);
 				Object.assign(share, newShare);
 			} catch (state) {
-				alert(state.stderr);
+				await props.modalPopup.alert("Failed to update share", state.stderr, { danger: true });
 				emit('refresh-shares');
 			}
 		}

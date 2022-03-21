@@ -50,7 +50,7 @@
 			</select>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Global MacOS Shares</SwitchLabel>
 					<SwitchDescription
@@ -95,8 +95,8 @@
 		</div>
 	</div>
 	<div class="card-footer flex flex-row justify-end space-x-3">
-		<button class="btn-primary" @click="resetChanges" v-if="changesMade">Cancel</button>
-		<button class="btn-green" @click="apply" :disabled="!changesMade">Apply</button>
+		<button class="btn btn-secondary" @click="resetChanges" v-if="changesMade">Cancel</button>
+		<button class="btn btn-primary" @click="apply" :disabled="!changesMade">Apply</button>
 	</div>
 </template>
 
@@ -115,6 +115,7 @@ const spawnOpts = {
 
 export default {
 	props: {
+		modalPopup: Object,
 		globalConfig: Object,
 		loaded: Boolean,
 	},
@@ -198,7 +199,7 @@ export default {
 				changesMade.value = false;
 			} catch (state) {
 				resetChanges();
-				alert(state.stderr);
+				await props.modalPopup.alert(state.stderr);
 			}
 		}
 

@@ -13,10 +13,11 @@
 	</div>
 	<div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8 py-8">
 		<div class="card">
-			<SambaGlobalManagement :globalConfig="globalConfig" :loaded="loaded" />
+			<SambaGlobalManagement :modalPopup="modalPopup" :globalConfig="globalConfig" :loaded="loaded" />
 		</div>
 		<div class="card">
 			<SambaShareManagement
+				:modalPopup="modalPopup"
 				:shares="shares"
 				@refresh-shares="refresh"
 				:groups="groups"
@@ -31,8 +32,8 @@
 			</div>
 			<div class="card-body flex flex-row space-x-3">
 				<input @change="importConfig" type="file" hidden id="file-upload" />
-				<button @click="uploadConfig" class="btn-primary">Import</button>
-				<button @click="exportConfig" class="btn-primary">Export</button>
+				<button @click="uploadConfig" class="btn btn-primary">Import</button>
+				<button @click="exportConfig" class="btn btn-primary">Export</button>
 			</div>
 		</div>
 	</div>
@@ -45,13 +46,15 @@ import SambaGlobalManagement from "./SambaGlobalManagement.vue";
 import SambaUserManagement from "./SambaUserManagement.vue";
 import useSpawn from "./UseSpawn";
 import { ref, reactive, watch } from "vue";
-import { C } from "../../dist/assets/vendor.ab1acd88";
 
 const spawnOpts = {
 	superuser: 'try',
 }
 
 export default {
+	props: {
+		modalPopup: Object,
+	},
 	setup(props, ctx) {
 		const shares = ref([]);
 		const globalConfig = reactive({ advancedSettings: [] });
@@ -182,7 +185,11 @@ export default {
 				const smbConfFile = cockpit.file("/etc/samba/smb.conf", { superuser: 'try' });
 				const smbConf = await smbConfFile.read();
 				if (!/(?<=\[ ?global ?\][^\[\]]*)^\s*include ?= ?registry/mg.test(smbConf)) {
-					if (confirm("`include = registry` is missing from the global section of /etc/samba/smb.conf. Insert it now?")) {
+					if (await props.modalPopup.confirm(
+						"Samba is Misconfigured",
+						"`include = registry` is missing from the global section of /etc/samba/smb.conf. Insert it now?",
+						{ danger: true }
+					)) {
 						if (!/\[ ?global ?\]/.test(smbConf)) {
 							await smbConfFile.modify((content) => {
 								return "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + (content ?? "");
@@ -218,8 +225,12 @@ export default {
 
 		refresh();
 
-		const uploadConfig = () => {
-			if (!confirm("This will permanently overwrite current configuration. Are you sure?"))
+		const uploadConfig = async () => {
+			if (!await props.modalPopup.confirm(
+				"This will permanently overwrite current configuration. Are you sure?",
+				"",
+				{ danger: true }
+			))
 				return;
 			document.getElementById("file-upload").click();
 		}
@@ -240,7 +251,7 @@ export default {
 					await useSpawn(['net', 'conf', 'import', tmpFile], spawnOpts).promise();
 					await refresh();
 				} catch (state) {
-					alert("Failed to import config: " + state.stderr);
+					await props.modalPopup.alert("Failed to import config", state.stderr, { danger: true });
 				} finally {
 					if (tmpFile)
 						useSpawn(['rm', '-f', tmpFile], spawnOpts);
@@ -252,18 +263,18 @@ export default {
 		const exportConfig = async () => {
 			const backendPath = "/tmp/cockpit-file-sharing_samba_exported.conf";
 			const date = new Date();
-			const filename = `cockpit-file-sharing_samba_exported_${date.toISOString().replace(/:/g, '-').replace(/T/,'_')}.conf`;
+			const filename = `cockpit-file-sharing_samba_exported_${date.toISOString().replace(/:/g, '-').replace(/T/, '_')}.conf`;
 			let config;
 			try {
 				config = (await useSpawn(['net', 'conf', 'list'], spawnOpts).promise()).stdout;
 			} catch (state) {
 				console.log(state);
-				alert("Failed to get configuration: " + state.stderr);
+				await props.modalPopup.alert("Failed to get configuration", state.stderr, { danger: true });
 			}
 			try {
 				await cockpit.file(backendPath).replace(config);
-			} catch(err) {
-				alert("Failed to write configuration to tmp: " + err.message);
+			} catch (err) {
+				await props.modalPopup.alert("Failed to write configuration to tmp", err.message, { danger: true });
 			}
 			let query = window.btoa(JSON.stringify({
 				payload: 'fsread1',

@@ -7,7 +7,7 @@
 		>{{ entry.title }}</div>
 	</div>
 	<div class="bg-neutral-50 dark:bg-neutral-900 overflow-y-scroll grow">
-		<component :is="components[currentTab].component" />
+		<component :modalPopup="modalPopup" :is="components[currentTab].component" />
 	</div>
 </template>
 
@@ -25,6 +25,7 @@ export default {
 	},
 	props: {
 		components: Array[Object],
+		modalPopup: Object,
 		saveState: {
 			type: Boolean,
 			default: false

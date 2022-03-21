@@ -75,8 +75,8 @@
 			</div>
 		</div>
 		<div class="flex flex-row space-x-3">
-			<button class="btn-primary" @click="cancel">Cancel</button>
-			<button class="btn-green" @click="apply">Apply</button>
+			<button class="btn btn-secondary" @click="cancel">Cancel</button>
+			<button class="btn btn-primary" @click="apply">Apply</button>
 		</div>
 	</div>
 </template>

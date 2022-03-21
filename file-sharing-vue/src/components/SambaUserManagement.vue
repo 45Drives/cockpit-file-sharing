@@ -24,10 +24,10 @@
 			</div>
 			<div class="flex flex-row space-x-3">
 				<button
-					class="btn-primary"
+					class="btn btn-primary"
 					@click="showSetPassword = !showSetPassword; sambaPassword1 = sambaPassword2 = ''"
 				>{{ showSetPassword ? 'Cancel' : 'Set Samba Password' }}</button>
-				<button @click="removeSambaPassword" class="btn-danger">Remove Samba Password</button>
+				<button @click="removeSambaPassword" class="btn btn-danger">Remove Samba Password</button>
 			</div>
 		</div>
 		<div v-if="showSetPassword" class="space-y-5 pt-5">
@@ -62,8 +62,8 @@
 				</div>
 			</div>
 			<div class="flex flex-row space-x-3">
-				<button class="btn-primary" @click="showSetPassword = false">Cancel</button>
-				<button class="btn-green" @click="setSambaPassword">Apply</button>
+				<button class="btn btn-primary" @click="showSetPassword = false">Cancel</button>
+				<button class="btn btn-green" @click="setSambaPassword">Apply</button>
 			</div>
 		</div>
 		<div class="mt-8 flex flex-col">

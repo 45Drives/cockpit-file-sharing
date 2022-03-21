@@ -57,7 +57,7 @@
 			</div>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Guest OK</SwitchLabel>
 					<!-- <SwitchDescription
@@ -77,7 +77,7 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Read Only</SwitchLabel>
 					<!-- <SwitchDescription
@@ -97,7 +97,7 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Browseable</SwitchLabel>
 					<!-- <SwitchDescription
@@ -117,7 +117,7 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Windows ACLs</SwitchLabel>
 					<SwitchDescription
@@ -138,7 +138,7 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Shadow Copy</SwitchLabel>
 					<SwitchDescription
@@ -159,7 +159,7 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>MacOS Share</SwitchLabel>
 					<SwitchDescription
@@ -180,7 +180,7 @@
 			</SwitchGroup>
 		</div>
 		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3">
+			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Audit Logs</SwitchLabel>
 					<SwitchDescription
@@ -223,8 +223,8 @@
 			/>
 		</div>
 		<div class="flex flex-row justify-end space-x-3">
-			<button class="btn-primary" @click="cancel">Cancel</button>
-			<button class="btn-green" @click="apply">Confirm</button>
+			<button class="btn btn-secondary" @click="cancel">Cancel</button>
+			<button class="btn btn-primary" @click="apply">Confirm</button>
 		</div>
 	</div>
 </template>

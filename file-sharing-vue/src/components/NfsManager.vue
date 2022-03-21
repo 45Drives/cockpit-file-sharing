@@ -77,8 +77,8 @@
 			</div>
 			<div class="card-body flex flex-row space-x-3">
 				<input @change="importConfig" type="file" hidden id="file-upload" />
-				<button @click="uploadConfig" class="btn-primary">Import</button>
-				<button @click="exportConfig" class="btn-primary">Export</button>
+				<button @click="uploadConfig" class="btn btn-primary">Import</button>
+				<button @click="exportConfig" class="btn btn-primary">Export</button>
 			</div>
 		</div>
 	</div>
@@ -93,6 +93,9 @@ import { ref, reactive } from "vue";
 import { NfsExportSyntax } from "./NfsExportSyntax";
 import useSpawn from "./UseSpawn";
 export default {
+	props: {
+		modalPopup: Object,
+	},
 	setup(props) {
 		const fatalError = ref("");
 		const shares = ref([]);
@@ -140,7 +143,7 @@ export default {
 				}
 				await writeExports();
 			} catch (error) {
-				alert("Failed to update shares: " + error.message);
+				await props.modalPopup.alert("Failed to update shares", error.message, { danger: true });
 				if (share) {
 					Object.assign(share, oldShare);
 				} else {
@@ -156,18 +159,24 @@ export default {
 		}
 
 		const deleteShare = async (share) => {
-			if (!confirm(`Delete share for "${share.path}"?`))
+			if (!await props.modalPopup.confirm(`Permanently delete share for "${share.path}"?`, "This cannot be undone.", { danger: true }))
 				return;
 			try {
 				shares.value = shares.value.filter((testShare) => share !== testShare);
 				await writeExports();
 			} catch (error) {
-				alert("Failed to delete share: " + error.message);
+				await props.modalPopup.alert("Failed to delete share", error.message, { danger: true });
 				loadShares();
 			}
 		}
 
-		const uploadConfig = () => {
+		const uploadConfig = async () => {
+			if (!await props.modalPopup.confirm(
+				"This will permanently overwrite current configuration. Are you sure?",
+				"",
+				{ danger: true }
+			))
+				return;
 			document.getElementById("file-upload").click();
 		}
 
@@ -181,7 +190,7 @@ export default {
 					shares.value = NfsExportSyntax.parse(content);
 					await writeExports();
 				} catch (err) {
-					alert("Failed to import config: " + err.message);
+					await props.modalPopup.alert("Failed to import config", err.message, { danger: true });
 					shares.value = oldShares;
 				}
 			}
