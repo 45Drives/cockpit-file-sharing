@@ -18,6 +18,10 @@ if (import.meta.env.DEV && typeof cockpit === 'undefined') {
 				},
 				close: () => { }
 			}
+		},
+		transport: {
+			uri: (path) => "ws://localhost:9090/cockpit/" + path,
+			csrf_token: "token",
 		}
 	}
 }
