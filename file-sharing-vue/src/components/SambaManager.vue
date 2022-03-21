@@ -24,6 +24,17 @@
 				:loaded="loaded"
 			/>
 		</div>
+		<div class="card">
+			<div class="card-header flex flex-row space-x-3">
+				<h3 class="text-lg leading-6 font-medium">Import/Export Config</h3>
+				<LoadingSpinner v-if="!loaded" class="w-5 h-5" />
+			</div>
+			<div class="card-body flex flex-row space-x-3">
+				<input @change="importConfig" type="file" hidden id="file-upload" />
+				<button @click="uploadConfig" class="btn-primary">Import</button>
+				<button @click="exportConfig" class="btn-primary">Export</button>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -34,10 +45,10 @@ import SambaGlobalManagement from "./SambaGlobalManagement.vue";
 import SambaUserManagement from "./SambaUserManagement.vue";
 import useSpawn from "./UseSpawn";
 import { ref, reactive, watch } from "vue";
+import { C } from "../../dist/assets/vendor.ab1acd88";
 
 const spawnOpts = {
 	superuser: 'try',
-	promise: true
 }
 
 export default {
@@ -78,7 +89,7 @@ export default {
 			};
 			let share = null;
 			try {
-				const netConfOutput = (await useSpawn(['net', 'conf', 'list'], { ...spawnOpts, superuser: 'require' })).stdout;
+				const netConfOutput = (await useSpawn(['net', 'conf', 'list'], { ...spawnOpts, superuser: 'require' }).promise()).stdout;
 				let match;
 				netConfOutput.split('\n').forEach((line) => {
 					if ((match = line.match(/\[([^\]]+)]/))) {
@@ -109,17 +120,17 @@ export default {
 
 		const checkIsDomain = async () => {
 			try {
-				const result = (await useSpawn(['realm', 'list'], spawnOpts)).stdout;
+				const result = (await useSpawn(['realm', 'list'], spawnOpts).promise()).stdout;
 				if (result)
 					return true;
-			} catch (state) {} // ignore, not using domain if realm not installed
+			} catch (state) { } // ignore, not using domain if realm not installed
 			return false;
 		}
 
 		const getUsers = async () => {
 			users.value = [];
 			try {
-				const passwdDB = (await useSpawn(['getent', 'passwd'], spawnOpts)).stdout;
+				const passwdDB = (await useSpawn(['getent', 'passwd'], spawnOpts).promise()).stdout;
 				passwdDB.split('\n').forEach((record) => {
 					const fields = record.split(':');
 					const user = fields[0];
@@ -128,11 +139,14 @@ export default {
 						users.value.push({ user: user, domain: false, pretty: user });
 				})
 				if (domainJoined.value) {
-					const domainUsersDB = (await useSpawn(['wbinfo', '-u'], spawnOpts)).stdout
+					const domainUsersDB = (await useSpawn(['wbinfo', '-u'], spawnOpts).promise()).stdout
 					domainUsersDB.split('\n').forEach((record) => {
-						users.value.push({ user: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + "(domain)" });
+						if (/^\s*$/.test(record))
+							return;
+						users.value.push({ user: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + " (domain)" });
 					})
 				}
+				users.value.sort((a, b) => a.pretty.localeCompare(b.pretty));
 			} catch (state) {
 				fatalError.value += "Error while getting users: " + state.stderr + '\n';
 			}
@@ -141,7 +155,7 @@ export default {
 		const getGroups = async () => {
 			groups.value = [];
 			try {
-				const groupDB = (await useSpawn(['getent', 'group'], spawnOpts)).stdout;
+				const groupDB = (await useSpawn(['getent', 'group'], spawnOpts).promise()).stdout;
 				groupDB.split('\n').forEach((record) => {
 					const fields = record.split(':');
 					const group = fields[0];
@@ -150,11 +164,14 @@ export default {
 						groups.value.push({ group: group, domain: false, pretty: group });
 				})
 				if (domainJoined.value) {
-					const domainGroupsDB = (await useSpawn(['wbinfo', '-g'], spawnOpts)).stdout
+					const domainGroupsDB = (await useSpawn(['wbinfo', '-g'], spawnOpts).promise()).stdout
 					domainGroupsDB.split('\n').forEach((record) => {
-						groups.value.push({ group: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + "(domain)" });
+						if (/^\s*$/.test(record))
+							return;
+						groups.value.push({ group: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + " (domain)" });
 					})
 				}
+				groups.value.sort((a, b) => a.pretty.localeCompare(b.pretty));
 			} catch (state) {
 				fatalError.value += "Error while getting groups: " + state.stderr + '\n';
 			}
@@ -168,21 +185,20 @@ export default {
 					if (confirm("`include = registry` is missing from the global section of /etc/samba/smb.conf. Insert it now?")) {
 						if (!/\[ ?global ?\]/.test(smbConf)) {
 							await smbConfFile.modify((content) => {
-								return "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + content;
+								return "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + (content ?? "");
 							});
 						} else {
 							await smbConfFile.modify((content) => {
-								return content.replace(/(?<=\[ ?global ?\])/mi, "\n\tinclude = registry # inserted by cockpit-file-sharing");
+								return content.replace(/(?<=\[ ?global ?\](?:[^\[]*\n)*)(?=\s*\[|$)/si, "\tinclude = registry # inserted by cockpit-file-sharing\n");
 							});
 						}
-						useSpawn(['smbcontrol', 'all', 'reload-config'], { superuser: 'require' });
+						useSpawn(['smbcontrol', 'all', 'reload-config'], spawnOpts);
 					} else
 						fatalError.value += "`include = registry` missing from /etc/samba/smb.conf\n";
 				}
 				smbConfFile.close();
 			} catch (error) {
 				fatalError.value += "Failed to read /etc/smb.conf: " + error?.message ?? error;
-				console.log(error);
 			}
 		}
 
@@ -202,6 +218,79 @@ export default {
 
 		refresh();
 
+		const uploadConfig = () => {
+			if (!confirm("This will permanently overwrite current configuration. Are you sure?"))
+				return;
+			document.getElementById("file-upload").click();
+		}
+
+		const importConfig = (event) => {
+			const file = event.target.files[0];
+			let reader = new FileReader();
+			reader.onload = async (event) => {
+				const content = event.target.result;
+				let tmpFile;
+				try {
+					tmpFile = (await useSpawn(['mktemp'], spawnOpts).promise()).stdout;
+					// could use cockpit.file here, but easier to use useSpawn with dd to
+					// catch the state object if there are any errors
+					const writerState = useSpawn(['dd', `of=${tmpFile}`], spawnOpts);
+					writerState.proc.input(content);
+					await writerState.promise();
+					await useSpawn(['net', 'conf', 'import', tmpFile], spawnOpts).promise();
+					await refresh();
+				} catch (state) {
+					alert("Failed to import config: " + state.stderr);
+				} finally {
+					if (tmpFile)
+						useSpawn(['rm', '-f', tmpFile], spawnOpts);
+				}
+			}
+			reader.readAsText(file);
+		}
+
+		const exportConfig = async () => {
+			const backendPath = "/tmp/cockpit-file-sharing_samba_exported.conf";
+			const date = new Date();
+			const filename = `cockpit-file-sharing_samba_exported_${date.toISOString().replace(/:/g, '-').replace(/T/,'_')}.conf`;
+			let config;
+			try {
+				config = (await useSpawn(['net', 'conf', 'list'], spawnOpts).promise()).stdout;
+			} catch (state) {
+				console.log(state);
+				alert("Failed to get configuration: " + state.stderr);
+			}
+			try {
+				await cockpit.file(backendPath).replace(config);
+			} catch(err) {
+				alert("Failed to write configuration to tmp: " + err.message);
+			}
+			let query = window.btoa(JSON.stringify({
+				payload: 'fsread1',
+				binary: 'raw',
+				path: backendPath,
+				superuser: false,
+				max_read_size: 1024 * 1024,
+				external: {
+					'content-disposition': 'attachment; filename="' + filename + '"',
+					'content-type': 'application/x-xz, application/octet-stream'
+				},
+			}));
+			let prefix = (new URL(cockpit.transport.uri('channel/' + cockpit.transport.csrf_token))).pathname;
+			var a = document.createElement("a");
+			a.href = prefix + "?" + query;
+			a.style.display = "none";
+			a.download = filename;
+			document.body.appendChild(a);
+			var event = new MouseEvent('click', {
+				'view': window,
+				'bubbles': false,
+				'cancelable': true
+			});
+			a.dispatchEvent(event);
+			document.body.removeChild(a);
+		}
+
 		return {
 			shares,
 			globalConfig,
@@ -213,6 +302,9 @@ export default {
 			getUsers,
 			getGroups,
 			refresh,
+			uploadConfig,
+			importConfig,
+			exportConfig,
 		}
 	},
 	components: { SambaShareManagement, SambaGlobalManagement, SambaUserManagement, XCircleIcon }
