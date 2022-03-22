@@ -27,3 +27,9 @@ install: default
 install-local: default
 	mkdir -p $(HOME)/.local/share/cockpit/file-sharing
 	cp -rpf file-sharing-vue/dist/* $(HOME)/.local/share/cockpit/file-sharing
+
+install-remote: default
+	ssh root@osd1 mkdir -p /root/.local/share/cockpit/file-sharing-test
+	rsync -avh file-sharing-vue/dist/* root@osd1:/root/.local/share/cockpit/file-sharing-test
+	# ssh root@osd1 systemctl stop cockpit.socket
+	# ssh root@osd1 systemctl start cockpit.socket
