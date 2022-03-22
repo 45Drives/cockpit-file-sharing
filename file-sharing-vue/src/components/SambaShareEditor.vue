@@ -12,7 +12,15 @@
 					placeholder="Share Name"
 					v-model="tmpShare.name"
 					:disabled="share"
+					autocomplete="off"
 				/>
+			</div>
+			<div
+				class="mt-2 text-sm text-red-600 flex flex-row justify-start items-center space-x-1"
+				v-if="feedback.name"
+			>
+				<ExclamationCircleIcon class="w-5 h-5 inline" />
+				<span>{{ feedback.name }}</span>
 			</div>
 		</div>
 		<div>
@@ -35,11 +43,67 @@
 					type="text"
 					name="path"
 					id="path"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md disabled:bg-neutral-100 disabled:text-gray-500 disabled:cursor-not-allowed"
 					placeholder="Share Path/Directory"
 					v-model="tmpShare.path"
+					:disabled="share !== null"
 				/>
 			</div>
+			<div
+				class="mt-2 text-sm text-red-600 flex flex-row justify-start items-center space-x-1"
+				v-if="feedback.path"
+			>
+				<ExclamationCircleIcon class="w-5 h-5 inline" />
+				<span>{{ feedback.path }}</span>
+			</div>
+			<div
+				v-if="!pathExists && !feedback.path"
+				class="mt-2 text-sm text-orange-500 flex flex-row justify-start items-center space-x-1"
+			>
+				<ExclamationIcon class="w-5 h-5 inline-block" />
+				<span>Path does not exist.</span>
+				<button class="underline" @click="makeDir">Create now</button>
+			</div>
+		</div>
+		<div v-if="isCeph">
+			<label class="block text-sm font-medium">Ceph Quota</label>
+			<div class="mt-1 relative rounded-md shadow-sm">
+				<input
+					type="number"
+					class="focus:ring-0 focus:border-gray-500 block w-full pr-12 sm:text-sm border-gray-300 rounded-md dark:border-gray-700 dark:bg-neutral-800"
+					placeholder="0.00"
+					v-model="cephOptions.quotaValue"
+				/>
+				<div class="absolute inset-y-0 right-0 flex items-center">
+					<label class="sr-only">Unit</label>
+					<select
+						class="focus:ring-0 focus:border-gray-500 h-full py-0 pl-2 pr-7 border-transparent bg-transparent text-gray-500 sm:text-sm rounded-md"
+						v-model="cephOptions.quotaMultiplier"
+					>
+						<option :value="1024 ** 2">MiB</option>
+						<option :value="1024 ** 3">GiB</option>
+						<option :value="1024 ** 4">TiB</option>
+					</select>
+				</div>
+			</div>
+			<div
+				class="mt-2 text-sm text-red-600 flex flex-row justify-start items-center space-x-1"
+				v-if="feedback.cephQuota"
+			>
+				<ExclamationCircleIcon class="w-5 h-5 inline" />
+				<span>{{ feedback.cephQuota }}</span>
+			</div>
+		</div>
+		<div v-if="isCeph">
+			<label class="block text-sm font-medium">Ceph Layout Pool</label>
+			<select
+				class="mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-neutral-800 focus:border-gray-500 sm:text-sm rounded-md disabled:bg-neutral-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+				v-model="cephOptions.layoutPool"
+				:disabled="share !== null"
+			>
+				<option value>Select a Pool</option>
+				<option v-for="(pool, index) in cephLayoutPools" :value="pool">{{ pool }}</option>
+			</select>
 		</div>
 		<div
 			class="space-y-5"
@@ -141,10 +205,7 @@
 			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Shadow Copy</SwitchLabel>
-					<SwitchDescription
-						as="span"
-						class="text-sm text-gray-500"
-					>Expose Per-File Snapshots to Users</SwitchDescription>
+					<SwitchDescription as="span" class="text-sm text-gray-500">Expose Per-File Snapshots to Users</SwitchDescription>
 				</span>
 				<Switch
 					v-model="shareShadowCopy"
@@ -162,10 +223,7 @@
 			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>MacOS Share</SwitchLabel>
-					<SwitchDescription
-						as="span"
-						class="text-sm text-gray-500"
-					>Optmize Share for MacOS</SwitchDescription>
+					<SwitchDescription as="span" class="text-sm text-gray-500">Optmize Share for MacOS</SwitchDescription>
 				</span>
 				<Switch
 					v-model="shareMacOsShare"
@@ -183,10 +241,7 @@
 			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Audit Logs</SwitchLabel>
-					<SwitchDescription
-						as="span"
-						class="text-sm text-gray-500"
-					>Turn on Audit Logging</SwitchDescription>
+					<SwitchDescription as="span" class="text-sm text-gray-500">Turn on Audit Logging</SwitchDescription>
 				</span>
 				<Switch
 					v-model="shareAuditLogs"
@@ -224,7 +279,7 @@
 		</div>
 		<div class="flex flex-row justify-end space-x-3">
 			<button class="btn btn-secondary" @click="cancel">Cancel</button>
-			<button class="btn btn-primary" @click="apply">Confirm</button>
+			<button class="btn btn-primary" @click="apply" :disabled="!inputsValid">Confirm</button>
 		</div>
 	</div>
 </template>
@@ -234,8 +289,9 @@ import PillList from "./PillList.vue";
 import DropdownSelector from "./DropdownSelector.vue";
 import { splitAdvancedSettings, joinAdvancedSettings, strToBool } from "../functions";
 import { Switch, SwitchDescription, SwitchGroup, SwitchLabel } from '@headlessui/vue'
-import { ChevronDownIcon } from "@heroicons/vue/solid";
+import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
 import { ref, reactive, watch } from "vue";
+import useSpawn from "./UseSpawn";
 export default {
 	props: {
 		share: {
@@ -245,6 +301,10 @@ export default {
 		},
 		users: Array[Object],
 		groups: Array[Object],
+		ctdbHosts: Array[String],
+		cephLayoutPools: Array[String],
+		modalPopup: Object,
+		shares: Array[Object],
 	},
 	setup(props, { emit }) {
 		const tmpShare = reactive({});
@@ -256,6 +316,16 @@ export default {
 		const shareShadowCopy = ref(false);
 		const shareMacOsShare = ref(false);
 		const shareAuditLogs = ref(false);
+		const isCeph = ref(false);
+		const cephOptions = reactive({
+			quotaValue: 0,
+			quotaMultiplier: 0,
+			layoutPool: "",
+		});
+		const inputsValid = ref(true);
+		const pathExists = ref(false);
+
+		const feedback = reactive({});
 
 		const setAdvancedToggleStates = () => {
 			shareWindowsAcls.value =
@@ -284,6 +354,50 @@ export default {
 				&& /vfs objects ?=.*full_audit/.test(shareAdvancedSettingsStr.value);
 		}
 
+		const checkIfExists = async () => {
+			try {
+				await useSpawn(['ls', tmpShare.path], { superuser: 'try' }).promise();
+				pathExists.value = true;
+				return;
+			} catch { }
+			pathExists.value = false;
+		};
+
+		const checkIfCeph = async () => {
+			try {
+				const cephXattr = (await useSpawn(['getfattr', '-n', 'ceph.dir.rctime', tmpShare.path]).promise()).stdout;
+				if (cephXattr !== "") {
+					isCeph.value = true;
+					return;
+				}
+			} catch (state) { }
+			isCeph.value = false;
+		};
+
+		const getCephQuota = async () => {
+			try {
+				const quotaBytes = Number((await useSpawn(['getfattr', '-n', 'ceph.quota.max_bytes', '--only-values', tmpShare.path], { superuser: 'try', err: 'message' }).promise()).stdout);
+				if (quotaBytes !== 0) {
+					const base = 1024;
+					let exp = Math.floor(Math.log(quotaBytes) / Math.log(base));
+					exp = Math.min(Math.max(exp, 2), 4); // limit to MiB - TiB
+					cephOptions.quotaMultiplier = base ** exp;
+					cephOptions.quotaValue = quotaBytes / cephOptions.quotaMultiplier;
+					return;
+				}
+			} catch (err) { console.error(err) }
+			cephOptions.quotaValue = 0;
+			cephOptions.quotaMultiplier = 1024 ** 3; // default to GiB
+		}
+
+		const getCephLayoutPool = async () => {
+			try {
+				cephOptions.layoutPool = (await useSpawn(['getfattr', '-n', 'ceph.dir.layout.pool', '--only-values', tmpShare.path], { superuser: 'try', err: 'message' }).promise()).stdout;
+				return;
+			} catch (err) { console.error(err) }
+			cephOptions.layoutPool = "";
+		};
+
 		const tmpShareInit = () => {
 			shareValidUsers.value = [];
 			shareValidGroups.value = [];
@@ -304,12 +418,12 @@ export default {
 					"browseable": true,
 					advancedSettings: []
 				})
-			tmpShare["valid users"].match(/(?:[^\s"]+|"[^"]*")+/g)?.map(entity => entity.replace(/^"/,'').replace(/"$/,'')).forEach((entity) => {
+			tmpShare["valid users"].match(/(?:[^\s"]+|"[^"]*")+/g)?.map(entity => entity.replace(/^"/, '').replace(/"$/, '')).forEach((entity) => {
 				if (entity.at(0) === '@') {
 					const groupName = entity.substring(1);
-					shareValidGroups.value.push(props.groups.find(group => group.group === groupName) ?? {group: groupName, domain: false, pretty: groupName});
+					shareValidGroups.value.push(props.groups.find(group => group.group === groupName) ?? { group: groupName, domain: false, pretty: groupName });
 				} else if (entity) {
-					shareValidUsers.value.push(props.users.find(user => user.user === entity) ?? {user: entity, domain: false, pretty: entity});
+					shareValidUsers.value.push(props.users.find(user => user.user === entity) ?? { user: entity, domain: false, pretty: entity });
 				}
 			});
 
@@ -317,6 +431,13 @@ export default {
 			showAdvanced.value = Boolean(shareAdvancedSettingsStr.value);
 
 			setAdvancedToggleStates();
+
+			checkIfCeph().then(() => {
+				if (isCeph.value) {
+					getCephQuota();
+					getCephLayoutPool();
+				}
+			})
 		}
 
 		tmpShareInit();
@@ -439,6 +560,82 @@ export default {
 			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
 		};
 
+		const applyCeph = async (force = false) => {
+			try {
+				const quotaBytes = Math.ceil(cephOptions.quotaValue * cephOptions.quotaMultiplier);
+				if (quotaBytes) {
+					// set quota
+					await useSpawn(['setfattr', '-n', 'ceph.quota.max_bytes', '-v', quotaBytes.toString(), tmpShare.path], { superuser: 'try' }).promise();
+				} else {
+					// remove quota
+					try {
+						await useSpawn(['setfattr', '-x', 'ceph.quota.max_bytes', tmpShare.path], { superuser: 'try' }).promise();
+					} catch { /* ignore failure if xattr DNE */ }
+				}
+				getCephQuota();
+			} catch (state) {
+				console.error(state);
+			}
+
+			if (force || props.share === null) { // only run if creating new share
+				try {
+					if (cephOptions.layoutPool) {
+						await useSpawn(['setfattr', '-n', 'ceph.dir.layout.pool', '-v', cephOptions.layoutPool, tmpShare.path], { superuser: 'try' }).promise();
+					}
+					getCephLayoutPool();
+				} catch (state) {
+					console.error(state);
+				}
+				try {
+					const systemdMountFile = `/etc/systemd/system/${tmpShare.path.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
+					const df = (await useSpawn(['df', '--output=source,target', tmpShare.path], { superuser: 'try' }).promise()).stdout.split('\n')[1];
+					const rootFsSrc = ':' + df.split(' ')[0].split(/:(?=[^:]+$)/)[1];
+					const rootFsTgt = df.split(/\s+/)[1]; // split at first space
+					const fsLeaf = tmpShare.path.slice(rootFsTgt.length);
+					const systemdMountContents =
+						`[Unit]
+DefaultDependencies=no
+After=remote-fs-pre.target
+After=network.target
+Wants=network.target
+After=network-online.target
+Wants=network-online.target
+Conflicts=umount.target
+Before=umount.target
+Before=ctdb.service
+
+[Mount]
+What=${rootFsSrc + fsLeaf}
+Where=${tmpShare.path}
+LazyUnmount=true
+Type=ceph
+Options=name=samba,secretfile=/etc/ceph/samba.secret,_netdev
+
+[Install]
+WantedBy=remote-fs.target
+`
+					for (const host of props.ctdbHosts) {
+						await cockpit.file(systemdMountFile, { superuser: 'try', host }).replace(systemdMountContents);
+						await useSpawn(['systemctl', 'enable', '--now', systemdMountFile], { superuser: 'try', host }).promise();
+					}
+				} catch (state) {
+					console.error(state);
+				}
+			}
+		}
+
+		const removeCephMount = async () => {
+			try {
+				const systemdMountUnit = `${tmpShare.path.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
+				for (const host of props.ctdbHosts) {
+					await useSpawn(['systemctl', 'disable', '--now', systemdMountUnit], { superuser: 'try', host }).promise();
+					await cockpit.file(systemdMountUnit, { superuser: 'try', host }).replace(null);
+				}
+			} catch (state) {
+				console.error(state);
+			}
+		}
+
 		const apply = () => {
 			tmpShare["valid users"] = shareWindowsAcls.value ? "" : [...shareValidGroups.value.map(group => `"@${group.group}"`).sort(), ...shareValidUsers.value.map(user => `"${user.user}"`).sort()].join(" ");
 			tmpShare.advancedSettings = splitAdvancedSettings(shareAdvancedSettingsStr.value);
@@ -449,6 +646,8 @@ export default {
 				"read only": tmpShare["read only"] ? "yes" : "no",
 				"browseable": tmpShare["browseable"] ? "yes" : "no",
 			});
+			if (isCeph.value)
+				applyCeph();
 		};
 
 		const cancel = () => {
@@ -472,7 +671,72 @@ export default {
 			shareValidGroups.value = shareValidGroups.value.filter((a) => a !== group);
 		};
 
-		watch(() => props.share, tmpShareInit, { lazy: false });
+		const makeDir = async () => {
+			try {
+				await useSpawn(['mkdir', '-p', tmpShare.path], { superuser: 'try' }).promise();
+				await checkIfExists();
+				await checkIfCeph();
+				if (isCeph.value)
+					await getCephQuota();
+			} catch (status) {
+				await props.modalPopup.alert("Failed to make directory", status.stderr, { danger: true });
+			}
+		}
+
+		const validateInputs = () => {
+			let result = true;
+
+			if (!tmpShare.name) {
+				feedback.name = "Share name is required.";
+				result = false;
+			} else if (props.share === null && props.shares.find(share => share.name.toUpperCase() === tmpShare.name.toUpperCase())) {
+				feedback.name = "Share exists.";
+				result = false;
+			} else {
+				feedback.name = "";
+			}
+
+			if (!tmpShare.path) {
+				feedback.path = "Share path is required.";
+				result = false;
+			} else if (!/^\//.test(tmpShare.path)) {
+				feedback.path = "Share path must be absolute.";
+				result = false;
+			} else {
+				feedback.path = "";
+			}
+
+			if (isCeph.value) {
+				if (!/^\d+(?:\.\d*)?$/.test(cephOptions.quotaValue)) {
+					feedback.cephQuota = "Invalid number format.";
+					result = false;
+				} else {
+					feedback.cephQuota = "";
+				}
+			}
+
+			inputsValid.value = result;
+		}
+
+		watch(() => props.share, () => {
+			tmpShareInit();
+		}, { lazy: false });
+
+		watch(() => ({ ...tmpShare }), async (current, old) => {
+			validateInputs();
+			if (old === undefined || current.path !== old.path) {
+				await checkIfExists();
+				await checkIfCeph();
+				if (isCeph.value) {
+					await getCephQuota();
+					await getCephLayoutPool();
+				}
+			}
+		}, { deep: true, immediate: true });
+
+		watch(() => ({ ...cephOptions }), async (current, old) => {
+			validateInputs();
+		});
 
 		return {
 			tmpShare,
@@ -495,6 +759,15 @@ export default {
 			removeValidUser,
 			addValidGroup,
 			removeValidGroup,
+			makeDir,
+			pathExists,
+			isCeph,
+			checkIfCeph,
+			cephOptions,
+			inputsValid,
+			feedback,
+			applyCeph,
+			removeCephMount,
 		};
 	},
 	components: {
@@ -505,43 +778,20 @@ export default {
 		SwitchGroup,
 		SwitchLabel,
 		ChevronDownIcon,
+		ExclamationCircleIcon,
+		ExclamationIcon,
 	}
 }
 </script>
 
 <style scoped>
-/* .editor {
-	border: 1px solid lightgrey;
-	border-radius
-/* .editor {
-	border: 1px solid lightgrey;
-	border-radius: 5px;
-	padding: 5px;
-	align-self: flex-start;
-	background-color: white;
-	margin: 5px;
-}
-.col {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
 }
 
-.rotated {
-	transform: rotate(180deg);
-	display: inline-block;
+input[type="number"] {
+	-moz-appearance: textfield;
 }
-
-label {
-	font-weight: bold;
-}
-
-.valid-entities {
-	display: flex;
-	flex-flow: row wrap;
-}
-
-.valid-entity {
-	font-weight: normal;
-} */
 </style>

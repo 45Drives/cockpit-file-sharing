@@ -15,6 +15,10 @@
 				@hide="showAddShare = false"
 				:users="users"
 				:groups="groups"
+				:ctdbHosts="ctdbHosts"
+				:cephLayoutPools="cephLayoutPools"
+				:modalPopup="modalPopup"
+				:shares="shares"
 			/>
 		</div>
 		<div class="flex flex-col">
@@ -54,6 +58,10 @@
 									@update-share="updateShare"
 									:users="users"
 									:groups="groups"
+									:ctdbHosts="ctdbHosts"
+									:cephLayoutPools="cephLayoutPools"
+									:modalPopup="modalPopup"
+									:shares="shares"
 								/>
 								<tr v-if="shares.length === 0">
 									<td
@@ -90,13 +98,13 @@ export default {
 		users: Array[String],
 		groups: Array[String],
 		loaded: Boolean,
+		ctdbHosts: Array[String],
+		cephLayoutPools: Array[String],
 	},
 	setup(props, { emit }) {
 		const showAddShare = ref(false);
 
 		const deleteShare = async (share) => {
-			if (!await props.modalPopup.confirm(`Permanently delete ${share.name}?`, "This cannot be undone.", { danger: true }))
-				return;
 			try {
 				// run net conf commands
 				await useSpawn(['net', 'conf', 'delshare', share.name], spawnOpts).promise();

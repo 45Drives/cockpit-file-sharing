@@ -47,34 +47,36 @@ if (import.meta.env.DEV && typeof cockpit === 'undefined') {
  * @param {'out'|'err'} stderr - where to pipe stderr of proc
  * @returns {SpawnState} state - the process state object
  */
-export default function useSpawn(argv = [], opts = {}, stderr = 'out') {
+export default function useSpawn(argv = [], opts = {}, stderr = 'message') {
 	const state = reactive({
 		loading: true,
 		status: 0,
 		stdout: '',
 		stderr: '',
+		argv: [],
 		proc: null,
 		promise: () => {
 			return new Promise((resolve, reject) => {
 				watch(state, () => {
 					if (!state.loading) {
-						if (state.status !== 0)
-							reject({ ...state });
-						else
+						if (state.status === 0)
 							resolve({ ...state });
+						else
+							reject({ ...state });
 					}
-				});
+				}, { lazy: false });
 			})
 		}
 	});
 
 	if (!opts.superuser) opts.superuser = 'require';
-	opts.err = stderr === 'out' ? 'out' : 'message';
+	if (!opts.err) opts.err = stderr;
 
 	state.loading = true;
 	state.status = 0;
 	state.stdout = '';
 	state.stderr = '';
+	state.argv = [...argv];
 
 	state.proc = cockpit.spawn(argv, opts);
 	state.proc
@@ -83,7 +85,7 @@ export default function useSpawn(argv = [], opts = {}, stderr = 'out') {
 			state.stderr = _stderr;
 		})
 		.catch((ex, _stderr) => {
-			state.stderr = _stderr ?? ex.message;
+			state.stderr = ex.message ?? _stderr;
 			state.status = ex.exit_status ?? -1;
 		})
 		.finally(() => {

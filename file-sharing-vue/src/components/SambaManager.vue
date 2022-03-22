@@ -23,6 +23,8 @@
 				:groups="groups"
 				:users="users"
 				:loaded="loaded"
+				:cephLayoutPools="cephLayoutPools"
+				:ctdbHosts="ctdbHosts"
 			/>
 		</div>
 		<div class="card">
@@ -63,6 +65,8 @@ export default {
 		const loaded = ref(false);
 		const fatalError = ref("");
 		const domainJoined = ref(false);
+		const ctdbHosts = ref([]);
+		const cephLayoutPools = ref([]);
 
 		const parseNetConf = async () => {
 			shares.value = [];
@@ -209,6 +213,20 @@ export default {
 			}
 		}
 
+		const getCtdbHosts = async () => {
+			try {
+				const nodes = await cockpit.file("/etc/ctdb/nodes", { superuser: "try" }).read();
+				ctdbHosts.value = nodes.split('\n').filter(line => line !== "");
+			} catch { /* not using ctdb */ }
+		}
+
+		const getCephLayoutPools = async () => {
+			try {
+				const cephFsStatus = JSON.parse((await useSpawn(['ceph', 'fs', 'status', '--format=json'], spawnOpts).promise()).stdout);
+				cephLayoutPools.value = cephFsStatus.pools.filter(pool => pool.type === 'data').map(pool => pool.name);
+			} catch(state) { /* not ceph */ }
+		}
+
 		const refresh = async () => {
 			loaded.value = false;
 			domainJoined.value = await checkIsDomain();
@@ -217,6 +235,8 @@ export default {
 			procs.push(getUsers());
 			procs.push(getGroups());
 			procs.push(checkConf());
+			procs.push(getCtdbHosts());
+			procs.push(getCephLayoutPools());
 			for (let proc of procs)
 				await proc;
 			shares.value.sort((a, b) => a.name.localeCompare(b.name));
@@ -268,7 +288,7 @@ export default {
 			try {
 				config = (await useSpawn(['net', 'conf', 'list'], spawnOpts).promise()).stdout;
 			} catch (state) {
-				console.log(state);
+				console.error(state);
 				await props.modalPopup.alert("Failed to get configuration", state.stderr, { danger: true });
 			}
 			try {
@@ -309,6 +329,8 @@ export default {
 			groups,
 			loaded,
 			fatalError,
+			ctdbHosts,
+			cephLayoutPools,
 			parseNetConf,
 			getUsers,
 			getGroups,

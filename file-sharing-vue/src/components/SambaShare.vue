@@ -19,7 +19,7 @@
 			class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
 		>
 			<a
-				@click="$emit('delete-share', share)"
+				@click="deleteShare"
 				class="uppercase text-red-600 hover:text-red-900 cursor-pointer"
 			>
 				Delete
@@ -40,6 +40,10 @@
 					:users="users"
 					:groups="groups"
 					ref="editorRef"
+					:ctdbHosts="ctdbHosts"
+					:cephLayoutPools="cephLayoutPools"
+					:modalPopup="modalPopup"
+					:shares="shares"
 				/>
 			</div>
 		</td>
@@ -55,6 +59,10 @@ export default {
 		index: Number,
 		users: Array[String],
 		groups: Array[String],
+		ctdbHosts: Array[String],
+		cephLayoutPools: Array[String],
+		modalPopup: Object,
+		shares: Array[Object],
 	},
 	setup(props, { emit }) {
 		const editorRef = ref();
@@ -68,12 +76,21 @@ export default {
 			showEditor.value = false;
 		}
 
+		const deleteShare = async () => {
+			if (!await props.modalPopup.confirm(`Permanently delete ${props.share.name}?`, "This cannot be undone.", { danger: true }))
+				return;
+			emit('delete-share', props.share);
+			if (editorRef.value.isCeph)
+				editorRef.value.removeCephMount();
+		}
+
 		return {
 			showEditor,
 			index,
 			users,
 			groups,
 			updateShare,
+			deleteShare,
 			editorRef,
 		}
 	},
