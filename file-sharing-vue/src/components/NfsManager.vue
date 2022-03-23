@@ -22,7 +22,12 @@
 					class="overflow-hidden px-5"
 					:style="{ 'max-height': showAddShare ? '1500px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
 				>
-					<NfsShareEditor @update-share="addShare" @hide="showAddShare = false" />
+					<NfsShareEditor
+						@update-share="addShare"
+						@hide="showAddShare = false"
+						:users="users"
+						:groups="groups"
+					/>
 				</div>
 				<div class="flex flex-col">
 					<div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
@@ -55,6 +60,8 @@
 											:index="index"
 											@delete-share="deleteShare"
 											@update-share="updateShare"
+											:users="users"
+											:groups="groups"
 										/>
 										<tr v-if="shares.length === 0">
 											<td
@@ -92,6 +99,7 @@ import LoadingSpinner from "./LoadingSpinner.vue";
 import { ref, reactive } from "vue";
 import { NfsExportSyntax } from "./NfsExportSyntax";
 import useSpawn from "./UseSpawn";
+import { getUsers, getGroups } from "../functions";
 export default {
 	props: {
 		modalPopup: Object,
@@ -102,6 +110,8 @@ export default {
 		const loaded = ref(false);
 		const showAddShare = ref(false);
 		const exportsFile = reactive(cockpit.file("/etc/exports.d/cockpit-file-sharing.exports", { superuser: 'try', syntax: NfsExportSyntax }));
+		const users = ref([]);
+		const groups = ref([]);
 
 		const loadShares = async () => {
 			shares.value = [];
@@ -110,12 +120,32 @@ export default {
 			} catch (err) {
 				fatalError.value += "Failed to load share configuration: " + err.message;
 			}
-			shares.value.sort((a,b) => a.path.localeCompare(b.path));
+			shares.value.sort((a, b) => a.path.localeCompare(b.path));
 		};
+
+		const getUserList = async () => {
+			users.value = [];
+			try {
+				users.value = await getUsers(false);
+			} catch (error) {
+				fatalError.value += error.message + '\n';
+			}
+		}
+
+		const getGroupList = async () => {
+			groups.value = [];
+			try {
+				groups.value = await getGroups(false);
+			} catch (error) {
+				fatalError.value += error.message + '\n';
+			}
+		}
 
 		const init = async () => {
 			const procs = [];
 			procs.push(loadShares());
+			procs.push(getUserList());
+			procs.push(getGroupList());
 			for (let proc of procs)
 				await proc;
 			loaded.value = true;
@@ -143,7 +173,7 @@ export default {
 				}
 				await writeExports();
 			} catch (error) {
-				await props.modalPopup.alert("Failed to update shares", error.message, { danger: true });
+				await props.modalPopup.alert("Failed to update shares", error.message, { icon: 'danger' });
 				if (share) {
 					Object.assign(share, oldShare);
 				} else {
@@ -151,7 +181,7 @@ export default {
 				}
 				await writeExports();
 			}
-			shares.value.sort((a,b) => a.path.localeCompare(b.path));
+			shares.value.sort((a, b) => a.path.localeCompare(b.path));
 		}
 
 		const addShare = async (newShare) => {
@@ -159,13 +189,13 @@ export default {
 		}
 
 		const deleteShare = async (share) => {
-			if (!await props.modalPopup.confirm(`Permanently delete share for "${share.path}"?`, "This cannot be undone.", { danger: true }))
+			if (!await props.modalPopup.confirm(`Permanently delete share for "${share.path}"?`, "This cannot be undone.", { icon: 'danger' }))
 				return;
 			try {
 				shares.value = shares.value.filter((testShare) => share !== testShare);
 				await writeExports();
 			} catch (error) {
-				await props.modalPopup.alert("Failed to delete share", error.message, { danger: true });
+				await props.modalPopup.alert("Failed to delete share", error.message, { icon: 'danger' });
 				loadShares();
 			}
 		}
@@ -174,7 +204,7 @@ export default {
 			if (!await props.modalPopup.confirm(
 				"This will permanently overwrite current configuration. Are you sure?",
 				"",
-				{ danger: true }
+				{ icon: 'danger' }
 			))
 				return;
 			document.getElementById("file-upload").click();
@@ -190,17 +220,17 @@ export default {
 					shares.value = NfsExportSyntax.parse(content);
 					await writeExports();
 				} catch (err) {
-					await props.modalPopup.alert("Failed to import config", err.message, { danger: true });
+					await props.modalPopup.alert("Failed to import config", err.message, { icon: 'danger' });
 					shares.value = oldShares;
 				}
 			}
-			shares.value.sort((a,b) => a.path.localeCompare(b.path));
+			shares.value.sort((a, b) => a.path.localeCompare(b.path));
 			reader.readAsText(file);
 		}
 
 		const exportConfig = () => {
 			const date = new Date();
-			const filename = `cockpit-file-sharing_nfs_exported_${date.toISOString().replace(/:/g, '-').replace(/T/,'_')}.exports`;
+			const filename = `cockpit-file-sharing_nfs_exported_${date.toISOString().replace(/:/g, '-').replace(/T/, '_')}.exports`;
 			let query = window.btoa(JSON.stringify({
 				payload: 'fsread1',
 				binary: 'raw',
@@ -232,6 +262,8 @@ export default {
 			shares,
 			loaded,
 			showAddShare,
+			users,
+			groups,
 			loadShares,
 			updateShare,
 			addShare,

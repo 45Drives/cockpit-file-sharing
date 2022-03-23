@@ -48,6 +48,7 @@ import SambaGlobalManagement from "./SambaGlobalManagement.vue";
 import SambaUserManagement from "./SambaUserManagement.vue";
 import useSpawn from "./UseSpawn";
 import { ref, reactive, watch } from "vue";
+import { getUsers, getGroups } from "../functions";
 
 const spawnOpts = {
 	superuser: 'try',
@@ -134,53 +135,21 @@ export default {
 			return false;
 		}
 
-		const getUsers = async () => {
+		const getUserList = async () => {
 			users.value = [];
 			try {
-				const passwdDB = (await useSpawn(['getent', 'passwd'], spawnOpts).promise()).stdout;
-				passwdDB.split('\n').forEach((record) => {
-					const fields = record.split(':');
-					const user = fields[0];
-					const uid = fields[2];
-					if (uid >= 1000)
-						users.value.push({ user: user, domain: false, pretty: user });
-				})
-				if (domainJoined.value) {
-					const domainUsersDB = (await useSpawn(['wbinfo', '-u'], spawnOpts).promise()).stdout
-					domainUsersDB.split('\n').forEach((record) => {
-						if (/^\s*$/.test(record))
-							return;
-						users.value.push({ user: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + " (domain)" });
-					})
-				}
-				users.value.sort((a, b) => a.pretty.localeCompare(b.pretty));
-			} catch (state) {
-				fatalError.value += "Error while getting users: " + state.stderr + '\n';
+				users.value = await getUsers(domainJoined.value);
+			} catch (error) {
+				fatalError.value += error.message + '\n';
 			}
 		}
 
-		const getGroups = async () => {
+		const getGroupList = async () => {
 			groups.value = [];
 			try {
-				const groupDB = (await useSpawn(['getent', 'group'], spawnOpts).promise()).stdout;
-				groupDB.split('\n').forEach((record) => {
-					const fields = record.split(':');
-					const group = fields[0];
-					const gid = fields[2];
-					if (gid >= 1000)
-						groups.value.push({ group: group, domain: false, pretty: group });
-				})
-				if (domainJoined.value) {
-					const domainGroupsDB = (await useSpawn(['wbinfo', '-g'], spawnOpts).promise()).stdout
-					domainGroupsDB.split('\n').forEach((record) => {
-						if (/^\s*$/.test(record))
-							return;
-						groups.value.push({ group: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + " (domain)" });
-					})
-				}
-				groups.value.sort((a, b) => a.pretty.localeCompare(b.pretty));
-			} catch (state) {
-				fatalError.value += "Error while getting groups: " + state.stderr + '\n';
+				groups.value = await getGroups(domainJoined.value);
+			} catch (error) {
+				fatalError.value += error.message + '\n';
 			}
 		}
 
@@ -192,7 +161,7 @@ export default {
 					if (await props.modalPopup.confirm(
 						"Samba is Misconfigured",
 						"`include = registry` is missing from the global section of /etc/samba/smb.conf. Insert it now?",
-						{ danger: true }
+						{ icon: 'danger' }
 					)) {
 						if (!/\[ ?global ?\]/.test(smbConf)) {
 							await smbConfFile.modify((content) => {
@@ -232,8 +201,8 @@ export default {
 			domainJoined.value = await checkIsDomain();
 			const procs = [];
 			procs.push(parseNetConf());
-			procs.push(getUsers());
-			procs.push(getGroups());
+			procs.push(getUserList());
+			procs.push(getGroupList());
 			procs.push(checkConf());
 			procs.push(getCtdbHosts());
 			procs.push(getCephLayoutPools());
@@ -249,7 +218,7 @@ export default {
 			if (!await props.modalPopup.confirm(
 				"This will permanently overwrite current configuration. Are you sure?",
 				"",
-				{ danger: true }
+				{ icon: 'danger' }
 			))
 				return;
 			document.getElementById("file-upload").click();
@@ -271,7 +240,7 @@ export default {
 					await useSpawn(['net', 'conf', 'import', tmpFile], spawnOpts).promise();
 					await refresh();
 				} catch (state) {
-					await props.modalPopup.alert("Failed to import config", state.stderr, { danger: true });
+					await props.modalPopup.alert("Failed to import config", state.stderr, { icon: 'danger' });
 				} finally {
 					if (tmpFile)
 						useSpawn(['rm', '-f', tmpFile], spawnOpts);
@@ -289,12 +258,12 @@ export default {
 				config = (await useSpawn(['net', 'conf', 'list'], spawnOpts).promise()).stdout;
 			} catch (state) {
 				console.error(state);
-				await props.modalPopup.alert("Failed to get configuration", state.stderr, { danger: true });
+				await props.modalPopup.alert("Failed to get configuration", state.stderr, { icon: 'danger' });
 			}
 			try {
 				await cockpit.file(backendPath).replace(config);
 			} catch (err) {
-				await props.modalPopup.alert("Failed to write configuration to tmp", err.message, { danger: true });
+				await props.modalPopup.alert("Failed to write configuration to tmp", err.message, { icon: 'danger' });
 			}
 			let query = window.btoa(JSON.stringify({
 				payload: 'fsread1',
@@ -332,8 +301,8 @@ export default {
 			ctdbHosts,
 			cephLayoutPools,
 			parseNetConf,
-			getUsers,
-			getGroups,
+			getUserList,
+			getGroupList,
 			refresh,
 			uploadConfig,
 			importConfig,
