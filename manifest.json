@@ -5,7 +5,7 @@
     "prerelease": false,
     "version": "3.0.0",
     "buildVersion": "1",
-    "author": "Brett Kelly <bkelly@45drives.com>",
+    "author": "Josh Boudreau <jboudreau@45drives.com>",
     "url": "https://github.com/45Drives/cockpit-file-sharing",
     "category": "utils",
     "priority": "optional",
@@ -24,31 +24,26 @@
     "dependencies": {
         "deb": [
             "cockpit",
-            "python3",
             "samba",
-            "nfs-kernel-server"
+            "nfs-kernel-server",
+			"attr"
         ],
         "el": [
             "cockpit",
-            "python3",
             "samba",
-            "nfs-utils"
+            "nfs-utils",
+			"attr"
         ]
     },
     "releases": [
         {
-            "image": "ubuntu-focal-builder",
+            "image": "node-ubuntu-focal-builder",
             "codeName": "focal",
             "type": "deb"
         },
         {
-            "image": "rocky-el8-builder",
+            "image": "node-rocky-el8-builder",
             "codeName": "el8",
-            "type": "el"
-        },
-        {
-            "image": "centos-el7-builder",
-            "codeName": "el7",
             "type": "el"
         }
     ],
