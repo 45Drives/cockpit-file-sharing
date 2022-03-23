@@ -66,6 +66,34 @@
 			</div>
 		</div>
 		<div v-if="isCeph">
+			<label class="block text-sm font-medium">Ceph Share Mount Options</label>
+			<div class="mt-1">
+				<input
+					type="text"
+					name="path"
+					id="path"
+					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md disabled:bg-neutral-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+					placeholder="Share Path/Directory"
+					v-model="cephOptions.mountOptions"
+					:disabled="share !== null"
+				/>
+			</div>
+			<div
+				class="mt-2 text-sm text-red-600 flex flex-row justify-start items-center space-x-1"
+				v-if="feedback.cephMountOptions"
+			>
+				<ExclamationCircleIcon class="w-5 h-5 inline" />
+				<span>{{ feedback.cephMountOptions }}</span>
+			</div>
+			<div class="mt-2 text-sm text-gray-500 flex flex-row justify-start items-center space-x-1">
+				<InformationCircleIcon class="w-5 h-5 inline-block shrink-0" />
+				<span>
+					When creating a Ceph share, a new filesystem mount point is created on top of the share directory.
+					This is needed for Windows to properly report quotas through Samba.
+				</span>
+			</div>
+		</div>
+		<div v-if="isCeph">
 			<label class="block text-sm font-medium">Ceph Quota</label>
 			<div class="mt-1 relative rounded-md shadow-sm">
 				<input
@@ -289,7 +317,7 @@ import PillList from "./PillList.vue";
 import DropdownSelector from "./DropdownSelector.vue";
 import { splitAdvancedSettings, joinAdvancedSettings, strToBool } from "../functions";
 import { Switch, SwitchDescription, SwitchGroup, SwitchLabel } from '@headlessui/vue'
-import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
+import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon, InformationCircleIcon } from "@heroicons/vue/solid";
 import { ref, reactive, watch } from "vue";
 import useSpawn from "./UseSpawn";
 export default {
@@ -321,6 +349,7 @@ export default {
 			quotaValue: 0,
 			quotaMultiplier: 0,
 			layoutPool: "",
+			mountOptions: "name=samba,secretfile=/etc/ceph/samba.secret,_netdev",
 		});
 		const inputsValid = ref(true);
 		const pathExists = ref(false);
@@ -376,7 +405,7 @@ export default {
 
 		const getCephQuota = async () => {
 			try {
-				const quotaBytes = Number((await useSpawn(['getfattr', '-n', 'ceph.quota.max_bytes', '--only-values', tmpShare.path], { superuser: 'try', err: 'message' }).promise()).stdout);
+				const quotaBytes = Number((await useSpawn(['getfattr', '-n', 'ceph.quota.max_bytes', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try', err: 'message' }).promise()).stdout);
 				if (quotaBytes !== 0) {
 					const base = 1024;
 					let exp = Math.floor(Math.log(quotaBytes) / Math.log(base));
@@ -392,7 +421,7 @@ export default {
 
 		const getCephLayoutPool = async () => {
 			try {
-				cephOptions.layoutPool = (await useSpawn(['getfattr', '-n', 'ceph.dir.layout.pool', '--only-values', tmpShare.path], { superuser: 'try', err: 'message' }).promise()).stdout;
+				cephOptions.layoutPool = (await useSpawn(['getfattr', '-n', 'ceph.dir.layout.pool', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try', err: 'message' }).promise()).stdout;
 				return;
 			} catch (err) { console.error(err) }
 			cephOptions.layoutPool = "";
@@ -603,20 +632,26 @@ Wants=network-online.target
 Conflicts=umount.target
 Before=umount.target
 Before=ctdb.service
+Description=share mount created by cockpit-file-sharing
 
 [Mount]
 What=${rootFsSrc + fsLeaf}
 Where=${tmpShare.path}
 LazyUnmount=true
 Type=ceph
-Options=name=samba,secretfile=/etc/ceph/samba.secret,_netdev
+Options=${cephOptions.mountOptions}
 
 [Install]
 WantedBy=remote-fs.target
 `
-					for (const host of props.ctdbHosts) {
-						await cockpit.file(systemdMountFile, { superuser: 'try', host }).replace(systemdMountContents);
-						await useSpawn(['systemctl', 'enable', '--now', systemdMountFile], { superuser: 'try', host }).promise();
+					if (props.ctdbHosts?.length) {
+						for (const host of props.ctdbHosts) {
+							await cockpit.file(systemdMountFile, { superuser: 'try', host }).replace(systemdMountContents);
+							await useSpawn(['systemctl', 'enable', '--now', systemdMountFile], { superuser: 'try', host }).promise();
+						}
+					} else {
+						await cockpit.file(systemdMountFile, { superuser: 'try' }).replace(systemdMountContents);
+						await useSpawn(['systemctl', 'enable', '--now', systemdMountFile], { superuser: 'try' }).promise();
 					}
 				} catch (state) {
 					console.error(state);
@@ -780,6 +815,7 @@ WantedBy=remote-fs.target
 		ChevronDownIcon,
 		ExclamationCircleIcon,
 		ExclamationIcon,
+		InformationCircleIcon,
 	}
 }
 </script>
