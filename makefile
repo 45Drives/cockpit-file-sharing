@@ -21,7 +21,7 @@ all: default
 # system install, requires `systemctl restart cockpit.socket`
 install: default
 	mkdir -p $(DESTDIR)/usr/share/cockpit/file-sharing
-	cp -rpf file-sharing-vue/dist/* $(DESTDIR)/usr/share/cockpit
+	cp -rpf file-sharing-vue/dist/* $(DESTDIR)/usr/share/cockpit/file-sharing
 
 # install to ~/.local, can test plugin without restarting cockpit
 install-local: default
