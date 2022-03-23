@@ -13,6 +13,21 @@
 					v-model="tmpShare.path"
 				/>
 			</div>
+			<div
+				class="mt-2 text-sm text-red-600 flex flex-row justify-start items-center space-x-1"
+				v-if="feedback.path"
+			>
+				<ExclamationCircleIcon class="w-5 h-5 inline" />
+				<span>{{ feedback.path }}</span>
+			</div>
+			<div
+				v-if="!pathExists && !feedback.path"
+				class="mt-2 text-sm text-orange-500 flex flex-row justify-start items-center space-x-1"
+			>
+				<ExclamationIcon class="w-5 h-5 inline-block" />
+				<span>Path does not exist.</span>
+				<button class="underline" @click="makeDir">Create now</button>
+			</div>
 		</div>
 		<div class="flex flex-col">
 			<div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
@@ -76,14 +91,15 @@
 		</div>
 		<div class="flex flex-row space-x-3">
 			<button class="btn btn-secondary" @click="cancel">Cancel</button>
-			<button class="btn btn-primary" @click="apply">Apply</button>
+			<button class="btn btn-primary" @click="apply" :disabled="!inputsValid">Apply</button>
 		</div>
 	</div>
 </template>
 
 <script>
 import { reactive, ref, watch } from "vue";
-import { PlusIcon, MinusIcon } from "@heroicons/vue/solid";
+import { PlusIcon, MinusIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
+import useSpawn from "./UseSpawn";
 
 const clientTemplate = {
 	host: "*",
@@ -104,7 +120,10 @@ export default {
 		},
 	},
 	setup(props, { emit }) {
+		const pathExists = ref(false);
+		const inputsValid= ref(false);
 		const tmpShare = reactive({});
+		const feedback = reactive({});
 
 		const tmpShareInit = () => {
 			Object.assign(tmpShare, props?.share
@@ -131,14 +150,6 @@ export default {
 			emit('hide');
 		}
 
-		watch(() => props.share, () => {
-			tmpShareInit();
-		}, { lazy: false });
-
-		watch(() => props.share?.clients, () => {
-			tmpShareInit();
-		}, { lazy: false });
-
 		const cancel = () => {
 			tmpShareInit();
 			emit('hide');
@@ -152,17 +163,70 @@ export default {
 			tmpShare.clients = tmpShare.clients.filter((client) => client !== toRemove);
 		}
 
+		const checkIfExists = async () => {
+			try {
+				await useSpawn(['ls', tmpShare.path], { superuser: 'try' }).promise();
+				pathExists.value = true;
+				return;
+			} catch { }
+			pathExists.value = false;
+		};
+
+		const makeDir = async () => {
+			try {
+				await useSpawn(['mkdir', '-p', tmpShare.path], { superuser: 'try' }).promise();
+				await checkIfExists();
+			} catch (status) {
+				await props.modalPopup.alert("Failed to make directory", status.stderr, { danger: true });
+			}
+		};
+
+		const validateInputs = () => {
+			let result = true;
+			if (!tmpShare.path) {
+				feedback.path = "Share path is required.";
+				result = false;
+			} else if (!/^\//.test(tmpShare.path)) {
+				feedback.path = "Share path must be absolute.";
+				result = false;
+			} else {
+				feedback.path = "";
+			}
+			inputsValid.value = result;
+		};
+
+		watch(() => props.share, () => {
+			tmpShareInit();
+		}, { lazy: false });
+
+		watch(() => props.share?.clients, () => {
+			tmpShareInit();
+		}, { lazy: false });
+
+		watch(() => ({ ...tmpShare }), async (current, old) => {
+			validateInputs();
+			if (old === undefined || current.path !== old.path) {
+				await checkIfExists();
+			}
+		}, { deep: true, immediate: true });
+
 		return {
+			pathExists,
+			inputsValid,
 			tmpShare,
+			feedback,
 			apply,
 			cancel,
 			addClient,
 			deleteClient,
+			makeDir,
 		}
 	},
 	components: {
 		PlusIcon,
 		MinusIcon,
+		ExclamationCircleIcon,
+		ExclamationIcon,
 	}
 }
 </script>
