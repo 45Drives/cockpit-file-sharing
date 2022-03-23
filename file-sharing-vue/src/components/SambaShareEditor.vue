@@ -72,7 +72,7 @@
 					class="text-lime-500 hover:text-lime-800 underline"
 					@click="makeDir"
 				>Edit Permissions</button>
-				<ModalPopup ref="newDirModal">
+				<ModalPopup ref="newDirModal" class="text-gray-700 dark:text-gray-200">
 					<div class="flex flex-col space-y-4">
 						<div class="space-y-1">
 							<div class="grid grid-cols-4 gap-2 justify-items-center">
@@ -82,19 +82,19 @@
 								<label class="block text-sm font-medium">Execute</label>
 
 								<label class="justify-self-start block text-sm font-medium">Owner</label>
-								<input type="checkbox" v-model="modeMatrix.owner.read" />
-								<input type="checkbox" v-model="modeMatrix.owner.write" />
-								<input type="checkbox" v-model="modeMatrix.owner.execute" />
+								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.owner.read" />
+								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.owner.write" />
+								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.owner.execute" />
 
 								<label class="justify-self-start block text-sm font-medium">Group</label>
-								<input type="checkbox" v-model="modeMatrix.group.read" />
-								<input type="checkbox" v-model="modeMatrix.group.write" />
-								<input type="checkbox" v-model="modeMatrix.group.execute" />
+								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.group.read" />
+								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.group.write" />
+								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.group.execute" />
 
 								<label class="justify-self-start block text-sm font-medium">Other</label>
-								<input type="checkbox" v-model="modeMatrix.other.read" />
-								<input type="checkbox" v-model="modeMatrix.other.write" />
-								<input type="checkbox" v-model="modeMatrix.other.execute" />
+								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.other.read" />
+								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.other.write" />
+								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.other.execute" />
 							</div>
 
 							<div>

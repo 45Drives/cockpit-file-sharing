@@ -1,6 +1,6 @@
 <template>
 	<tr :class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'">
-		<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{{ share.path }}</td>
+		<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6 lg:pl-8 text-gray-500 dark:text-gray-400">{{ share.path }}</td>
 		<td
 			class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
 		>
@@ -29,7 +29,7 @@
 	<tr :class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'">
 		<td colspan="3">
 			<div
-				class="overflow-hidden px-5"
+				class="overflow-hidden"
 				:style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
 			>
 				<NfsShareEditor

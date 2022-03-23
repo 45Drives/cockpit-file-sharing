@@ -38,7 +38,7 @@
 								<table class="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
 									<thead class="bg-neutral-50 dark:bg-neutral-800">
 										<tr>
-											<th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold">Path</th>
+											<th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold sm:pl-6 lg:pl-8">Path</th>
 											<th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6 lg:pr-8">
 												<span class="sr-only">Edit</span>
 											</th>
