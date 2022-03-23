@@ -32,14 +32,16 @@
 					>
 						<div class="sm:flex sm:items-start">
 							<div
-								:class="[danger ? 'bg-red-100 dark:bg-red-500/25' : '', 'mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10']"
+								v-if="icon !== 'none'"
+								:class="['mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10']"
 							>
-								<ExclamationIcon v-if="danger" class="h-6 w-6 text-red-600" aria-hidden="true" />
-								<InformationCircleIcon v-else class="h-12 w-12 text-blue-400" aria-hidden="true" />
+								<ExclamationCircleIcon v-if="icon === 'danger'" class="h-12 w-12 text-red-600" aria-hidden="true" />
+								<ExclamationIcon v-if="icon === 'warn'" class="h-12 w-12 text-orange-600" aria-hidden="true" />
+								<InformationCircleIcon v-else-if="icon === 'info'" class="h-12 w-12 text-blue-400" aria-hidden="true" />
 							</div>
 							<div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
 								<DialogTitle as="h3" class="text-lg leading-6 font-medium">{{ headerText }}</DialogTitle>
-								<div class="mt-2">
+								<div class="my-2">
 									<p class="text-sm">{{ bodyText }}</p>
 									<input
 										v-if="showInput"
@@ -48,6 +50,7 @@
 										class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md disabled:bg-neutral-100 disabled:text-gray-500 disabled:cursor-not-allowed"
 										v-model="input"
 									/>
+									<slot />
 								</div>
 							</div>
 						</div>
@@ -75,10 +78,10 @@
 <script>
 import { ref } from 'vue'
 import { Dialog, DialogOverlay, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
-import { ExclamationIcon, InformationCircleIcon } from '@heroicons/vue/outline'
+import { ExclamationIcon, ExclamationCircleIcon, InformationCircleIcon } from '@heroicons/vue/outline'
 
 const defaultOpts = {
-	danger: false,
+	icon: "danger",
 	placeholder: "",
 	inputType: "text",
 }
@@ -94,7 +97,7 @@ export default {
 		const inputType = ref("text");
 		const placeholder = ref("");
 		const input = ref("");
-		const danger = ref(defaultOpts.danger);
+		const icon = ref(defaultOpts.icon);
 
 		const buttonCallback = ref(() => { });
 
@@ -111,7 +114,7 @@ export default {
 			showInput.value = false;
 			showModal.value = true;
 
-			danger.value = opts.danger ?? defaultOpts.danger;
+			icon.value = opts.icon ?? defaultOpts.icon;
 
 			return new Promise((resolve, reject) => {
 				buttonCallback.value = () => {
@@ -128,7 +131,7 @@ export default {
 			showInput.value = false;
 			showModal.value = true;
 
-			danger.value = opts.danger ?? defaultOpts.danger;
+			icon.value = opts.icon ?? defaultOpts.icon;
 
 			return new Promise((resolve, reject) => {
 				buttonCallback.value = (value) => {
@@ -145,10 +148,10 @@ export default {
 			showInput.value = true;
 			showModal.value = true;
 
-			danger.value = opts.danger ?? defaultOpts.danger;
+			icon.value = opts.icon ?? defaultOpts.icon;
 			inputType.value = opts.inputType ?? defaultOpts.inputType;
 			placeholder.value = opts.placeholder ?? defaultOpts.placeholder;
-			
+
 			return new Promise((resolve, reject) => {
 				buttonCallback.value = (value) => {
 					if (value)
@@ -171,7 +174,7 @@ export default {
 			input,
 			_buttonCallback,
 			buttonCallback,
-			danger,
+			icon,
 			alert,
 			confirm,
 			prompt,
@@ -184,6 +187,7 @@ export default {
 		TransitionChild,
 		TransitionRoot,
 		ExclamationIcon,
+		ExclamationCircleIcon,
 		InformationCircleIcon,
 	},
 };

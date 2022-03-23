@@ -32,7 +32,14 @@
 				class="overflow-hidden px-5"
 				:style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
 			>
-				<NfsShareEditor :share="share" @update-share="updateShare" @hide="showEditor = false" ref="editorRef" />
+				<NfsShareEditor
+					:share="share"
+					@update-share="updateShare"
+					@hide="showEditor = false"
+					ref="editorRef"
+					:users="users"
+					:groups="groups"
+				/>
 			</div>
 		</td>
 	</tr>
@@ -45,6 +52,8 @@ export default {
 	props: {
 		share: Object,
 		index: Number,
+		users: Array[Object],
+		groups: Array[Object],
 	},
 	setup(props, { emit }) {
 		const editorRef = ref();

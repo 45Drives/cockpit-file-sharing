@@ -110,7 +110,7 @@ export default {
 				await useSpawn(['net', 'conf', 'delshare', share.name], spawnOpts).promise();
 				props.shares = props.shares.filter((a) => a !== share);
 			} catch (state) {
-				await props.modalPopup.alert("Failed to delete share", state.stderr, { danger: true });
+				await props.modalPopup.alert("Failed to delete share", state.stderr, { icon: 'danger' });
 				emit('refresh-shares');
 			}
 		}
@@ -133,7 +133,7 @@ export default {
 				await applyShareChanges(null, share);
 				props.shares = [...props.shares, share];
 			} catch (state) {
-				await props.modalPopup.alert("Failed to add share", state.stderr, { danger: true });
+				await props.modalPopup.alert("Failed to add share", state.stderr, { icon: 'danger' });
 				emit('refresh-shares');
 			}
 			showAddShare.value = false;
@@ -145,7 +145,7 @@ export default {
 				await applyShareChanges(share, newShare);
 				Object.assign(share, newShare);
 			} catch (state) {
-				await props.modalPopup.alert("Failed to update share", state.stderr, { danger: true });
+				await props.modalPopup.alert("Failed to update share", state.stderr, { icon: 'danger' });
 				emit('refresh-shares');
 			}
 		}

@@ -53,10 +53,7 @@
 			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
 				<span class="flex-grow flex flex-col">
 					<SwitchLabel as="span" class="text-sm font-medium" passive>Global MacOS Shares</SwitchLabel>
-					<SwitchDescription
-							as="span"
-							class="text-sm text-gray-500"
-					>Optmize All Shares for MacOS</SwitchDescription>
+					<SwitchDescription as="span" class="text-sm text-gray-500">Optmize All Shares for MacOS</SwitchDescription>
 				</span>
 				<Switch
 					v-model="globalMacOsShare"
@@ -199,7 +196,7 @@ export default {
 				changesMade.value = false;
 			} catch (state) {
 				resetChanges();
-				await props.modalPopup.alert(state.stderr);
+				await props.modalPopup.alert("Failed to apply global settings", state.stderr, { icon: 'danger' });
 			}
 		}
 
