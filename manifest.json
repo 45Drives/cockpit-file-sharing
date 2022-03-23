@@ -3,7 +3,7 @@
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
     "prerelease": false,
-    "version": "2.4.5",
+    "version": "3.0.0",
     "buildVersion": "1",
     "author": "Brett Kelly <bkelly@45drives.com>",
     "url": "https://github.com/45Drives/cockpit-file-sharing",
@@ -54,7 +54,7 @@
     ],
     "changelog": {
         "urgency": "medium",
-        "version": "2.4.5",
+        "version": "3.0.0",
         "buildVersion": "1",
         "ignore": [],
         "date": null,

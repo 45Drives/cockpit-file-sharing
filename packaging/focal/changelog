@@ -1,3 +1,9 @@
+cockpit-file-sharing (3.0.0-1focal) focal; urgency=medium
+
+  * Overhaul Plugin with Vue.js and Tailwind CSS
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 23 Mar 2022 12:02:23 -0300
+
 cockpit-file-sharing (2.4.5-1focal) focal; urgency=medium
 
   * add support for using samba varibles in path names

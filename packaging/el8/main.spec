@@ -27,6 +27,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Mar 23 2022 Joshua Boudreau <jboudreau@45drives.com> 3.0.0-1
+- Overhaul Plugin with Vue.js and Tailwind CSS
+* Wed Mar 23 2022 Joshua Boudreau <jboudreau@45drives.com> 3.0.0-1
+- Overhaul Plugin with Vue.js and Tailwind CSS
 * Tue Mar 08 2022 Brett Kelly <bkelly@45drives.com> 2.4.5-1
 - add support for using samba varibles in path names
 * Tue Mar 08 2022 Brett Kelly <bkelly@45drives.com> 2.4.5-1
