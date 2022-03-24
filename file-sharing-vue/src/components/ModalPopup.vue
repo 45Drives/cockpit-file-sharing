@@ -76,13 +76,13 @@ If not, see <https://www.gnu.org/licenses/>.
 								v-if="showCancel"
 								type="button"
 								class="btn btn-secondary"
-								@click="_buttonCallback(false)"
+								@click="buttonCallback_(false)"
 								ref="cancelButtonRef"
 							>Cancel</button>
 							<button
 								type="button"
-								:class="['btn', danger ? 'btn-danger' : 'btn-primary']"
-								@click="_buttonCallback(true)"
+								:class="['btn', 'btn-primary']"
+								@click="buttonCallback_(true)"
 							>{{ buttonText }}</button>
 						</div>
 					</div>
@@ -118,7 +118,7 @@ export default {
 
 		const buttonCallback = ref(() => { });
 
-		const _buttonCallback = (value) => {
+		const buttonCallback_ = (value) => {
 			buttonCallback.value(value);
 			showModal.value = false;
 		};
@@ -189,7 +189,7 @@ export default {
 			inputType,
 			placeholder,
 			input,
-			_buttonCallback,
+			buttonCallback_,
 			buttonCallback,
 			icon,
 			alert,
