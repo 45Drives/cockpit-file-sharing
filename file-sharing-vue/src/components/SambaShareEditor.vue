@@ -86,7 +86,7 @@ If not, see <https://www.gnu.org/licenses/>.
 				>Create now</button>
 				<button
 					v-else
-					class="text-lime-500 hover:text-lime-800 underline"
+					class="btn btn-secondary"
 					@click="makeDir"
 				>Edit Permissions</button>
 				<ModalPopup ref="newDirModal" class="text-gray-700 dark:text-gray-200">
@@ -100,51 +100,51 @@ If not, see <https://www.gnu.org/licenses/>.
 
 								<label class="justify-self-start block text-sm font-medium">Owner</label>
 								<input
-									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
 									type="checkbox"
 									v-model="modeMatrix.owner.read"
 								/>
 								<input
-									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
 									type="checkbox"
 									v-model="modeMatrix.owner.write"
 								/>
 								<input
-									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
 									type="checkbox"
 									v-model="modeMatrix.owner.execute"
 								/>
 
 								<label class="justify-self-start block text-sm font-medium">Group</label>
 								<input
-									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
 									type="checkbox"
 									v-model="modeMatrix.group.read"
 								/>
 								<input
-									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
 									type="checkbox"
 									v-model="modeMatrix.group.write"
 								/>
 								<input
-									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
 									type="checkbox"
 									v-model="modeMatrix.group.execute"
 								/>
 
 								<label class="justify-self-start block text-sm font-medium">Other</label>
 								<input
-									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
 									type="checkbox"
 									v-model="modeMatrix.other.read"
 								/>
 								<input
-									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
 									type="checkbox"
 									v-model="modeMatrix.other.write"
 								/>
 								<input
-									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
 									type="checkbox"
 									v-model="modeMatrix.other.execute"
 								/>
@@ -184,7 +184,13 @@ If not, see <https://www.gnu.org/licenses/>.
 			</div>
 		</div>
 		<div v-if="isCeph">
-			<label class="block text-sm font-medium">Ceph Share Mount Options</label>
+			<label class="text-sm font-medium flex flex-row space-x-2">
+				Ceph Share Mount Options
+				<InfoTip>
+					When creating a Ceph share, a new filesystem mount point is created on top of the share directory.
+					This is needed for Windows to properly report quotas through Samba.
+				</InfoTip>
+			</label>
 			<div class="mt-1">
 				<input
 					type="text"
@@ -202,13 +208,6 @@ If not, see <https://www.gnu.org/licenses/>.
 			>
 				<ExclamationCircleIcon class="w-5 h-5 inline" />
 				<span>{{ feedback.cephMountOptions }}</span>
-			</div>
-			<div class="mt-2 text-sm text-gray-500 flex flex-row justify-start items-center space-x-1">
-				<InformationCircleIcon class="w-5 h-5 inline-block shrink-0" />
-				<span>
-					When creating a Ceph share, a new filesystem mount point is created on top of the share directory.
-					This is needed for Windows to properly report quotas through Samba.
-				</span>
 			</div>
 		</div>
 		<div v-if="isCeph">
@@ -258,9 +257,7 @@ If not, see <https://www.gnu.org/licenses/>.
 			<div>
 				<label class="text-sm font-medium flex flex-row space-x-2">
 					Valid Users
-					<InfoTip>
-						By default, any user and group can join a share. If a "valid user" or "valid group" is added, it then acts as a whitelist.
-					</InfoTip>
+					<InfoTip>By default, any user and group can join a share. If a "valid user" or "valid group" is added, it then acts as a whitelist.</InfoTip>
 				</label>
 				<PillList :list="shareValidUsers" @remove-item="removeValidUser" />
 				<DropdownSelector :options="users" placeholder="Add User" @select="addValidUser" />
@@ -440,7 +437,7 @@ import PillList from "./PillList.vue";
 import DropdownSelector from "./DropdownSelector.vue";
 import { splitAdvancedSettings, joinAdvancedSettings, strToBool } from "../functions";
 import { Switch, SwitchDescription, SwitchGroup, SwitchLabel } from '@headlessui/vue'
-import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon, InformationCircleIcon } from "@heroicons/vue/solid";
+import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
 import { ref, reactive, watch } from "vue";
 import useSpawn from "./UseSpawn";
 import ModalPopup from "./ModalPopup.vue";
@@ -888,6 +885,10 @@ WantedBy=remote-fs.target
 		const makeDir = async () => {
 			try {
 				await resetNewDirSettings();
+				if (/^(?:\/\.?\.?)+$/.test(tmpShare.path)) {
+					props.modalPopup.alert("Cannot Edit Permissions for /", "If you think you need to do this, you don't.", { icon: 'danger' });
+					return;
+				}
 				const choice = await newDirModal.value.confirm("Share Directory Permissions", "", { icon: 'none' });
 				if (!choice)
 					return;
@@ -1047,7 +1048,6 @@ WantedBy=remote-fs.target
 		ChevronDownIcon,
 		ExclamationCircleIcon,
 		ExclamationIcon,
-		InformationCircleIcon,
 		ModalPopup,
 		InfoTip
 	}
@@ -1055,7 +1055,7 @@ WantedBy=remote-fs.target
 </script>
 
 <style scoped>
-input::-webkit-outer-spin-button,
+input::-webkit input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
 	-webkit-appearance: none;
 	margin: 0;
