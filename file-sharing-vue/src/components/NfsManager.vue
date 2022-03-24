@@ -295,6 +295,7 @@ export default {
 		NfsShareEditor,
 		PlusIcon,
 		LoadingSpinner,
+		XCircleIcon,
 	}
 }
 </script>
