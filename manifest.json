@@ -3,7 +3,7 @@
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
     "prerelease": false,
-    "version": "3.0.0",
+    "version": "3.0.1",
     "buildVersion": "1",
     "author": "Josh Boudreau <jboudreau@45drives.com>",
     "url": "https://github.com/45Drives/cockpit-file-sharing",
@@ -26,13 +26,13 @@
             "cockpit",
             "samba",
             "nfs-kernel-server",
-			"attr"
+            "attr"
         ],
         "el": [
             "cockpit",
             "samba",
             "nfs-utils",
-			"attr"
+            "attr"
         ]
     },
     "releases": [
@@ -49,11 +49,11 @@
     ],
     "changelog": {
         "urgency": "medium",
-        "version": "3.0.0",
+        "version": "3.0.1",
         "buildVersion": "1",
         "ignore": [],
         "date": null,
-        "packager": "Brett Kelly <bkelly@45drives.com>",
+        "packager": "Josh Boudreau <jboudreau@45drives.com>",
         "changes": []
     }
 }

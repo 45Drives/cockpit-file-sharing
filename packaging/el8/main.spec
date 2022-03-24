@@ -27,6 +27,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu Mar 24 2022 Joshua Boudreau <jboudreau@45drives.com> 3.0.1-1
+- Fix some placeholder text, add tooltip for valid users
+- Fix shadow copy settings for Ceph shares
+- Clean up systemd mount files after deleting a Ceph share
 * Wed Mar 23 2022 Joshua Boudreau <jboudreau@45drives.com> 3.0.0-1
 - Overhaul Plugin with Vue.js and Tailwind CSS
 * Tue Mar 08 2022 Brett Kelly <bkelly@45drives.com> 2.4.5-1
