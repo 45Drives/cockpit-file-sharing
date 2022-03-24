@@ -29,17 +29,8 @@ If not, see <https://www.gnu.org/licenses/>.
 </template>
 
 <script>
+import { ref } from "vue";
 export default {
-	data() {
-		return {
-			currentTab: 0
-		}
-	},
-	created() {
-		if (this.saveState) {
-			this.currentTab = Math.min(JSON.parse(localStorage.getItem('tabbed-component-switcher-tab')) ?? 0, this.components.length - 1);
-		}
-	},
 	props: {
 		components: Array[Object],
 		modalPopup: Object,
@@ -48,12 +39,22 @@ export default {
 			default: false
 		}
 	},
-	methods: {
-		switchTab(index) {
-			this.currentTab = index;
-			if (this.saveState)
-				localStorage.setItem('tabbed-component-switcher-tab', JSON.stringify(this.currentTab))
+	setup(props) {
+		const currentTab = ref(0);
+		if (props.saveState) {
+			currentTab.value = Math.min(JSON.parse(localStorage.getItem('tabbed-component-switcher-tab')) ?? 0, props.components.length - 1);
 		}
-	}
+
+		const switchTab = (index) => {
+			currentTab.value = index;
+			if (props.saveState)
+				localStorage.setItem('tabbed-component-switcher-tab', JSON.stringify(currentTab.value))
+		}
+
+		return {
+			currentTab,
+			switchTab,
+		}
+	},
 }
 </script>
