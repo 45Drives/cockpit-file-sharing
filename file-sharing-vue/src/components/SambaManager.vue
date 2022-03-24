@@ -211,7 +211,7 @@ export default {
 			try {
 				const cephFsStatus = JSON.parse((await useSpawn(['ceph', 'fs', 'status', '--format=json'], spawnOpts).promise()).stdout);
 				cephLayoutPools.value = cephFsStatus.pools.filter(pool => pool.type === 'data').map(pool => pool.name);
-			} catch(state) { /* not ceph */ }
+			} catch (state) { /* not ceph */ }
 		}
 
 		const refresh = async () => {
