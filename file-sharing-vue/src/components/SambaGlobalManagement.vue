@@ -12,7 +12,7 @@
 					name="server-string"
 					id="server-string"
 					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
-					placeholder="Description of Server"
+					placeholder="Description of server"
 					v-model="tmpGlobalConfig['server string']"
 					@input="changesMade = true"
 				/>
