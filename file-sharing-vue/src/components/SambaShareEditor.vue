@@ -9,7 +9,7 @@
 					name="name"
 					id="name"
 					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md disabled:bg-neutral-100 disabled:text-gray-500 disabled:cursor-not-allowed"
-					placeholder="Share Name"
+					placeholder="A unique name for your share"
 					v-model="tmpShare.name"
 					:disabled="share"
 					autocomplete="off"
@@ -31,7 +31,7 @@
 					name="description"
 					id="description"
 					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
-					placeholder="Share Name"
+					placeholder="Describe your share"
 					v-model="tmpShare.comment"
 				/>
 			</div>
@@ -44,7 +44,7 @@
 					name="path"
 					id="path"
 					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md disabled:bg-neutral-100 disabled:text-gray-500 disabled:cursor-not-allowed"
-					placeholder="Share Path/Directory"
+					placeholder="Share path/directory"
 					v-model="tmpShare.path"
 					:disabled="share !== null"
 				/>
@@ -82,19 +82,55 @@
 								<label class="block text-sm font-medium">Execute</label>
 
 								<label class="justify-self-start block text-sm font-medium">Owner</label>
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.owner.read" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.owner.write" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.owner.execute" />
+								<input
+									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									type="checkbox"
+									v-model="modeMatrix.owner.read"
+								/>
+								<input
+									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									type="checkbox"
+									v-model="modeMatrix.owner.write"
+								/>
+								<input
+									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									type="checkbox"
+									v-model="modeMatrix.owner.execute"
+								/>
 
 								<label class="justify-self-start block text-sm font-medium">Group</label>
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.group.read" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.group.write" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.group.execute" />
+								<input
+									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									type="checkbox"
+									v-model="modeMatrix.group.read"
+								/>
+								<input
+									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									type="checkbox"
+									v-model="modeMatrix.group.write"
+								/>
+								<input
+									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									type="checkbox"
+									v-model="modeMatrix.group.execute"
+								/>
 
 								<label class="justify-self-start block text-sm font-medium">Other</label>
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.other.read" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.other.write" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.other.execute" />
+								<input
+									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									type="checkbox"
+									v-model="modeMatrix.other.read"
+								/>
+								<input
+									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									type="checkbox"
+									v-model="modeMatrix.other.write"
+								/>
+								<input
+									class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
+									type="checkbox"
+									v-model="modeMatrix.other.execute"
+								/>
 							</div>
 
 							<div>
@@ -203,7 +239,12 @@
 			:style="{ 'max-height': !shareWindowsAcls ? '500px' : '0', transition: !shareWindowsAcls ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out', overflow: 'hidden' }"
 		>
 			<div>
-				<label class="block text-sm font-medium">Valid Users</label>
+				<label class="text-sm font-medium flex flex-row space-x-2">
+					Valid Users
+					<InfoTip>
+						By default, any user and group can join a share. If a "valid user" or "valid group" is added, it then acts as a whitelist.
+					</InfoTip>
+				</label>
 				<PillList :list="shareValidUsers" @remove-item="removeValidUser" />
 				<DropdownSelector :options="users" placeholder="Add User" @select="addValidUser" />
 			</div>
@@ -302,7 +343,7 @@
 				</span>
 				<Switch
 					v-model="shareShadowCopy"
-					@click="switchShadowCopy(shareShadowCopy)"
+					@click="switchShadowCopy()"
 					:class="[shareShadowCopy ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
 				>
 					<span
@@ -386,6 +427,7 @@ import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon, InformationCir
 import { ref, reactive, watch } from "vue";
 import useSpawn from "./UseSpawn";
 import ModalPopup from "./ModalPopup.vue";
+import InfoTip from "./InfoTip.vue";
 export default {
 	props: {
 		share: {
@@ -441,10 +483,12 @@ export default {
 				&& /acl_xattr: ?ignore system acl ?=/.test(shareAdvancedSettingsStr.value)
 				&& /vfs objects ?=.*acl_xattr.*/.test(shareAdvancedSettingsStr.value);
 			shareShadowCopy.value =
-				/shadow: ?snapdir ?=/.test(shareAdvancedSettingsStr.value)
-				&& /shadow: ?sort ?=/.test(shareAdvancedSettingsStr.value)
-				&& /shadow: ?format ?=/.test(shareAdvancedSettingsStr.value)
-				&& /vfs objects ?=.*shadow_copy2/.test(shareAdvancedSettingsStr.value);
+				(/shadow: ?snapdir ?=/.test(shareAdvancedSettingsStr.value)
+					&& /shadow: ?sort ?=/.test(shareAdvancedSettingsStr.value)
+					&& /shadow: ?format ?=/.test(shareAdvancedSettingsStr.value)
+					&& /vfs objects ?=.*shadow_copy2/.test(shareAdvancedSettingsStr.value))
+				|| (isCeph.value
+					&& /vfs objects ?=.*ceph_snapshots/.test(shareAdvancedSettingsStr.value))
 			shareMacOsShare.value =
 				/fruit: ?encoding ?=/.test(shareAdvancedSettingsStr.value)
 				&& /fruit: ?metadata ?=/.test(shareAdvancedSettingsStr.value)
@@ -506,7 +550,7 @@ export default {
 			cephOptions.layoutPool = "";
 		};
 
-		const tmpShareInit = () => {
+		const tmpShareInit = async () => {
 			shareValidUsers.value = [];
 			shareValidGroups.value = [];
 			Object.assign(tmpShare, props.share
@@ -538,14 +582,14 @@ export default {
 			shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
 			showAdvanced.value = Boolean(shareAdvancedSettingsStr.value);
 
-			setAdvancedToggleStates();
 
-			checkIfCeph().then(() => {
-				if (isCeph.value) {
-					getCephQuota();
-					getCephLayoutPool();
-				}
-			})
+			await checkIfCeph();
+			if (isCeph.value) {
+				getCephQuota();
+				getCephLayoutPool();
+			}
+
+			setAdvancedToggleStates();
 		}
 
 		tmpShareInit();
@@ -577,9 +621,8 @@ export default {
 			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
 		};
 
-		const switchShadowCopy = (value) => {
-			if (value) {
-				showAdvanced.value = true;
+		const switchShadowCopy = () => {
+			const addShadowCopy = () => {
 				if (!/shadow: ?snapdir/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value += "\nshadow:snapdir = .zfs/snapshot";
 				if (!/shadow: ?sort/.test(shareAdvancedSettingsStr.value))
@@ -590,13 +633,38 @@ export default {
 					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=vfs objects ?=)(?!.*shadow_copy2.*)/, " shadow_copy2 ");
 				else
 					shareAdvancedSettingsStr.value += "\nvfs objects = shadow_copy2";
-			} else {
+			};
+			const removeShadowCopy = () => {
 				shareAdvancedSettingsStr.value =
 					shareAdvancedSettingsStr.value
 						.replace(/shadow: ?snapdir ?=.*\n?/, "")
 						.replace(/shadow: ?sort.*\n?/, "")
 						.replace(/shadow: ?format.*\n?/, "")
 						.replace(/(?<=vfs objects ?=.*)shadow_copy2 ?/, "");
+			};
+			const addCephShadowCopy = () => {
+				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
+					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=vfs objects ?=)(?!.*ceph_snapshots.*)/, " ceph_snapshots ");
+				else
+					shareAdvancedSettingsStr.value += "\nvfs objects = ceph_snapshots";
+			};
+			const removeCephShadowCopy = () => {
+				shareAdvancedSettingsStr.value =
+					shareAdvancedSettingsStr.value
+						.replace(/(?<=vfs objects ?=.*)ceph_snapshots ?/, "");
+			};
+			if (shareShadowCopy.value) {
+				showAdvanced.value = true;
+				if (isCeph.value) {
+					removeShadowCopy();
+					addCephShadowCopy();
+				} else {
+					removeCephShadowCopy();
+					addShadowCopy();
+				}
+			} else {
+				removeShadowCopy();
+				removeCephShadowCopy();
 			}
 			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
 		};
@@ -741,9 +809,15 @@ WantedBy=remote-fs.target
 		const removeCephMount = async () => {
 			try {
 				const systemdMountUnit = `${tmpShare.path.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
-				for (const host of props.ctdbHosts) {
-					await useSpawn(['systemctl', 'disable', '--now', systemdMountUnit], { superuser: 'try', host }).promise();
-					await cockpit.file(systemdMountUnit, { superuser: 'try', host }).replace(null);
+				const systemdMountFile = `/etc/systemd/system/${systemdMountUnit}`;
+				if (props.ctdbHosts?.length) {
+					for (const host of props.ctdbHosts) {
+						await useSpawn(['systemctl', 'disable', '--now', systemdMountUnit], { superuser: 'try', host }).promise();
+						await cockpit.file(systemdMountFile, { superuser: 'try', host }).replace(null);
+					}
+				} else {
+					await useSpawn(['systemctl', 'disable', '--now', systemdMountUnit], { superuser: 'try' }).promise();
+					await cockpit.file(systemdMountFile, { superuser: 'try' }).replace(null);
 				}
 			} catch (state) {
 				console.error(state);
@@ -859,7 +933,11 @@ WantedBy=remote-fs.target
 				if (pathExists.value) {
 					resetNewDirSettings();
 				}
+				const lastIsCeph = isCeph.value;
 				await checkIfCeph();
+				if (isCeph.value !== lastIsCeph) {
+					switchShadowCopy();
+				}
 				if (isCeph.value) {
 					await getCephQuota();
 					await getCephLayoutPool();
@@ -892,7 +970,7 @@ WantedBy=remote-fs.target
 				+ (modeMatrix.other.read ? 'r' : '-')
 				+ (modeMatrix.other.write ? 'w' : '-')
 				+ (modeMatrix.other.execute ? 'x' : '-')
-				+ ` (${newDirSettings.mode.toString(8).padStart(3,'0')})`;
+				+ ` (${newDirSettings.mode.toString(8).padStart(3, '0')})`;
 		}, { deep: true, immediate: true });
 
 		watch(() => newDirSettings.mode, (current, old) => {
@@ -953,7 +1031,8 @@ WantedBy=remote-fs.target
 		ExclamationCircleIcon,
 		ExclamationIcon,
 		InformationCircleIcon,
-		ModalPopup
+		ModalPopup,
+		InfoTip
 	}
 }
 </script>
