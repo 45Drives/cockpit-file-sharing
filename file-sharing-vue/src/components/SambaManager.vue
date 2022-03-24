@@ -1,3 +1,20 @@
+<!--
+Copyright (C) 2022 Josh Boudreau <jboudreau@45drives.com>
+
+This file is part of Cockpit File Sharing.
+
+Cockpit File Sharing is free software: you can redistribute it and/or modify it under the terms
+of the GNU General Public License as published by the Free Software Foundation, either version 3
+of the License, or (at your option) any later version.
+
+Cockpit File Sharing is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with Cockpit File Sharing.
+If not, see <https://www.gnu.org/licenses/>. 
+-->
+
 <template>
 	<div v-if="fatalError" class="absolute w-full h-full bg-white/50 dark:bg-black/50 z-50 px-60 pt-5">
 		<div class="rounded-md bg-red-50 p-4 grow-0">
@@ -49,6 +66,7 @@ import SambaUserManagement from "./SambaUserManagement.vue";
 import useSpawn from "./UseSpawn";
 import { ref, reactive, watch } from "vue";
 import { getUsers, getGroups } from "../functions";
+import LoadingSpinner from "./LoadingSpinner.vue";
 
 const spawnOpts = {
 	superuser: 'try',
@@ -309,6 +327,6 @@ export default {
 			exportConfig,
 		}
 	},
-	components: { SambaShareManagement, SambaGlobalManagement, SambaUserManagement, XCircleIcon }
+	components: { SambaShareManagement, SambaGlobalManagement, SambaUserManagement, XCircleIcon, LoadingSpinner }
 }
 </script>
