@@ -62,7 +62,6 @@ If not, see <https://www.gnu.org/licenses/>.
 import { XCircleIcon } from "@heroicons/vue/solid";
 import SambaShareManagement from "./SambaShareManagement.vue";
 import SambaGlobalManagement from "./SambaGlobalManagement.vue";
-import SambaUserManagement from "./SambaUserManagement.vue";
 import useSpawn from "./UseSpawn";
 import { ref, reactive, watch } from "vue";
 import { getUsers, getGroups } from "../functions";
@@ -327,6 +326,6 @@ export default {
 			exportConfig,
 		}
 	},
-	components: { SambaShareManagement, SambaGlobalManagement, SambaUserManagement, XCircleIcon, LoadingSpinner }
+	components: { SambaShareManagement, SambaGlobalManagement, XCircleIcon, LoadingSpinner }
 }
 </script>
