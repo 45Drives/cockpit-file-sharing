@@ -139,7 +139,7 @@ To allow Cockpit File Sharing to manage existing shares defined in smb.conf, do 
 2. Ensure that `include = registry` is NOT present in smb.conf: `sed -i '/include = registry/d' /etc/samba/smb.conf`
 2. Run `net conf import /etc/samba/smb.conf`
 3. Check that your shares are now in the registry with `net conf list`
-4. Replace contents of smb.conf: `echo "[Global]\n\tinclude = registry" > /etc/samba/smb.conf`
+4. Replace contents of smb.conf: `echo -e "[Global]\n\tinclude = registry" > /etc/samba/smb.conf`
 5. Restart Samba: `systemctl restart smb.service`
 
 ## NFS Manager
