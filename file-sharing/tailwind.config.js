@@ -5,8 +5,10 @@ module.exports = {
 	],
 	theme: {
 		extend: {
-			screens: {
-				'mobile': { 'max': '500px' }
+			colors: {
+				neutral: {
+					850: "#222222",
+				}
 			}
 		},
 
