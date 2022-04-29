@@ -15,9 +15,19 @@
 # PLUGIN_SRCS is space-delimited list of subdirectories containg a plugin project.
 # You can leave it empty for automatic detection based on directories containing a package.json file.
 PLUGIN_SRCS=
+
+# For installing to a remote machine for testing with `make install-remote`
 REMOTE_TEST_HOST=osd1
 REMOTE_TEST_USER=root
+
+# Restarts cockpit after install
 RESTART_COCKPIT?=0
+
+# When set to 1, JS is not minified
+DEBUG?=0
+
+# Run yarn upgrade or npm update for each project before build
+AUTO_UPGRADE_DEPS?=1
 
 # USAGE
 # installation:
@@ -38,6 +48,10 @@ define cyantext
 	'\033[1;96m$(1)\033[0m'
 endef
 
+ifeq ($(DEBUG),1)
+BUILD_FLAGS=-- --minify false
+endif
+
 ifndef PLUGIN_SRCS
 PLUGIN_SRCS:=$(patsubst %/package.json,%,$(wildcard */package.json))
 endif
@@ -46,6 +60,7 @@ OUTPUTS:=$(patsubst %, %/dist/index.html, $(PLUGIN_SRCS))
 
 REMOTE_TEST_HOME:=$(shell ssh $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST) 'echo $$HOME')
 NPM_PREFIX:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn --cwd' || echo 'npm --prefix')
+NPM_UPDATE:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn upgrade --cwd' || echo 'npm update --prefix')
 
 default: $(OUTPUTS)
 
@@ -58,7 +73,10 @@ all: default
 $(OUTPUTS): %/dist/index.html: $$(shell find $$*/{src,public} -type f) $$(shell find $$* -name 'yarn.lock' -o -name 'package.json' -not -path '*node_modules*') $$*/*.html  $$*/*.js
 	@echo -e $(call cyantext,Building $*)
 	$(NPM_PREFIX) $* install
-	$(NPM_PREFIX) $* run build
+ifeq ($(AUTO_UPGRADE_DEPS),1)
+	$(NPM_UPDATE) $*
+endif
+	$(NPM_PREFIX) $* run build $(BUILD_FLAGS)
 	@echo -e $(call greentext,Done building $*)
 	@echo
 
