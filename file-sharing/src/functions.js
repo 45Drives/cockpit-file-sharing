@@ -14,7 +14,7 @@
  * If not, see <https://www.gnu.org/licenses/>. 
  */
 
-import useSpawn from "./components/UseSpawn"
+import { useSpawn } from "@45drives/cockpit-helpers";
 
 export function generateConfDiff(conf, newConf) {
 	let confDiff = { add: [], remove: [] };
@@ -70,54 +70,44 @@ const spawnOpts = {
 
 export async function getUsers(domainJoined) {
 	let users = [];
-	try {
-		const passwdDB = (await useSpawn(['getent', 'passwd'], spawnOpts).promise()).stdout;
-		passwdDB.split('\n').forEach((record) => {
-			const fields = record.split(':');
-			const user = fields[0];
-			const uid = fields[2];
-			if (uid >= 1000 || uid === '0') // include root
-				users.push({ user: user, domain: false, pretty: user });
+	const passwdDB = (await useSpawn(['getent', 'passwd'], spawnOpts).promise()).stdout;
+	passwdDB.split('\n').forEach((record) => {
+		const fields = record.split(':');
+		const user = fields[0];
+		const uid = fields[2];
+		if (uid >= 1000 || uid === '0') // include root
+			users.push({ user: user, domain: false, pretty: user });
+	})
+	if (domainJoined) {
+		const domainUsersDB = (await useSpawn(['wbinfo', '-u'], spawnOpts).promise()).stdout
+		domainUsersDB.split('\n').forEach((record) => {
+			if (/^\s*$/.test(record))
+				return;
+			users.push({ user: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + " (domain)" });
 		})
-		if (domainJoined) {
-			const domainUsersDB = (await useSpawn(['wbinfo', '-u'], spawnOpts).promise()).stdout
-			domainUsersDB.split('\n').forEach((record) => {
-				if (/^\s*$/.test(record))
-					return;
-				users.push({ user: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + " (domain)" });
-			})
-		}
-		users.sort((a, b) => a.pretty.localeCompare(b.pretty));
-		return users;
-	} catch (state) {
-		console.error(state);
-		throw new Error("Error while getting users: " + state.stderr);
 	}
+	users.sort((a, b) => a.pretty.localeCompare(b.pretty));
+	return users;
 }
 
 export async function getGroups(domainJoined) {
 	let groups = [];
-	try {
-		const groupDB = (await useSpawn(['getent', 'group'], spawnOpts).promise()).stdout;
-		groupDB.split('\n').forEach((record) => {
-			const fields = record.split(':');
-			const group = fields[0];
-			const gid = fields[2];
-			if (gid >= 1000 || gid === '0')
-				groups.push({ group: group, domain: false, pretty: group });
+	const groupDB = (await useSpawn(['getent', 'group'], spawnOpts).promise()).stdout;
+	groupDB.split('\n').forEach((record) => {
+		const fields = record.split(':');
+		const group = fields[0];
+		const gid = fields[2];
+		if (gid >= 1000 || gid === '0')
+			groups.push({ group: group, domain: false, pretty: group });
+	})
+	if (domainJoined) {
+		const domainGroupsDB = (await useSpawn(['wbinfo', '-g'], spawnOpts).promise()).stdout
+		domainGroupsDB.split('\n').forEach((record) => {
+			if (/^\s*$/.test(record))
+				return;
+			groups.push({ group: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + " (domain)" });
 		})
-		if (domainJoined) {
-			const domainGroupsDB = (await useSpawn(['wbinfo', '-g'], spawnOpts).promise()).stdout
-			domainGroupsDB.split('\n').forEach((record) => {
-				if (/^\s*$/.test(record))
-					return;
-				groups.push({ group: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + " (domain)" });
-			})
-		}
-		groups.sort((a, b) => a.pretty.localeCompare(b.pretty));
-		return groups
-	} catch (state) {
-		console.error(state);
-		throw new Error("Error while getting groups: " + state.stderr);
 	}
+	groups.sort((a, b) => a.pretty.localeCompare(b.pretty));
+	return groups
 }

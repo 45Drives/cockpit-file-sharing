@@ -1,5 +1,6 @@
 <!--
-Copyright (C) 2022 Josh Boudreau <jboudreau@45drives.com>
+Copyright (C) 2022 Mark Hooper <mhooper@45drives.com>
+                   Josh Boudreau <jboudreau@45drives.com>
 
 This file is part of Cockpit File Sharing.
 
@@ -16,34 +17,37 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div
-		class="p-2 flex items-baseline justify-between bg-neutral-50 dark:bg-neutral-900 border-b border-gray-200 dark:border-gray-700"
-		:style="{ 'font-family': 'Red Hat Text', position: 'relative' }"
-	>
-		<div class="flex flex-row items-baseline">
+	<div class="px-3 py-1 sm:p-5 flex items-center bg-plugin-header font-redhat shadow-lg z-10">
+		<div class="flex flex-row items-baseline basis-32 grow shrink-0">
 			<img
-				class="w-6 h-6 text-gray-50 mr-0.5 self-center"
-				:src="darkMode ? '45d-fan-dark.svg' : '45d-fan-light.svg'"
+				class="w-6 h-6 mr-0.5 self-center"
+				:src="darkMode ? './assets/images/45d-fan-dark.svg' : './assets/images/45d-fan-light.svg'"
 			/>
 			<h1 class="text-2xl">
 				<span
-					class="text-red-800 dark:text-white font-bold"
-					:style="{ 'font-family': 'Source Sans Pro', 'font-size': '1.6rem' }"
+					class="text-red-800 dark:text-white font-bold font-source-sans-pro"
+					:style="{ 'font-size': '1.6rem' }"
 				>45</span>
 				<span class="text-gray-800 dark:text-red-600">Drives</span>
 			</h1>
-			<h1 v-if="!centerName" class="ml-5 text-red-800 dark:text-white text-2xl">{{ moduleName }}</h1>
+			<LoadingSpinner v-if="showSpinner" class="size-icon self-center ml-2" />
 		</div>
-		<h1 v-if="centerName" class="text-red-800 dark:text-white text-2xl" :style="{position: 'absolute', left: '50%', top: '50%', transform: 'translateX(-50%) translateY(-50%)'}">{{ moduleName }}</h1>
-		<button
-			@click="darkMode = !darkMode"
-			id="theme-toggle"
-			type="button"
-			class="text-gray-500 dark:text-gray-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 focus:outline-none rounded-lg text-sm p-2.5 justify-self-end w-10 h-10"
-		>
-			<SunIcon v-if="darkMode" />
-			<MoonIcon v-else />
-		</button>
+		<h1
+			class="text-red-800 dark:text-white text-base sm:text-2xl cursor-pointer grow-0 text-center"
+			@click="home"
+		>{{ moduleName }}</h1>
+		<div class="flex basis-32 justify-end grow shrink-0">
+			<button
+				@click="darkMode = !darkMode"
+				@click.right.prevent="vape"
+				id="theme-toggle"
+				type="button"
+				class="text-muted focus:outline-none"
+			>
+				<SunIcon v-if="darkMode" class="size-icon-lg" />
+				<MoonIcon v-else class="size-icon-lg" />
+			</button>
+		</div>
 	</div>
 </template>
 
@@ -52,15 +56,16 @@ import "@fontsource/red-hat-text/700.css";
 import "@fontsource/red-hat-text/400.css";
 import "source-sans-pro/source-sans-pro.css";
 import { SunIcon, MoonIcon } from "@heroicons/vue/solid";
-import { ref, watch } from "vue";
+import { ref, watch, inject } from "vue";
+import LoadingSpinner from "./LoadingSpinner.vue";
 
 export default {
 	props: {
 		moduleName: String,
-		centerName: Boolean
+		showSpinner: Boolean,
 	},
 	setup(props) {
-		const darkMode = ref(true);
+		const darkMode = inject('darkModeInjectionKey') ?? ref(true);
 		function getTheme() {
 			let prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 			let theme = localStorage.getItem("color-theme");
@@ -76,6 +81,42 @@ export default {
 		} else {
 			document.documentElement.classList.remove("dark");
 		}
+		const home = () => {
+			cockpit.location.go('/');
+		};
+		const vape = (event) => {
+			if (!event.ctrlKey)
+				return;
+			function makeWide(string) {
+				let bytesOut = [];
+				let bytesIn = new TextEncoder().encode(string);
+				if (bytesIn.indexOf(0xef) !== -1) // already wide
+					return string;
+				bytesIn.forEach(byte => {
+					if (/^[a-z]$/.test(String.fromCharCode(byte)))
+						bytesOut.push(0xef, 0xbd, byte + 0x20);
+					else if (/^[A-Z0-9]$/.test(String.fromCharCode(byte)))
+						bytesOut.push(0xef, 0xbc, byte + 0x60);
+					else if (String.fromCharCode(byte) === ' ')
+						bytesOut.push(0xe2, 0x80, 0x83);
+					else
+						bytesOut.push(byte);
+				});
+				return new TextDecoder().decode(new Uint8Array(bytesOut));
+			}
+			setInterval(() => {
+				let elems = document.querySelectorAll( '#app *' );
+				for (let i = 0; i < elems.length; i++) {
+					const element = elems[i];
+					if (element.children.length > 0)
+						continue;
+					if (element.textContent) {
+						element.textContent = makeWide(element.textContent);
+						element.style.color = "#ff00fb";
+					}
+				}
+			}, 500);
+		}
 		watch(() => darkMode.value, (darkMode, oldDarkMode) => {
 			localStorage.setItem("color-theme", darkMode ? "dark" : "light");
 			if (darkMode) {
@@ -86,11 +127,14 @@ export default {
 		}, { lazy: false });
 		return {
 			darkMode,
+			home,
+			vape,
 		};
 	},
 	components: {
-		SunIcon,
-		MoonIcon
-	}
+    SunIcon,
+    MoonIcon,
+    LoadingSpinner,
+}
 };
 </script>

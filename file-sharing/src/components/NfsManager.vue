@@ -16,24 +16,8 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div v-if="fatalError" class="absolute w-full h-full bg-white/50 dark:bg-black/50 z-50 px-60 pt-5">
-		<div class="rounded-md bg-red-50 p-4 grow-0">
-			<div class="flex">
-				<div class="flex-shrink-0">
-					<XCircleIcon class="h-5 w-5 text-red-400" aria-hidden="true" />
-				</div>
-				<div class="ml-3">
-					<h3 class="text-sm font-medium text-red-800 whitespace-pre">{{ fatalError }}</h3>
-				</div>
-			</div>
-		</div>
-	</div>
-	<div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8 py-8">
+	<div class="centered-column p-well space-y-well">
 		<div class="card">
-			<div class="card-header flex flex-row space-x-3">
-				<h3 class="text-lg leading-6 font-medium">NFS Shares</h3>
-				<LoadingSpinner v-if="!loaded" class="w-5 h-5" />
-			</div>
 			<div class="card-body">
 				<div
 					class="overflow-hidden px-5"
@@ -46,115 +30,142 @@ If not, see <https://www.gnu.org/licenses/>.
 						:groups="groups"
 					/>
 				</div>
-				<div class="flex flex-col">
-					<div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-						<div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-							<div
-								class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg"
-							>
-								<table class="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-									<thead class="bg-neutral-50 dark:bg-neutral-800">
-										<tr>
-											<th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold sm:pl-6 lg:pl-8">Path</th>
-											<th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6 lg:pr-8">
-												<span class="sr-only">Edit</span>
-											</th>
-											<th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6 lg:pr-8">
-												<span class="sr-only">Delete</span>
-											</th>
-											<div class="relative">
-												<PlusIcon
-													@click="showAddShare = true"
-													class="w-5 h-5 absolute right-3 top-3.5 cursor-pointer text-gray-500"
-												/>
-											</div>
-										</tr>
-									</thead>
-									<tbody class="bg-white dark:bg-neutral-800">
-										<NfsShare
-											v-for="(share, index) in shares"
-											:share="shares[index]"
-											:index="index"
-											@delete-share="deleteShare"
-											@update-share="updateShare"
-											:users="users"
-											:groups="groups"
-										/>
-										<tr v-if="shares.length === 0">
-											<td
-												colspan="3"
-												class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-500 sm:pl-6 lg:pl-8"
-											>No shares. Click "+" to add one.</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
+				<Table emptyText="No shares. Click '+'to add one." shrinkHeight noScroll>
+					<template #header>
+						<div class="flex flex-row space-x-2 items-center">
+							<div>NFS Shares</div>
+							<LoadingSpinner v-if="processing" class="size-icon" />
+							<div class="grow"></div>
+							<button @click="showAddShare = !showAddShare">
+								<PlusIcon class="size-icon icon-default cursor-pointer" />
+							</button>
 						</div>
-					</div>
-				</div>
+					</template>
+					<template #thead>
+						<tr>
+							<th scope="col">Path</th>
+							<th scope="col">
+								<span class="sr-only">Edit/Delete</span>
+							</th>
+						</tr>
+					</template>
+					<template #tbody>
+						<NfsShare
+							v-for="(share, index) in shares"
+							:key="index"
+							:share="shares[index]"
+							:index="index"
+							@delete-share="deleteShare"
+							@update-share="updateShare"
+							:users="users"
+							:groups="groups"
+						/>
+					</template>
+				</Table>
 			</div>
 		</div>
 		<div class="card">
-			<div class="card-header flex flex-row space-x-3">
-				<h3 class="text-lg leading-6 font-medium">Import/Export Config</h3>
-				<LoadingSpinner v-if="!loaded" class="w-5 h-5" />
+			<div class="card-header flex flex-row space-x-2 items-center">
+				<div class="text-header">Import/Export Config</div>
+				<LoadingSpinner v-if="processing" class="size-icon" />
 			</div>
-			<div class="card-body flex flex-row space-x-3">
-				<input @change="importConfig" type="file" hidden id="file-upload" />
+			<div class="card-body button-group-row">
+				<input @change="importConfig" type="file" id="file-upload" hidden />
 				<button @click="uploadConfig" class="btn btn-primary">Import</button>
 				<button @click="exportConfig" class="btn btn-primary">Export</button>
 			</div>
 		</div>
 	</div>
+	<ModalPopup
+		:showModal="confirmationModal.showModal"
+		@apply="confirmationModal.applyCallback"
+		@cancel="confirmationModal.cancelCallback"
+		applyDangerous
+		applyText="Yes"
+		:headerText="confirmationModal.headerText"
+	>
+		<template #icon>
+			<ExclamationCircleIcon class="size-icon-xl icon-danger" />
+		</template>
+		{{ confirmationModal.bodyText }}
+	</ModalPopup>
 </template>
 
 <script>
 import NfsShare from "./NfsShare.vue";
 import NfsShareEditor from "./NfsShareEditor.vue";
-import { PlusIcon, XCircleIcon } from "@heroicons/vue/solid";
+import { PlusIcon, XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/solid";
 import LoadingSpinner from "./LoadingSpinner.vue";
-import { ref, reactive } from "vue";
-import { NfsExportSyntax } from "./NfsExportSyntax";
-import useSpawn from "./UseSpawn";
+import { ref, reactive, inject } from "vue";
+import { NfsExportSyntax } from "@45drives/cockpit-syntaxes";
+import { useSpawn, errorString, errorStringHTML } from "@45drives/cockpit-helpers";
 import { getUsers, getGroups } from "../functions";
+import Table from "./Table.vue";
+import { notificationsInjectionKey } from "../keys";
+import ModalPopup from "./ModalPopup.vue";
+
 export default {
-	props: {
-		modalPopup: Object,
-	},
 	setup(props) {
-		const fatalError = ref("");
 		const shares = ref([]);
-		const loaded = ref(false);
+		const processing = ref(0);
 		const showAddShare = ref(false);
 		const exportsFile = reactive(cockpit.file("/etc/exports.d/cockpit-file-sharing.exports", { superuser: 'try', syntax: NfsExportSyntax }));
 		const users = ref([]);
 		const groups = ref([]);
+		const notifications = inject(notificationsInjectionKey);
+
+		const confirmationModal = reactive({
+			showModal: false,
+			headerText: "",
+			bodyText: "",
+			ask: (header, body) => {
+				return new Promise((resolve, reject) => {
+					confirmationModal.showModal = true;
+					confirmationModal.headerText = header;
+					confirmationModal.bodyText = body;
+					const respond = (result) => {
+						confirmationModal.showModal = false;
+						resolve(result);
+					}
+					confirmationModal.applyCallback = () => respond(true);
+					confirmationModal.cancelCallback = () => respond(false);
+				});
+			},
+			applyCallback: () => { },
+			cancelCallback: () => { },
+		});
 
 		const loadShares = async () => {
-			shares.value = [];
+			processing.value++;
 			try {
 				shares.value = await exportsFile.read() ?? [];
-			} catch (err) {
-				fatalError.value += "Failed to load share configuration: " + err.message;
+				shares.value.sort((a, b) => a.path.localeCompare(b.path));
+			} catch (error) {
+				notifications.value.constructNotification("Failed to load share configuration", errorStringHTML(error), 'error', 0);
+			} finally {
+				processing.value--;
 			}
-			shares.value.sort((a, b) => a.path.localeCompare(b.path));
 		};
 
 		const getUserList = async () => {
-			users.value = [];
+			processing.value++;
 			try {
 				users.value = await getUsers(false);
 			} catch (error) {
-				fatalError.value += error.message + '\n';
+				notifications.value.constructNotification("Failed to get users", errorStringHTML(error), 'error', 0);
+			} finally {
+				processing.value--;
 			}
 		}
 
 		const getGroupList = async () => {
-			groups.value = [];
+			processing.value++;
 			try {
 				groups.value = await getGroups(false);
 			} catch (error) {
-				fatalError.value += error.message + '\n';
+				notifications.value.constructNotification("Failed to get groups", errorStringHTML(error), 'error', 0);
+			} finally {
+				processing.value--;
 			}
 		}
 
@@ -165,22 +176,31 @@ export default {
 			procs.push(getGroupList());
 			for (let proc of procs)
 				await proc;
-			loaded.value = true;
 		};
 
 		init();
 
-		const writeExports = async () => {
-			await exportsFile.replace(shares.value);
+		const writeExportsFile = async () => {
+			try {
+				await exportsFile.replace(shares.value);
+			} catch (error) {
+				error.message = `Failed to write exports file: ${errorString(error.message)}`;
+				throw error;
+			}
+		}
+
+		const validateExportsFile = async () => {
 			try {
 				await useSpawn(['exportfs', '-ra'], { superuser: 'try' }).promise();
-			} catch (state) {
-				throw new Error(state.stderr);
+			} catch (error) {
+				error.message = `Failed to validate exports file: ${errorString(error)}`;
+				throw error;
 			}
 		}
 
 		const updateShare = async (share, newShare) => {
 			const oldShare = {};
+			processing.value++;
 			try {
 				if (share) {
 					Object.assign(oldShare, share);
@@ -188,17 +208,25 @@ export default {
 				} else {
 					shares.value.push({ ...newShare });
 				}
-				await writeExports();
+				await writeExportsFile();
+				await validateExportsFile();
+				notifications.value.constructNotification(`Successfully ${share === null ? 'added' : 'updated'} share`, "", 'success');
 			} catch (error) {
-				await props.modalPopup.alert("Failed to update shares", error.message, { icon: 'danger' });
+				notifications.value.constructNotification("Failed to update shares", errorStringHTML(error), 'error');
 				if (share) {
 					Object.assign(share, oldShare);
 				} else {
 					shares.value.pop();
 				}
-				await writeExports();
+				try {
+					await writeExportsFile();
+				} catch (error) {
+					notifications.value.constructNotification("Failed to revert exports file", errorStringHTML(error), 'error');
+				}
+			} finally {
+				shares.value.sort((a, b) => a.path.localeCompare(b.path));
+				processing.value--;
 			}
-			shares.value.sort((a, b) => a.path.localeCompare(b.path));
 		}
 
 		const addShare = async (newShare) => {
@@ -206,23 +234,20 @@ export default {
 		}
 
 		const deleteShare = async (share) => {
-			if (!await props.modalPopup.confirm(`Permanently delete share for "${share.path}"?`, "This cannot be undone.", { icon: 'danger' }))
+			if (!await confirmationModal.ask(`Permanently delete share for "${share.path}"?`, "This cannot be undone."))
 				return;
 			try {
 				shares.value = shares.value.filter((testShare) => share !== testShare);
-				await writeExports();
+				await writeExportsFile();
+				notifications.value.constructNotification(`Successfully deleted share`, "", 'success');
 			} catch (error) {
-				await props.modalPopup.alert("Failed to delete share", error.message, { icon: 'danger' });
+				notifications.value.constructNotification("Failed to delete share", errorStringHTML(error), 'error');
 				loadShares();
 			}
 		}
 
 		const uploadConfig = async () => {
-			if (!await props.modalPopup.confirm(
-				"This will permanently overwrite current configuration. Are you sure?",
-				"",
-				{ icon: 'danger' }
-			))
+			if (!await confirmationModal.ask("This will permanently overwrite current configuration", "Are you sure?"))
 				return;
 			document.getElementById("file-upload").click();
 		}
@@ -235,13 +260,20 @@ export default {
 				let oldShares = shares.value.map((share) => { return { ...share } });
 				try {
 					shares.value = NfsExportSyntax.parse(content);
-					await writeExports();
-				} catch (err) {
-					await props.modalPopup.alert("Failed to import config", err.message, { icon: 'danger' });
+					await writeExportsFile();
+					notifications.value.constructNotification(`Successfully imported configuration`, "", 'success');
+				} catch (error) {
+					notifications.value.constructNotification("Failed to import config", errorStringHTML(error), 'error');
 					shares.value = oldShares;
 				}
+				shares.value.sort((a, b) => a.path.localeCompare(b.path));
+				processing.value--;
 			}
-			shares.value.sort((a, b) => a.path.localeCompare(b.path));
+			reader.onerror = (event) => {
+				notifications.value.constructNotification("Failed to import config", "Error reading file on client side", 'error');
+				processing.value--;
+			}
+			processing.value++;
 			reader.readAsText(file);
 		}
 
@@ -275,12 +307,12 @@ export default {
 		}
 
 		return {
-			fatalError,
 			shares,
-			loaded,
+			processing,
 			showAddShare,
 			users,
 			groups,
+			confirmationModal,
 			loadShares,
 			updateShare,
 			addShare,
@@ -296,6 +328,9 @@ export default {
 		PlusIcon,
 		LoadingSpinner,
 		XCircleIcon,
+		Table,
+		ModalPopup,
+		ExclamationCircleIcon,
 	}
 }
 </script>

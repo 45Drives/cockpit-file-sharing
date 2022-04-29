@@ -16,162 +16,91 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="space-y-5 px-4 pb-4">
-		<h3 v-if="!share">New Share</h3>
+	<div class="space-y-content py-2">
+		<div class="text-header" v-if="!share">New Share</div>
 		<div>
-			<label class="block text-sm font-medium">Share Path</label>
-			<div class="mt-1">
-				<input
-					type="text"
-					name="path"
-					id="path"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
-					placeholder="Share Path"
-					v-model="tmpShare.path"
-				/>
+			<label class="block text-label">Share Path</label>
+			<input
+				type="text"
+				name="path"
+				class="w-full input-textlike"
+				placeholder="Share Path"
+				v-model="tmpShare.path"
+			/>
+			<div class="feedback-group" v-if="feedback.path">
+				<ExclamationCircleIcon class="size-icon icon-error" />
+				<span class="text-feedback text-error">{{ feedback.path }}</span>
 			</div>
-			<div
-				class="mt-2 text-sm text-red-600 flex flex-row justify-start items-center space-x-1"
-				v-if="feedback.path"
-			>
-				<ExclamationCircleIcon class="w-5 h-5 inline" />
-				<span>{{ feedback.path }}</span>
-			</div>
-			<div
-				v-if="(!feedback.path)"
-				class="mt-2 text-sm flex flex-row justify-start items-center space-x-1"
-			>
-				<ExclamationIcon v-if="!pathExists" class="w-5 h-5 inline-block text-orange-500" />
-				<span v-if="!pathExists" class="text-orange-500">Path does not exist.</span>
+			<div class="feedback-group" v-else>
+				<ExclamationIcon v-if="!pathExists" class="size-icon icon-warning" />
+				<span v-if="!pathExists" class="text-feedback text-warning">Path does not exist.</span>
 				<button
 					v-if="!pathExists"
-					class="text-orange-500 hover:text-orange-800 underline"
-					@click="makeDir"
+					class="text-feedback text-warning underline"
+					@click="dirPermissions.update"
 				>Create now</button>
-				<button
-					v-else
-					class="text-lime-500 hover:text-lime-800 underline"
-					@click="makeDir"
-				>Edit Permissions</button>
-				<ModalPopup ref="newDirModal" class="text-gray-700 dark:text-gray-200">
-					<div class="flex flex-col space-y-4">
-						<div class="space-y-1">
-							<div class="grid grid-cols-4 gap-2 justify-items-center">
-								<label class="justify-self-start block text-sm font-medium"></label>
-								<label class="block text-sm font-medium">Read</label>
-								<label class="block text-sm font-medium">Write</label>
-								<label class="block text-sm font-medium">Execute</label>
-
-								<label class="justify-self-start block text-sm font-medium">Owner</label>
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.owner.read" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.owner.write" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.owner.execute" />
-
-								<label class="justify-self-start block text-sm font-medium">Group</label>
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.group.read" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.group.write" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.group.execute" />
-
-								<label class="justify-self-start block text-sm font-medium">Other</label>
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.other.read" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.other.write" />
-								<input class="dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded" type="checkbox" v-model="modeMatrix.other.execute" />
-							</div>
-
-							<div>
-								<label class="text-sm font-medium">Result</label>
-								<span
-									class="ml-8 font-mono font-medium whitespace-nowrap overflow-visible grow-0 basis-0"
-								>{{ newDirSettings.modeStr }}</span>
-							</div>
-						</div>
-						<div>
-							<label class="block text-sm font-medium">Owner</label>
-							<select
-								id="log-level"
-								name="log-level"
-								class="mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-neutral-800 focus:border-gray-500 sm:text-sm rounded-md"
-								v-model="newDirSettings.owner"
-							>
-								<option v-for="user in users" :value="user.user">{{ user.pretty }}</option>
-							</select>
-						</div>
-						<div>
-							<label class="block text-sm font-medium">Group</label>
-							<select
-								id="log-level"
-								name="log-level"
-								class="mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-neutral-800 focus:border-gray-500 sm:text-sm rounded-md"
-								v-model="newDirSettings.group"
-							>
-								<option v-for="group in groups" :value="group.group">{{ group.pretty }}</option>
-							</select>
-						</div>
-					</div>
-				</ModalPopup>
+				<button v-else class="text-feedback text-primary" @click="dirPermissions.update">Edit Permissions</button>
 			</div>
 		</div>
-		<div class="flex flex-col">
-			<div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-				<div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-					<div
-						class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg"
-					>
-						<table class="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-							<thead class="bg-neutral-50 dark:bg-neutral-800">
-								<tr>
-									<th
-										scope="col"
-										class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold sm:pl-6 lg:pl-8"
-									>Host</th>
-									<th
-										scope="col"
-										class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold sm:pl-6 lg:pl-8"
-									>Settings</th>
-									<div class="relative">
-										<PlusIcon
-											@click="addClient"
-											class="w-5 h-5 absolute right-3 top-3.5 cursor-pointer text-gray-500"
-										/>
-									</div>
-								</tr>
-							</thead>
-							<tbody class="bg-white dark:bg-neutral-800">
-								<tr
-									v-for="(client, index) in tmpShare.clients"
-									:class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'"
-								>
-									<td class="w-1/4 whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6 lg:pl-8">
-										<input
-											type="text"
-											class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
-											v-model="client.host"
-										/>
-									</td>
-									<td class="w-3/4 whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6 lg:pl-8">
-										<input
-											type="text"
-											class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
-											v-model="client.settings"
-										/>
-									</td>
-									<td
-										v-if="tmpShare.clients.length > 1"
-										class="w-1/4 whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6 lg:pl-8"
-									>
-										<MinusIcon
-											@click="deleteClient(client)"
-											class="w-5 h-5 uppercase text-red-600 hover:text-red-900 cursor-pointer"
-										/>
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
+		<ModalPopup
+			:showModal="dirPermissions.showModal"
+			headerText="Share Directory Permissions"
+			@apply="dirPermissions.applyCallback"
+			@cancel="dirPermissions.cancelCallback"
+		>
+			<div class="flex flex-col space-y-content">
+				<FileModeMatrix v-model="dirPermissions.mode" />
+				<div>
+					<label class="block text-sm font-medium">Owner</label>
+					<select name="log-level" class="input-textlike" v-model="dirPermissions.owner">
+						<option v-for="user in users" :value="user.user">{{ user.pretty }}</option>
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-medium">Group</label>
+					<select name="log-level" class="input-textlike" v-model="dirPermissions.group">
+						<option v-for="group in groups" :value="group.group">{{ group.pretty }}</option>
+					</select>
 				</div>
 			</div>
-		</div>
-		<div class="flex flex-row space-x-3 w-full justify-end">
+		</ModalPopup>
+		<Table shrinkHeight noScroll>
+			<template #header>
+				<div class="flex flex-row items-center justify-between">
+					<div>Clients</div>
+					<PlusIcon @click="addClient" class="size-icon icon-default cursor-pointer" />
+				</div>
+			</template>
+			<template #thead>
+				<tr>
+					<th scope="col">Host</th>
+					<th scope="col">Settings</th>
+					<th scope="col">
+						<span class="sr-only">Remove client</span>
+					</th>
+				</tr>
+			</template>
+			<template #tbody>
+				<tr
+					v-for="(client, index) in tmpShare.clients"
+					:class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'"
+				>
+					<td class="w-1/4">
+						<input type="text" class="w-full input-textlike" v-model="client.host" />
+					</td>
+					<td class="w-3/4">
+						<input type="text" class="w-full input-textlike" v-model="client.settings" />
+					</td>
+					<td class="flex flex-row justify-end items-center align-middle">
+						<button v-if="tmpShare.clients.length > 1" @click="deleteClient(client)">
+							<span class="sr-only">Remove client {{ client }}</span>
+							<MinusIcon class="size-icon icon-danger cursor-pointer" />
+						</button>
+					</td>
+				</tr>
+			</template>
+		</Table>
+		<div class="button-group-row w-full justify-end">
 			<button class="btn btn-secondary" @click="cancel">Cancel</button>
 			<button class="btn btn-primary" @click="apply" :disabled="!inputsValid">Apply</button>
 		</div>
@@ -179,10 +108,13 @@ If not, see <https://www.gnu.org/licenses/>.
 </template>
 
 <script>
-import { reactive, ref, watch } from "vue";
+import { inject, reactive, ref, watch } from "vue";
 import { PlusIcon, MinusIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
-import useSpawn from "./UseSpawn";
+import { useSpawn, errorStringHTML } from "@45drives/cockpit-helpers";
 import ModalPopup from "./ModalPopup.vue";
+import { notificationsInjectionKey } from "../keys";
+import FileModeMatrix from "./FileModeMatrix.vue";
+import Table from "./Table.vue";
 
 const clientTemplate = {
 	host: "*",
@@ -205,22 +137,62 @@ export default {
 		groups: Array[Object],
 	},
 	setup(props, { emit }) {
-		const newDirModal = ref();
 		const pathExists = ref(false);
 		const inputsValid = ref(false);
 		const tmpShare = reactive({});
 		const feedback = reactive({});
+		const notifications = inject(notificationsInjectionKey);
 
-		const newDirSettings = reactive({
+		const dirPermissions = reactive({
+			showModal: false,
 			mode: 0o755,
-			modeStr: "rwxr-xr-x",
 			owner: 'root',
 			group: 'root',
-		});
-		const modeMatrix = reactive({
-			owner: { read: true, write: true, execute: true },
-			group: { read: true, write: false, execute: true },
-			other: { read: true, write: false, execute: true },
+			resetNewDirSettings: async () => {
+				try {
+					const stat = (await useSpawn(['stat', '--format=%a:%U:%G', tmpShare.path], { superuser: 'try' }).promise()).stdout.trim().split(':');
+					dirPermissions.mode = parseInt(stat[0], 8);
+					dirPermissions.owner = stat[1];
+					dirPermissions.group = stat[2];
+				} catch (state) {
+					dirPermissions.mode = 0o755;
+					dirPermissions.owner = 'root';
+					dirPermissions.group = 'root';
+				}
+			},
+			update: async () => {
+				try {
+					if (/^(?:\/\.?\.?)+$/.test(tmpShare.path)) {
+						notifications.value.constructNotification("Cannot Edit Permissions for /", "If you think you need to do this, you don't.", 'denied');
+						return;
+					}
+					await dirPermissions.resetNewDirSettings();
+					if (!await dirPermissions.waitForApply())
+						return;
+					await useSpawn(['mkdir', '-p', tmpShare.path], { superuser: 'try' }).promise();
+					await useSpawn(['chown', dirPermissions.owner, tmpShare.path], { superuser: 'try' }).promise();
+					await useSpawn(['chgrp', dirPermissions.group, tmpShare.path], { superuser: 'try' }).promise();
+					await useSpawn(['chmod', dirPermissions.mode.toString(8), tmpShare.path], { superuser: 'try' }).promise();
+					await checkIfExists();
+				} catch (state) {
+					notifications.value.constructNotification("Failed to update directory permissions", errorStringHTML(state), 'error');
+				}
+			},
+			waitForApply: () => {
+				return new Promise((resolve, reject) => {
+					dirPermissions.showModal = true;
+					const respond = (result) => {
+						dirPermissions.showModal = false;
+						resolve(result);
+					}
+					dirPermissions.applyCallback = () => respond(true);
+					dirPermissions.cancelCallback = () => respond(false);
+				});
+			},
+			applyCallback: () => { },
+			cancelCallback: () => {
+				dirPermissions.showModal = false;
+			}
 		});
 
 		const tmpShareInit = () => {
@@ -243,7 +215,7 @@ export default {
 				client.host = client.host.replace(/\s+/, '');
 				client.settings = client.settings.replace(/\s+/, '');
 			}
-			emit('update-share', tmpShare);
+			emit('updateShare', tmpShare);
 			tmpShareInit();
 			emit('hide');
 		}
@@ -269,31 +241,6 @@ export default {
 			} catch { }
 			pathExists.value = false;
 		};
-
-		const resetNewDirSettings = async () => {
-			try {
-				const stat = (await useSpawn(['stat', '--format=%a:%U:%G', tmpShare.path], { superuser: 'try' }).promise()).stdout.trim().split(':');
-				newDirSettings.mode = parseInt(stat[0], 8);
-				newDirSettings.owner = stat[1];
-				newDirSettings.group = stat[2];
-			} catch (state) { console.error(state) }
-		};
-
-		const makeDir = async () => {
-			try {
-				await resetNewDirSettings();
-				const choice = await newDirModal.value.confirm("Share Directory Permissions", "", { icon: 'none' });
-				if (!choice)
-					return;
-				await useSpawn(['mkdir', '-p', tmpShare.path], { superuser: 'try' }).promise();
-				await useSpawn(['chown', newDirSettings.owner, tmpShare.path], { superuser: 'try' }).promise();
-				await useSpawn(['chgrp', newDirSettings.group, tmpShare.path], { superuser: 'try' }).promise();
-				await useSpawn(['chmod', newDirSettings.mode.toString(8), tmpShare.path], { superuser: 'try' }).promise();
-				await checkIfExists();
-			} catch (status) {
-				await props.modalPopup.alert("Failed to make directory", status.stderr, { icon: 'danger' });
-			}
-		}
 
 		const validateInputs = () => {
 			let result = true;
@@ -322,60 +269,21 @@ export default {
 			if (old === undefined || current.path !== old.path) {
 				await checkIfExists();
 				if (pathExists.value) {
-					resetNewDirSettings();
+					dirPermissions.resetNewDirSettings();
 				}
 			}
 		}, { deep: true, immediate: true });
 
-		watch(() => ({ ...modeMatrix }), (current, old) => {
-			newDirSettings.mode =
-				(modeMatrix.other.execute ? 0b000000001 : 0)
-				| (modeMatrix.other.write ? 0b000000010 : 0)
-				| (modeMatrix.other.read ? 0b000000100 : 0)
-				| (modeMatrix.group.execute ? 0b000001000 : 0)
-				| (modeMatrix.group.write ? 0b000010000 : 0)
-				| (modeMatrix.group.read ? 0b000100000 : 0)
-				| (modeMatrix.owner.execute ? 0b001000000 : 0)
-				| (modeMatrix.owner.write ? 0b010000000 : 0)
-				| (modeMatrix.owner.read ? 0b100000000 : 0)
-			newDirSettings.modeStr =
-				(modeMatrix.owner.read ? 'r' : '-')
-				+ (modeMatrix.owner.write ? 'w' : '-')
-				+ (modeMatrix.owner.execute ? 'x' : '-')
-				+ (modeMatrix.group.read ? 'r' : '-')
-				+ (modeMatrix.group.write ? 'w' : '-')
-				+ (modeMatrix.group.execute ? 'x' : '-')
-				+ (modeMatrix.other.read ? 'r' : '-')
-				+ (modeMatrix.other.write ? 'w' : '-')
-				+ (modeMatrix.other.execute ? 'x' : '-')
-				+ ` (${newDirSettings.mode.toString(8).padStart(3, '0')})`;
-		}, { deep: true, immediate: true });
-
-		watch(() => newDirSettings.mode, (current, old) => {
-			modeMatrix.other.execute = newDirSettings.mode & 0b000000001 ? true : false;
-			modeMatrix.other.write = newDirSettings.mode & 0b000000010 ? true : false;
-			modeMatrix.other.read = newDirSettings.mode & 0b000000100 ? true : false;
-			modeMatrix.group.execute = newDirSettings.mode & 0b000001000 ? true : false;
-			modeMatrix.group.write = newDirSettings.mode & 0b000010000 ? true : false;
-			modeMatrix.group.read = newDirSettings.mode & 0b000100000 ? true : false;
-			modeMatrix.owner.execute = newDirSettings.mode & 0b001000000 ? true : false;
-			modeMatrix.owner.write = newDirSettings.mode & 0b010000000 ? true : false;
-			modeMatrix.owner.read = newDirSettings.mode & 0b100000000 ? true : false;
-		}, { deep: true, immediate: true })
-
 		return {
-			newDirModal,
+			dirPermissions,
 			pathExists,
 			inputsValid,
 			tmpShare,
 			feedback,
-			newDirSettings,
-			modeMatrix,
 			apply,
 			cancel,
 			addClient,
 			deleteClient,
-			makeDir,
 		}
 	},
 	components: {
@@ -384,6 +292,8 @@ export default {
 		ExclamationCircleIcon,
 		ExclamationIcon,
 		ModalPopup,
+		FileModeMatrix,
+		Table
 	}
 }
 </script>

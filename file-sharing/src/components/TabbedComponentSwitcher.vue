@@ -16,15 +16,20 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="flex flex-row grow-0 dark:bg-neutral-800">
-		<div
-			v-for="(entry, index) in components"
-			:class="['px-5 py-3 cursor-default', currentTab === index ? 'bg-neutral-50 dark:bg-neutral-900' : 'hover:bg-neutral-50 dark:hover:bg-neutral-900 dark:bg-neutral-800']"
-			@click="switchTab(index)"
-		>{{ entry.title }}</div>
-	</div>
-	<div class="bg-neutral-50 dark:bg-neutral-900 overflow-y-scroll grow">
-		<component :modalPopup="modalPopup" :is="components[currentTab].component" />
+	<div class="flex flex-col">
+		<div class="flex flex-row grow-0 items-stretch bg-well">
+			<button
+				v-for="(entry, index) in components"
+				:class="['px-5 py-3 cursor-default z-10', currentTab === index ? 'bg-transparent' : 'bg-plugin-header shadow-lg']"
+				@click="switchTab(index)"
+			>{{ entry.title }}</button>
+			<div class="grow bg-plugin-header z-10 shadow-lg"></div>
+		</div>
+		<div class="overflow-hidden grow basis-0">
+			<div class="bg-well overflow-y-scroll h-full">
+				<component :modalPopup="modalPopup" :is="components[currentTab].component" />
+			</div>
+		</div>
 	</div>
 </template>
 

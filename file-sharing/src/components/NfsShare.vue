@@ -16,35 +16,22 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<tr :class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'">
-		<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-6 lg:pl-8 text-gray-500 dark:text-gray-400">{{ share.path }}</td>
-		<td
-			class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
-		>
-			<div class="inline-block w-20 text-left">
-				<a
-					@click="showEditor ? editorRef.cancel() : showEditor = true"
-					class="uppercase text-lime-500 hover:text-lime-800 cursor-pointer"
-				>
-					{{ showEditor ? 'Cancel' : 'Edit' }}
-					<span class="sr-only">, {{ share.path }}</span>
-				</a>
-			</div>
-		</td>
-		<td
-			class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
-		>
-			<a
-				@click="$emit('delete-share', share)"
-				class="uppercase text-red-600 hover:text-red-900 cursor-pointer"
-			>
-				Delete
-				<span class="sr-only">, {{ share.name }}</span>
-			</a>
+	<tr>
+		<td>{{ share.path }}</td>
+		<td class="button-group-row justify-end">
+			<button @click="showEditor ? editorRef.cancel() : showEditor = true">
+				<span class="sr-only">Edit share for {{ share.path }}</span>
+				<PencilAltIcon class="size-icon icon-default" />
+			</button>
+			<button @click="$emit('delete-share', share)">
+				<span class="sr-only">Delete share for {{ share.path }}</span>
+				<TrashIcon class="size-icon icon-danger" />
+			</button>
 		</td>
 	</tr>
-	<tr :class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'">
-		<td colspan="3">
+	<tr></tr> <!-- needed to make backgrounds match -->
+	<tr>
+		<td colspan="2" class="!py-0">
 			<div
 				class="overflow-hidden"
 				:style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
@@ -65,10 +52,10 @@ If not, see <https://www.gnu.org/licenses/>.
 <script>
 import { ref } from "vue";
 import NfsShareEditor from "./NfsShareEditor.vue";
+import { PencilAltIcon, TrashIcon } from "@heroicons/vue/solid";
 export default {
 	props: {
 		share: Object,
-		index: Number,
 		users: Array[Object],
 		groups: Array[Object],
 	},
@@ -88,6 +75,8 @@ export default {
 	},
 	components: {
 		NfsShareEditor,
+		PencilAltIcon,
+		TrashIcon,
 	}
 }
 </script>

@@ -16,7 +16,7 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="loading-spinner border-neutral-200 dark:border-t-neutral-200 dark:border-neutral-500 border-t-neutral-500 rounded-full"></div>
+	<div class="aspect-square loading-spinner border-neutral-300 border-t-neutral-500 dark:border-neutral-500 dark:border-t-neutral-200 rounded-full"></div>
 </template>
 
 <style>

@@ -16,11 +16,11 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="h-full flex flex-col overflow-hidden text-gray-700 dark:text-gray-200">
+	<div class="h-full flex flex-col text-default">
 		<FfdHeader moduleName="File Sharing" centerName />
-		<TabbedComponentSwitcher :modalPopup="modalPopup" :components="tabs" :saveState="true" />
+		<TabbedComponentSwitcher :components="tabs" :saveState="true" class="grow" />
 	</div>
-	<ModalPopup ref="modalPopup" class="text-gray-700 dark:text-gray-200" />
+	<Notifications :notificationFIFO="notificationFIFO" ref="notifications" />
 </template>
 
 <script setup>
@@ -28,18 +28,15 @@ import TabbedComponentSwitcher from './components/TabbedComponentSwitcher.vue';
 import SambaManager from './components/SambaManager.vue'
 import NfsManager from './components/NfsManager.vue';
 import FfdHeader from './components/FfdHeader.vue';
-import ModalPopup from './components/ModalPopup.vue';
-import { ref } from 'vue';
+import Notifications from './components/Notifications.vue';
+import { onMounted, provide, ref } from 'vue';
+import { notificationsInjectionKey } from './keys';
+import { FIFO } from '@45drives/cockpit-helpers';
 
-const tabs = [{ title: 'Samba', component: SambaManager }, { title: 'NFS', component: NfsManager }];
+const props = defineProps({ notificationFIFO: FIFO });
 
-const modalPopup = ref();
+const notifications = ref(null);
+provide(notificationsInjectionKey, notifications);
+
+const tabs = ref([{ title: 'Samba', component: SambaManager }, { title: 'NFS', component: NfsManager }]);
 </script>
-
-<style>
-#app {
-	font-family: Avenir, Helvetica, Arial, sans-serif;
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
-}
-</style>

@@ -16,166 +16,74 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="space-y-5 px-4 pb-4">
-		<h3 v-if="!share">New Share</h3>
+	<div class="space-y-content py-2 text-base">
+		<div class="text-header" v-if="!share">New Share</div>
 		<div>
-			<label class="block text-sm font-medium">Share Name</label>
-			<div class="mt-1">
-				<input
-					type="text"
-					name="name"
-					id="name"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md disabled:bg-neutral-100 disabled:text-gray-500 disabled:cursor-not-allowed"
-					placeholder="A unique name for your share"
-					v-model="tmpShare.name"
-					:disabled="share"
-					autocomplete="off"
-				/>
-			</div>
-			<div
-				class="mt-2 text-sm text-red-600 flex flex-row justify-start items-center space-x-1"
-				v-if="feedback.name"
-			>
-				<ExclamationCircleIcon class="w-5 h-5 inline" />
-				<span>{{ feedback.name }}</span>
+			<label class="block text-label">Share Name</label>
+			<input
+				type="text"
+				name="name"
+				class="w-full input-textlike"
+				placeholder="A unique name for your share"
+				v-model="tmpShare.name"
+				:disabled="share"
+				autocomplete="off"
+			/>
+			<div class="feedback-group" v-if="feedback.name">
+				<ExclamationCircleIcon class="size-icon icon-error" />
+				<span class="text-feedback text-error">{{ feedback.name }}</span>
 			</div>
 		</div>
 		<div>
-			<label class="block text-sm font-medium">Share Description</label>
-			<div class="mt-1">
-				<input
-					type="text"
-					name="description"
-					id="description"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
-					placeholder="Describe your share"
-					v-model="tmpShare.comment"
-				/>
-			</div>
+			<label class="block text-label">Share Description</label>
+			<input
+				type="text"
+				name="description"
+				class="w-full input-textlike"
+				placeholder="Describe your share"
+				v-model="tmpShare.comment"
+			/>
 		</div>
 		<div>
-			<label class="block text-sm font-medium">Path</label>
-			<div class="mt-1">
-				<input
-					type="text"
-					name="path"
-					id="path"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md disabled:bg-neutral-100 disabled:text-gray-500 disabled:cursor-not-allowed"
-					placeholder="Share path/directory"
-					v-model="tmpShare.path"
-					:disabled="share !== null"
-				/>
+			<label class="block text-label">Path</label>
+			<input
+				type="text"
+				name="path"
+				class="w-full input-textlike disabled:cursor-not-allowed"
+				placeholder="Share path/directory"
+				v-model="tmpShare.path"
+				:disabled="share !== null"
+			/>
+			<div class="feedback-group" v-if="feedback.path">
+				<ExclamationCircleIcon class="size-icon icon-error" />
+				<span class="text-feedback text-error">{{ feedback.path }}</span>
 			</div>
-			<div
-				class="mt-2 text-sm text-red-600 flex flex-row justify-start items-center space-x-1"
-				v-if="feedback.path"
-			>
-				<ExclamationCircleIcon class="w-5 h-5 inline" />
-				<span>{{ feedback.path }}</span>
-			</div>
-			<div
-				v-if="(!feedback.path)"
-				class="mt-2 text-sm flex flex-row justify-start items-center space-x-1"
-			>
-				<ExclamationIcon v-if="!pathExists" class="w-5 h-5 inline-block text-orange-500" />
-				<span v-if="!pathExists" class="text-orange-500">Path does not exist.</span>
+			<div v-else class="feedback-group">
+				<ExclamationIcon v-if="!pathExists" class="size-icon icon-warning" />
+				<span v-if="!pathExists" class="text-feedback text-warning">Path does not exist.</span>
 				<button
 					v-if="!pathExists"
-					class="text-orange-500 hover:text-orange-800 underline"
-					@click="makeDir"
+					class="text-feedback text-warning underline"
+					@click="dirPermissions.update"
 				>Create now</button>
-				<button
-					v-else
-					class="btn btn-secondary"
-					@click="makeDir"
-				>Edit Permissions</button>
-				<ModalPopup ref="newDirModal" class="text-gray-700 dark:text-gray-200">
-					<div class="flex flex-col space-y-4">
-						<div class="space-y-1">
-							<div class="grid grid-cols-4 gap-2 justify-items-center">
-								<label class="justify-self-start block text-sm font-medium"></label>
-								<label class="block text-sm font-medium">Read</label>
-								<label class="block text-sm font-medium">Write</label>
-								<label class="block text-sm font-medium">Execute</label>
-
-								<label class="justify-self-start block text-sm font-medium">Owner</label>
-								<input
-									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
-									type="checkbox"
-									v-model="modeMatrix.owner.read"
-								/>
-								<input
-									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
-									type="checkbox"
-									v-model="modeMatrix.owner.write"
-								/>
-								<input
-									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
-									type="checkbox"
-									v-model="modeMatrix.owner.execute"
-								/>
-
-								<label class="justify-self-start block text-sm font-medium">Group</label>
-								<input
-									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
-									type="checkbox"
-									v-model="modeMatrix.group.read"
-								/>
-								<input
-									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
-									type="checkbox"
-									v-model="modeMatrix.group.write"
-								/>
-								<input
-									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
-									type="checkbox"
-									v-model="modeMatrix.group.execute"
-								/>
-
-								<label class="justify-self-start block text-sm font-medium">Other</label>
-								<input
-									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
-									type="checkbox"
-									v-model="modeMatrix.other.read"
-								/>
-								<input
-									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
-									type="checkbox"
-									v-model="modeMatrix.other.write"
-								/>
-								<input
-									class="focus:ring-offset-0 dark:bg-neutral-800 dark:border-gray-700 dark:checked:bg-red-600 focus:ring-0 focus:outline-none h-4 w-4 text-red-600 border-gray-300 rounded"
-									type="checkbox"
-									v-model="modeMatrix.other.execute"
-								/>
-							</div>
-
-							<div>
-								<label class="text-sm font-medium">Result</label>
-								<span
-									class="ml-8 font-mono font-medium whitespace-nowrap overflow-visible grow-0 basis-0"
-								>{{ newDirSettings.modeStr }}</span>
-							</div>
-						</div>
+				<button v-else class="text-feedback text-primary" @click="dirPermissions.update">Edit Permissions</button>
+				<ModalPopup
+					:showModal="dirPermissions.showModal"
+					headerText="Share Directory Permissions"
+					@apply="dirPermissions.applyCallback"
+					@cancel="dirPermissions.cancelCallback"
+				>
+					<div class="flex flex-col space-y-content">
+						<FileModeMatrix v-model="dirPermissions.mode" />
 						<div>
 							<label class="block text-sm font-medium">Owner</label>
-							<select
-								id="log-level"
-								name="log-level"
-								class="mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-neutral-800 focus:border-gray-500 sm:text-sm rounded-md"
-								v-model="newDirSettings.owner"
-							>
+							<select name="log-level" class="input-textlike" v-model="dirPermissions.owner">
 								<option v-for="user in users" :value="user.user">{{ user.pretty }}</option>
 							</select>
 						</div>
 						<div>
 							<label class="block text-sm font-medium">Group</label>
-							<select
-								id="log-level"
-								name="log-level"
-								class="mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-neutral-800 focus:border-gray-500 sm:text-sm rounded-md"
-								v-model="newDirSettings.group"
-							>
+							<select name="log-level" class="input-textlike" v-model="dirPermissions.group">
 								<option v-for="group in groups" :value="group.group">{{ group.pretty }}</option>
 							</select>
 						</div>
@@ -184,45 +92,39 @@ If not, see <https://www.gnu.org/licenses/>.
 			</div>
 		</div>
 		<div v-if="isCeph">
-			<label class="text-sm font-medium flex flex-row space-x-2">
-				Ceph Share Mount Options
+			<label class="text-label flex flex-row space-x-2">
+				<span>Ceph Share Mount Options</span>
 				<InfoTip>
 					When creating a Ceph share, a new filesystem mount point is created on top of the share directory.
 					This is needed for Windows to properly report quotas through Samba.
 				</InfoTip>
 			</label>
-			<div class="mt-1">
-				<input
-					type="text"
-					name="path"
-					id="path"
-					class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md disabled:bg-neutral-100 disabled:text-gray-500 disabled:cursor-not-allowed"
-					placeholder="Share Path/Directory"
-					v-model="cephOptions.mountOptions"
-					:disabled="share !== null"
-				/>
-			</div>
-			<div
-				class="mt-2 text-sm text-red-600 flex flex-row justify-start items-center space-x-1"
-				v-if="feedback.cephMountOptions"
-			>
-				<ExclamationCircleIcon class="w-5 h-5 inline" />
-				<span>{{ feedback.cephMountOptions }}</span>
+			<input
+				type="text"
+				name="path"
+				class="input-textlike disabled:cursor-not-allowed"
+				placeholder="Share Path/Directory"
+				v-model="cephOptions.mountOptions"
+				:disabled="share !== null"
+			/>
+			<div class="feedback-group" v-if="feedback.cephMountOptions">
+				<ExclamationCircleIcon class="size-icon icon-error" />
+				<span class="text-feedback text-error">{{ feedback.cephMountOptions }}</span>
 			</div>
 		</div>
 		<div v-if="isCeph">
-			<label class="block text-sm font-medium">Ceph Quota</label>
-			<div class="mt-1 relative rounded-md shadow-sm">
+			<label class="block text-label">Ceph Quota</label>
+			<div class="relative rounded-md shadow-sm">
 				<input
 					type="number"
-					class="focus:ring-0 focus:border-gray-500 block w-full pr-12 sm:text-sm border-gray-300 rounded-md dark:border-gray-700 dark:bg-neutral-800"
+					class="w-full pr-12 input-textlike"
 					placeholder="0.00"
 					v-model="cephOptions.quotaValue"
 				/>
 				<div class="absolute inset-y-0 right-0 flex items-center">
 					<label class="sr-only">Unit</label>
 					<select
-						class="focus:ring-0 focus:border-gray-500 h-full py-0 pl-2 pr-7 border-transparent bg-transparent text-gray-500 sm:text-sm rounded-md"
+						class="input-textlike border-transparent bg-transparent"
 						v-model="cephOptions.quotaMultiplier"
 					>
 						<option :value="1024 ** 2">MiB</option>
@@ -231,18 +133,15 @@ If not, see <https://www.gnu.org/licenses/>.
 					</select>
 				</div>
 			</div>
-			<div
-				class="mt-2 text-sm text-red-600 flex flex-row justify-start items-center space-x-1"
-				v-if="feedback.cephQuota"
-			>
-				<ExclamationCircleIcon class="w-5 h-5 inline" />
-				<span>{{ feedback.cephQuota }}</span>
+			<div class="feedback-group" v-if="feedback.cephQuota">
+				<ExclamationCircleIcon class="size-icon icon-error" />
+				<span class="text-feedback text-error">{{ feedback.cephQuota }}</span>
 			</div>
 		</div>
 		<div v-if="isCeph">
-			<label class="block text-sm font-medium">Ceph Layout Pool</label>
+			<label class="block text-label">Ceph Layout Pool</label>
 			<select
-				class="mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-neutral-800 focus:border-gray-500 sm:text-sm rounded-md disabled:bg-neutral-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+				class="input-textlike disabled:cursor-not-allowed"
 				v-model="cephOptions.layoutPool"
 				:disabled="share !== null"
 			>
@@ -251,164 +150,64 @@ If not, see <https://www.gnu.org/licenses/>.
 			</select>
 		</div>
 		<div
-			class="space-y-5"
+			class="space-y-content"
 			:style="{ 'max-height': !shareWindowsAcls ? '500px' : '0', transition: !shareWindowsAcls ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out', overflow: 'hidden' }"
 		>
 			<div>
-				<label class="text-sm font-medium flex flex-row space-x-2">
-					Valid Users
+				<label class="text-label flex flex-row space-x-2">
+					<span>Valid Users</span>
 					<InfoTip>By default, any user and group can join a share. If a "valid user" or "valid group" is added, it then acts as a whitelist.</InfoTip>
 				</label>
 				<PillList :list="shareValidUsers" @remove-item="removeValidUser" />
 				<DropdownSelector :options="users" placeholder="Add User" @select="addValidUser" />
 			</div>
 			<div>
-				<label class="block text-sm font-medium">Valid Groups</label>
+				<label class="block text-label">Valid Groups</label>
 				<PillList :list="shareValidGroups" @remove-item="removeValidGroup" />
 				<DropdownSelector :options="groups" placeholder="Add Group" @select="addValidGroup" />
 			</div>
 		</div>
-		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
-				<span class="flex-grow flex flex-col">
-					<SwitchLabel as="span" class="text-sm font-medium" passive>Guest OK</SwitchLabel>
-					<!-- <SwitchDescription
-						as="span"
-						class="text-sm text-gray-500"
-					>Allow guests in share.</SwitchDescription>-->
-				</span>
-				<Switch
-					v-model="tmpShare['guest ok']"
-					:class="[tmpShare['guest ok'] ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
-				>
-					<span
-						aria-hidden="true"
-						:class="[tmpShare['guest ok'] ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
-					/>
-				</Switch>
-			</SwitchGroup>
-		</div>
-		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
-				<span class="flex-grow flex flex-col">
-					<SwitchLabel as="span" class="text-sm font-medium" passive>Read Only</SwitchLabel>
-					<!-- <SwitchDescription
-						as="span"
-						class="text-sm text-gray-500"
-					>Make share read only.</SwitchDescription>-->
-				</span>
-				<Switch
-					v-model="tmpShare['read only']"
-					:class="[tmpShare['read only'] ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
-				>
-					<span
-						aria-hidden="true"
-						:class="[tmpShare['read only'] ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
-					/>
-				</Switch>
-			</SwitchGroup>
-		</div>
-		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
-				<span class="flex-grow flex flex-col">
-					<SwitchLabel as="span" class="text-sm font-medium" passive>Browseable</SwitchLabel>
-					<!-- <SwitchDescription
-						as="span"
-						class="text-sm text-gray-500"
-					>Allow browsing of share.</SwitchDescription>-->
-				</span>
-				<Switch
-					v-model="tmpShare.browseable"
-					:class="[tmpShare.browseable ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
-				>
-					<span
-						aria-hidden="true"
-						:class="[tmpShare.browseable ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
-					/>
-				</Switch>
-			</SwitchGroup>
-		</div>
-		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
-				<span class="flex-grow flex flex-col">
-					<SwitchLabel as="span" class="text-sm font-medium" passive>Windows ACLs</SwitchLabel>
-					<SwitchDescription
-						as="span"
-						class="text-sm text-gray-500"
-					>Administer Share Permissions from Windows</SwitchDescription>
-				</span>
-				<Switch
-					v-model="shareWindowsAcls"
-					@click="switchWindowsAcls(shareWindowsAcls)"
-					:class="[shareWindowsAcls ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
-				>
-					<span
-						aria-hidden="true"
-						:class="[shareWindowsAcls ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
-					/>
-				</Switch>
-			</SwitchGroup>
-		</div>
-		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
-				<span class="flex-grow flex flex-col">
-					<SwitchLabel as="span" class="text-sm font-medium" passive>Shadow Copy</SwitchLabel>
-					<SwitchDescription as="span" class="text-sm text-gray-500">Expose Per-File Snapshots to Users</SwitchDescription>
-				</span>
-				<Switch
-					v-model="shareShadowCopy"
-					@click="switchShadowCopy()"
-					:class="[shareShadowCopy ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
-				>
-					<span
-						aria-hidden="true"
-						:class="[shareShadowCopy ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
-					/>
-				</Switch>
-			</SwitchGroup>
-		</div>
-		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
-				<span class="flex-grow flex flex-col">
-					<SwitchLabel as="span" class="text-sm font-medium" passive>MacOS Share</SwitchLabel>
-					<SwitchDescription as="span" class="text-sm text-gray-500">Optmize Share for MacOS</SwitchDescription>
-				</span>
-				<Switch
-					v-model="shareMacOsShare"
-					@click="switchMacOsShare(shareMacOsShare)"
-					:class="[shareMacOsShare ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
-				>
-					<span
-						aria-hidden="true"
-						:class="[shareMacOsShare ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
-					/>
-				</Switch>
-			</SwitchGroup>
-		</div>
-		<div>
-			<SwitchGroup as="div" class="flex items-center justify-between w-1/3 mobile:w-full">
-				<span class="flex-grow flex flex-col">
-					<SwitchLabel as="span" class="text-sm font-medium" passive>Audit Logs</SwitchLabel>
-					<SwitchDescription as="span" class="text-sm text-gray-500">Turn on Audit Logging</SwitchDescription>
-				</span>
-				<Switch
-					v-model="shareAuditLogs"
-					@click="switchAuditLogs(shareAuditLogs)"
-					:class="[shareAuditLogs ? 'bg-red-600 dark:bg-red-700' : 'bg-neutral-200 dark:bg-neutral-900', 'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-0']"
-				>
-					<span
-						aria-hidden="true"
-						:class="[shareAuditLogs ? 'translate-x-5' : 'translate-x-0', 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-600 shadow transform ring-0 transition ease-in-out duration-200']"
-					/>
-				</Switch>
-			</SwitchGroup>
+		<div class="inline-flex flex-col items-stretch gap-content">
+			<LabelledSwitch v-model="tmpShare['guest ok']">
+				Guest OK
+			</LabelledSwitch>
+			<LabelledSwitch v-model="tmpShare['read only']">
+				Read Only
+			</LabelledSwitch>
+			<LabelledSwitch v-model="tmpShare['browseable']">
+				Browseable
+			</LabelledSwitch>
+			<LabelledSwitch v-model="shareWindowsAcls" @change="value => switchWindowsAcls(value)">
+				Windows ACLS
+				<template #description>
+					Administer share permissions from Windows
+				</template>
+			</LabelledSwitch>
+			<LabelledSwitch v-model="shareShadowCopy" @change="value => switchShadowCopy(value)">
+				Shadow Copy
+				<template #description>
+					Expose per-file snapshots to users
+				</template>
+			</LabelledSwitch>
+			<LabelledSwitch v-model="shareMacOsShare" @change="value => switchMacOsShare(value)">
+				MacOS Share
+				<template #description>
+					Optimize share for MacOS
+				</template>
+			</LabelledSwitch>
+			<LabelledSwitch v-model="shareAuditLogs" @change="value => switchAuditLogs(value)">
+				Audit Logs
+				<template #description>
+					Turn on audit logging
+				</template>
+			</LabelledSwitch>
 		</div>
 		<div @click="showAdvanced = !showAdvanced">
-			<label class="block text-sm font-medium cursor-pointer">
+			<label class="block text-label cursor-pointer">
 				Advanced Settings
 				<ChevronDownIcon
 					:style="{ display: 'inline-block', transition: '0.5s', transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0)' }"
-					class="h-4 w-4"
+					class="size-icon-sm"
 				/>
 			</label>
 		</div>
@@ -416,16 +215,15 @@ If not, see <https://www.gnu.org/licenses/>.
 			:style="{ 'max-height': showAdvanced ? '500px' : '0', transition: showAdvanced ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out', overflow: 'hidden' }"
 		>
 			<textarea
-				id="advanced-settings"
 				name="advanced-settings"
 				rows="4"
 				v-model="shareAdvancedSettingsStr"
-				class="shadow-sm focus:border-gray-500 focus:ring-0 focus:outline-none block w-1/2 sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-neutral-800 rounded-md"
+				class="w-full input-textlike"
 				@change="setAdvancedToggleStates"
 				placeholder="key = value"
 			/>
 		</div>
-		<div class="flex flex-row justify-end space-x-3">
+		<div class="button-group-row justify-end">
 			<button class="btn btn-secondary" @click="cancel">Cancel</button>
 			<button class="btn btn-primary" @click="apply" :disabled="!inputsValid">Confirm</button>
 		</div>
@@ -436,12 +234,14 @@ If not, see <https://www.gnu.org/licenses/>.
 import PillList from "./PillList.vue";
 import DropdownSelector from "./DropdownSelector.vue";
 import { splitAdvancedSettings, joinAdvancedSettings, strToBool } from "../functions";
-import { Switch, SwitchDescription, SwitchGroup, SwitchLabel } from '@headlessui/vue'
 import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
-import { ref, reactive, watch } from "vue";
-import useSpawn from "./UseSpawn";
+import { ref, reactive, watch, inject } from "vue";
+import { useSpawn, errorStringHTML } from "@45drives/cockpit-helpers";
 import ModalPopup from "./ModalPopup.vue";
 import InfoTip from "./InfoTip.vue";
+import FileModeMatrix from "./FileModeMatrix.vue";
+import { notificationsInjectionKey } from "../keys";
+import LabelledSwitch from "./LabelledSwitch.vue";
 export default {
 	props: {
 		share: {
@@ -453,11 +253,9 @@ export default {
 		groups: Array[Object],
 		ctdbHosts: Array[String],
 		cephLayoutPools: Array[String],
-		modalPopup: Object,
 		shares: Array[Object],
 	},
 	setup(props, { emit }) {
-		const newDirModal = ref();
 		const tmpShare = reactive({});
 		const showAdvanced = ref(false);
 		const shareValidUsers = ref([]);
@@ -476,19 +274,60 @@ export default {
 		});
 		const inputsValid = ref(true);
 		const pathExists = ref(false);
+		const notifications = inject(notificationsInjectionKey);
 
 		const feedback = reactive({});
 
-		const newDirSettings = reactive({
+		const dirPermissions = reactive({
+			showModal: false,
 			mode: 0o755,
-			modeStr: "rwxr-xr-x",
 			owner: 'root',
 			group: 'root',
-		});
-		const modeMatrix = reactive({
-			owner: { read: true, write: true, execute: true },
-			group: { read: true, write: false, execute: true },
-			other: { read: true, write: false, execute: true },
+			resetNewDirSettings: async () => {
+				try {
+					const stat = (await useSpawn(['stat', '--format=%a:%U:%G', tmpShare.path], { superuser: 'try' }).promise()).stdout.trim().split(':');
+					dirPermissions.mode = parseInt(stat[0], 8);
+					dirPermissions.owner = stat[1];
+					dirPermissions.group = stat[2];
+				} catch (state) {
+					dirPermissions.mode = 0o755;
+					dirPermissions.owner = 'root';
+					dirPermissions.group = 'root';
+				}
+			},
+			update: async () => {
+				try {
+					if (/^(?:\/\.?\.?)+$/.test(tmpShare.path)) {
+						notifications.value.constructNotification("Cannot Edit Permissions for /", "If you think you need to do this, you don't.", 'denied');
+						return;
+					}
+					await dirPermissions.resetNewDirSettings();
+					if (!await dirPermissions.waitForApply())
+						return;
+					await useSpawn(['mkdir', '-p', tmpShare.path], { superuser: 'try' }).promise();
+					await useSpawn(['chown', dirPermissions.owner, tmpShare.path], { superuser: 'try' }).promise();
+					await useSpawn(['chgrp', dirPermissions.group, tmpShare.path], { superuser: 'try' }).promise();
+					await useSpawn(['chmod', dirPermissions.mode.toString(8), tmpShare.path], { superuser: 'try' }).promise();
+					await checkIfExists();
+				} catch (state) {
+					notifications.value.constructNotification("Failed to update directory permissions", errorStringHTML(state), 'error');
+				}
+			},
+			waitForApply: () => {
+				return new Promise((resolve, reject) => {
+					dirPermissions.showModal = true;
+					const respond = (result) => {
+						dirPermissions.showModal = false;
+						resolve(result);
+					}
+					dirPermissions.applyCallback = () => respond(true);
+					dirPermissions.cancelCallback = () => respond(false);
+				});
+			},
+			applyCallback: () => { },
+			cancelCallback: () => {
+				dirPermissions.showModal = false;
+			}
 		});
 
 		const setAdvancedToggleStates = () => {
@@ -522,11 +361,11 @@ export default {
 
 		const checkIfExists = async () => {
 			try {
-				await useSpawn(['ls', tmpShare.path], { superuser: 'try' }).promise();
+				await useSpawn(['stat', tmpShare.path], { superuser: 'try' }).promise();
 				pathExists.value = true;
-				return;
-			} catch { }
-			pathExists.value = false;
+			} catch {
+				pathExists.value = false;
+			}
 		};
 
 		const checkIfCeph = async () => {
@@ -534,15 +373,17 @@ export default {
 				const cephXattr = (await useSpawn(['getfattr', '-n', 'ceph.dir.rctime', tmpShare.path]).promise()).stdout;
 				if (cephXattr !== "") {
 					isCeph.value = true;
-					return;
+				} else {
+					isCeph.value = false;
 				}
-			} catch (state) { }
-			isCeph.value = false;
+			} catch (state) {
+				isCeph.value = false;
+			}
 		};
 
 		const getCephQuota = async () => {
 			try {
-				const quotaBytes = Number((await useSpawn(['getfattr', '-n', 'ceph.quota.max_bytes', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try', err: 'message' }).promise()).stdout);
+				const quotaBytes = Number((await useSpawn(['getfattr', '-n', 'ceph.quota.max_bytes', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try' }).promise()).stdout);
 				if (quotaBytes !== 0) {
 					const base = 1024;
 					let exp = Math.floor(Math.log(quotaBytes) / Math.log(base));
@@ -558,10 +399,11 @@ export default {
 
 		const getCephLayoutPool = async () => {
 			try {
-				cephOptions.layoutPool = (await useSpawn(['getfattr', '-n', 'ceph.dir.layout.pool', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try', err: 'message' }).promise()).stdout;
-				return;
-			} catch (err) { console.error(err) }
-			cephOptions.layoutPool = "";
+				cephOptions.layoutPool = (await useSpawn(['getfattr', '-n', 'ceph.dir.layout.pool', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try' }).promise()).stdout;
+			} catch (err) {
+				cephOptions.layoutPool = "";
+				console.error(err);
+			}
 		};
 
 		const tmpShareInit = async () => {
@@ -583,7 +425,8 @@ export default {
 					"read only": false,
 					"browseable": true,
 					advancedSettings: []
-				})
+				}
+			);
 			tmpShare["valid users"].match(/(?:[^\s"]+|"[^"]*")+/g)?.map(entity => entity.replace(/^"/, '').replace(/"$/, '')).forEach((entity) => {
 				if (entity.at(0) === '@') {
 					const groupName = entity.substring(1);
@@ -595,7 +438,6 @@ export default {
 
 			shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
 			showAdvanced.value = Boolean(shareAdvancedSettingsStr.value);
-
 
 			await checkIfCeph();
 			if (isCeph.value) {
@@ -635,7 +477,7 @@ export default {
 			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
 		};
 
-		const switchShadowCopy = () => {
+		const switchShadowCopy = (value) => {
 			const addShadowCopy = () => {
 				if (!/shadow: ?snapdir/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value += "\nshadow:snapdir = .zfs/snapshot";
@@ -667,7 +509,7 @@ export default {
 					shareAdvancedSettingsStr.value
 						.replace(/(?<=vfs objects ?=.*)ceph_snapshots ?/, "");
 			};
-			if (shareShadowCopy.value) {
+			if (value) {
 				showAdvanced.value = true;
 				if (isCeph.value) {
 					removeShadowCopy();
@@ -764,7 +606,7 @@ export default {
 				}
 				getCephQuota();
 			} catch (state) {
-				console.error(state);
+				notifications.value.constructNotification("Failed to set Ceph quota", errorStringHTML(state), 'error');
 			}
 
 			if (force || props.share === null) { // only run if creating new share
@@ -774,7 +616,7 @@ export default {
 					}
 					getCephLayoutPool();
 				} catch (state) {
-					console.error(state);
+					notifications.value.constructNotification("Failed to set Ceph layout pool", errorStringHTML(state), 'error');
 				}
 				try {
 					const systemdMountFile = `/etc/systemd/system/${tmpShare.path.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
@@ -815,7 +657,7 @@ WantedBy=remote-fs.target
 						await useSpawn(['systemctl', 'enable', '--now', systemdMountFile], { superuser: 'try' }).promise();
 					}
 				} catch (state) {
-					console.error(state);
+					notifications.value.constructNotification("Failed to set up Ceph systemd mount for share", errorStringHTML(state), 'error');
 				}
 			}
 		}
@@ -834,7 +676,7 @@ WantedBy=remote-fs.target
 					await cockpit.file(systemdMountFile, { superuser: 'try' }).replace(null);
 				}
 			} catch (state) {
-				console.error(state);
+				notifications.value.constructNotification("Failed to remove Ceph systemd mount for share", errorStringHTML(state), 'error');
 			}
 		}
 
@@ -842,7 +684,7 @@ WantedBy=remote-fs.target
 			tmpShare["valid users"] = shareWindowsAcls.value ? "" : [...shareValidGroups.value.map(group => `"@${group.group}"`).sort(), ...shareValidUsers.value.map(user => `"${user.user}"`).sort()].join(" ");
 			tmpShare.advancedSettings = splitAdvancedSettings(shareAdvancedSettingsStr.value);
 			shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
-			emit("apply-share", {
+			emit("applyShare", {
 				...tmpShare,
 				"guest ok": tmpShare["guest ok"] ? "yes" : "no",
 				"read only": tmpShare["read only"] ? "yes" : "no",
@@ -872,38 +714,6 @@ WantedBy=remote-fs.target
 		const removeValidGroup = (group) => {
 			shareValidGroups.value = shareValidGroups.value.filter((a) => a !== group);
 		};
-
-		const resetNewDirSettings = async () => {
-			try {
-				const stat = (await useSpawn(['stat', '--format=%a:%U:%G', tmpShare.path], { superuser: 'try' }).promise()).stdout.trim().split(':');
-				newDirSettings.mode = parseInt(stat[0], 8);
-				newDirSettings.owner = stat[1];
-				newDirSettings.group = stat[2];
-			} catch (state) { console.error(state) }
-		};
-
-		const makeDir = async () => {
-			try {
-				await resetNewDirSettings();
-				if (/^(?:\/\.?\.?)+$/.test(tmpShare.path)) {
-					props.modalPopup.alert("Cannot Edit Permissions for /", "If you think you need to do this, you don't.", { icon: 'danger' });
-					return;
-				}
-				const choice = await newDirModal.value.confirm("Share Directory Permissions", "", { icon: 'none' });
-				if (!choice)
-					return;
-				await useSpawn(['mkdir', '-p', tmpShare.path], { superuser: 'try' }).promise();
-				await useSpawn(['chown', newDirSettings.owner, tmpShare.path], { superuser: 'try' }).promise();
-				await useSpawn(['chgrp', newDirSettings.group, tmpShare.path], { superuser: 'try' }).promise();
-				await useSpawn(['chmod', newDirSettings.mode.toString(8), tmpShare.path], { superuser: 'try' }).promise();
-				await checkIfExists();
-				await checkIfCeph();
-				if (isCeph.value)
-					await getCephQuota();
-			} catch (status) {
-				await props.modalPopup.alert("Failed to make directory", status.stderr, { icon: 'danger' });
-			}
-		}
 
 		const validateInputs = () => {
 			let result = true;
@@ -949,7 +759,7 @@ WantedBy=remote-fs.target
 			if (old === undefined || current.path !== old.path) {
 				await checkIfExists();
 				if (pathExists.value) {
-					resetNewDirSettings();
+					dirPermissions.resetNewDirSettings();
 				}
 				const lastIsCeph = isCeph.value;
 				await checkIfCeph();
@@ -967,44 +777,8 @@ WantedBy=remote-fs.target
 			validateInputs();
 		});
 
-		watch(() => ({ ...modeMatrix }), (current, old) => {
-			newDirSettings.mode =
-				(modeMatrix.other.execute ? 0b000000001 : 0)
-				| (modeMatrix.other.write ? 0b000000010 : 0)
-				| (modeMatrix.other.read ? 0b000000100 : 0)
-				| (modeMatrix.group.execute ? 0b000001000 : 0)
-				| (modeMatrix.group.write ? 0b000010000 : 0)
-				| (modeMatrix.group.read ? 0b000100000 : 0)
-				| (modeMatrix.owner.execute ? 0b001000000 : 0)
-				| (modeMatrix.owner.write ? 0b010000000 : 0)
-				| (modeMatrix.owner.read ? 0b100000000 : 0)
-			newDirSettings.modeStr =
-				(modeMatrix.owner.read ? 'r' : '-')
-				+ (modeMatrix.owner.write ? 'w' : '-')
-				+ (modeMatrix.owner.execute ? 'x' : '-')
-				+ (modeMatrix.group.read ? 'r' : '-')
-				+ (modeMatrix.group.write ? 'w' : '-')
-				+ (modeMatrix.group.execute ? 'x' : '-')
-				+ (modeMatrix.other.read ? 'r' : '-')
-				+ (modeMatrix.other.write ? 'w' : '-')
-				+ (modeMatrix.other.execute ? 'x' : '-')
-				+ ` (${newDirSettings.mode.toString(8).padStart(3, '0')})`;
-		}, { deep: true, immediate: true });
-
-		watch(() => newDirSettings.mode, (current, old) => {
-			modeMatrix.other.execute = newDirSettings.mode & 0b000000001 ? true : false;
-			modeMatrix.other.write = newDirSettings.mode & 0b000000010 ? true : false;
-			modeMatrix.other.read = newDirSettings.mode & 0b000000100 ? true : false;
-			modeMatrix.group.execute = newDirSettings.mode & 0b000001000 ? true : false;
-			modeMatrix.group.write = newDirSettings.mode & 0b000010000 ? true : false;
-			modeMatrix.group.read = newDirSettings.mode & 0b000100000 ? true : false;
-			modeMatrix.owner.execute = newDirSettings.mode & 0b001000000 ? true : false;
-			modeMatrix.owner.write = newDirSettings.mode & 0b010000000 ? true : false;
-			modeMatrix.owner.read = newDirSettings.mode & 0b100000000 ? true : false;
-		}, { deep: true, immediate: true })
-
 		return {
-			newDirModal,
+			dirPermissions,
 			tmpShare,
 			showAdvanced,
 			shareValidUsers,
@@ -1025,7 +799,6 @@ WantedBy=remote-fs.target
 			removeValidUser,
 			addValidGroup,
 			removeValidGroup,
-			makeDir,
 			pathExists,
 			isCeph,
 			checkIfCeph,
@@ -1034,23 +807,24 @@ WantedBy=remote-fs.target
 			feedback,
 			applyCeph,
 			removeCephMount,
-			newDirSettings,
-			modeMatrix,
+			tmpShareInit,
 		};
 	},
 	components: {
 		PillList,
 		DropdownSelector,
-		Switch,
-		SwitchDescription,
-		SwitchGroup,
-		SwitchLabel,
 		ChevronDownIcon,
 		ExclamationCircleIcon,
 		ExclamationIcon,
 		ModalPopup,
-		InfoTip
-	}
+		InfoTip,
+		FileModeMatrix,
+		LabelledSwitch,
+	},
+	emits: [
+		'applyShare',
+		'hide',
+	],
 }
 </script>
 

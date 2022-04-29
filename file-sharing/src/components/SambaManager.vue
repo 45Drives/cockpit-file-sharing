@@ -16,75 +16,93 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div v-if="fatalError" class="absolute w-full h-full bg-white/50 dark:bg-black/50 z-50 px-60 pt-5">
-		<div class="rounded-md bg-red-50 p-4 grow-0">
-			<div class="flex">
-				<div class="flex-shrink-0">
-					<XCircleIcon class="h-5 w-5 text-red-400" aria-hidden="true" />
-				</div>
-				<div class="ml-3">
-					<h3 class="text-sm font-medium text-red-800 whitespace-pre">{{ fatalError }}</h3>
-				</div>
+	<div class="centered-column p-well space-y-well">
+		<SambaGlobalManagement
+			:globalConfig="globalConfig"
+			:processing="processing"
+			@startProcessing="processing++"
+			@stopProcessing="processing--"
+		/>
+		<SambaShareManagement
+			:shares="shares"
+			@refreshShares="refresh"
+			:groups="groups"
+			:users="users"
+			:cephLayoutPools="cephLayoutPools"
+			:ctdbHosts="ctdbHosts"
+			:parentProcessing="processing"
+			@appendShareToList="share => shares = [...shares, share]"
+			@removeShareFromList="share => shares = shares.filter((a) => a !== share)"
+		/>
+		<div class="card">
+			<div class="card-header flex flex-row space-x-2 items-center">
+				<div class="text-header">Import/Export Config</div>
+				<LoadingSpinner v-if="processing" class="size-icon" />
 			</div>
-		</div>
-	</div>
-	<div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8 py-8">
-		<div class="card">
-			<SambaGlobalManagement :modalPopup="modalPopup" :globalConfig="globalConfig" :loaded="loaded" />
-		</div>
-		<div class="card">
-			<SambaShareManagement
-				:modalPopup="modalPopup"
-				:shares="shares"
-				@refresh-shares="refresh"
-				:groups="groups"
-				:users="users"
-				:loaded="loaded"
-				:cephLayoutPools="cephLayoutPools"
-				:ctdbHosts="ctdbHosts"
-			/>
-		</div>
-		<div class="card">
-			<div class="card-header flex flex-row space-x-3">
-				<h3 class="text-lg leading-6 font-medium">Import/Export Config</h3>
-				<LoadingSpinner v-if="!loaded" class="w-5 h-5" />
-			</div>
-			<div class="card-body flex flex-row space-x-3">
-				<input @change="importConfig" type="file" hidden id="file-upload" />
+			<div class="card-body button-group-row">
+				<input @change="importConfig" type="file" id="file-upload" hidden />
 				<button @click="uploadConfig" class="btn btn-primary">Import</button>
 				<button @click="exportConfig" class="btn btn-primary">Export</button>
 			</div>
 		</div>
 	</div>
+	<ModalPopup
+		:showModal="confirmationModal.showModal"
+		@apply="confirmationModal.applyCallback"
+		@cancel="confirmationModal.cancelCallback"
+		applyDangerous
+		applyText="Yes"
+		:headerText="confirmationModal.headerText"
+	>
+		<template #icon>
+			<ExclamationCircleIcon class="size-icon-xl icon-danger" />
+		</template>
+		{{ confirmationModal.bodyText }}
+	</ModalPopup>
 </template>
 
 <script>
 import { XCircleIcon } from "@heroicons/vue/solid";
 import SambaShareManagement from "./SambaShareManagement.vue";
 import SambaGlobalManagement from "./SambaGlobalManagement.vue";
-import useSpawn from "./UseSpawn";
-import { ref, reactive, watch } from "vue";
+import { useSpawn, errorString, errorStringHTML } from "@45drives/cockpit-helpers";
+import { ref, reactive, watch, inject } from "vue";
 import { getUsers, getGroups } from "../functions";
 import LoadingSpinner from "./LoadingSpinner.vue";
-
-const spawnOpts = {
-	superuser: 'try',
-}
+import { notificationsInjectionKey } from "../keys";
+import ModalPopup from "./ModalPopup.vue";
 
 export default {
-	props: {
-		modalPopup: Object,
-	},
 	setup(props, ctx) {
 		const shares = ref([]);
 		const globalConfig = reactive({ advancedSettings: [] });
 		const users = ref([]);
 		const groups = ref([]);
-		const loaded = ref(false);
-		const fatalError = ref("");
 		const domainJoined = ref(false);
 		const ctdbHosts = ref([]);
 		const cephLayoutPools = ref([]);
+		const processing = ref(0);
+		const notifications = inject(notificationsInjectionKey);
+		const confirmationModal = reactive({
+			showModal: false,
+			headerText: "",
+			bodyText: "",
+			ask: (header, body) => {
+				return new Promise((resolve, reject) => {
+					confirmationModal.showModal = true;
+					confirmationModal.headerText = header;
+					confirmationModal.bodyText = body;
+					const respond = (result) => {
+						confirmationModal.showModal = false;
+						resolve(result);
+					}
+					confirmationModal.applyCallback = () => respond(true);
+					confirmationModal.cancelCallback = () => respond(false);
+				});
+			},
+			applyCallback: () => { },
+			cancelCallback: () => { },
+		});
 
 		const parseNetConf = async () => {
 			shares.value = [];
@@ -113,8 +131,9 @@ export default {
 				advancedSettings: []
 			};
 			let share = null;
+			processing.value++;
 			try {
-				const netConfOutput = (await useSpawn(['net', 'conf', 'list'], { ...spawnOpts, superuser: 'require' }).promise()).stdout;
+				const netConfOutput = (await useSpawn(['net', 'conf', 'list'], { superuser: 'try' }).promise()).stdout;
 				let match;
 				netConfOutput.split('\n').forEach((line) => {
 					if ((match = line.match(/\[([^\]]+)]/))) {
@@ -139,13 +158,15 @@ export default {
 				if (share && share !== globalConfig)
 					shares.value.push({ ...share, advancedSettings: [...share.advancedSettings] });
 			} catch (state) {
-				fatalError.value += "Error while getting shares: " + state.stderr + '\n';
+				notifications.value.constructNotification("Failed to get shares", errorStringHTML(state), 'error');
+			} finally {
+				processing.value--;
 			}
 		};
 
 		const checkIsDomain = async () => {
 			try {
-				const result = (await useSpawn(['realm', 'list'], spawnOpts).promise()).stdout;
+				const result = (await useSpawn(['realm', 'list'], { superuser: 'try' }).promise()).stdout;
 				if (result)
 					return true;
 			} catch (state) { } // ignore, not using domain if realm not installed
@@ -153,49 +174,62 @@ export default {
 		}
 
 		const getUserList = async () => {
-			users.value = [];
+			processing.value++;
 			try {
 				users.value = await getUsers(domainJoined.value);
 			} catch (error) {
-				fatalError.value += error.message + '\n';
+				notifications.value.constructNotification("Failed to get users", errorStringHTML(error), 'error');
+			} finally {
+				processing.value--;
 			}
 		}
 
 		const getGroupList = async () => {
-			groups.value = [];
+			processing.value++;
 			try {
 				groups.value = await getGroups(domainJoined.value);
 			} catch (error) {
-				fatalError.value += error.message + '\n';
+				notifications.value.constructNotification("Failed to get groups", errorStringHTML(error), 'error');
+			} finally {
+				processing.value--;
 			}
 		}
 
 		const checkConf = async () => {
+			processing.value++;
 			try {
 				const smbConfFile = cockpit.file("/etc/samba/smb.conf", { superuser: 'try' });
 				const smbConf = await smbConfFile.read();
-				if (!/(?<=\[ ?global ?\][^\[\]]*)^\s*include ?= ?registry/mg.test(smbConf)) {
-					if (await props.modalPopup.confirm(
-						"Samba is Misconfigured",
-						"`include = registry` is missing from the global section of /etc/samba/smb.conf. Insert it now?",
-						{ icon: 'danger' }
-					)) {
-						if (!/\[ ?global ?\]/.test(smbConf)) {
-							await smbConfFile.modify((content) => {
-								return "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + (content ?? "");
-							});
-						} else {
-							await smbConfFile.modify((content) => {
-								return content.replace(/(?<=\[ ?global ?\](?:[^\[]*\n)*)(?=\s*\[|$)/si, "\tinclude = registry # inserted by cockpit-file-sharing\n");
-							});
-						}
-						useSpawn(['smbcontrol', 'all', 'reload-config'], spawnOpts);
-					} else
-						fatalError.value += "`include = registry` missing from /etc/samba/smb.conf\n";
-				}
 				smbConfFile.close();
+				if (!/(?<=\[ ?global ?\][^\[\]]*)^\s*include ?= ?registry/mg.test(smbConf)) {
+					notifications.value.constructNotification(
+						"Samba is Misconfigured",
+						"`include = registry` is missing from the global section of /etc/samba/smb.conf, which is required for File Sharing to manage shares.",
+						'error'
+					).addAction("Fix now", async () => {
+						processing.value++;
+						try {
+							if (!/\[ ?global ?\]/.test(smbConf)) {
+								await smbConfFile.modify((content) => {
+									return "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + (content ?? "");
+								});
+							} else {
+								await smbConfFile.modify((content) => {
+									return content.replace(/(?<=\[ ?global ?\](?:[^\[]*\n)*)(?=\s*\[|$)/si, "\tinclude = registry # inserted by cockpit-file-sharing\n");
+								});
+							}
+							await useSpawn(['smbcontrol', 'all', 'reload-config'], { superuser: 'try' });
+						} catch (error) {
+							notifications.value.constructNotification("Failed to fix Samba configuration", errorStringHTML(error), 'error');
+						} finally {
+							processing.value--;
+						}
+					});
+				}
 			} catch (error) {
-				fatalError.value += "Failed to read /etc/smb.conf: " + error?.message ?? error;
+				notifications.value.constructNotification("Failed to validate /etc/smb.conf: ", errorStringHTML(error), 'error');
+			} finally {
+				processing.value--;
 			}
 		}
 
@@ -208,34 +242,36 @@ export default {
 
 		const getCephLayoutPools = async () => {
 			try {
-				const cephFsStatus = JSON.parse((await useSpawn(['ceph', 'fs', 'status', '--format=json'], spawnOpts).promise()).stdout);
+				const cephFsStatus = JSON.parse((await useSpawn(['ceph', 'fs', 'status', '--format=json'], { superuser: 'try' }).promise()).stdout);
 				cephLayoutPools.value = cephFsStatus.pools.filter(pool => pool.type === 'data').map(pool => pool.name);
 			} catch (state) { /* not ceph */ }
 		}
 
 		const refresh = async () => {
-			loaded.value = false;
-			domainJoined.value = await checkIsDomain();
-			const procs = [];
-			procs.push(parseNetConf());
-			procs.push(getUserList());
-			procs.push(getGroupList());
-			procs.push(checkConf());
-			procs.push(getCtdbHosts());
-			procs.push(getCephLayoutPools());
-			for (let proc of procs)
-				await proc;
-			shares.value.sort((a, b) => a.name.localeCompare(b.name));
-			loaded.value = true;
+			processing.value++;
+			try {
+				domainJoined.value = await checkIsDomain();
+				const procs = [];
+				procs.push(parseNetConf());
+				procs.push(getUserList());
+				procs.push(getGroupList());
+				procs.push(checkConf());
+				procs.push(getCtdbHosts());
+				procs.push(getCephLayoutPools());
+				for (let proc of procs)
+					await proc;
+				shares.value.sort((a, b) => a.name.localeCompare(b.name));
+			} finally {
+				processing.value--;
+			}
 		};
 
 		refresh();
 
 		const uploadConfig = async () => {
-			if (!await props.modalPopup.confirm(
-				"This will permanently overwrite current configuration. Are you sure?",
-				"",
-				{ icon: 'danger' }
+			if (!await confirmationModal.ask(
+				"This will permanently overwrite current configuration",
+				"Are you sure?"
 			))
 				return;
 			document.getElementById("file-upload").click();
@@ -248,21 +284,27 @@ export default {
 				const content = event.target.result;
 				let tmpFile;
 				try {
-					tmpFile = (await useSpawn(['mktemp'], spawnOpts).promise()).stdout;
+					tmpFile = (await useSpawn(['mktemp'], { superuser: 'try' }).promise()).stdout;
 					// could use cockpit.file here, but easier to use useSpawn with dd to
 					// catch the state object if there are any errors
-					const writerState = useSpawn(['dd', `of=${tmpFile}`], spawnOpts);
+					const writerState = useSpawn(['dd', `of=${tmpFile}`], { superuser: 'try' });
 					writerState.proc.input(content);
 					await writerState.promise();
-					await useSpawn(['net', 'conf', 'import', tmpFile], spawnOpts).promise();
+					await useSpawn(['net', 'conf', 'import', tmpFile], { superuser: 'try' }).promise();
 					await refresh();
 				} catch (state) {
-					await props.modalPopup.alert("Failed to import config", state.stderr, { icon: 'danger' });
+					notifications.value.constructNotification("Failed to import config", errorStringHTML(error), 'error');
 				} finally {
 					if (tmpFile)
-						useSpawn(['rm', '-f', tmpFile], spawnOpts);
+						useSpawn(['rm', '-f', tmpFile], { superuser: 'try' });
+					processing.value--;
 				}
 			}
+			reader.onerror = (event) => {
+				notifications.value.constructNotification("Failed to import config", "Error reading file on client side", 'error');
+				processing.value--;
+			}
+			processing.value++;
 			reader.readAsText(file);
 		}
 
@@ -272,15 +314,16 @@ export default {
 			const filename = `cockpit-file-sharing_samba_exported_${date.toISOString().replace(/:/g, '-').replace(/T/, '_')}.conf`;
 			let config;
 			try {
-				config = (await useSpawn(['net', 'conf', 'list'], spawnOpts).promise()).stdout;
+				config = (await useSpawn(['net', 'conf', 'list'], { superuser: 'try' }).promise()).stdout;
 			} catch (state) {
-				console.error(state);
-				await props.modalPopup.alert("Failed to get configuration", state.stderr, { icon: 'danger' });
+				notifications.value.constructNotification("Failed to get configuration", errorStringHTML(state), 'error');
+				return;
 			}
 			try {
 				await cockpit.file(backendPath).replace(config);
-			} catch (err) {
-				await props.modalPopup.alert("Failed to write configuration to tmp", err.message, { icon: 'danger' });
+			} catch (error) {
+				notifications.value.constructNotification("Failed to write configuration to temp file", errorStringHTML(error), 'error');
+				return;
 			}
 			let query = window.btoa(JSON.stringify({
 				payload: 'fsread1',
@@ -313,8 +356,8 @@ export default {
 			globalConfig,
 			users,
 			groups,
-			loaded,
-			fatalError,
+			processing,
+			confirmationModal,
 			ctdbHosts,
 			cephLayoutPools,
 			parseNetConf,
@@ -326,6 +369,12 @@ export default {
 			exportConfig,
 		}
 	},
-	components: { SambaShareManagement, SambaGlobalManagement, XCircleIcon, LoadingSpinner }
+	components: {
+		SambaShareManagement,
+		SambaGlobalManagement,
+		XCircleIcon,
+		LoadingSpinner,
+		ModalPopup,
+	}
 }
 </script>

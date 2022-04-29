@@ -2,10 +2,27 @@
 # yarn lockfile v1
 
 
+"@45drives/cockpit-css@^0.1.5":
+  version "0.1.8"
+  resolved "https://npm.pkg.github.com/download/@45drives/cockpit-css/0.1.8/8315d49fcb3ff2d1a29bfa60cc27c680fe7a76ce7971b1ecbcdfc5842c1be8ff#49465334dc71e04330e5489fae5965f81ed61cf7"
+  integrity sha512-0yk8YY/Ea3KHLR8l4duJWVPr9rLtMZSYPWw3RGh/ekr+iWoH+MvlHp/qQ6qhOgvV0Rod9Md5NEVsIDRG0WmZ8A==
+
+"@45drives/cockpit-helpers@^0.1.2", "@45drives/cockpit-helpers@^0.1.3":
+  version "0.1.3"
+  resolved "https://npm.pkg.github.com/download/@45drives/cockpit-helpers/0.1.3/a4037b6d111558c03755932cd1edc4e35722038526e30fd5bf762483efb0d6f9#39eca392963e1e109b09b420cb922d4e207b515a"
+  integrity sha512-jUU+Cd47mwzGGs9sNc88vpbOXSzLAqVueWlqb+sOyFBXQs6zJj7MiZd/MLmQfY/SwM4Q4yJbywOFXbPs90j8BQ==
+
+"@45drives/cockpit-syntaxes@^0.1.4":
+  version "0.1.4"
+  resolved "https://npm.pkg.github.com/download/@45drives/cockpit-syntaxes/0.1.4/e1d35e98f856398975e654f43776068aa511bf86906e97f653c94735993821c9#b386242f43e353ecc700ecba1d10a4d9ee6efca3"
+  integrity sha512-8mDVoiuV9Wp5NO7QmY6DHgU8lKqwO++sVEzKsWuyrHdG+6q4afGd2iu/2OD0GMLvzakeN5DJGt97s7RErbgkVQ==
+  dependencies:
+    "@45drives/cockpit-helpers" "^0.1.2"
+
 "@babel/parser@^7.16.4":
-  version "7.17.9"
-  resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.17.9.tgz#9c94189a6062f0291418ca021077983058e171ef"
-  integrity sha512-vqUSBLP8dQHFPdPi9bc5GK9vRkYHJ49fsZdtoJ8EQ8ibpwk5rPKfvNIwChB0KVXcIjcepEBBd2VHC5r9Gy8ueg==
+  version "7.17.10"
+  resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.17.10.tgz#873b16db82a8909e0fbd7f115772f4b739f6ce78"
+  integrity sha512-n2Q6i+fnJqzOaq2VkdXxy2TCPCWQZHiCo0XqmrCvDWcZQKRyZzYi4Z0yxlBuN0w+r2ZHmre+Q087DSrw3pbJDQ==
 
 "@fontsource/red-hat-text@^4.5.4":
   version "4.5.6"
@@ -218,9 +235,9 @@ camelcase-css@^2.0.1:
   integrity sha512-QOSvevhslijgYwRx6Rv7zKdMF8lbRmx+uQGx2+vDc+KI/eBnsy9kit5aj23AgGu3pa4t9AgwbnXWqS+iOY+2aA==
 
 caniuse-lite@^1.0.30001332:
-  version "1.0.30001332"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001332.tgz#39476d3aa8d83ea76359c70302eafdd4a1d727dd"
-  integrity sha512-10T30NYOEQtN6C11YGg411yebhvpnC6Z102+B95eAsN0oB6KUs01ivE8u+G6FMIRtIrVlYXhL+LUwQ3/hXwDWw==
+  version "1.0.30001334"
+  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001334.tgz#892e9965b35285033fc2b8a8eff499fe02f13d8b"
+  integrity sha512-kbaCEBRRVSoeNs74sCuq92MJyGrMtjWVfhltoHUCW4t4pXFvGjUBrfo47weBRViHkiV3eBYyIsfl956NtHGazw==
 
 chokidar@^3.5.3:
   version "3.5.3"
@@ -277,9 +294,9 @@ dlv@^1.1.3:
   integrity sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==
 
 electron-to-chromium@^1.4.118:
-  version "1.4.123"
-  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.123.tgz#de88ea7fd29d7c868e63c88f129e91494bcf3266"
-  integrity sha512-0pHGE53WkYoFbsgwYcVKEpWa6jbzlvkohIEA2CUoZ9b5KC+w/zlMiQHvW/4IBcOh7YoEFqRNavgTk02TBoUTUw==
+  version "1.4.127"
+  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.127.tgz#4ef19d5d920abe2676d938f4170729b44f7f423a"
+  integrity sha512-nhD6S8nKI0O2MueC6blNOEZio+/PWppE/pevnf3LOlQA/fKPCrDp2Ao4wx4LFwmIkJpVdFdn2763YWLy9ENIZg==
 
 esbuild-android-64@0.14.38:
   version "0.14.38"
@@ -550,9 +567,9 @@ nanoid@^3.3.1:
   integrity sha512-p1sjXuopFs0xg+fPASzQ28agW1oHD7xDsd9Xkf3T15H3c/cifrFHVwrh74PdoklAPi+i7MdRsE47vm2r6JoB+w==
 
 node-releases@^2.0.3:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/node-releases/-/node-releases-2.0.3.tgz#225ee7488e4a5e636da8da52854844f9d716ca96"
-  integrity sha512-maHFz6OLqYxz+VQyCAtA3PTX4UP/53pa05fyDNc9CwjvJ0yEh6+xBwKsgCxMNhS8taUKBFYxfuiaD9U/55iFaw==
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/node-releases/-/node-releases-2.0.4.tgz#f38252370c43854dc48aa431c766c6c398f40476"
+  integrity sha512-gbMzqQtTtDz/00jQzZ21PQzdI9PyLYqUSvD0p3naOhX4odFji0ZxYdnVwPTxmSwkmxhcFImpozceidSG+AgoPQ==
 
 normalize-path@^3.0.0, normalize-path@~3.0.0:
   version "3.0.0"
