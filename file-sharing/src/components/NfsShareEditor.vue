@@ -216,8 +216,8 @@ export default {
 				client.settings = client.settings.replace(/\s+/, '');
 			}
 			emit('updateShare', tmpShare);
-			tmpShareInit();
 			emit('hide');
+			setTimeout(() => tmpShareInit(), 500);
 		}
 
 		const cancel = () => {
