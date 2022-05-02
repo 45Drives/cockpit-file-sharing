@@ -58,7 +58,6 @@ endif
 
 OUTPUTS:=$(patsubst %, %/dist/index.html, $(PLUGIN_SRCS))
 
-REMOTE_TEST_HOME:=$(shell ssh $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST) 'echo $$HOME')
 NPM_PREFIX:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn --cwd' || echo 'npm --prefix')
 NPM_UPDATE:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn upgrade --cwd' || echo 'npm update --prefix')
 
@@ -113,6 +112,7 @@ plugin-install-local-% : INSTALL_SUFFIX=-test
 plugin-install-remote-% : INSTALL_PREFIX=$(REMOTE_TEST_HOME)/.local/share/cockpit
 plugin-install-remote-% : INSTALL_SUFFIX=-test
 plugin-install-remote-% : SSH=ssh $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST)
+plugin-install-remote-% : REMOTE_TEST_HOME=$(shell ssh $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST) 'echo $$HOME')
 
 clean: FORCE
 	rm $(dir $(OUTPUTS)) -rf
