@@ -17,6 +17,10 @@ If not, see <https://www.gnu.org/licenses/>.
 
 <template>
 	<div class="card">
+		<div class="card-header flex flex-row items-center gap-2">
+			<div class="text-header">Shares</div>
+			<LoadingSpinner v-if="processing || parentProcessing" class="size-icon" />
+		</div>
 		<div class="card-body">
 			<div
 				class="overflow-hidden"
@@ -33,24 +37,22 @@ If not, see <https://www.gnu.org/licenses/>.
 					ref="newShareEditorRef"
 				/>
 			</div>
-			<Table emptyText="No shares. Click '+' to add one." shrinkHeight="" noScroll>
-				<template #header>
+			<Table emptyText="No shares. Click '+' to add one." shrinkHeight noScroll noHeader>
+				<!-- <template #header>
 					<div class="flex flex-row items-center space-x-2">
-						<div>Shares</div>
 						<LoadingSpinner v-if="processing || parentProcessing" class="size-icon" />
 						<div class="grow"></div>
-						<PlusIcon
-							@click="showAddShare ? newShareEditorRef.cancel() : showAddShare = true"
-							class="size-icon icon-default cursor-pointer"
-						/>
 					</div>
-				</template>
+				</template>-->
 				<template #thead>
 					<tr>
 						<th scope="col">Name</th>
 						<th scope="col">Path</th>
-						<th scope="col">
+						<th scope="col" class="flex flex-row justify-end">
 							<span class="sr-only">Edit/Delete</span>
+							<button @click="showAddShare ? newShareEditorRef.cancel() : showAddShare = true">
+								<PlusIcon class="size-icon icon-default" />
+							</button>
 						</th>
 					</tr>
 				</template>
@@ -132,7 +134,7 @@ export default {
 				await applyShareChanges(null, share);
 				// props.shares = [...props.shares, share]; // done in SambaManager with event
 				emit('appendShareToList', share);
-				newShareEditorRef.value.tmpShareInit();
+				setTimeout(() => newShareEditorRef.value.tmpShareInit(), 500);
 				notifications.value.constructNotification("Success", "Successfully added share", 'success');
 			} catch (state) {
 				notifications.value.constructNotification("Failed to add share", errorStringHTML(state), 'error');

@@ -18,6 +18,10 @@ If not, see <https://www.gnu.org/licenses/>.
 <template>
 	<div class="centered-column p-well space-y-well">
 		<div class="card">
+			<div class="card-header flex flex-row items-center gap-2">
+				<div class="text-header">Shares</div>
+				<LoadingSpinner v-if="processing" class="size-icon" />
+			</div>
 			<div class="card-body">
 				<div
 					class="overflow-hidden px-5"
@@ -30,8 +34,8 @@ If not, see <https://www.gnu.org/licenses/>.
 						:groups="groups"
 					/>
 				</div>
-				<Table emptyText="No shares. Click '+' to add one." shrinkHeight noScroll>
-					<template #header>
+				<Table emptyText="No shares. Click '+' to add one." shrinkHeight noScroll noHeader>
+					<!-- <template #header>
 						<div class="flex flex-row space-x-2 items-center">
 							<div>NFS Shares</div>
 							<LoadingSpinner v-if="processing" class="size-icon" />
@@ -40,12 +44,15 @@ If not, see <https://www.gnu.org/licenses/>.
 								<PlusIcon class="size-icon icon-default cursor-pointer" />
 							</button>
 						</div>
-					</template>
+					</template> -->
 					<template #thead>
 						<tr>
 							<th scope="col">Path</th>
-							<th scope="col">
+							<th scope="col" class="flex flex-row justify-end">
 								<span class="sr-only">Edit/Delete</span>
+								<button @click="showAddShare = !showAddShare">
+									<PlusIcon class="size-icon icon-default" />
+								</button>
 							</th>
 						</tr>
 					</template>

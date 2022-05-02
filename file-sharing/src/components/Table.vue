@@ -4,6 +4,7 @@
 			<div class="inline-block w-full py-2 align-middle md:px-6 lg:px-8">
 				<div class="shadow md:rounded-[9px] border border-default">
 					<div
+						v-if="!noHeader"
 						class="md:rounded-t-[8px] bg-accent py-3 px-4 lg:pl-8 lg:pr-6 text-sm font-semibold flex flex-row"
 					>
 						<div class="grow">
@@ -14,7 +15,7 @@
 						<div :class="[noScroll ? '' : 'overflow-y-auto']" :style="{'scrollbar-gutter': noScroll ? 'auto' : 'stable'}"></div>
 					</div>
 					<div
-						:class="[noShrink ? noShrinkHeight : shrinkHeight, noScroll ? '' : 'overflow-y-scroll', 'flex flex-col md:rounded-b-[8px] overflow-x-auto']"
+						:class="[noShrink ? noShrinkHeight : shrinkHeight, noScroll ? '' : 'overflow-y-scroll', noHeader ? 'md:rounded-t-[8px]' : '', 'flex flex-col md:rounded-b-[8px] overflow-x-auto']"
 						:style="{'scrollbar-gutter': noScroll ? 'auto' : 'stable'}"
 					>
 						<table class="min-w-full divide houston-table">
@@ -70,6 +71,7 @@ export default {
 			default: 'max-h-80'
 		},
 		noScroll: Boolean,
+		noHeader: Boolean,
 	}
 }
 </script>
