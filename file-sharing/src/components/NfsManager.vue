@@ -24,7 +24,7 @@ If not, see <https://www.gnu.org/licenses/>.
 			</div>
 			<div class="card-body">
 				<div
-					class="overflow-hidden px-5"
+					class="overflow-hidden"
 					:style="{ 'max-height': showAddShare ? '1500px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
 				>
 					<NfsShareEditor
