@@ -30,7 +30,7 @@ If not, see <https://www.gnu.org/licenses/>.
 						:groups="groups"
 					/>
 				</div>
-				<Table emptyText="No shares. Click '+'to add one." shrinkHeight noScroll>
+				<Table emptyText="No shares. Click '+' to add one." shrinkHeight noScroll>
 					<template #header>
 						<div class="flex flex-row space-x-2 items-center">
 							<div>NFS Shares</div>
