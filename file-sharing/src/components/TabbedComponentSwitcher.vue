@@ -17,14 +17,23 @@ If not, see <https://www.gnu.org/licenses/>.
 
 <template>
 	<div class="flex flex-col">
-		<div class="flex flex-row grow-0 items-stretch bg-well">
+		<FfdHeader moduleName="File Sharing" centerName>
+			<div class="flex flex-row flex-nowrap items-stretch self-stretch gap-2">
+				<button
+					v-for="(entry, index) in components"
+					:class="['px-2 border-b-2 border-b-transparent hover:border-b-neutral-400 dark:hover:border-b-neutral-600 text-lg font-medium sm:pt-2', currentTab === index ? '!border-b-red-700 dark:!border-b-red-800' : 'text-muted hover:text-default']"
+					@click="switchTab(index)"
+				>{{ entry.title }}</button>
+			</div>
+		</FfdHeader>
+		<!-- <div class="flex flex-row grow-0 items-stretch bg-well">
 			<button
 				v-for="(entry, index) in components"
 				:class="['px-5 py-3 cursor-default z-10', currentTab === index ? 'bg-transparent' : 'bg-plugin-header shadow-lg']"
 				@click="switchTab(index)"
 			>{{ entry.title }}</button>
 			<div class="grow bg-plugin-header z-10 shadow-lg"></div>
-		</div>
+		</div>-->
 		<div class="overflow-hidden grow basis-0">
 			<div class="bg-well overflow-y-scroll h-full">
 				<component :modalPopup="modalPopup" :is="components[currentTab].component" />
@@ -34,6 +43,7 @@ If not, see <https://www.gnu.org/licenses/>.
 </template>
 
 <script>
+import FfdHeader from "./FfdHeader.vue";
 import { ref } from "vue";
 export default {
 	props: {
@@ -61,5 +71,8 @@ export default {
 			switchTab,
 		}
 	},
+	components: {
+		FfdHeader,
+	}
 }
 </script>

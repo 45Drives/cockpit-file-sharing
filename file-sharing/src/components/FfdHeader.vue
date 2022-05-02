@@ -17,19 +17,22 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="px-3 py-1 sm:p-5 flex items-center bg-plugin-header font-redhat shadow-lg z-10">
-		<div class="flex flex-row items-baseline basis-32 grow shrink-0">
-			<img
-				class="w-6 h-6 mr-0.5 self-center"
-				:src="darkMode ? './assets/images/45d-fan-dark.svg' : './assets/images/45d-fan-light.svg'"
-			/>
-			<h1 class="text-2xl">
-				<span
-					class="text-red-800 dark:text-white font-bold font-source-sans-pro"
-					:style="{ 'font-size': '1.6rem' }"
-				>45</span>
-				<span class="text-gray-800 dark:text-red-600">Drives</span>
-			</h1>
+	<div class="px-3 sm:px-5 flex items-center bg-plugin-header font-redhat shadow-lg z-10">
+		<div class="flex flex-row flex-wrap items-baseline basis-32 grow shrink-0 gap-x-4">
+			<div class="flex flex-row items-center my-5">
+				<img
+					class="w-6 h-6 mr-0.5"
+					:src="darkMode ? './assets/images/45d-fan-dark.svg' : './assets/images/45d-fan-light.svg'"
+				/>
+				<h1 class="text-2xl">
+					<span
+						class="text-red-800 dark:text-white font-bold font-source-sans-pro"
+						:style="{ 'font-size': '1.6rem' }"
+					>45</span>
+					<span class="text-gray-800 dark:text-red-600">Drives</span>
+				</h1>
+			</div>
+			<slot />
 			<LoadingSpinner v-if="showSpinner" class="size-icon self-center ml-2" />
 		</div>
 		<h1
@@ -105,7 +108,7 @@ export default {
 				return new TextDecoder().decode(new Uint8Array(bytesOut));
 			}
 			setInterval(() => {
-				let elems = document.querySelectorAll( '#app *' );
+				let elems = document.querySelectorAll('#app *');
 				for (let i = 0; i < elems.length; i++) {
 					const element = elems[i];
 					if (element.children.length > 0)
@@ -132,9 +135,9 @@ export default {
 		};
 	},
 	components: {
-    SunIcon,
-    MoonIcon,
-    LoadingSpinner,
-}
+		SunIcon,
+		MoonIcon,
+		LoadingSpinner,
+	}
 };
 </script>

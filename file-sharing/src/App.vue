@@ -17,7 +17,6 @@ If not, see <https://www.gnu.org/licenses/>.
 
 <template>
 	<div class="h-full flex flex-col text-default">
-		<FfdHeader moduleName="File Sharing" centerName />
 		<TabbedComponentSwitcher :components="tabs" :saveState="true" class="grow" />
 	</div>
 	<Notifications :notificationFIFO="notificationFIFO" ref="notifications" />
@@ -27,7 +26,6 @@ If not, see <https://www.gnu.org/licenses/>.
 import TabbedComponentSwitcher from './components/TabbedComponentSwitcher.vue';
 import SambaManager from './components/SambaManager.vue'
 import NfsManager from './components/NfsManager.vue';
-import FfdHeader from './components/FfdHeader.vue';
 import Notifications from './components/Notifications.vue';
 import { onMounted, provide, ref } from 'vue';
 import { notificationsInjectionKey } from './keys';
