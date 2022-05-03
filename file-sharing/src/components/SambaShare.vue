@@ -48,6 +48,7 @@ If not, see <https://www.gnu.org/licenses/>.
 					:cephLayoutPools="cephLayoutPools"
 					:modalPopup="modalPopup"
 					:shares="shares"
+					class="py-2"
 				/>
 			</div>
 		</td>

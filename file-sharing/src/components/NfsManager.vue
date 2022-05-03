@@ -22,7 +22,7 @@ If not, see <https://www.gnu.org/licenses/>.
 				<div class="text-header">Shares</div>
 				<LoadingSpinner v-if="processing" class="size-icon" />
 			</div>
-			<div class="card-body">
+			<div :class="['card-body', showAddShare ? 'space-y-content' : '']">
 				<div
 					class="overflow-hidden"
 					:style="{ 'max-height': showAddShare ? '1500px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"

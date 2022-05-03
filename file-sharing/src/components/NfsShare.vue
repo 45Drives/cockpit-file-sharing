@@ -43,6 +43,7 @@ If not, see <https://www.gnu.org/licenses/>.
 					ref="editorRef"
 					:users="users"
 					:groups="groups"
+					class="py-2"
 				/>
 			</div>
 		</td>

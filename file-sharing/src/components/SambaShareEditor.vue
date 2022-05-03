@@ -16,7 +16,7 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="space-y-content py-2 text-base">
+	<div class="space-y-content text-base">
 		<div class="text-header" v-if="!share">New Share</div>
 		<div>
 			<label class="block text-label">Share Name</label>
