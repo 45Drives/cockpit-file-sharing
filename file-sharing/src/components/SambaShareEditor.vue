@@ -66,7 +66,11 @@ If not, see <https://www.gnu.org/licenses/>.
 					class="text-feedback text-warning underline"
 					@click="dirPermissions.update"
 				>Create now</button>
-				<button v-else class="text-feedback text-primary" @click="dirPermissions.update">Edit Permissions</button>
+				<button
+					v-else
+					class="text-feedback text-primary"
+					@click="dirPermissions.update"
+				>Edit Permissions</button>
 				<ModalPopup
 					:showModal="dirPermissions.showModal"
 					headerText="Share Directory Permissions"
@@ -90,6 +94,18 @@ If not, see <https://www.gnu.org/licenses/>.
 					</div>
 				</ModalPopup>
 			</div>
+			<div v-if="isCeph && cephNotRemounted && share !== null" class="feedback-group">
+				<ExclamationIcon class="size-icon icon-warning" />
+				<span class="text-feedback text-warning">Ceph filesystem not remounted at share.</span>
+				<button
+					class="text-feedback text-warning underline"
+					@click="remountCeph()"
+				>Fix now</button>
+				<InfoTip>
+					When creating a Ceph share, a new filesystem mount point is created on top of the share directory.
+					This is needed for Windows to properly report quotas through Samba.
+				</InfoTip>
+			</div>
 		</div>
 		<div v-if="isCeph">
 			<label class="text-label flex flex-row space-x-2">
@@ -102,7 +118,7 @@ If not, see <https://www.gnu.org/licenses/>.
 			<input
 				type="text"
 				name="path"
-				class="input-textlike disabled:cursor-not-allowed"
+				class="w-full input-textlike disabled:cursor-not-allowed"
 				placeholder="Share Path/Directory"
 				v-model="cephOptions.mountOptions"
 				:disabled="share !== null"
@@ -117,7 +133,7 @@ If not, see <https://www.gnu.org/licenses/>.
 			<div class="relative rounded-md shadow-sm">
 				<input
 					type="number"
-					class="w-full pr-12 input-textlike"
+					class="pr-12 input-textlike"
 					placeholder="0.00"
 					v-model="cephOptions.quotaValue"
 				/>
@@ -168,38 +184,24 @@ If not, see <https://www.gnu.org/licenses/>.
 			</div>
 		</div>
 		<div class="inline-flex flex-col items-stretch gap-content">
-			<LabelledSwitch v-model="tmpShare['guest ok']">
-				Guest OK
-			</LabelledSwitch>
-			<LabelledSwitch v-model="tmpShare['read only']">
-				Read Only
-			</LabelledSwitch>
-			<LabelledSwitch v-model="tmpShare['browseable']">
-				Browseable
-			</LabelledSwitch>
+			<LabelledSwitch v-model="tmpShare['guest ok']">Guest OK</LabelledSwitch>
+			<LabelledSwitch v-model="tmpShare['read only']">Read Only</LabelledSwitch>
+			<LabelledSwitch v-model="tmpShare['browseable']">Browseable</LabelledSwitch>
 			<LabelledSwitch v-model="shareWindowsAcls" @change="value => switchWindowsAcls(value)">
 				Windows ACLS
-				<template #description>
-					Administer share permissions from Windows
-				</template>
+				<template #description>Administer share permissions from Windows</template>
 			</LabelledSwitch>
 			<LabelledSwitch v-model="shareShadowCopy" @change="value => switchShadowCopy(value)">
 				Shadow Copy
-				<template #description>
-					Expose per-file snapshots to users
-				</template>
+				<template #description>Expose per-file snapshots to users</template>
 			</LabelledSwitch>
 			<LabelledSwitch v-model="shareMacOsShare" @change="value => switchMacOsShare(value)">
 				MacOS Share
-				<template #description>
-					Optimize share for MacOS
-				</template>
+				<template #description>Optimize share for MacOS</template>
 			</LabelledSwitch>
 			<LabelledSwitch v-model="shareAuditLogs" @change="value => switchAuditLogs(value)">
 				Audit Logs
-				<template #description>
-					Turn on audit logging
-				</template>
+				<template #description>Turn on audit logging</template>
 			</LabelledSwitch>
 		</div>
 		<div @click="showAdvanced = !showAdvanced">
@@ -266,6 +268,7 @@ export default {
 		const shareMacOsShare = ref(false);
 		const shareAuditLogs = ref(false);
 		const isCeph = ref(false);
+		const cephNotRemounted = ref(false);
 		const cephOptions = reactive({
 			quotaValue: 0,
 			quotaMultiplier: 0,
@@ -592,7 +595,7 @@ export default {
 			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
 		};
 
-		const applyCeph = async (force = false) => {
+		const setCephQuota = async () => {
 			try {
 				const quotaBytes = Math.ceil(cephOptions.quotaValue * cephOptions.quotaMultiplier);
 				if (quotaBytes) {
@@ -608,24 +611,38 @@ export default {
 			} catch (state) {
 				notifications.value.constructNotification("Failed to set Ceph quota", errorStringHTML(state), 'error');
 			}
+		}
 
-			if (force || props.share === null) { // only run if creating new share
-				try {
-					if (cephOptions.layoutPool) {
-						await useSpawn(['setfattr', '-n', 'ceph.dir.layout.pool', '-v', cephOptions.layoutPool, tmpShare.path], { superuser: 'try' }).promise();
-					}
-					getCephLayoutPool();
-				} catch (state) {
-					notifications.value.constructNotification("Failed to set Ceph layout pool", errorStringHTML(state), 'error');
+		const setCephLayoutPool = async () => {
+			try {
+				if (cephOptions.layoutPool) {
+					await useSpawn(['setfattr', '-n', 'ceph.dir.layout.pool', '-v', cephOptions.layoutPool, tmpShare.path], { superuser: 'try' }).promise();
 				}
-				try {
-					const systemdMountFile = `/etc/systemd/system/${tmpShare.path.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
-					const df = (await useSpawn(['df', '--output=source,target', tmpShare.path], { superuser: 'try' }).promise()).stdout.split('\n')[1];
-					const rootFsSrc = ':' + df.split(' ')[0].split(/:(?=[^:]+$)/)[1];
-					const rootFsTgt = df.split(/\s+/)[1]; // split at first space
-					const fsLeaf = tmpShare.path.slice(rootFsTgt.length);
-					const systemdMountContents =
-						`[Unit]
+				getCephLayoutPool();
+			} catch (state) {
+				notifications.value.constructNotification("Failed to set Ceph layout pool", errorStringHTML(state), 'error');
+			}
+		}
+
+		const checkCephRemount = async () => {
+			try {
+				cephNotRemounted.value = !(new RegExp(`^${tmpShare.path}$`, 'mg')).test((await useSpawn(['df', '--output=target'], { superuser: 'try' }).promise()).stdout);
+			} catch (state) {
+				notifications.value.constructNotification("Failed to determine if Ceph was remounted", errorStringHTML(state), 'error');
+				cephNotRemounted.value = true;
+			}
+		}
+
+		const remountCeph = async () => {
+			// TODO: get mount options programatically from main filesystem mount options?
+			try {
+				const systemdMountFile = `/etc/systemd/system/${tmpShare.path.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
+				const df = (await useSpawn(['df', '--output=source,target', tmpShare.path], { superuser: 'try' }).promise()).stdout.split('\n')[1];
+				const rootFsSrc = ':' + df.split(' ')[0].split(/:(?=[^:]+$)/)[1];
+				const rootFsTgt = df.split(/\s+/)[1]; // split at first space
+				const fsLeaf = tmpShare.path.slice(rootFsTgt.length);
+				const systemdMountContents =
+					`[Unit]
 DefaultDependencies=no
 After=remote-fs-pre.target
 After=network.target
@@ -647,18 +664,28 @@ Options=${cephOptions.mountOptions}
 [Install]
 WantedBy=remote-fs.target
 `
-					if (props.ctdbHosts?.length) {
-						for (const host of props.ctdbHosts) {
-							await cockpit.file(systemdMountFile, { superuser: 'try', host }).replace(systemdMountContents);
-							await useSpawn(['systemctl', 'enable', '--now', systemdMountFile], { superuser: 'try', host }).promise();
-						}
-					} else {
-						await cockpit.file(systemdMountFile, { superuser: 'try' }).replace(systemdMountContents);
-						await useSpawn(['systemctl', 'enable', '--now', systemdMountFile], { superuser: 'try' }).promise();
+				if (props.ctdbHosts?.length) {
+					for (const host of props.ctdbHosts) {
+						await cockpit.file(systemdMountFile, { superuser: 'try', host }).replace(systemdMountContents);
+						await useSpawn(['systemctl', 'enable', '--now', systemdMountFile], { superuser: 'try', host }).promise();
 					}
-				} catch (state) {
-					notifications.value.constructNotification("Failed to set up Ceph systemd mount for share", errorStringHTML(state), 'error');
+				} else {
+					await cockpit.file(systemdMountFile, { superuser: 'try' }).replace(systemdMountContents);
+					await useSpawn(['systemctl', 'enable', '--now', systemdMountFile], { superuser: 'try' }).promise();
 				}
+			} catch (state) {
+				notifications.value.constructNotification("Failed to set up Ceph systemd mount for share", errorStringHTML(state), 'error');
+			} finally {
+				checkCephRemount();
+			}
+		}
+
+		const applyCeph = async (force = false) => {
+			setCephQuota();
+			if (force || props.share === null) { // only run if creating new share
+				setCephLayoutPool();
+				if (cephNotRemounted.value)
+					remountCeph();
 			}
 		}
 
@@ -769,6 +796,7 @@ WantedBy=remote-fs.target
 				if (isCeph.value) {
 					await getCephQuota();
 					await getCephLayoutPool();
+					await checkCephRemount();
 				}
 			}
 		}, { deep: true, immediate: true });
@@ -801,10 +829,12 @@ WantedBy=remote-fs.target
 			removeValidGroup,
 			pathExists,
 			isCeph,
+			cephNotRemounted,
 			checkIfCeph,
 			cephOptions,
 			inputsValid,
 			feedback,
+			remountCeph,
 			applyCeph,
 			removeCephMount,
 			tmpShareInit,
