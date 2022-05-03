@@ -56,20 +56,26 @@ ifndef PLUGIN_SRCS
 PLUGIN_SRCS:=$(patsubst %/package.json,%,$(wildcard */package.json))
 endif
 
-OUTPUTS:=$(patsubst %, %/dist/index.html, $(PLUGIN_SRCS))
+OUTPUTS:=$(addsuffix /dist/index.html, $(PLUGIN_SRCS))
 
 NPM_PREFIX:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn --cwd' || echo 'npm --prefix')
 NPM_UPDATE:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn upgrade --cwd' || echo 'npm update --prefix')
 
-default: $(OUTPUTS)
+VERSION_FILES:=$(addsuffix /src/version.js, $(PLUGIN_SRCS))
+OS_PACKAGE_RELEASE?=built_from_source
+
+default: $(VERSION_FILES) $(OUTPUTS)
 
 all: default
 
 .PHONY: default all install clean help install-local install-remote install
 
+$(VERSION_FILES): FORCE
+	echo 'export const pluginVersion = "$(shell jq -r '.version' ./manifest.json)-$(OS_PACKAGE_RELEASE)";' > $@
+
 # build outputs
 .SECONDEXPANSION:
-$(OUTPUTS): %/dist/index.html: $$(shell find $$*/{src,public} -type f) $$(shell find $$* -name 'yarn.lock' -o -name 'package.json' -not -path '*node_modules*') $$*/*.html  $$*/*.js
+$(OUTPUTS): %/dist/index.html: $$(shell find $$*/{src,public} -type f -not -name version.js) $$(shell find $$* -name 'yarn.lock' -o -name 'package.json' -not -path '*node_modules*') $$*/*.html  $$*/*.js
 	@echo -e $(call cyantext,Building $*)
 	$(NPM_PREFIX) $* install
 ifeq ($(AUTO_UPGRADE_DEPS),1)
