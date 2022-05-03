@@ -39,24 +39,20 @@ If not, see <https://www.gnu.org/licenses/>.
 			class="text-red-800 dark:text-white text-base sm:text-2xl cursor-pointer grow-0 text-center"
 			@click="home"
 		>{{ moduleName }}</h1>
-		<div class="flex basis-32 justify-end grow shrink-0">
+		<div class="flex basis-32 justify-end items-center grow shrink-0 gap-buttons">
+			<button :class="[infoButtonInHeader ? '' : 'fixed right-6 bottom-3 z-50']" @click="showInfo = true">
+				<QuestionMarkCircleIcon class="size-icon icon-default" />
+			</button>
 			<button
 				@click="darkMode = !darkMode"
 				@click.right.prevent="vape"
-				id="theme-toggle"
-				type="button"
-				class="text-muted focus:outline-none"
 			>
 				<SunIcon v-if="darkMode" class="size-icon-lg icon-default" />
 				<MoonIcon v-else class="size-icon-lg icon-default" />
 			</button>
 		</div>
 	</div>
-	<button v-if="!noInfo" class="fixed right-6 bottom-3 z-50" @click="showInfo = true">
-		<QuestionMarkCircleIcon class="icon-default size-icon" />
-	</button>
 	<ModalPopup
-		v-if="!noInfo"
 		:showModal="showInfo"
 		:headerText="`${moduleName} ${version}`"
 		noCancel
@@ -93,7 +89,7 @@ export default {
 		sourceURL: String,
 		issuesURL: String,
 		showSpinner: Boolean,
-		noInfo: Boolean,
+		infoButtonInHeader: Boolean,
 	},
 	setup(props) {
 		const version = ref(pluginVersion);
