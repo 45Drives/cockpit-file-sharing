@@ -47,27 +47,57 @@ If not, see <https://www.gnu.org/licenses/>.
 				type="button"
 				class="text-muted focus:outline-none"
 			>
-				<SunIcon v-if="darkMode" class="size-icon-lg" />
-				<MoonIcon v-else class="size-icon-lg" />
+				<SunIcon v-if="darkMode" class="size-icon-lg icon-default" />
+				<MoonIcon v-else class="size-icon-lg icon-default" />
 			</button>
 		</div>
 	</div>
+	<button v-if="!noInfo" class="fixed right-6 bottom-3 z-50" @click="showInfo = true">
+		<QuestionMarkCircleIcon class="icon-default size-icon" />
+	</button>
+	<ModalPopup
+		v-if="!noInfo"
+		:showModal="showInfo"
+		:headerText="`${moduleName} ${version}`"
+		noCancel
+		applyText="Close"
+		@apply="showInfo = false"
+	>
+		<div class="flex flex-col">
+			<span>
+				Created by
+				<a
+					class="text-link"
+					href="https://www.45drives.com/?utm_source=Houston&utm_medium=UI&utm_campaign=OS-Link"
+				>45Drives</a> for Houston UI (Cockpit)
+			</span>
+			<a class="text-link" href="sourceURL">Source Code</a>
+			<a class="text-link" href="issuesURL">Issue Tracker</a>
+		</div>
+	</ModalPopup>
 </template>
 
 <script>
 import "@fontsource/red-hat-text/700.css";
 import "@fontsource/red-hat-text/400.css";
 import "source-sans-pro/source-sans-pro.css";
-import { SunIcon, MoonIcon } from "@heroicons/vue/solid";
+import { SunIcon, MoonIcon, QuestionMarkCircleIcon } from "@heroicons/vue/solid";
 import { ref, watch, inject } from "vue";
 import LoadingSpinner from "./LoadingSpinner.vue";
+import ModalPopup from './ModalPopup.vue';
+import { pluginVersion } from '../version';
 
 export default {
 	props: {
 		moduleName: String,
+		sourceURL: String,
+		issuesURL: String,
 		showSpinner: Boolean,
+		noInfo: Boolean,
 	},
 	setup(props) {
+		const version = ref(pluginVersion);
+		const showInfo = ref(false);
 		const darkMode = inject('darkModeInjectionKey') ?? ref(true);
 		function getTheme() {
 			let prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -129,6 +159,8 @@ export default {
 			}
 		}, { lazy: false });
 		return {
+			version,
+			showInfo,
 			darkMode,
 			home,
 			vape,
@@ -138,6 +170,8 @@ export default {
 		SunIcon,
 		MoonIcon,
 		LoadingSpinner,
+		ModalPopup,
+		QuestionMarkCircleIcon,
 	}
 };
 </script>

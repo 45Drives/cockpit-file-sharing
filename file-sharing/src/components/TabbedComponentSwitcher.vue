@@ -17,7 +17,12 @@ If not, see <https://www.gnu.org/licenses/>.
 
 <template>
 	<div class="flex flex-col">
-		<FfdHeader moduleName="File Sharing" centerName>
+		<FfdHeader
+			moduleName="File Sharing"
+			centerName
+			sourceURL="https://github.com/45Drives/cockpit-file-sharing"
+			issuesURL="https://github.com/45Drives/cockpit-file-sharing/issues"
+		>
 			<div class="flex flex-row flex-nowrap items-stretch self-stretch gap-2">
 				<button
 					v-for="(entry, index) in components"

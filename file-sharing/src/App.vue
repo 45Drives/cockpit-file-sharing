@@ -19,11 +19,6 @@ If not, see <https://www.gnu.org/licenses/>.
 	<div class="h-full flex flex-col text-default">
 		<TabbedComponentSwitcher :components="tabs" :saveState="true" class="grow" />
 	</div>
-	<PluginInfo
-		pluginName="Cockpit File Sharing"
-		sourceURL="https://github.com/45Drives/cockpit-file-sharing"
-		issuesURL="https://github.com/45Drives/cockpit-file-sharing/issues"
-	/>
 	<Notifications :notificationFIFO="notificationFIFO" ref="notifications" />
 </template>
 
@@ -35,7 +30,6 @@ import Notifications from './components/Notifications.vue';
 import { onMounted, provide, ref } from 'vue';
 import { notificationsInjectionKey } from './keys';
 import { FIFO } from '@45drives/cockpit-helpers';
-import PluginInfo from './components/PluginInfo.vue';
 
 const props = defineProps({ notificationFIFO: FIFO });
 
