@@ -22,6 +22,7 @@ If not, see <https://www.gnu.org/licenses/>.
 			centerName
 			sourceURL="https://github.com/45Drives/cockpit-file-sharing"
 			issuesURL="https://github.com/45Drives/cockpit-file-sharing/issues"
+			infoNudgeScrollbar
 		>
 			<div class="flex flex-row flex-nowrap items-stretch self-stretch gap-2">
 				<button
@@ -40,7 +41,7 @@ If not, see <https://www.gnu.org/licenses/>.
 			<div class="grow bg-plugin-header z-10 shadow-lg"></div>
 		</div>-->
 		<div class="overflow-hidden grow basis-0">
-			<div class="bg-well overflow-y-scroll h-full">
+			<div class="bg-well overflow-y-auto h-full" style="scrollbar-gutter: stable both-edges;">
 				<component :modalPopup="modalPopup" :is="components[currentTab].component" />
 			</div>
 		</div>

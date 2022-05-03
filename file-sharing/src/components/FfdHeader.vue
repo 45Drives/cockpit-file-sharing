@@ -33,14 +33,14 @@ If not, see <https://www.gnu.org/licenses/>.
 				</h1>
 			</div>
 			<slot />
-			<LoadingSpinner v-if="showSpinner" class="size-icon self-center ml-2" />
+			<LoadingSpinner v-if="showSpinner" class="size-icon self-center" />
 		</div>
 		<h1
 			class="text-red-800 dark:text-white text-base sm:text-2xl cursor-pointer grow-0 text-center"
 			@click="home"
 		>{{ moduleName }}</h1>
 		<div class="flex basis-32 justify-end items-center grow shrink-0 gap-buttons">
-			<button :class="[infoButtonInHeader ? '' : 'fixed right-6 bottom-3 z-50']" @click="showInfo = true">
+			<button :class="[infoButtonInHeader ? '' : infoNudgeScrollbar ? 'fixed right-5 bottom-2 z-50' : 'fixed right-2 bottom-2 z-50']" @click="showInfo = true">
 				<QuestionMarkCircleIcon class="size-icon icon-default" />
 			</button>
 			<button
@@ -90,6 +90,7 @@ export default {
 		issuesURL: String,
 		showSpinner: Boolean,
 		infoButtonInHeader: Boolean,
+		infoNudgeScrollbar: Boolean,
 	},
 	setup(props) {
 		const version = ref(pluginVersion);
