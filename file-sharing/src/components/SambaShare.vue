@@ -106,8 +106,8 @@ export default {
 			cancelCallback: () => { },
 		});
 
-		const updateShare = (newShare) => {
-			emit('updateShare', props.share, newShare);
+		const updateShare = (newShare, doneHook) => {
+			emit('updateShare', props.share, newShare, doneHook);
 			showEditor.value = false;
 		}
 
@@ -115,7 +115,7 @@ export default {
 			if (!await confirmationModal.ask(`Permanently delete ${props.share.name}?`, "This cannot be undone."))
 				return;
 			emit('deleteShare', props.share);
-			if (editorRef.value.isCeph)
+			if (editorRef.value.isCeph && !editorRef.value.cephNotRemounted)
 				editorRef.value.removeCephMount();
 		}
 
