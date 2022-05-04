@@ -1,3 +1,13 @@
+cockpit-file-sharing (3.1.0-1focal) focal; urgency=medium
+
+  * Fix bugs with ceph remounting
+  * Add fix button for missing ceph remounts
+  * Clean up tab navigation
+  * Allow for disabling ceph remount
+  * Add plugin info button
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 04 May 2022 14:13:40 -0300
+
 cockpit-file-sharing (3.0.1-1focal) focal; urgency=medium
 
   * Fix some placeholder text, add tooltip for valid users

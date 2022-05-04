@@ -1,5 +1,7 @@
-## Cockpit File Sharing 3.0.1-1
+## Cockpit File Sharing 3.1.0-1
 
-* Fix some placeholder text, add tooltip for valid users
-* Fix shadow copy settings for Ceph shares
-* Clean up systemd mount files after deleting a Ceph share
+* Fix bugs with ceph remounting
+* Add fix button for missing ceph remounts
+* Clean up tab navigation
+* Allow for disabling ceph remount
+* Add plugin info button
