@@ -100,37 +100,25 @@ If not, see <https://www.gnu.org/licenses/>.
 				<button
 					class="text-feedback text-warning underline"
 					@click="remountCeph()"
+					:disabled="cephOptions.fixMountRunning"
 				>Fix now</button>
 				<InfoTip>
 					When creating a Ceph share, a new filesystem mount point is created on top of the share directory.
 					This is needed for Windows to properly report quotas through Samba.
 				</InfoTip>
+				<LoadingSpinner v-if="cephOptions.fixMountRunning" class="ml-2 size-icon" />
 			</div>
 		</div>
-		<div v-if="isCeph">
-			<label class="text-label flex flex-row space-x-2">
-				<span>Ceph Share Mount Options</span>
-				<InfoTip>
-					When creating a Ceph share, a new filesystem mount point is created on top of the share directory.
-					This is needed for Windows to properly report quotas through Samba.
-				</InfoTip>
-			</label>
-			<input
-				type="text"
-				name="path"
-				class="w-full input-textlike disabled:cursor-not-allowed"
-				placeholder="Share Path/Directory"
-				v-model="cephOptions.mountOptions"
-				:disabled="share !== null"
-			/>
-			<div class="feedback-group" v-if="feedback.cephMountOptions">
-				<ExclamationCircleIcon class="size-icon icon-error" />
-				<span class="text-feedback text-error">{{ feedback.cephMountOptions }}</span>
-			</div>
+		<div v-if="isCeph && cephNotRemounted && share === null" class="flex flex-row items-center">
+			<LabelledSwitch v-model="cephOptions.enableRemount">Enable Ceph remount</LabelledSwitch>
+			<InfoTip>
+				When creating a Ceph share, a new filesystem mount point is created on top of the share directory.
+				This is needed for Windows to properly report quotas through Samba.
+			</InfoTip>
 		</div>
 		<div v-if="isCeph">
 			<label class="block text-label">Ceph Quota</label>
-			<div class="relative rounded-md shadow-sm">
+			<div class="relative rounded-md shadow-sm inline">
 				<input
 					type="number"
 					class="pr-12 input-textlike"
@@ -229,6 +217,18 @@ If not, see <https://www.gnu.org/licenses/>.
 			<button class="btn btn-secondary" @click="cancel">Cancel</button>
 			<button class="btn btn-primary" @click="apply" :disabled="!inputsValid">Confirm</button>
 		</div>
+		<ModalPopup
+			:showModal="cephOptions.showMountOptionsModal"
+			headerText="Ceph Remount Options"
+			cancelText="Do not remount"
+			@apply="cephOptions.mountOptionsApplyCallback"
+			@cancel="cephOptions.mountOptionsCancelCallback"
+		>
+			<div
+				class="block"
+			>Could not automatically determine options for remounting Ceph at share point. Enter options below.</div>
+			<input type="text" class="w-full input-textlike" v-model="cephOptions.mountOptions" />
+		</ModalPopup>
 	</div>
 </template>
 
@@ -244,6 +244,10 @@ import InfoTip from "./InfoTip.vue";
 import FileModeMatrix from "./FileModeMatrix.vue";
 import { notificationsInjectionKey } from "../keys";
 import LabelledSwitch from "./LabelledSwitch.vue";
+import { whitespaceDelimiterRegex } from "../regex";
+import normalizePath from 'normalize-path';
+import LoadingSpinner from "./LoadingSpinner.vue";
+
 export default {
 	props: {
 		share: {
@@ -273,7 +277,23 @@ export default {
 			quotaValue: 0,
 			quotaMultiplier: 0,
 			layoutPool: "",
+			enableRemount: true,
+			fixMountRunning: false,
+			showMountOptionsModal: false,
 			mountOptions: "name=samba,secretfile=/etc/ceph/samba.secret,_netdev",
+			mountOptionsAsk: () => {
+				return new Promise((resolve, reject) => {
+					const respond = (handle, response) => {
+						cephOptions.showMountOptionsModal = false;
+						handle(response);
+					}
+					cephOptions.mountOptionsApplyCallback = () => respond(resolve, cephOptions.mountOptions);
+					cephOptions.mountOptionsCancelCallback = () => respond(reject);
+					cephOptions.showMountOptionsModal = true;
+				});
+			},
+			mountOptionsApplyCallback: () => { },
+			mountOptionsCancelCallback: () => { },
 		});
 		const inputsValid = ref(true);
 		const pathExists = ref(false);
@@ -311,7 +331,7 @@ export default {
 					await useSpawn(['chown', dirPermissions.owner, tmpShare.path], { superuser: 'try' }).promise();
 					await useSpawn(['chgrp', dirPermissions.group, tmpShare.path], { superuser: 'try' }).promise();
 					await useSpawn(['chmod', dirPermissions.mode.toString(8), tmpShare.path], { superuser: 'try' }).promise();
-					await checkIfExists();
+					tmpShareUpdateCallback();
 				} catch (state) {
 					notifications.value.constructNotification("Failed to update directory permissions", errorStringHTML(state), 'error');
 				}
@@ -395,7 +415,7 @@ export default {
 					cephOptions.quotaValue = quotaBytes / cephOptions.quotaMultiplier;
 					return;
 				}
-			} catch (err) { console.error(err) }
+			} catch (err) { /* ignore */ }
 			cephOptions.quotaValue = 0;
 			cephOptions.quotaMultiplier = 1024 ** 3; // default to GiB
 		}
@@ -405,7 +425,6 @@ export default {
 				cephOptions.layoutPool = (await useSpawn(['getfattr', '-n', 'ceph.dir.layout.pool', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try' }).promise()).stdout;
 			} catch (err) {
 				cephOptions.layoutPool = "";
-				console.error(err);
 			}
 		};
 
@@ -626,21 +645,47 @@ export default {
 
 		const checkCephRemount = async () => {
 			try {
-				cephNotRemounted.value = !(new RegExp(`^${tmpShare.path}$`, 'mg')).test((await useSpawn(['df', '--output=target'], { superuser: 'try' }).promise()).stdout);
+				cephNotRemounted.value = !(new RegExp(`^${await normalizePath(tmpShare.path)}$`, 'mg')).test((await useSpawn(['df', '--output=target'], { superuser: 'try' }).promise()).stdout);
 			} catch (state) {
 				notifications.value.constructNotification("Failed to determine if Ceph was remounted", errorStringHTML(state), 'error');
 				cephNotRemounted.value = true;
 			}
 		}
 
+		const getCephMountOpts = async (mainFsMount) => {
+			try {
+				const regex = new RegExp(`\\s${mainFsMount}\\s`);
+				const possibleMatches = (await cockpit.file('/etc/fstab', { superuser: 'try' }).read())
+					.split('\n')
+					.filter(line => regex.test(line));
+				if (possibleMatches.length < 1)
+					throw new Error("No matches in fstab");
+				const opts = possibleMatches[0].split(whitespaceDelimiterRegex)[3];
+				cephOptions.mountOptions = opts;
+				if (possibleMatches.length > 1)
+					throw new Error("Too many matches in fstab");
+				return opts;
+			} catch (error) {
+				notifications.value.constructNotification("Failed to determine Ceph mount options", error.message, 'warning');
+				try {
+					return (await cephOptions.mountOptionsAsk());
+				} catch {
+					throw new Error("Cancelled by user");
+				}
+			}
+		}
+
 		const remountCeph = async () => {
-			// TODO: get mount options programatically from main filesystem mount options?
+			cephOptions.fixMountRunning = true;
 			try {
 				const systemdMountFile = `/etc/systemd/system/${tmpShare.path.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
 				const df = (await useSpawn(['df', '--output=source,target', tmpShare.path], { superuser: 'try' }).promise()).stdout.split('\n')[1];
-				const rootFsSrc = ':' + df.split(' ')[0].split(/:(?=[^:]+$)/)[1];
-				const rootFsTgt = df.split(/\s+/)[1]; // split at first space
-				const fsLeaf = tmpShare.path.slice(rootFsTgt.length);
+				let mainFsSrc, mainFsTgt, remainder;
+				[mainFsSrc, mainFsTgt, ...remainder] = df.split(whitespaceDelimiterRegex);
+				if (await normalizePath(mainFsTgt) === await normalizePath(tmpShare.path))
+					return;
+				const fsLeaf = tmpShare.path.slice(mainFsTgt.length);
+				const newFsSrc = (mainFsSrc + fsLeaf).replace(/\/+/, '/');
 				const systemdMountContents =
 					`[Unit]
 DefaultDependencies=no
@@ -652,14 +697,14 @@ Wants=network-online.target
 Conflicts=umount.target
 Before=umount.target
 Before=ctdb.service
-Description=share mount created by cockpit-file-sharing
+Description=share remount created by cockpit-file-sharing
 
 [Mount]
-What=${rootFsSrc + fsLeaf}
+What=${newFsSrc}
 Where=${tmpShare.path}
 LazyUnmount=true
 Type=ceph
-Options=${cephOptions.mountOptions}
+Options=${await getCephMountOpts(mainFsTgt)}
 
 [Install]
 WantedBy=remote-fs.target
@@ -673,34 +718,53 @@ WantedBy=remote-fs.target
 					await cockpit.file(systemdMountFile, { superuser: 'try' }).replace(systemdMountContents);
 					await useSpawn(['systemctl', 'enable', '--now', systemdMountFile], { superuser: 'try' }).promise();
 				}
+				notifications.value.constructNotification("Success", "Successfully set up Ceph remount for share", 'success');
 			} catch (state) {
 				notifications.value.constructNotification("Failed to set up Ceph systemd mount for share", errorStringHTML(state), 'error');
 			} finally {
+				cephOptions.fixMountRunning = false;
 				checkCephRemount();
 			}
 		}
 
 		const applyCeph = async (force = false) => {
-			setCephQuota();
+			const procs = [];
+			procs.push(setCephQuota());
 			if (force || props.share === null) { // only run if creating new share
-				setCephLayoutPool();
-				if (cephNotRemounted.value)
-					remountCeph();
+				procs.push(setCephLayoutPool());
+				if (cephNotRemounted.value && cephOptions.enableRemount)
+					procs.push(remountCeph());
 			}
+			await Promise.all(procs);
 		}
 
 		const removeCephMount = async () => {
+			const isRemount = async (systemdMountFile, host) => {
+				const opts = { superuser: 'try' };
+				if (host)
+					opts.host = host;
+				const mountContent = await cockpit.file(systemdMountFile, opts).read();
+				if (!mountContent)
+					return false; // assuming mount unit file DNE, so not remount
+				if (/share remount created by cockpit-file-sharing$/mg.test(mountContent))
+					return true; // remount generated by cockpit-file-sharing
+				return false; // not generated by cockpit-file-sharing
+			}
 			try {
 				const systemdMountUnit = `${tmpShare.path.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
 				const systemdMountFile = `/etc/systemd/system/${systemdMountUnit}`;
 				if (props.ctdbHosts?.length) {
 					for (const host of props.ctdbHosts) {
-						await useSpawn(['systemctl', 'disable', '--now', systemdMountUnit], { superuser: 'try', host }).promise();
-						await cockpit.file(systemdMountFile, { superuser: 'try', host }).replace(null);
+						if (await isRemount(systemdMountFile, host)) {
+							await useSpawn(['systemctl', 'disable', '--now', systemdMountUnit], { superuser: 'try', host }).promise();
+							await cockpit.file(systemdMountFile, { superuser: 'try', host }).replace(null);
+						}
 					}
 				} else {
-					await useSpawn(['systemctl', 'disable', '--now', systemdMountUnit], { superuser: 'try' }).promise();
-					await cockpit.file(systemdMountFile, { superuser: 'try' }).replace(null);
+					if (await isRemount(systemdMountFile)) {
+						await useSpawn(['systemctl', 'disable', '--now', systemdMountUnit], { superuser: 'try' }).promise();
+						await cockpit.file(systemdMountFile, { superuser: 'try' }).replace(null);
+					}
 				}
 			} catch (state) {
 				notifications.value.constructNotification("Failed to remove Ceph systemd mount for share", errorStringHTML(state), 'error');
@@ -716,9 +780,7 @@ WantedBy=remote-fs.target
 				"guest ok": tmpShare["guest ok"] ? "yes" : "no",
 				"read only": tmpShare["read only"] ? "yes" : "no",
 				"browseable": tmpShare["browseable"] ? "yes" : "no",
-			});
-			if (isCeph.value)
-				applyCeph();
+			}, applyCeph);
 		};
 
 		const cancel = () => {
@@ -744,12 +806,16 @@ WantedBy=remote-fs.target
 
 		const validateInputs = () => {
 			let result = true;
+			let invalidChars;
 
 			if (!tmpShare.name) {
 				feedback.name = "Share name is required.";
 				result = false;
 			} else if (props.share === null && props.shares.find(share => share.name.toUpperCase() === tmpShare.name.toUpperCase())) {
 				feedback.name = "Share exists.";
+				result = false;
+			} else if (invalidChars = tmpShare.name.match(/[%<>*?|/\\+=;:",]/g)) {
+				feedback.name = `Invalid character${invalidChars.length ? 's' : ''}: ${invalidChars.filter((c, i, a) => a.indexOf(c) === i).map(c => `'${c}'`).join(', ')}`;
 				result = false;
 			} else {
 				feedback.name = "";
@@ -777,11 +843,7 @@ WantedBy=remote-fs.target
 			inputsValid.value = result;
 		}
 
-		watch(() => props.share, () => {
-			tmpShareInit();
-		}, { lazy: false });
-
-		watch(() => ({ ...tmpShare }), async (current, old) => {
+		const tmpShareUpdateCallback = async (current, old) => {
 			validateInputs();
 			if (old === undefined || current.path !== old.path) {
 				await checkIfExists();
@@ -799,6 +861,14 @@ WantedBy=remote-fs.target
 					await checkCephRemount();
 				}
 			}
+		}
+
+		watch(() => props.share, () => {
+			tmpShareInit();
+		}, { lazy: false });
+
+		watch(() => ({ ...tmpShare }), async (current, old) => {
+			tmpShareUpdateCallback(current, old);
 		}, { deep: true, immediate: true });
 
 		watch(() => ({ ...cephOptions }), async (current, old) => {
@@ -850,6 +920,7 @@ WantedBy=remote-fs.target
 		InfoTip,
 		FileModeMatrix,
 		LabelledSwitch,
+		LoadingSpinner,
 	},
 	emits: [
 		'applyShare',
