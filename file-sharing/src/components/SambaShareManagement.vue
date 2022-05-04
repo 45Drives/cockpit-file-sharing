@@ -127,12 +127,12 @@ export default {
 			}
 		}
 
-		const addShare = async (share) => {
+		const addShare = async (share, doneHook) => {
 			processing.value++;
 			try {
 				await useSpawn(['net', 'conf', 'addshare', share.name, share.path], { superuser: 'try' }).promise();
 				await applyShareChanges(null, share);
-				// props.shares = [...props.shares, share]; // done in SambaManager with event
+				await doneHook?.();
 				emit('appendShareToList', share);
 				setTimeout(() => newShareEditorRef.value.tmpShareInit(), 500);
 				notifications.value.constructNotification("Success", "Successfully added share", 'success');
@@ -145,10 +145,11 @@ export default {
 			}
 		}
 
-		const updateShare = async (share, newShare) => {
+		const updateShare = async (share, newShare, doneHook) => {
 			processing.value++;
 			try {
 				await applyShareChanges(share, newShare);
+				await doneHook?.();
 				Object.assign(share, newShare);
 				notifications.value.constructNotification("Success", "Successfully updated share", 'success');
 			} catch (state) {
