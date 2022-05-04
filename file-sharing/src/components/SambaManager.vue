@@ -31,7 +31,7 @@ If not, see <https://www.gnu.org/licenses/>.
 			:cephLayoutPools="cephLayoutPools"
 			:ctdbHosts="ctdbHosts"
 			:parentProcessing="processing"
-			@appendShareToList="share => shares = [...shares, share]"
+			@appendShareToList="share => shares = [...shares, share].sort((a, b) => a.name.localeCompare(b.name))"
 			@removeShareFromList="share => shares = shares.filter((a) => a !== share)"
 		/>
 		<div class="card">
