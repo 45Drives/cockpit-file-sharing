@@ -8,6 +8,9 @@ on:
 jobs:
   main:
     runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v2
