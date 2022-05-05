@@ -40,7 +40,7 @@ If not, see <https://www.gnu.org/licenses/>.
 			@click="home"
 		>{{ moduleName }}</h1>
 		<div class="flex basis-32 justify-end items-center grow shrink-0 gap-buttons">
-			<button :class="[infoButtonInHeader ? '' : infoNudgeScrollbar ? 'fixed right-5 bottom-2 z-50' : 'fixed right-2 bottom-2 z-50']" @click="showInfo = true">
+			<button :class="[infoButtonInHeader ? '' : infoNudgeScrollbar ? 'md:fixed md:right-5 md:bottom-2 md:z-50' : 'md:fixed md:right-2 md:bottom-2 md:z-50']" @click="showInfo = true">
 				<QuestionMarkCircleIcon class="size-icon icon-default" />
 			</button>
 			<button
@@ -65,10 +65,11 @@ If not, see <https://www.gnu.org/licenses/>.
 				<a
 					class="text-link"
 					href="https://www.45drives.com/?utm_source=Houston&utm_medium=UI&utm_campaign=OS-Link"
+					target="_blank"
 				>45Drives</a> for Houston UI (Cockpit)
 			</span>
-			<a class="text-link" href="sourceURL">Source Code</a>
-			<a class="text-link" href="issuesURL">Issue Tracker</a>
+			<a class="text-link" :href="sourceURL" target="_blank">Source Code</a>
+			<a class="text-link" :href="issuesURL" target="_blank">Issue Tracker</a>
 		</div>
 	</ModalPopup>
 </template>
