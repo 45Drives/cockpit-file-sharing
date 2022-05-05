@@ -53,6 +53,7 @@ If not, see <https://www.gnu.org/licenses/>.
 				placeholder="Share path/directory"
 				v-model="tmpShare.path"
 				:disabled="share !== null"
+				@change="tmpShare.path = canonicalPath(tmpShare.path)"
 			/>
 			<div class="feedback-group" v-if="feedback.path">
 				<ExclamationCircleIcon class="size-icon icon-error" />
@@ -237,15 +238,14 @@ import PillList from "./PillList.vue";
 import DropdownSelector from "./DropdownSelector.vue";
 import { splitAdvancedSettings, joinAdvancedSettings, strToBool } from "../functions";
 import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
-import { ref, reactive, watch, inject } from "vue";
-import { useSpawn, errorStringHTML } from "@45drives/cockpit-helpers";
+import { ref, reactive, watch, inject, onMounted } from "vue";
+import { useSpawn, errorStringHTML, canonicalPath } from "@45drives/cockpit-helpers";
 import ModalPopup from "./ModalPopup.vue";
 import InfoTip from "./InfoTip.vue";
 import FileModeMatrix from "./FileModeMatrix.vue";
 import { notificationsInjectionKey } from "../keys";
 import LabelledSwitch from "./LabelledSwitch.vue";
 import { whitespaceDelimiterRegex } from "../regex";
-import normalizePath from 'normalize-path';
 import LoadingSpinner from "./LoadingSpinner.vue";
 
 export default {
@@ -391,43 +391,6 @@ export default {
 			}
 		};
 
-		const checkIfCeph = async () => {
-			try {
-				const cephXattr = (await useSpawn(['getfattr', '-n', 'ceph.dir.rctime', tmpShare.path]).promise()).stdout;
-				if (cephXattr !== "") {
-					isCeph.value = true;
-				} else {
-					isCeph.value = false;
-				}
-			} catch (state) {
-				isCeph.value = false;
-			}
-		};
-
-		const getCephQuota = async () => {
-			try {
-				const quotaBytes = Number((await useSpawn(['getfattr', '-n', 'ceph.quota.max_bytes', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try' }).promise()).stdout);
-				if (quotaBytes !== 0) {
-					const base = 1024;
-					let exp = Math.floor(Math.log(quotaBytes) / Math.log(base));
-					exp = Math.min(Math.max(exp, 2), 4); // limit to MiB - TiB
-					cephOptions.quotaMultiplier = base ** exp;
-					cephOptions.quotaValue = quotaBytes / cephOptions.quotaMultiplier;
-					return;
-				}
-			} catch (err) { /* ignore */ }
-			cephOptions.quotaValue = 0;
-			cephOptions.quotaMultiplier = 1024 ** 3; // default to GiB
-		}
-
-		const getCephLayoutPool = async () => {
-			try {
-				cephOptions.layoutPool = (await useSpawn(['getfattr', '-n', 'ceph.dir.layout.pool', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try' }).promise()).stdout;
-			} catch (err) {
-				cephOptions.layoutPool = "";
-			}
-		};
-
 		const tmpShareInit = async () => {
 			shareValidUsers.value = [];
 			shareValidGroups.value = [];
@@ -470,7 +433,7 @@ export default {
 			setAdvancedToggleStates();
 		}
 
-		tmpShareInit();
+		onMounted(() => tmpShareInit());
 
 		// these switch methods were watch, but I don't want settings to be removed
 		// when changing a line turns off the switch automatically through setAdvancedToggleStates
@@ -614,6 +577,43 @@ export default {
 			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
 		};
 
+		const checkIfCeph = async () => {
+			try {
+				const cephXattr = (await useSpawn(['getfattr', '-n', 'ceph.dir.rctime', tmpShare.path]).promise()).stdout;
+				if (cephXattr !== "") {
+					isCeph.value = true;
+				} else {
+					isCeph.value = false;
+				}
+			} catch (state) {
+				isCeph.value = false;
+			}
+		};
+
+		const getCephQuota = async () => {
+			try {
+				const quotaBytes = Number((await useSpawn(['getfattr', '-n', 'ceph.quota.max_bytes', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try' }).promise()).stdout);
+				if (quotaBytes !== 0) {
+					const base = 1024;
+					let exp = Math.floor(Math.log(quotaBytes) / Math.log(base));
+					exp = Math.min(Math.max(exp, 2), 4); // limit to MiB - TiB
+					cephOptions.quotaMultiplier = base ** exp;
+					cephOptions.quotaValue = quotaBytes / cephOptions.quotaMultiplier;
+					return;
+				}
+			} catch (err) { /* ignore */ }
+			cephOptions.quotaValue = 0;
+			cephOptions.quotaMultiplier = 1024 ** 3; // default to GiB
+		}
+
+		const getCephLayoutPool = async () => {
+			try {
+				cephOptions.layoutPool = (await useSpawn(['getfattr', '-n', 'ceph.dir.layout.pool', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try' }).promise()).stdout;
+			} catch (err) {
+				cephOptions.layoutPool = "";
+			}
+		};
+
 		const setCephQuota = async () => {
 			try {
 				const quotaBytes = Math.ceil(cephOptions.quotaValue * cephOptions.quotaMultiplier);
@@ -645,7 +645,7 @@ export default {
 
 		const checkCephRemount = async () => {
 			try {
-				cephNotRemounted.value = !(new RegExp(`^${await normalizePath(tmpShare.path)}$`, 'mg')).test((await useSpawn(['df', '--output=target'], { superuser: 'try' }).promise()).stdout);
+				cephNotRemounted.value = !(new RegExp(`^${canonicalPath(tmpShare.path)}$`, 'mg')).test((await useSpawn(['df', '--output=target'], { superuser: 'try' }).promise()).stdout);
 			} catch (state) {
 				notifications.value.constructNotification("Failed to determine if Ceph was remounted", errorStringHTML(state), 'error');
 				cephNotRemounted.value = true;
@@ -682,10 +682,10 @@ export default {
 				const df = (await useSpawn(['df', '--output=source,target', tmpShare.path], { superuser: 'try' }).promise()).stdout.split('\n')[1];
 				let mainFsSrc, mainFsTgt, remainder;
 				[mainFsSrc, mainFsTgt, ...remainder] = df.split(whitespaceDelimiterRegex);
-				if (await normalizePath(mainFsTgt) === await normalizePath(tmpShare.path))
+				if (canonicalPath(mainFsTgt) === canonicalPath(tmpShare.path))
 					return;
 				const fsLeaf = tmpShare.path.slice(mainFsTgt.length);
-				const newFsSrc = (mainFsSrc + fsLeaf).replace(/\/+/, '/');
+				const newFsSrc = canonicalPath(mainFsSrc + fsLeaf);
 				const systemdMountContents =
 					`[Unit]
 DefaultDependencies=no
@@ -911,6 +911,7 @@ WantedBy=remote-fs.target
 			applyCeph,
 			removeCephMount,
 			tmpShareInit,
+			canonicalPath, // for calling in template
 		};
 	},
 	components: {
