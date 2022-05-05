@@ -33,6 +33,7 @@ make DESTDIR=%{buildroot} install
 - Clean up tab navigation
 - Allow for disabling ceph remount
 - Add plugin info button
+- Automatically canonicalize share path on input change
 * Thu Mar 24 2022 Joshua Boudreau <jboudreau@45drives.com> 3.0.1-1
 - Fix some placeholder text, add tooltip for valid users
 - Fix shadow copy settings for Ceph shares
