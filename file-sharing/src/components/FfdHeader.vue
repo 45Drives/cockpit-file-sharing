@@ -40,13 +40,18 @@ If not, see <https://www.gnu.org/licenses/>.
 			@click="home"
 		>{{ moduleName }}</h1>
 		<div class="flex basis-32 justify-end items-center grow shrink-0 gap-buttons">
-			<button :class="[infoButtonInHeader ? '' : infoNudgeScrollbar ? 'md:fixed md:right-5 md:bottom-2 md:z-50' : 'md:fixed md:right-2 md:bottom-2 md:z-50']" @click="showInfo = true">
-				<QuestionMarkCircleIcon class="size-icon icon-default" />
-			</button>
-			<button
-				@click="darkMode = !darkMode"
-				@click.right.prevent="vape"
+			<div
+				:class="[infoButtonInHeader ? '' : 'md:fixed md:right-2 md:bottom-2 md:z-50 flex flex-row items-stretch']"
 			>
+				<button @click="showInfo = true">
+					<QuestionMarkCircleIcon class="size-icon icon-default" />
+				</button>
+				<div
+					class="overflow-y-auto"
+					:style="{ 'scrollbar-gutter': infoNudgeScrollbar ? 'stable' : 'auto' }"
+				></div>
+			</div>
+			<button @click="darkMode = !darkMode" @click.right.prevent="vape">
 				<SunIcon v-if="darkMode" class="size-icon-lg icon-default" />
 				<MoonIcon v-else class="size-icon-lg icon-default" />
 			</button>
