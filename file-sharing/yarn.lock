@@ -8,9 +8,9 @@
   integrity sha512-fyUb6xMwKpuRWOL3DV1ZjGQjPxEkEhqsbFlZy6gALeOzk9RuJlBReQXyo0Ds9ZwcJlrhwRRdSDmT/EEtNs+ZaA==
 
 "@45drives/cockpit-helpers@^0.1.2", "@45drives/cockpit-helpers@^0.1.3":
-  version "0.1.5"
-  resolved "https://npm.pkg.github.com/download/@45drives/cockpit-helpers/0.1.5/11da695fa45541ed05a741e727ad7bd0ab9147f6d64b6232a3c0e0864ed11ef0#3c30430ef04c3eb5a034be64e893735b561dccd7"
-  integrity sha512-UnTXt0p8SPKeD0UmxvojihUx54gyMwe324/2FjD3muCEBoREzW0SsumS/mj1ASVASkcRJQ5SwDNXDRQsWHIgJQ==
+  version "0.1.7"
+  resolved "https://npm.pkg.github.com/download/@45drives/cockpit-helpers/0.1.7/fc1c065099065eb9eec8499f2a8823e0db573c3a1f9071f738ea19a136fe54c7#eb87551729cde09031ae47793994a7163b33db4d"
+  integrity sha512-R+05C7GvLRj1Wl7h/X//RsT7sybyTN6wEofWGUjYq05jWlBk6/+43tC6mQ1E52iRmTsEqTHKqZZhPN0A4L3iyQ==
 
 "@45drives/cockpit-syntaxes@^0.1.4":
   version "0.1.4"
@@ -235,9 +235,9 @@ camelcase-css@^2.0.1:
   integrity sha512-QOSvevhslijgYwRx6Rv7zKdMF8lbRmx+uQGx2+vDc+KI/eBnsy9kit5aj23AgGu3pa4t9AgwbnXWqS+iOY+2aA==
 
 caniuse-lite@^1.0.30001332, caniuse-lite@^1.0.30001335:
-  version "1.0.30001336"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001336.tgz#a9eb13edd2613f418ebc632c8d6c9ab9fde7ccc4"
-  integrity sha512-/YxSlBmL7iKXTbIJ48IQTnAOBk7XmWsxhBF1PZLOko5Dt9qc4Pl+84lfqG3Tc4EuavurRn1QLoVJGxY2iSycfw==
+  version "1.0.30001338"
+  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001338.tgz#b5dd7a7941a51a16480bdf6ff82bded1628eec0d"
+  integrity sha512-1gLHWyfVoRDsHieO+CaeYe7jSo/MT7D7lhaXUiwwbuR5BwQxORs0f1tAwUSQr3YbxRXJvxHM/PA5FfPQRnsPeQ==
 
 chokidar@^3.5.3:
   version "3.5.3"
@@ -294,9 +294,9 @@ dlv@^1.1.3:
   integrity sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==
 
 electron-to-chromium@^1.4.118:
-  version "1.4.134"
-  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.134.tgz#9baca7a018ca489d8e81a00c7cfe15161da38568"
-  integrity sha512-OdD7M2no4Mi8PopfvoOuNcwYDJ2mNFxaBfurA6okG3fLBaMcFah9S+si84FhX+FIWLKkdaiHfl4A+5ep/gOVrg==
+  version "1.4.136"
+  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.136.tgz#b6a3595a9c29d6d8f60e092d40ac24f997e4e7ef"
+  integrity sha512-GnITX8rHnUrIVnTxU9UlsTnSemHUA2iF+6QrRqxFbp/mf0vfuSc/goEyyQhUX3TUUCE3mv/4BNuXOtaJ4ur0eA==
 
 esbuild-android-64@0.14.38:
   version "0.14.38"
