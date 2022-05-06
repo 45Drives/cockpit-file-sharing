@@ -97,26 +97,20 @@ export default {
 		showSpinner: Boolean,
 		infoButtonInHeader: Boolean,
 		infoNudgeScrollbar: Boolean,
+		pluginVersion: Number
 	},
 	setup(props) {
 		const version = ref(pluginVersion);
 		const showInfo = ref(false);
-		const darkMode = inject('darkModeInjectionKey') ?? ref(true);
+		const darkMode = inject('darkModeInjectionKey') ?? ref(false);
 		function getTheme() {
 			let prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-			let theme = localStorage.getItem("color-theme");
+			let theme = cockpit.localStorage.getItem("houston-color-theme");
 			if (theme === null)
 				return prefersDark;
-			if (theme === "dark")
-				return true;
-			return false;
+			return theme === "dark";
 		}
 		darkMode.value = getTheme();
-		if (darkMode.value) {
-			document.documentElement.classList.add("dark");
-		} else {
-			document.documentElement.classList.remove("dark");
-		}
 		const home = () => {
 			cockpit.location.go('/');
 		};
@@ -154,13 +148,14 @@ export default {
 			}, 500);
 		}
 		watch(() => darkMode.value, (darkMode, oldDarkMode) => {
-			localStorage.setItem("color-theme", darkMode ? "dark" : "light");
+			cockpit.localStorage.setItem("houston-color-theme", darkMode ? "dark" : "light");
 			if (darkMode) {
 				document.documentElement.classList.add("dark");
 			} else {
 				document.documentElement.classList.remove("dark");
 			}
-		}, { lazy: false });
+		}, { lazy: false, immediate: true });
+		cockpit.onvisibilitychange = () => darkMode.value = getTheme();
 		return {
 			version,
 			showInfo,
