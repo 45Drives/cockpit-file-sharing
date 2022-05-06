@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri May 06 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.1-1
+- Fix info button positioning
 * Wed May 04 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.0-1
 - Fix bugs with ceph remounting
 - Add fix button for missing ceph remounts
