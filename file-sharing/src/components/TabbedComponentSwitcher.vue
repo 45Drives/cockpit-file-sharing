@@ -17,7 +17,7 @@ If not, see <https://www.gnu.org/licenses/>.
 
 <template>
 	<div class="flex flex-col">
-		<FfdHeader
+		<HoustonHeader
 			moduleName="File Sharing"
 			centerName
 			sourceURL="https://github.com/45Drives/cockpit-file-sharing"
@@ -31,7 +31,7 @@ If not, see <https://www.gnu.org/licenses/>.
 					@click="switchTab(index)"
 				>{{ entry.title }}</button>
 			</div>
-		</FfdHeader>
+		</HoustonHeader>
 		<!-- <div class="flex flex-row grow-0 items-stretch bg-well">
 			<button
 				v-for="(entry, index) in components"
@@ -49,7 +49,7 @@ If not, see <https://www.gnu.org/licenses/>.
 </template>
 
 <script>
-import FfdHeader from "./FfdHeader.vue";
+import HoustonHeader from "./HoustonHeader.vue";
 import { ref } from "vue";
 export default {
 	props: {
@@ -78,7 +78,7 @@ export default {
 		}
 	},
 	components: {
-		FfdHeader,
+		HoustonHeader,
 	}
 }
 </script>
