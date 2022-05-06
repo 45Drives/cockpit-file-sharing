@@ -23,6 +23,7 @@ If not, see <https://www.gnu.org/licenses/>.
 			sourceURL="https://github.com/45Drives/cockpit-file-sharing"
 			issuesURL="https://github.com/45Drives/cockpit-file-sharing/issues"
 			infoNudgeScrollbar
+			:pluginVersion="version"
 		>
 			<div class="flex flex-row flex-nowrap items-stretch self-stretch gap-2">
 				<button
@@ -51,6 +52,7 @@ If not, see <https://www.gnu.org/licenses/>.
 <script>
 import HoustonHeader from "./HoustonHeader.vue";
 import { ref } from "vue";
+import { pluginVersion } from "../version";
 export default {
 	props: {
 		components: Array[Object],
@@ -62,6 +64,7 @@ export default {
 	},
 	setup(props) {
 		const currentTab = ref(0);
+		const version = ref(pluginVersion);
 		if (props.saveState) {
 			currentTab.value = Math.min(JSON.parse(localStorage.getItem('tabbed-component-switcher-tab')) ?? 0, props.components.length - 1);
 		}
@@ -73,6 +76,7 @@ export default {
 		}
 
 		return {
+			version,
 			currentTab,
 			switchTab,
 		}

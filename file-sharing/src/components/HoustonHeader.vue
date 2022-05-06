@@ -59,7 +59,7 @@ If not, see <https://www.gnu.org/licenses/>.
 	</div>
 	<ModalPopup
 		:showModal="showInfo"
-		:headerText="`${moduleName} ${version}`"
+		:headerText="`${moduleName} ${pluginVersion}`"
 		noCancel
 		applyText="Close"
 		@apply="showInfo = false"
@@ -87,7 +87,6 @@ import { SunIcon, MoonIcon, QuestionMarkCircleIcon } from "@heroicons/vue/solid"
 import { ref, watch, inject } from "vue";
 import LoadingSpinner from "./LoadingSpinner.vue";
 import ModalPopup from './ModalPopup.vue';
-import { pluginVersion } from '../version';
 
 export default {
 	props: {
@@ -100,7 +99,6 @@ export default {
 		pluginVersion: Number
 	},
 	setup(props) {
-		const version = ref(pluginVersion);
 		const showInfo = ref(false);
 		const darkMode = inject('darkModeInjectionKey') ?? ref(false);
 		function getTheme() {
@@ -157,7 +155,6 @@ export default {
 		}, { lazy: false, immediate: true });
 		cockpit.onvisibilitychange = () => darkMode.value = getTheme();
 		return {
-			version,
 			showInfo,
 			darkMode,
 			home,
