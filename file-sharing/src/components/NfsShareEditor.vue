@@ -26,6 +26,7 @@ If not, see <https://www.gnu.org/licenses/>.
 				class="w-full input-textlike"
 				placeholder="Share Path"
 				v-model="tmpShare.path"
+				@change="tmpShare.path = canonicalPath(tmpShare.path)"
 			/>
 			<div class="feedback-group" v-if="feedback.path">
 				<ExclamationCircleIcon class="size-icon icon-error" />
@@ -110,7 +111,7 @@ If not, see <https://www.gnu.org/licenses/>.
 <script>
 import { inject, reactive, ref, watch } from "vue";
 import { PlusIcon, MinusIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
-import { useSpawn, errorStringHTML } from "@45drives/cockpit-helpers";
+import { useSpawn, errorStringHTML, canonicalPath } from "@45drives/cockpit-helpers";
 import ModalPopup from "./ModalPopup.vue";
 import { notificationsInjectionKey } from "../keys";
 import FileModeMatrix from "./FileModeMatrix.vue";
@@ -284,6 +285,7 @@ export default {
 			cancel,
 			addClient,
 			deleteClient,
+			canonicalPath,
 		}
 	},
 	components: {
