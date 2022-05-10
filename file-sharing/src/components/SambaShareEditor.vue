@@ -678,13 +678,14 @@ export default {
 		const remountCeph = async () => {
 			cephOptions.fixMountRunning = true;
 			try {
-				const systemdMountFile = `/etc/systemd/system/${tmpShare.path.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
-				const df = (await useSpawn(['df', '--output=source,target', tmpShare.path], { superuser: 'try' }).promise()).stdout.split('\n')[1];
+				const sharePath = canonicalPath(tmpShare.path);
+				const systemdMountFile = `/etc/systemd/system/${sharePath.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
+				const df = (await useSpawn(['df', '--output=source,target', sharePath], { superuser: 'try' }).promise()).stdout.split('\n')[1];
 				let mainFsSrc, mainFsTgt, remainder;
 				[mainFsSrc, mainFsTgt, ...remainder] = df.split(whitespaceDelimiterRegex);
-				if (canonicalPath(mainFsTgt) === canonicalPath(tmpShare.path))
+				if (canonicalPath(mainFsTgt) === canonicalPath(sharePath))
 					return;
-				const fsLeaf = tmpShare.path.slice(mainFsTgt.length);
+				const fsLeaf = sharePath.slice(mainFsTgt.length);
 				const newFsSrc = canonicalPath(mainFsSrc + fsLeaf);
 				const systemdMountContents =
 					`[Unit]
@@ -758,13 +759,13 @@ WantedBy=remote-fs.target
 				const systemdMountFile = `/etc/systemd/system/${systemdMountUnit}`;
 				if (props.ctdbHosts?.length) {
 					for (const host of props.ctdbHosts) {
-						if (!await isRemount(systemdMountFile, host))
-							return;
+						if (!(await isRemount(systemdMountFile, host)))
+							continue;
 						await useSpawn(['systemctl', 'disable', '--now', systemdMountUnit], { superuser: 'try', host }).promise();
 						await cockpit.file(systemdMountFile, { superuser: 'try', host }).replace(null);
 					}
 				} else {
-					if (!await isRemount(systemdMountFile, host))
+					if (!(await isRemount(systemdMountFile)))
 						return;
 					await useSpawn(['systemctl', 'disable', '--now', systemdMountUnit], { superuser: 'try' }).promise();
 					await cockpit.file(systemdMountFile, { superuser: 'try' }).replace(null);
