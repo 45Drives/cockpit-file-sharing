@@ -27,6 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue May 10 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.2-1
+- Fixed canonicalizing Samba share path to fix bug with Ceph remount unit file name
+- Canonicalize NFS share path
 * Fri May 06 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.1-1
 - Fix info button positioning
 * Wed May 04 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.0-1
