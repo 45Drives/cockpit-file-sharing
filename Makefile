@@ -88,7 +88,7 @@ endif
 # system install, requires `systemctl restart cockpit.socket`
 # runs plugin-install-* for each plugin
 .SECONDEXPANSION:
-install install-local install-remote: default $$(addprefix plugin-$$@-, $$(PLUGIN_SRCS))
+install install-local install-remote: default $$(addprefix plugin-$$@-, $$(PLUGIN_SRCS)) system-files-$$@
 ifeq ($(RESTART_COCKPIT), 1)
 ifndef DESTDIR
 	$(SSH) systemctl stop cockpit.socket
@@ -119,6 +119,15 @@ plugin-install-remote-% : INSTALL_PREFIX=$(REMOTE_TEST_HOME)/.local/share/cockpi
 plugin-install-remote-% : INSTALL_SUFFIX=-test
 plugin-install-remote-% : SSH=ssh $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST)
 plugin-install-remote-% : REMOTE_TEST_HOME=$(shell ssh $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST) 'echo $$HOME')
+
+system-files-install:
+	-cp -af system_files/* $(DESTDIR)/
+
+system-files-install-local:
+	-cp -af system_files/* $(DESTDIR)/
+
+system-files-install-remote:
+	-rsync -avh system_files/* $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST):$(DESTDIR)/
 
 clean: FORCE
 	rm $(dir $(OUTPUTS)) -rf
