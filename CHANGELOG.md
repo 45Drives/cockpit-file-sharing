@@ -1,3 +1,3 @@
-## Cockpit File Sharing 3.1.3-1
+## Cockpit File Sharing 3.1.3-2
 
-* fix typo in acl_xattr setting
+* Add dependencies for packaging

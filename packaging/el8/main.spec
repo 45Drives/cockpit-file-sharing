@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu May 19 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.3-2
+- Add dependencies for packaging
 * Thu May 19 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.3-1
 - fix typo in acl_xattr setting
 * Tue May 10 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.2-1
