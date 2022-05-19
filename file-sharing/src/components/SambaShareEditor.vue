@@ -356,7 +356,7 @@ export default {
 		const setAdvancedToggleStates = () => {
 			shareWindowsAcls.value =
 				/map acl inherit ?=/.test(shareAdvancedSettingsStr.value)
-				&& /acl_xattr: ?ignore system acl ?=/.test(shareAdvancedSettingsStr.value)
+				&& /acl_xattr: ?ignore system acls ?=/.test(shareAdvancedSettingsStr.value)
 				&& /vfs objects ?=.*acl_xattr.*/.test(shareAdvancedSettingsStr.value);
 			shareShadowCopy.value =
 				(/shadow: ?snapdir ?=/.test(shareAdvancedSettingsStr.value)
@@ -444,10 +444,10 @@ export default {
 					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=map acl inherit ?=).*/, " yes");
 				else
 					shareAdvancedSettingsStr.value += "\nmap acl inherit = yes";
-				if (/acl_xattr:ignore system acl/.test(shareAdvancedSettingsStr.value))
-					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=acl_xattr: ?ignore system acl ?=).*/, " yes");
+				if (/acl_xattr:ignore system acls/.test(shareAdvancedSettingsStr.value))
+					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=acl_xattr: ?ignore system acls ?=).*/, " yes");
 				else
-					shareAdvancedSettingsStr.value += "\nacl_xattr:ignore system acl = yes";
+					shareAdvancedSettingsStr.value += "\nacl_xattr:ignore system acls = yes";
 				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=vfs objects ?=)(?!.*acl_xattr.*)/, " acl_xattr ");
 				else
@@ -456,7 +456,7 @@ export default {
 				shareAdvancedSettingsStr.value =
 					shareAdvancedSettingsStr.value
 						.replace(/map acl inherit ?= ?(yes|true|1)\n?/, "")
-						.replace(/acl_xattr: ?ignore system acl ?= ?(yes|true|1)\n?/, "")
+						.replace(/acl_xattr: ?ignore system acls ?= ?(yes|true|1)\n?/, "")
 						.replace(/(?<=vfs objects ?=.*)acl_xattr ?/, "");
 			}
 			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
