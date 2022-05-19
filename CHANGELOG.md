@@ -1,4 +1,3 @@
-## Cockpit File Sharing 3.1.2-1
+## Cockpit File Sharing 3.1.3-1
 
-* Fixed canonicalizing Samba share path to fix bug with Ceph remount unit file name
-* Canonicalize NFS share path
+* fix typo in acl_xattr setting
