@@ -27,7 +27,7 @@ RESTART_COCKPIT?=0
 DEBUG?=0
 
 # Run yarn upgrade or npm update for each project before build
-AUTO_UPGRADE_DEPS?=1
+AUTO_UPGRADE_DEPS?=0
 
 # USAGE
 # installation:
