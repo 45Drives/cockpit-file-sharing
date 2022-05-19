@@ -29,18 +29,6 @@ export default {
 		modelValue: Boolean,
 		labelRight: Boolean,
 	},
-	// setup(props, { emit }) {
-	// 	const internalModel = ref(props.modelValue);
-
-	// 	const updateModelValue = () => emit('update:modelValue', internalModel.value);
-
-	// 	watch(() => props.modelValue, (newValue) => internalModel.value = newValue);
-
-	// 	return {
-	// 		internalModel,
-	// 		updateModelValue,
-	// 	};
-	// },
 	components: {
 		Switch,
 		SwitchDescription,
