@@ -9,7 +9,7 @@ jobs:
   main:
     runs-on: self-hosted
     permissions:
-      contents: read|write
+      contents: write
       packages: write
     steps:
       - name: Checkout
