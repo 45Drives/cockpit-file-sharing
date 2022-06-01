@@ -27,6 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Jun 01 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.4-1
+- Tweak styling of components
+- Fix bug where Ceph remount tries to apply when directory DNE
 * Thu May 19 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.3-2
 - Add dependencies for packaging
 * Thu May 19 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.3-1

@@ -1,3 +1,4 @@
-## Cockpit File Sharing 3.1.3-2
+## Cockpit File Sharing 3.1.4-1
 
-* Add dependencies for packaging
+* Tweak styling of components
+* Fix bug where Ceph remount tries to apply when directory DNE
