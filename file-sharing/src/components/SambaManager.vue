@@ -62,7 +62,7 @@ If not, see <https://www.gnu.org/licenses/>.
 </template>
 
 <script>
-import { XCircleIcon } from "@heroicons/vue/solid";
+import { XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/solid";
 import SambaShareManagement from "./SambaShareManagement.vue";
 import SambaGlobalManagement from "./SambaGlobalManagement.vue";
 import { useSpawn, errorString, errorStringHTML } from "@45drives/cockpit-helpers";
@@ -375,6 +375,7 @@ export default {
 		XCircleIcon,
 		LoadingSpinner,
 		ModalPopup,
+		ExclamationCircleIcon,
 	}
 }
 </script>
