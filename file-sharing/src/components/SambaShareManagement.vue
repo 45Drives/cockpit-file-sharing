@@ -21,56 +21,37 @@ If not, see <https://www.gnu.org/licenses/>.
 			<div class="text-header">Shares</div>
 			<LoadingSpinner v-if="processing || parentProcessing" class="size-icon" />
 		</div>
-		<div :class="['card-body', showAddShare ? 'space-y-content' : '']">
-			<div
-				class="overflow-hidden"
-				:style="{ 'max-height': showAddShare ? '1500px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
-			>
-				<SambaShareEditor
-					@applyShare="addShare"
-					@hide="showAddShare = false"
-					:users="users"
-					:groups="groups"
-					:ctdbHosts="ctdbHosts"
-					:cephLayoutPools="cephLayoutPools"
-					:shares="shares"
-					ref="newShareEditorRef"
-				/>
+		<div class="overflow-hidden"
+			:style="{ 'max-height': showAddShare ? '1500px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }">
+			<div class="card-body">
+				<SambaShareEditor @applyShare="addShare" @hide="showAddShare = false" :users="users" :groups="groups"
+					:ctdbHosts="ctdbHosts" :cephLayoutPools="cephLayoutPools" :shares="shares"
+					ref="newShareEditorRef" />
 			</div>
-			<Table emptyText="No shares. Click '+' to add one." shrinkHeight noScroll noHeader>
-				<!-- <template #header>
-					<div class="flex flex-row items-center space-x-2">
-						<LoadingSpinner v-if="processing || parentProcessing" class="size-icon" />
-						<div class="grow"></div>
-					</div>
-				</template>-->
-				<template #thead>
-					<tr>
-						<th scope="col">Name</th>
-						<th scope="col">Path</th>
-						<th scope="col" class="flex flex-row justify-end">
-							<span class="sr-only">Edit/Delete</span>
-							<button @click="showAddShare ? newShareEditorRef.cancel() : showAddShare = true">
-								<PlusIcon class="size-icon icon-default" />
-							</button>
-						</th>
-					</tr>
-				</template>
-				<template #tbody>
-					<SambaShare
-						v-for="(share, index) in shares"
-						:share="shares[index]"
-						:index="index"
-						@deleteShare="deleteShare"
-						@updateShare="updateShare"
-						:users="users"
-						:groups="groups"
-						:ctdbHosts="ctdbHosts"
-						:cephLayoutPools="cephLayoutPools"
-						:shares="shares"
-					/>
-				</template>
-			</Table>
+		</div>
+		<div :class="[showAddShare ? '' : '!border-t-0', 'card-body p-0 sm:p-6']">
+			<div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
+				<Table emptyText="No shares. Click '+' to add one." shrinkHeight noScroll noHeader
+					class="!border-none !shadow-none">
+					<template #thead>
+						<tr>
+							<th scope="col">Name</th>
+							<th scope="col">Path</th>
+							<th scope="col" class="flex flex-row justify-end">
+								<span class="sr-only">Edit/Delete</span>
+								<button @click="showAddShare ? newShareEditorRef.cancel() : showAddShare = true">
+									<PlusIcon class="size-icon icon-default" />
+								</button>
+							</th>
+						</tr>
+					</template>
+					<template #tbody>
+						<SambaShare v-for="(share, index) in shares" :share="shares[index]" :index="index"
+							@deleteShare="deleteShare" @updateShare="updateShare" :users="users" :groups="groups"
+							:ctdbHosts="ctdbHosts" :cephLayoutPools="cephLayoutPools" :shares="shares" />
+					</template>
+				</Table>
+			</div>
 		</div>
 	</div>
 </template>

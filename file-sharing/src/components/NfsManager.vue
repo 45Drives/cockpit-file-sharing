@@ -22,53 +22,35 @@ If not, see <https://www.gnu.org/licenses/>.
 				<div class="text-header">Shares</div>
 				<LoadingSpinner v-if="processing" class="size-icon" />
 			</div>
-			<div :class="['card-body', showAddShare ? 'space-y-content' : '']">
-				<div
-					class="overflow-hidden"
-					:style="{ 'max-height': showAddShare ? '1500px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
-				>
-					<NfsShareEditor
-						@update-share="addShare"
-						@hide="showAddShare = false"
-						:users="users"
-						:groups="groups"
-					/>
+			<div class="overflow-hidden"
+				:style="{ 'max-height': showAddShare ? '1500px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }">
+				<div class="card-body">
+					<NfsShareEditor @update-share="addShare" @hide="showAddShare = false" :users="users"
+						:groups="groups" />
 				</div>
-				<Table emptyText="No shares. Click '+' to add one." shrinkHeight noScroll noHeader>
-					<!-- <template #header>
-						<div class="flex flex-row space-x-2 items-center">
-							<div>NFS Shares</div>
-							<LoadingSpinner v-if="processing" class="size-icon" />
-							<div class="grow"></div>
-							<button @click="showAddShare = !showAddShare">
-								<PlusIcon class="size-icon icon-default cursor-pointer" />
-							</button>
-						</div>
-					</template> -->
-					<template #thead>
-						<tr>
-							<th scope="col">Path</th>
-							<th scope="col" class="flex flex-row justify-end">
-								<span class="sr-only">Edit/Delete</span>
-								<button @click="showAddShare = !showAddShare">
-									<PlusIcon class="size-icon icon-default" />
-								</button>
-							</th>
-						</tr>
-					</template>
-					<template #tbody>
-						<NfsShare
-							v-for="(share, index) in shares"
-							:key="index"
-							:share="shares[index]"
-							:index="index"
-							@delete-share="deleteShare"
-							@update-share="updateShare"
-							:users="users"
-							:groups="groups"
-						/>
-					</template>
-				</Table>
+			</div>
+			<div :class="[showAddShare ? '' : '!border-t-0', 'card-body p-0 sm:p-6']">
+				<div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
+					<Table emptyText="No shares. Click '+' to add one." shrinkHeight noScroll noHeader
+						class="!border-none !shadow-none">
+						<template #thead>
+							<tr>
+								<th scope="col">Path</th>
+								<th scope="col" class="flex flex-row justify-end">
+									<span class="sr-only">Edit/Delete</span>
+									<button @click="showAddShare = !showAddShare">
+										<PlusIcon class="size-icon icon-default" />
+									</button>
+								</th>
+							</tr>
+						</template>
+						<template #tbody>
+							<NfsShare v-for="(share, index) in shares" :key="index" :share="shares[index]"
+								:index="index" @delete-share="deleteShare" @update-share="updateShare" :users="users"
+								:groups="groups" />
+						</template>
+					</Table>
+				</div>
 			</div>
 		</div>
 		<div class="card">
@@ -83,14 +65,9 @@ If not, see <https://www.gnu.org/licenses/>.
 			</div>
 		</div>
 	</div>
-	<ModalPopup
-		:showModal="confirmationModal.showModal"
-		@apply="confirmationModal.applyCallback"
-		@cancel="confirmationModal.cancelCallback"
-		applyDangerous
-		applyText="Yes"
-		:headerText="confirmationModal.headerText"
-	>
+	<ModalPopup :showModal="confirmationModal.showModal" @apply="confirmationModal.applyCallback"
+		@cancel="confirmationModal.cancelCallback" applyDangerous applyText="Yes"
+		:headerText="confirmationModal.headerText">
 		<template #icon>
 			<ExclamationCircleIcon class="size-icon-xl icon-danger" />
 		</template>

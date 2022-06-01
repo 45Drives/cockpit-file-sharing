@@ -38,7 +38,7 @@ If not, see <https://www.gnu.org/licenses/>.
 					@hide="showPermissionsEditor = false" />
 			</div>
 		</div>
-		<Table shrinkHeight noScroll>
+		<Table shrinkHeight noScroll class="rounded-lg">
 			<template #header>
 				<div class="flex flex-row items-center justify-between">
 					<div>Clients</div>
