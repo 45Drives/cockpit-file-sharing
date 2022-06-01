@@ -62,7 +62,7 @@ If not, see <https://www.gnu.org/licenses/>.
 		:headerText="confirmationModal.headerText"
 	>
 		<template #icon>
-			<ExclamationCircleIcon class="size-icon-xl icon-danger" />
+			<ExclamationCircleIcon class="size-icon-xl icon-danger shrink-0" />
 		</template>
 		{{ confirmationModal.bodyText }}
 	</ModalPopup>
