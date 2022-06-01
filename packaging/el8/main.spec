@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Jun 01 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.5-1
+- Tweak input width to be full width for mobile
 * Wed Jun 01 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.4-1
 - Tweak styling of components
 - Fix bug where Ceph remount tries to apply when directory DNE

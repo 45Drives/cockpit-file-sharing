@@ -3,7 +3,7 @@
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
     "prerelease": true,
-    "version": "3.1.4",
+    "version": "3.1.5",
     "buildVersion": "1",
     "author": "Josh Boudreau <jboudreau@45drives.com>",
     "url": "https://github.com/45Drives/cockpit-file-sharing",
@@ -60,7 +60,7 @@
     ],
     "changelog": {
         "urgency": "medium",
-        "version": "3.1.4",
+        "version": "3.1.5",
         "buildVersion": "1",
         "ignore": [],
         "date": null,

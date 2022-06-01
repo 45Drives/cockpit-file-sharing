@@ -1,4 +1,3 @@
-## Cockpit File Sharing 3.1.4-1
+## Cockpit File Sharing 3.1.5-1
 
-* Tweak styling of components
-* Fix bug where Ceph remount tries to apply when directory DNE
+* Tweak input width to be full width for mobile
