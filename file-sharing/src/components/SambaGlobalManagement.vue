@@ -49,7 +49,7 @@ If not, see <https://www.gnu.org/licenses/>.
 				<select
 					id="log-level"
 					name="log-level"
-					class="w-20 input-textlike"
+					class="input-textlike w-full sm:w-auto"
 					v-model="tmpGlobalConfig['log level']"
 					@change="changesMade = true"
 				>
@@ -62,7 +62,7 @@ If not, see <https://www.gnu.org/licenses/>.
 				</select>
 			</div>
 			<div>
-				<LabelledSwitch v-model="globalMacOsShare" @change="value => switchMacOsShare(value)">
+				<LabelledSwitch v-model="globalMacOsShare" @change="value => switchMacOsShare(value)" class="w-full sm:w-auto">
 					Global MacOS Shares
 					<template #description>
 						Optimize all shares for MacOS

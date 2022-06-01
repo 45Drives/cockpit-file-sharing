@@ -44,8 +44,8 @@ If not, see <https://www.gnu.org/licenses/>.
 			<div v-else class="feedback-group">
 				<ExclamationIcon v-if="!pathExists" class="size-icon icon-warning" />
 				<span v-if="!pathExists" class="text-feedback text-warning">Path does not exist.</span>
-				<button v-if="!pathExists" class="text-feedback text-warning underline"
-					@click="createDir">Create now</button>
+				<button v-if="!pathExists" class="text-feedback text-warning underline" @click="createDir">Create
+					now</button>
 				<button v-else class="text-feedback text-primary" @click="showPermissionsEditor = true">Edit
 					Permissions</button>
 				<FilePermissions :show="showPermissionsEditor" :path="tmpShare.path" :users="users" :groups="groups"
@@ -65,16 +65,21 @@ If not, see <https://www.gnu.org/licenses/>.
 			</div>
 		</div>
 		<div v-if="isCeph && cephNotRemounted && share === null" class="flex flex-row items-center">
-			<LabelledSwitch v-model="cephOptions.enableRemount">Enable Ceph remount</LabelledSwitch>
-			<InfoTip>
-				When creating a Ceph share, a new filesystem mount point is created on top of the share directory.
-				This is needed for Windows to properly report quotas through Samba.
-			</InfoTip>
+			<LabelledSwitch v-model="cephOptions.enableRemount" class="grow sm:grow-0">
+				<span class="inline-flex items-center">
+					<span>Enable Ceph remount</span>
+					<InfoTip>
+						When creating a Ceph share, a new filesystem mount point is created on top of the share
+						directory.
+						This is needed for Windows to properly report quotas through Samba.
+					</InfoTip>
+				</span>
+			</LabelledSwitch>
 		</div>
 		<div v-if="isCeph">
 			<label class="block text-label">Ceph Quota</label>
 			<div class="relative rounded-md shadow-sm inline">
-				<input type="number" class="pr-12 input-textlike" placeholder="0.00" v-model="cephOptions.quotaValue" />
+				<input type="number" class="pr-12 input-textlike w-full sm:w-auto" placeholder="0.00" v-model="cephOptions.quotaValue" />
 				<div class="absolute inset-y-0 right-0 flex items-center">
 					<label class="sr-only">Unit</label>
 					<select class="input-textlike border-transparent bg-transparent"
@@ -92,7 +97,7 @@ If not, see <https://www.gnu.org/licenses/>.
 		</div>
 		<div v-if="isCeph">
 			<label class="block text-label">Ceph Layout Pool</label>
-			<select class="input-textlike disabled:cursor-not-allowed" v-model="cephOptions.layoutPool"
+			<select class="input-textlike disabled:cursor-not-allowed w-full sm:w-auto" v-model="cephOptions.layoutPool"
 				:disabled="share !== null">
 				<option value>Select a Pool</option>
 				<option v-for="(pool, index) in cephLayoutPools" :value="pool">{{ pool }}</option>
@@ -107,15 +112,15 @@ If not, see <https://www.gnu.org/licenses/>.
 						added, it then acts as a whitelist.</InfoTip>
 				</label>
 				<PillList :list="shareValidUsers" @remove-item="removeValidUser" />
-				<DropdownSelector :options="users" placeholder="Add User" @select="addValidUser" />
+				<DropdownSelector :options="users" placeholder="Add User" @select="addValidUser" class="w-full sm:w-auto" />
 			</div>
 			<div>
 				<label class="block text-label">Valid Groups</label>
 				<PillList :list="shareValidGroups" @remove-item="removeValidGroup" />
-				<DropdownSelector :options="groups" placeholder="Add Group" @select="addValidGroup" />
+				<DropdownSelector :options="groups" placeholder="Add Group" @select="addValidGroup" class="w-full sm:w-auto" />
 			</div>
 		</div>
-		<div class="inline-flex flex-col items-stretch gap-content">
+		<div class="inline-flex flex-col items-stretch gap-content w-full sm:w-auto">
 			<LabelledSwitch v-model="tmpShare['guest ok']">Guest OK</LabelledSwitch>
 			<LabelledSwitch v-model="tmpShare['read only']">Read Only</LabelledSwitch>
 			<LabelledSwitch v-model="tmpShare['browseable']">Browseable</LabelledSwitch>
