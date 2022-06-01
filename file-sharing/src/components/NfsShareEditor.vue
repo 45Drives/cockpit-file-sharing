@@ -20,14 +20,8 @@ If not, see <https://www.gnu.org/licenses/>.
 		<div class="text-header" v-if="!share">New Share</div>
 		<div>
 			<label class="block text-label">Share Path</label>
-			<input
-				type="text"
-				name="path"
-				class="w-full input-textlike"
-				placeholder="Share Path"
-				v-model="tmpShare.path"
-				@change="tmpShare.path = canonicalPath(tmpShare.path)"
-			/>
+			<input type="text" name="path" class="w-full input-textlike" placeholder="Share Path"
+				v-model="tmpShare.path" @change="tmpShare.path = canonicalPath(tmpShare.path)" />
 			<div class="feedback-group" v-if="feedback.path">
 				<ExclamationCircleIcon class="size-icon icon-error" />
 				<span class="text-feedback text-error">{{ feedback.path }}</span>
@@ -35,36 +29,15 @@ If not, see <https://www.gnu.org/licenses/>.
 			<div class="feedback-group" v-else>
 				<ExclamationIcon v-if="!pathExists" class="size-icon icon-warning" />
 				<span v-if="!pathExists" class="text-feedback text-warning">Path does not exist.</span>
-				<button
-					v-if="!pathExists"
-					class="text-feedback text-warning underline"
-					@click="dirPermissions.update"
-				>Create now</button>
-				<button v-else class="text-feedback text-primary" @click="dirPermissions.update">Edit Permissions</button>
+				<button v-if="!pathExists" class="text-feedback text-warning underline" @click="createDir">Create
+					now</button>
+				<button v-else class="text-feedback text-primary" @click="showPermissionsEditor = true">Edit
+					Permissions</button>
+				<FilePermissions :show="showPermissionsEditor" :path="tmpShare.path" :users="users" :groups="groups"
+					:onError="error => notifications.constructNotification(error.name, error.message, 'error')"
+					@hide="showPermissionsEditor = false" />
 			</div>
 		</div>
-		<ModalPopup
-			:showModal="dirPermissions.showModal"
-			headerText="Share Directory Permissions"
-			@apply="dirPermissions.applyCallback"
-			@cancel="dirPermissions.cancelCallback"
-		>
-			<div class="flex flex-col space-y-content">
-				<FileModeMatrix v-model="dirPermissions.mode" />
-				<div>
-					<label class="block text-sm font-medium">Owner</label>
-					<select name="log-level" class="input-textlike" v-model="dirPermissions.owner">
-						<option v-for="user in users" :value="user.user">{{ user.pretty }}</option>
-					</select>
-				</div>
-				<div>
-					<label class="block text-sm font-medium">Group</label>
-					<select name="log-level" class="input-textlike" v-model="dirPermissions.group">
-						<option v-for="group in groups" :value="group.group">{{ group.pretty }}</option>
-					</select>
-				</div>
-			</div>
-		</ModalPopup>
 		<Table shrinkHeight noScroll>
 			<template #header>
 				<div class="flex flex-row items-center justify-between">
@@ -82,10 +55,8 @@ If not, see <https://www.gnu.org/licenses/>.
 				</tr>
 			</template>
 			<template #tbody>
-				<tr
-					v-for="(client, index) in tmpShare.clients"
-					:class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'"
-				>
+				<tr v-for="(client, index) in tmpShare.clients"
+					:class="index % 2 === 0 ? undefined : 'bg-neutral-50 dark:bg-neutral-700'">
 					<td class="w-1/4">
 						<input type="text" class="w-full input-textlike" v-model="client.host" />
 					</td>
@@ -114,7 +85,7 @@ import { PlusIcon, MinusIcon, ExclamationCircleIcon, ExclamationIcon } from "@he
 import { useSpawn, errorStringHTML, canonicalPath } from "@45drives/cockpit-helpers";
 import ModalPopup from "./ModalPopup.vue";
 import { notificationsInjectionKey } from "../keys";
-import FileModeMatrix from "./FileModeMatrix.vue";
+import FilePermissions from "./FilePermissions.vue";
 import Table from "./Table.vue";
 
 const clientTemplate = {
@@ -144,57 +115,7 @@ export default {
 		const feedback = reactive({});
 		const notifications = inject(notificationsInjectionKey);
 
-		const dirPermissions = reactive({
-			showModal: false,
-			mode: 0o755,
-			owner: 'root',
-			group: 'root',
-			resetNewDirSettings: async () => {
-				try {
-					const stat = (await useSpawn(['stat', '--format=%a:%U:%G', tmpShare.path], { superuser: 'try' }).promise()).stdout.trim().split(':');
-					dirPermissions.mode = parseInt(stat[0], 8);
-					dirPermissions.owner = stat[1];
-					dirPermissions.group = stat[2];
-				} catch (state) {
-					dirPermissions.mode = 0o755;
-					dirPermissions.owner = 'root';
-					dirPermissions.group = 'root';
-				}
-			},
-			update: async () => {
-				try {
-					if (/^(?:\/\.?\.?)+$/.test(tmpShare.path)) {
-						notifications.value.constructNotification("Cannot Edit Permissions for /", "If you think you need to do this, you don't.", 'denied');
-						return;
-					}
-					await dirPermissions.resetNewDirSettings();
-					if (!await dirPermissions.waitForApply())
-						return;
-					await useSpawn(['mkdir', '-p', tmpShare.path], { superuser: 'try' }).promise();
-					await useSpawn(['chown', dirPermissions.owner, tmpShare.path], { superuser: 'try' }).promise();
-					await useSpawn(['chgrp', dirPermissions.group, tmpShare.path], { superuser: 'try' }).promise();
-					await useSpawn(['chmod', dirPermissions.mode.toString(8), tmpShare.path], { superuser: 'try' }).promise();
-					await checkIfExists();
-				} catch (state) {
-					notifications.value.constructNotification("Failed to update directory permissions", errorStringHTML(state), 'error');
-				}
-			},
-			waitForApply: () => {
-				return new Promise((resolve, reject) => {
-					dirPermissions.showModal = true;
-					const respond = (result) => {
-						dirPermissions.showModal = false;
-						resolve(result);
-					}
-					dirPermissions.applyCallback = () => respond(true);
-					dirPermissions.cancelCallback = () => respond(false);
-				});
-			},
-			applyCallback: () => { },
-			cancelCallback: () => {
-				dirPermissions.showModal = false;
-			}
-		});
+		const showPermissionsEditor = ref(false);
 
 		const tmpShareInit = () => {
 			Object.assign(tmpShare, props?.share
@@ -243,6 +164,15 @@ export default {
 			pathExists.value = false;
 		};
 
+		const createDir = async () => {
+			try {
+				await useSpawn(['mkdir', '-p', tmpShare.path], { superuser: 'try' }).promise();
+				checkIfExists();
+			} catch (state) {
+				notifications.constructNotification("Failed to create directory", errorStringHTML(state), 'error');
+			}
+		}
+
 		const validateInputs = () => {
 			let result = true;
 			if (!tmpShare.path) {
@@ -269,14 +199,11 @@ export default {
 			validateInputs();
 			if (old === undefined || current.path !== old.path) {
 				await checkIfExists();
-				if (pathExists.value) {
-					dirPermissions.resetNewDirSettings();
-				}
 			}
 		}, { deep: true, immediate: true });
 
 		return {
-			dirPermissions,
+			showPermissionsEditor,
 			pathExists,
 			inputsValid,
 			tmpShare,
@@ -285,7 +212,9 @@ export default {
 			cancel,
 			addClient,
 			deleteClient,
+			createDir,
 			canonicalPath,
+			notifications,
 		}
 	},
 	components: {
@@ -294,7 +223,7 @@ export default {
 		ExclamationCircleIcon,
 		ExclamationIcon,
 		ModalPopup,
-		FileModeMatrix,
+		FilePermissions,
 		Table
 	}
 }
