@@ -174,7 +174,7 @@ import ModalPopup from "./ModalPopup.vue";
 import InfoTip from "./InfoTip.vue";
 import { notificationsInjectionKey } from "../keys";
 import LabelledSwitch from "./LabelledSwitch.vue";
-import { whitespaceDelimiterRegex } from "../regex";
+import { whitespaceDelimiterRegex } from "@45drives/regex";
 import LoadingSpinner from "./LoadingSpinner.vue";
 import FilePermissions from "./FilePermissions.vue";
 
@@ -274,7 +274,7 @@ export default {
 		const createDir = async () => {
 			try {
 				await useSpawn(['mkdir', '-p', tmpShare.path], { superuser: 'try' }).promise();
-				checkIfExists();
+				tmpShareUpdateCallback();
 			} catch (state) {
 				notifications.constructNotification("Failed to create directory", errorStringHTML(state), 'error');
 			}
@@ -618,6 +618,8 @@ WantedBy=remote-fs.target
 		}
 
 		const applyCeph = async (force = false) => {
+			if (!isCeph.value)
+				return;
 			const procs = [];
 			procs.push(setCephQuota());
 			if (force || props.share === null) { // only run if creating new share
