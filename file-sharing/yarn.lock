@@ -19,6 +19,11 @@
   dependencies:
     "@45drives/cockpit-helpers" "^0.1.2"
 
+"@45drives/regex@^0.1.0":
+  version "0.1.0"
+  resolved "https://npm.pkg.github.com/download/@45drives/regex/0.1.0/0f5192aa2141b3cb3d2e41b12f1003bbb880f5552f71a776b74bad0f2e6ef15b#5bd4aaeb4f28521de4551869cd88e12d9f61f065"
+  integrity sha512-YHjFxJv8vKoG+Jm5K5Q9/myz7lmenKmKyx4Cw04VJP+imTW+oYe8He41jibF1JSUqgZXOSOBWf4HpUcFaTKfmA==
+
 "@babel/parser@^7.16.4":
   version "7.18.4"
   resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.18.4.tgz#6774231779dd700e0af29f6ad8d479582d7ce5ef"
