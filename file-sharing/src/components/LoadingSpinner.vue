@@ -16,22 +16,5 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="aspect-square loading-spinner border-neutral-300 border-t-neutral-500 dark:border-neutral-500 dark:border-t-neutral-200 rounded-full"></div>
+	<div class="aspect-square animate-spin border-neutral-300 border-t-neutral-500 dark:border-neutral-500 dark:border-t-neutral-200 rounded-full"></div>
 </template>
-
-<style>
-.loading-spinner {
-	border-width: 0.2rem;
-	animation: spin 2s linear infinite;
-	display: inline-block;
-}
-
-@keyframes spin {
-	0% {
-		transform: rotate(0deg);
-	}
-	100% {
-		transform: rotate(360deg);
-	}
-}
-</style>
