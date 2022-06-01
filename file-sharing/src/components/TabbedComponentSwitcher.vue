@@ -33,14 +33,6 @@ If not, see <https://www.gnu.org/licenses/>.
 				>{{ entry.title }}</button>
 			</div>
 		</HoustonHeader>
-		<!-- <div class="flex flex-row grow-0 items-stretch bg-well">
-			<button
-				v-for="(entry, index) in components"
-				:class="['px-5 py-3 cursor-default z-10', currentTab === index ? 'bg-transparent' : 'bg-plugin-header shadow-lg']"
-				@click="switchTab(index)"
-			>{{ entry.title }}</button>
-			<div class="grow bg-plugin-header z-10 shadow-lg"></div>
-		</div>-->
 		<div class="overflow-hidden grow basis-0">
 			<div class="bg-well overflow-y-auto h-full" style="scrollbar-gutter: stable both-edges;">
 				<component :modalPopup="modalPopup" :is="components[currentTab].component" />
