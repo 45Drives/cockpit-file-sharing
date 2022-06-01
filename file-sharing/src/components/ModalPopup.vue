@@ -1,3 +1,20 @@
+<!--
+Copyright (C) 2022 Josh Boudreau <jboudreau@45drives.com>
+
+This file is part of Cockpit File Sharing.
+
+Cockpit File Sharing is free software: you can redistribute it and/or modify it under the terms
+of the GNU General Public License as published by the Free Software Foundation, either version 3
+of the License, or (at your option) any later version.
+
+Cockpit File Sharing is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with Cockpit File Sharing.
+If not, see <https://www.gnu.org/licenses/>. 
+-->
+
 <template>
 	<TransitionRoot as="div" class="fixed inset-0 z-10 overflow-visible" :show="showModal">
 		<TransitionChild as="template" enter="ease-out duration-500" enter-from="opacity-0" enter-to="opacity-100"
