@@ -4,7 +4,7 @@
 			leave="ease-in duration-500" leave-from="opacity-100" leave-to="opacity-0">
 			<div class="fixed z-10 inset-0 bg-neutral-500/75 dark:bg-black/50 transition-opacity" />
 		</TransitionChild>
-		<div class="fixed z-10 inset-0 overflow-hidden flex items-end sm:items-center justify-center p-4">
+		<div class="fixed z-10 inset-0 overflow-hidden flex items-end sm:items-center justify-center px-4 pb-20 sm:p-0">
 			<TransitionChild as="template" enter="ease-out duration-300"
 				enter-from="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-75"
 				enter-to="opacity-100 translate-y-0 sm:scale-100" leave="ease-in duration-100"
