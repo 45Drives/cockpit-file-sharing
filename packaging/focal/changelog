@@ -1,3 +1,11 @@
+cockpit-file-sharing (3.1.6-1focal) focal; urgency=medium
+
+  * Fixed bug where regex would crash from too much recursion while parsing Ubuntu
+    default smb.conf
+  * Watch for newly added users, groups, and CTDB hosts and refresh lists automatically
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 03 Jun 2022 14:31:55 -0300
+
 cockpit-file-sharing (3.1.5-1focal) focal; urgency=medium
 
   * Tweak input width to be full width for mobile

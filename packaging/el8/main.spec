@@ -27,6 +27,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri Jun 03 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.6-1
+- Fixed bug where regex would crash from too much recursion while parsing Ubuntu
+  default smb.conf
+- Watch for newly added users, groups, and CTDB hosts and refresh lists automatically
 * Wed Jun 01 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.5-1
 - Tweak input width to be full width for mobile
 * Wed Jun 01 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.4-1

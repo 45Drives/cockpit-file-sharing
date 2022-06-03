@@ -1,3 +1,4 @@
-## Cockpit File Sharing 3.1.5-1
+## Cockpit File Sharing 3.1.6-1
 
-* Tweak input width to be full width for mobile
+* Fixed bug where regex would crash from too much recursion while parsing Ubuntu default smb.conf
+* Watch for newly added users, groups, and CTDB hosts and refresh lists automatically
