@@ -17,23 +17,12 @@ If not, see <https://www.gnu.org/licenses/>.
 
 <template>
 	<div class="centered-column p-well space-y-well">
-		<SambaGlobalManagement
-			:globalConfig="globalConfig"
-			:processing="processing"
-			@startProcessing="processing++"
-			@stopProcessing="processing--"
-		/>
-		<SambaShareManagement
-			:shares="shares"
-			@refreshShares="refresh"
-			:groups="groups"
-			:users="users"
-			:cephLayoutPools="cephLayoutPools"
-			:ctdbHosts="ctdbHosts"
-			:parentProcessing="processing"
+		<SambaGlobalManagement :globalConfig="globalConfig" :processing="processing" @startProcessing="processing++"
+			@stopProcessing="processing--" />
+		<SambaShareManagement :shares="shares" @refreshShares="refresh" :groups="groups" :users="users"
+			:cephLayoutPools="cephLayoutPools" :ctdbHosts="ctdbHosts" :parentProcessing="processing"
 			@appendShareToList="share => shares = [...shares, share].sort((a, b) => a.name.localeCompare(b.name))"
-			@removeShareFromList="share => shares = shares.filter((a) => a !== share)"
-		/>
+			@removeShareFromList="share => shares = shares.filter((a) => a !== share)" />
 		<div class="card">
 			<div class="card-header flex flex-row space-x-2 items-center">
 				<div class="text-header">Import/Export Config</div>
@@ -46,14 +35,9 @@ If not, see <https://www.gnu.org/licenses/>.
 			</div>
 		</div>
 	</div>
-	<ModalPopup
-		:showModal="confirmationModal.showModal"
-		@apply="confirmationModal.applyCallback"
-		@cancel="confirmationModal.cancelCallback"
-		applyDangerous
-		applyText="Yes"
-		:headerText="confirmationModal.headerText"
-	>
+	<ModalPopup :showModal="confirmationModal.showModal" @apply="confirmationModal.applyCallback"
+		@cancel="confirmationModal.cancelCallback" applyDangerous applyText="Yes"
+		:headerText="confirmationModal.headerText">
 		<template #icon>
 			<ExclamationCircleIcon class="size-icon-xl icon-danger shrink-0" />
 		</template>
@@ -66,7 +50,7 @@ import { XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/solid";
 import SambaShareManagement from "./SambaShareManagement.vue";
 import SambaGlobalManagement from "./SambaGlobalManagement.vue";
 import { useSpawn, errorString, errorStringHTML } from "@45drives/cockpit-helpers";
-import { ref, reactive, watch, inject } from "vue";
+import { ref, reactive, watch, inject, onBeforeUnmount } from "vue";
 import { getUsers, getGroups } from "../functions";
 import LoadingSpinner from "./LoadingSpinner.vue";
 import { notificationsInjectionKey } from "../keys";
@@ -351,6 +335,14 @@ export default {
 			a.dispatchEvent(event);
 			document.body.removeChild(a);
 		}
+
+		const watchHandles = [];
+
+		watchHandles.push(cockpit.file('/etc/group', { superuser: 'try' }).watch(() => getGroupList(), { read: false }));
+		watchHandles.push(cockpit.file('/etc/passwd', { superuser: 'try' }).watch(() => getUserList(), { read: false }));
+		watchHandles.push(cockpit.file('/etc/ctdb/nodes', { superuser: 'try' }).watch(() => getCtdbHosts(), { read: false }));
+		
+		onBeforeUnmount(() => watchHandles.map(handle => handle?.remove?.()));
 
 		return {
 			shares,
