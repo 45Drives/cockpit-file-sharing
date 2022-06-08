@@ -79,7 +79,8 @@ If not, see <https://www.gnu.org/licenses/>.
 		<div v-if="isCeph">
 			<label class="block text-label">Ceph Quota</label>
 			<div class="relative rounded-md shadow-sm inline">
-				<input type="number" class="pr-12 input-textlike w-full sm:w-auto" placeholder="0.00" v-model="cephOptions.quotaValue" />
+				<input type="number" class="pr-12 input-textlike w-full sm:w-auto" placeholder="0.00"
+					v-model="cephOptions.quotaValue" />
 				<div class="absolute inset-y-0 right-0 flex items-center">
 					<label class="sr-only">Unit</label>
 					<select class="input-textlike border-transparent bg-transparent"
@@ -112,12 +113,14 @@ If not, see <https://www.gnu.org/licenses/>.
 						added, it then acts as a whitelist.</InfoTip>
 				</label>
 				<PillList :list="shareValidUsers" @remove-item="removeValidUser" />
-				<DropdownSelector :options="users" placeholder="Add User" @select="addValidUser" class="w-full sm:w-auto" />
+				<DropdownSelector :options="users" placeholder="Add User" @select="addValidUser"
+					class="w-full sm:w-auto" />
 			</div>
 			<div>
 				<label class="block text-label">Valid Groups</label>
 				<PillList :list="shareValidGroups" @remove-item="removeValidGroup" />
-				<DropdownSelector :options="groups" placeholder="Add Group" @select="addValidGroup" class="w-full sm:w-auto" />
+				<DropdownSelector :options="groups" placeholder="Add Group" @select="addValidGroup"
+					class="w-full sm:w-auto" />
 			</div>
 		</div>
 		<div class="inline-flex flex-col items-stretch gap-content w-full sm:w-auto">
@@ -174,7 +177,7 @@ import DropdownSelector from "./DropdownSelector.vue";
 import { splitAdvancedSettings, joinAdvancedSettings, strToBool } from "../functions";
 import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
 import { ref, reactive, watch, inject, onMounted } from "vue";
-import { useSpawn, errorStringHTML, canonicalPath } from "@45drives/cockpit-helpers";
+import { useSpawn, errorStringHTML, canonicalPath, systemdUnitEscape } from "@45drives/cockpit-helpers";
 import ModalPopup from "./ModalPopup.vue";
 import InfoTip from "./InfoTip.vue";
 import { notificationsInjectionKey } from "../keys";
@@ -306,14 +309,25 @@ export default {
 					advancedSettings: []
 				}
 			);
-			tmpShare["valid users"].match(/(?:[^\s"]+|"[^"]*")+/g)?.map(entity => entity.replace(/^"/, '').replace(/"$/, '')).forEach((entity) => {
-				if (entity.at(0) === '@') {
-					const groupName = entity.substring(1);
-					shareValidGroups.value.push(props.groups.find(group => group.group === groupName) ?? { group: groupName, domain: false, pretty: groupName });
-				} else if (entity) {
-					shareValidUsers.value.push(props.users.find(user => user.user === entity) ?? { user: entity, domain: false, pretty: entity });
-				}
-			});
+			tmpShare["valid users"]
+				.match(/(?:[^\s"]+|"[^"]*")+/g)
+				?.map(entity => entity.replace(/^"/, '').replace(/"$/, ''))
+				.forEach((entity) => {
+					if (entity.at(0) === '@') {
+						const groupName = entity.substring(1);
+						shareValidGroups.value
+							.push(
+								props.groups.find(group => group.group === groupName)
+								?? { group: groupName, domain: false, pretty: groupName }
+							);
+					} else if (entity) {
+						shareValidUsers.value
+							.push(
+								props.users.find(user => user.user === entity)
+								?? { user: entity, domain: false, pretty: entity }
+							);
+					}
+				});
 
 			shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
 			showAdvanced.value = Boolean(shareAdvancedSettingsStr.value);
@@ -335,15 +349,21 @@ export default {
 			if (value) {
 				showAdvanced.value = true;
 				if (/map acl inherit/.test(shareAdvancedSettingsStr.value))
-					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=map acl inherit ?=).*/, " yes");
+					shareAdvancedSettingsStr.value =
+						shareAdvancedSettingsStr.value
+							.replace(/(?<=map acl inherit ?=).*/, " yes");
 				else
 					shareAdvancedSettingsStr.value += "\nmap acl inherit = yes";
 				if (/acl_xattr:ignore system acls/.test(shareAdvancedSettingsStr.value))
-					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=acl_xattr: ?ignore system acls ?=).*/, " yes");
+					shareAdvancedSettingsStr.value =
+						shareAdvancedSettingsStr.value
+							.replace(/(?<=acl_xattr: ?ignore system acls ?=).*/, " yes");
 				else
 					shareAdvancedSettingsStr.value += "\nacl_xattr:ignore system acls = yes";
 				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
-					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=vfs objects ?=)(?!.*acl_xattr.*)/, " acl_xattr ");
+					shareAdvancedSettingsStr.value =
+						shareAdvancedSettingsStr.value
+							.replace(/(?<=vfs objects ?=)(?!.*acl_xattr.*)/, " acl_xattr ");
 				else
 					shareAdvancedSettingsStr.value += "\nvfs objects = acl_xattr";
 			} else {
@@ -353,7 +373,13 @@ export default {
 						.replace(/acl_xattr: ?ignore system acls ?= ?(yes|true|1)\n?/, "")
 						.replace(/(?<=vfs objects ?=.*)acl_xattr ?/, "");
 			}
-			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
+			shareAdvancedSettingsStr.value =
+				shareAdvancedSettingsStr.value
+					.split('\n')
+					.filter((line) => line !== "")
+					.join('\n')
+					.replace(/[\t ]+/g, " ")
+					.replace(/\s+$/gm, "");
 		};
 
 		const switchShadowCopy = (value) => {
@@ -365,7 +391,9 @@ export default {
 				if (!/shadow: ?format/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value += "\nshadow:format = %Y-%m-%d-%H%M%S";
 				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
-					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=vfs objects ?=)(?!.*shadow_copy2.*)/, " shadow_copy2 ");
+					shareAdvancedSettingsStr.value =
+						shareAdvancedSettingsStr.value
+							.replace(/(?<=vfs objects ?=)(?!.*shadow_copy2.*)/, " shadow_copy2 ");
 				else
 					shareAdvancedSettingsStr.value += "\nvfs objects = shadow_copy2";
 			};
@@ -379,7 +407,9 @@ export default {
 			};
 			const addCephShadowCopy = () => {
 				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
-					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=vfs objects ?=)(?!.*ceph_snapshots.*)/, " ceph_snapshots ");
+					shareAdvancedSettingsStr.value =
+						shareAdvancedSettingsStr.value
+							.replace(/(?<=vfs objects ?=)(?!.*ceph_snapshots.*)/, " ceph_snapshots ");
 				else
 					shareAdvancedSettingsStr.value += "\nvfs objects = ceph_snapshots";
 			};
@@ -401,7 +431,13 @@ export default {
 				removeShadowCopy();
 				removeCephShadowCopy();
 			}
-			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
+			shareAdvancedSettingsStr.value =
+				shareAdvancedSettingsStr.value
+					.split('\n')
+					.filter((line) => line !== "")
+					.join('\n')
+					.replace(/[\t ]+/g, " ")
+					.replace(/\s+$/gm, "");
 		};
 
 		const switchMacOsShare = (value) => {
@@ -412,11 +448,15 @@ export default {
 				if (!/fruit: ?metadata/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value += "\nfruit:metadata = stream";
 				if (/fruit: ?zero_file_id/.test(shareAdvancedSettingsStr.value))
-					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=fruit: ?zero_file_id ?=).*/, " yes");
+					shareAdvancedSettingsStr.value =
+						shareAdvancedSettingsStr.value
+							.replace(/(?<=fruit: ?zero_file_id ?=).*/, " yes");
 				else
 					shareAdvancedSettingsStr.value += "\nfruit:zero_file_id = yes";
 				if (/fruit: ?nfs_aces/.test(shareAdvancedSettingsStr.value))
-					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=fruit: ?nfs_aces ?=).*/, " no");
+					shareAdvancedSettingsStr.value =
+						shareAdvancedSettingsStr.value
+							.replace(/(?<=fruit: ?nfs_aces ?=).*/, " no");
 				else
 					shareAdvancedSettingsStr.value += "\nfruit:nfs_aces = no";
 				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
@@ -438,7 +478,13 @@ export default {
 						.replace(/(?<=vfs objects ?=.*)fruit ?/, "")
 						.replace(/(?<=vfs objects ?=.*)streams_xattr ?/, "");
 			}
-			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
+			shareAdvancedSettingsStr.value =
+				shareAdvancedSettingsStr.value
+					.split('\n')
+					.filter((line) => line !== "")
+					.join('\n')
+					.replace(/[\t ]+/g, " ")
+					.replace(/\s+$/gm, "");
 		};
 
 		const switchAuditLogs = (value) => {
@@ -449,13 +495,16 @@ export default {
 				if (!/full_audit: ?facility ?=/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value += "\nfull_audit:facility = local5";
 				if (!/full_audit: ?success ?=/.test(shareAdvancedSettingsStr.value))
-					shareAdvancedSettingsStr.value += "\nfull_audit:success = connect disconnect mkdir rmdir read write rename";
+					shareAdvancedSettingsStr.value +=
+						"\nfull_audit:success = connect disconnect mkdir rmdir read write rename";
 				if (!/full_audit: ?failure ?=/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value += "\nfull_audit:failure = connect";
 				if (!/full_audit: ?prefix ?=/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value += "\nfull_audit:prefix = %u|%I|%S";
 				if (/vfs objects ?=/.test(shareAdvancedSettingsStr.value))
-					shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.replace(/(?<=vfs objects ?=)(?!.*full_audit.*)/, " full_audit ");
+					shareAdvancedSettingsStr.value =
+						shareAdvancedSettingsStr.value
+							.replace(/(?<=vfs objects ?=)(?!.*full_audit.*)/, " full_audit ");
 				else
 					shareAdvancedSettingsStr.value += "\nvfs objects = full_audit";
 			} else {
@@ -468,12 +517,19 @@ export default {
 						.replace(/full_audit: ?prefix.*\n?/, "")
 						.replace(/(?<=vfs objects ?=.*)full_audit ?/, "");
 			}
-			shareAdvancedSettingsStr.value = shareAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
+			shareAdvancedSettingsStr.value =
+				shareAdvancedSettingsStr.value
+					.split('\n')
+					.filter((line) => line !== "")
+					.join('\n')
+					.replace(/[\t ]+/g, " ")
+					.replace(/\s+$/gm, "");
 		};
 
 		const checkIfCeph = async () => {
 			try {
-				const cephXattr = (await useSpawn(['getfattr', '-n', 'ceph.dir.rctime', tmpShare.path]).promise()).stdout;
+				const cephXattr =
+					(await useSpawn(['getfattr', '-n', 'ceph.dir.rctime', tmpShare.path]).promise()).stdout;
 				if (cephXattr !== "") {
 					isCeph.value = true;
 				} else {
@@ -486,7 +542,21 @@ export default {
 
 		const getCephQuota = async () => {
 			try {
-				const quotaBytes = Number((await useSpawn(['getfattr', '-n', 'ceph.quota.max_bytes', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try' }).promise()).stdout);
+				const quotaBytes = Number(
+					(
+						await useSpawn(
+							[
+								'getfattr',
+								'-n',
+								'ceph.quota.max_bytes',
+								'--only-values',
+								'--absolute-names',
+								tmpShare.path
+							],
+							{ superuser: 'try' }
+						).promise()
+					).stdout
+				);
 				if (quotaBytes !== 0) {
 					const base = 1024;
 					let exp = Math.floor(Math.log(quotaBytes) / Math.log(base));
@@ -502,7 +572,19 @@ export default {
 
 		const getCephLayoutPool = async () => {
 			try {
-				cephOptions.layoutPool = (await useSpawn(['getfattr', '-n', 'ceph.dir.layout.pool', '--only-values', '--absolute-names', tmpShare.path], { superuser: 'try' }).promise()).stdout;
+				cephOptions.layoutPool = (
+					await useSpawn(
+						[
+							'getfattr',
+							'-n',
+							'ceph.dir.layout.pool',
+							'--only-values',
+							'--absolute-names',
+							tmpShare.path
+						],
+						{ superuser: 'try' }
+					).promise()
+				).stdout;
 			} catch (err) {
 				cephOptions.layoutPool = "";
 			}
@@ -513,11 +595,17 @@ export default {
 				const quotaBytes = Math.ceil(cephOptions.quotaValue * cephOptions.quotaMultiplier);
 				if (quotaBytes) {
 					// set quota
-					await useSpawn(['setfattr', '-n', 'ceph.quota.max_bytes', '-v', quotaBytes.toString(), tmpShare.path], { superuser: 'try' }).promise();
+					await useSpawn(
+						['setfattr', '-n', 'ceph.quota.max_bytes', '-v', quotaBytes.toString(), tmpShare.path],
+						{ superuser: 'try' }
+					).promise();
 				} else {
 					// remove quota
 					try {
-						await useSpawn(['setfattr', '-x', 'ceph.quota.max_bytes', tmpShare.path], { superuser: 'try' }).promise();
+						await useSpawn(
+							['setfattr', '-x', 'ceph.quota.max_bytes', tmpShare.path],
+							{ superuser: 'try' }
+						).promise();
 					} catch { /* ignore failure if xattr DNE */ }
 				}
 				getCephQuota();
@@ -529,7 +617,10 @@ export default {
 		const setCephLayoutPool = async () => {
 			try {
 				if (cephOptions.layoutPool) {
-					await useSpawn(['setfattr', '-n', 'ceph.dir.layout.pool', '-v', cephOptions.layoutPool, tmpShare.path], { superuser: 'try' }).promise();
+					await useSpawn(
+						['setfattr', '-n', 'ceph.dir.layout.pool', '-v', cephOptions.layoutPool, tmpShare.path],
+						{ superuser: 'try' }
+					).promise();
 				}
 				getCephLayoutPool();
 			} catch (state) {
@@ -539,7 +630,11 @@ export default {
 
 		const checkCephRemount = async () => {
 			try {
-				cephNotRemounted.value = !(new RegExp(`^${canonicalPath(tmpShare.path)}$`, 'mg')).test((await useSpawn(['df', '--output=target'], { superuser: 'try' }).promise()).stdout);
+				cephNotRemounted.value =
+					!(new RegExp(`^${canonicalPath(tmpShare.path)}$`, 'mg'))
+						.test(
+							(await useSpawn(['df', '--output=target'], { superuser: 'try' }).promise()).stdout
+						);
 			} catch (state) {
 				notifications.value.constructNotification("Failed to determine if Ceph was remounted", errorStringHTML(state), 'error');
 				cephNotRemounted.value = true;
@@ -573,7 +668,9 @@ export default {
 			cephOptions.fixMountRunning = true;
 			try {
 				const sharePath = canonicalPath(tmpShare.path);
-				const systemdMountFile = `/etc/systemd/system/${sharePath.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
+				const unitName = systemdUnitEscape(tmpShare.path, true);
+				const systemdMountFile =
+					`/etc/systemd/system/${unitName}.mount`;
 				const df = (await useSpawn(['df', '--output=source,target', sharePath], { superuser: 'try' }).promise()).stdout.split('\n')[1];
 				let mainFsSrc, mainFsTgt, remainder;
 				[mainFsSrc, mainFsTgt, ...remainder] = df.split(whitespaceDelimiterRegex);
