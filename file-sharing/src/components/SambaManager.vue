@@ -185,8 +185,8 @@ export default {
 				const smbConfFile = cockpit.file("/etc/samba/smb.conf", { superuser: 'try' });
 				const smbConf = await smbConfFile.read();
 				smbConfFile.close();
-				const globalSectionText = smbConf.match(/^\s*\[ ?global ?\]\s*$\n(?:^(?!\s*\[).*$\n?)*/mi)?.[0];
-				if (!globalSectionText || !/^\s*include\s*=\s*registry/m.test(globalSectionText)) {
+				const globalSectionText = smbConf.match(/^\s*\[ ?global ?\]\s*$(?:\n^(?!\s*\[).*$)*/mi)?.[0];
+				if (!globalSectionText || !/^[\t ]*include[\t ]*=[\t ]*registry/m.test(globalSectionText)) {
 					notifications.value.constructNotification(
 						"Samba is Misconfigured",
 						"`include = registry` is missing from the global section of /etc/samba/smb.conf, which is required for File Sharing to manage shares.",
@@ -194,13 +194,13 @@ export default {
 					).addAction("Fix now", async () => {
 						processing.value++;
 						try {
-							if (!/\[ ?global ?\]/.test(smbConf)) {
+							if (!globalSectionText) {
 								await smbConfFile.modify((content) => {
 									return "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + (content ?? "");
 								});
 							} else {
 								await smbConfFile.modify((content) => {
-									return content.replace(/^\s*\[ ?global ?\][^]*?(?=^;?\s*\[)/mi, "$&\tinclude = registry # inserted by cockpit-file-sharing\n");
+									return content.replace(/^\s*\[ ?global ?\]\s*$(?:\n^(?!;?\s*\[).*$)*/mi, "$&\n\tinclude = registry # inserted by cockpit-file-sharing\n");
 								});
 							}
 							await useSpawn(['smbcontrol', 'all', 'reload-config'], { superuser: 'try' });
