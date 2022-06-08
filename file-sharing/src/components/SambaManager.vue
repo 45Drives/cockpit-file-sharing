@@ -194,15 +194,11 @@ export default {
 					).addAction("Fix now", async () => {
 						processing.value++;
 						try {
-							if (!globalSectionText) {
-								await smbConfFile.modify((content) => {
-									return "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + (content ?? "");
-								});
-							} else {
-								await smbConfFile.modify((content) => {
-									return content.replace(/^\s*\[ ?global ?\]\s*$(?:\n^(?!;?\s*\[).*$)*/mi, "$&\n\tinclude = registry # inserted by cockpit-file-sharing\n");
-								});
-							}
+							await smbConfFile.modify((content) => {
+								return globalSectionText
+									? content.replace(/^\s*\[ ?global ?\]\s*$(?:\n^(?!;?\s*\[).*$)*/mi, "$&\n\tinclude = registry # inserted by cockpit-file-sharing\n")
+									: "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + (content ?? "");
+							});
 							await useSpawn(['smbcontrol', 'all', 'reload-config'], { superuser: 'try' });
 						} catch (error) {
 							notifications.value.constructNotification("Failed to fix Samba configuration", errorStringHTML(error), 'error');
