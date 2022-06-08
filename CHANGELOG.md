@@ -1,4 +1,4 @@
-## Cockpit File Sharing 3.1.6-1
+## Cockpit File Sharing 3.1.7-1
 
-* Fixed bug where regex would crash from too much recursion while parsing Ubuntu default smb.conf
-* Watch for newly added users, groups, and CTDB hosts and refresh lists automatically
+* Use systemdUnitEscape() from cockpit-helpers to escape mount unit name instead of unreliable regex replace
+* Fix regular expressions used to check for and insert 'include = registry' in smb.conf

@@ -27,6 +27,10 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Jun 08 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.7-1
+- Use systemdUnitEscape() from cockpit-helpers to escape mount unit name instead
+  of unreliable regex replace
+- Fix regular expressions used to check for and insert 'include = registry' in smb.conf
 * Fri Jun 03 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.6-1
 - Fixed bug where regex would crash from too much recursion while parsing Ubuntu
   default smb.conf

@@ -1,3 +1,12 @@
+cockpit-file-sharing (3.1.7-1focal) focal; urgency=medium
+
+  * Use systemdUnitEscape() from cockpit-helpers to escape mount unit name instead
+    of unreliable regex replace
+  * Fix regular expressions used to check for and insert 'include = registry' in
+    smb.conf
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 08 Jun 2022 14:34:24 -0300
+
 cockpit-file-sharing (3.1.6-1focal) focal; urgency=medium
 
   * Fixed bug where regex would crash from too much recursion while parsing Ubuntu
