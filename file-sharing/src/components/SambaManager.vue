@@ -185,8 +185,8 @@ export default {
 				const smbConfFile = cockpit.file("/etc/samba/smb.conf", { superuser: 'try' });
 				const smbConf = await smbConfFile.read();
 				smbConfFile.close();
-				const globalSectionText = smbConf.match(/^\s*\[ ?global ?\][^]*?(?=^\s*\[)/mi)[0];
-				if (!/^\s*include\s*=\s*registry/m.test(globalSectionText)) {
+				const globalSectionText = smbConf.match(/^\s*\[ ?global ?\]\s*$\n(?:^(?!\s*\[).*$\n?)*/mi)?.[0];
+				if (!globalSectionText || !/^\s*include\s*=\s*registry/m.test(globalSectionText)) {
 					notifications.value.constructNotification(
 						"Samba is Misconfigured",
 						"`include = registry` is missing from the global section of /etc/samba/smb.conf, which is required for File Sharing to manage shares.",
@@ -212,7 +212,7 @@ export default {
 					});
 				}
 			} catch (error) {
-				notifications.value.constructNotification("Failed to validate /etc/smb.conf: ", errorStringHTML(error), 'error');
+				notifications.value.constructNotification("Failed to validate /etc/samba/smb.conf: ", errorStringHTML(error), 'error');
 			} finally {
 				processing.value--;
 			}
