@@ -128,7 +128,7 @@ If not, see <https://www.gnu.org/licenses/>.
 			<LabelledSwitch v-model="tmpShare['read only']">Read Only</LabelledSwitch>
 			<LabelledSwitch v-model="tmpShare['browseable']">Browseable</LabelledSwitch>
 			<LabelledSwitch v-model="shareWindowsAcls" @change="value => switchWindowsAcls(value)">
-				Windows ACLS
+				Windows ACLs
 				<template #description>Administer share permissions from Windows</template>
 			</LabelledSwitch>
 			<LabelledSwitch v-model="shareShadowCopy" @change="value => switchShadowCopy(value)">
