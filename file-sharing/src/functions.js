@@ -69,7 +69,7 @@ const spawnOpts = {
 }
 
 export async function getUsers() {
-	return [
+	const users = [
 		...(await useSpawn(['getent', '-s', 'files', 'passwd'], spawnOpts).promise()).stdout
 			.split('\n')
 			.map((record) => {
@@ -82,8 +82,11 @@ export async function getUsers() {
 					return { user, uid, domain: false, pretty: user };
 				return null;
 			}).filter(user => user !== null),
-		...(await useSpawn(['getent', '-s', 'winbind', '-s', 'sss', '-s', 'ldap', 'passwd'], spawnOpts).promise()).stdout
-			.split('\n')
+		...[
+			...(await useSpawn(['getent', '-s', 'winbind', 'passwd'], spawnOpts).promise()).stdout.split('\n'),
+			...(await useSpawn(['getent', '-s', 'sss', 'passwd'], spawnOpts).promise()).stdout.split('\n'),
+			...(await useSpawn(['getent', '-s', 'ldap', 'passwd'], spawnOpts).promise()).stdout.split('\n'),
+		]
 			.map((record) => {
 				if (!record)
 					return null;
@@ -93,10 +96,12 @@ export async function getUsers() {
 				return { user, uid, domain: true, pretty: user + " (domain)" };
 			}).filter(user => user !== null)
 	].sort((a, b) => a.pretty.localeCompare(b.pretty));
+	// console.log(users);
+	return users;
 }
 
 export async function getGroups() {
-	return [
+	const groups = [
 		...(await useSpawn(['getent', '-s', 'files', 'group'], spawnOpts).promise()).stdout
 			.split('\n')
 			.map((record) => {
@@ -109,8 +114,11 @@ export async function getGroups() {
 					return { group, gid, domain: false, pretty: group };
 				return null;
 			}).filter(group => group !== null),
-		...(await useSpawn(['getent', '-s', 'winbind', '-s', 'sss', '-s', 'ldap', 'group'], spawnOpts).promise()).stdout
-			.split('\n')
+		...[
+			...(await useSpawn(['getent', '-s', 'winbind', 'group'], spawnOpts).promise()).stdout.split('\n'),
+			...(await useSpawn(['getent', '-s', 'sss', 'group'], spawnOpts).promise()).stdout.split('\n'),
+			...(await useSpawn(['getent', '-s', 'ldap', 'group'], spawnOpts).promise()).stdout.split('\n'),
+		]
 			.map((record) => {
 				if (!record)
 					return null;
@@ -120,4 +128,6 @@ export async function getGroups() {
 				return { group, gid, domain: true, pretty: group + " (domain)" };
 			}).filter(group => group !== null)
 	].sort((a, b) => a.pretty.localeCompare(b.pretty));
+	console.log(groups);
+	return groups;
 }
