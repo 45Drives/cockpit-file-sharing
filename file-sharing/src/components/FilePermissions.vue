@@ -22,14 +22,14 @@ If not, see <https://www.gnu.org/licenses/>.
 			<FileModeMatrix v-model="mode" />
 			<div>
 				<label class="block text-sm font-medium">Owner</label>
-				<select class="input-textlike" v-model="owner">
-					<option v-for="user in users" :value="user.user">{{ user.pretty }}</option>
+				<select class="input-textlike" v-model.number="owner">
+					<option v-for="user in users" :value="user.uid">{{ user.pretty }}</option>
 				</select>
 			</div>
 			<div>
 				<label class="block text-sm font-medium">Group</label>
-				<select class="input-textlike" v-model="group">
-					<option v-for="group in groups" :value="group.group">{{ group.pretty }}</option>
+				<select class="input-textlike" v-model.number="group">
+					<option v-for="group in groups" :value="group.gid">{{ group.pretty }}</option>
 				</select>
 			</div>
 		</div>
@@ -55,16 +55,16 @@ export default {
 	},
 	setup(props, { emit }) {
 		const mode = ref(0);
-		const owner = ref("");
-		const group = ref("");
+		const owner = ref(0);
+		const group = ref(0);
 
 		const getPermissions = async () => {
 			try {
-				let modeStr;
-				[modeStr, owner.value, group.value] = (
-					await useSpawn(['stat', '--format=%a:%U:%G', props.path], { superuser: 'try' }).promise()
+				let [modeStr, ownerStr, groupStr] = (
+					await useSpawn(['stat', '--format=%a:%u:%g', props.path], { superuser: 'try' }).promise()
 				).stdout.trim().split(':');
 				mode.value = parseInt(modeStr, 8);
+				[owner.value, group.value] = [ownerStr, groupStr].map(s => parseInt(s));
 			} catch (state) {
 				const error = new Error(errorString(state));
 				error.name = "Permissions Query Error";
@@ -82,8 +82,8 @@ export default {
 				return;
 			}
 			const procs = [];
-			procs.push(useSpawn(['chown', owner.value, props.path], { superuser: 'try' }).promise());
-			procs.push(useSpawn(['chgrp', group.value, props.path], { superuser: 'try' }).promise());
+			procs.push(useSpawn(['chown', owner.value.toString(), props.path], { superuser: 'try' }).promise());
+			procs.push(useSpawn(['chgrp', group.value.toString(), props.path], { superuser: 'try' }).promise());
 			procs.push(useSpawn(['chmod', mode.value.toString(8), props.path], { superuser: 'try' }).promise());
 			for (const proc of procs) {
 				try {
