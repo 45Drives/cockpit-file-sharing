@@ -68,46 +68,56 @@ const spawnOpts = {
 	superuser: 'try',
 }
 
-export async function getUsers(domainJoined) {
-	let users = [];
-	const passwdDB = (await useSpawn(['getent', 'passwd'], spawnOpts).promise()).stdout;
-	passwdDB.split('\n').forEach((record) => {
-		const fields = record.split(':');
-		const user = fields[0];
-		const uid = fields[2];
-		if (uid >= 1000 || uid === '0') // include root
-			users.push({ user: user, domain: false, pretty: user });
-	})
-	if (domainJoined) {
-		const domainUsersDB = (await useSpawn(['wbinfo', '-u'], spawnOpts).promise()).stdout
-		domainUsersDB.split('\n').forEach((record) => {
-			if (/^\s*$/.test(record))
-				return;
-			users.push({ user: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + " (domain)" });
-		})
-	}
-	users.sort((a, b) => a.pretty.localeCompare(b.pretty));
-	return users;
+export async function getUsers() {
+	return [
+		...(await useSpawn(['getent', '-s', 'files', 'passwd'], spawnOpts).promise()).stdout
+			.split('\n')
+			.map((record) => {
+				if (!record)
+					return null;
+				const fields = record.split(':');
+				const user = fields[0];
+				const uid = fields[2];
+				if (uid >= 1000 || uid === '0') // include root
+					return { user, uid, domain: false, pretty: user };
+				return null;
+			}).filter(user => user !== null),
+		...(await useSpawn(['getent', '-s', 'winbind', '-s', 'sssd', 'passwd'], spawnOpts).promise()).stdout
+			.split('\n')
+			.map((record) => {
+				if (!record)
+					return null;
+				const fields = record.split(':');
+				const user = fields[0];
+				const uid = fields[2];
+				return { user, uid, domain: true, pretty: user + " (domain)" };
+			}).filter(user => user !== null)
+	].sort((a, b) => a.pretty.localeCompare(b.pretty));
 }
 
-export async function getGroups(domainJoined) {
-	let groups = [];
-	const groupDB = (await useSpawn(['getent', 'group'], spawnOpts).promise()).stdout;
-	groupDB.split('\n').forEach((record) => {
-		const fields = record.split(':');
-		const group = fields[0];
-		const gid = fields[2];
-		if (gid >= 1000 || gid === '0')
-			groups.push({ group: group, domain: false, pretty: group });
-	})
-	if (domainJoined) {
-		const domainGroupsDB = (await useSpawn(['wbinfo', '-g'], spawnOpts).promise()).stdout
-		domainGroupsDB.split('\n').forEach((record) => {
-			if (/^\s*$/.test(record))
-				return;
-			groups.push({ group: record.replace(/^[^\\]+\\/, ""), domain: true, pretty: record.replace(/^[^\\]+\\/, "") + " (domain)" });
-		})
-	}
-	groups.sort((a, b) => a.pretty.localeCompare(b.pretty));
-	return groups
+export async function getGroups() {
+	return [
+		...(await useSpawn(['getent', '-s', 'files', 'group'], spawnOpts).promise()).stdout
+			.split('\n')
+			.map((record) => {
+				if (!record)
+					return null;
+				const fields = record.split(':');
+				const group = fields[0];
+				const gid = fields[2];
+				if (gid >= 1000 || gid === '0') // include root
+					return { group, gid, domain: false, pretty: group };
+				return null;
+			}).filter(group => group !== null),
+		...(await useSpawn(['getent', '-s', 'winbind', '-s', 'sssd', 'group'], spawnOpts).promise()).stdout
+			.split('\n')
+			.map((record) => {
+				if (!record)
+					return null;
+				const fields = record.split(':');
+				const group = fields[0];
+				const gid = fields[2];
+				return { group, gid, domain: true, pretty: group + " (domain)" };
+			}).filter(group => group !== null)
+	].sort((a, b) => a.pretty.localeCompare(b.pretty));
 }

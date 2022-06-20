@@ -62,7 +62,6 @@ export default {
 		const globalConfig = reactive({ advancedSettings: [] });
 		const users = ref([]);
 		const groups = ref([]);
-		const domainJoined = ref(false);
 		const ctdbHosts = ref([]);
 		const cephLayoutPools = ref([]);
 		const processing = ref(0);
@@ -148,19 +147,10 @@ export default {
 			}
 		};
 
-		const checkIsDomain = async () => {
-			try {
-				const result = (await useSpawn(['realm', 'list'], { superuser: 'try' }).promise()).stdout;
-				if (result)
-					return true;
-			} catch (state) { } // ignore, not using domain if realm not installed
-			return false;
-		}
-
 		const getUserList = async () => {
 			processing.value++;
 			try {
-				users.value = await getUsers(domainJoined.value);
+				users.value = await getUsers();
 			} catch (error) {
 				notifications.value.constructNotification("Failed to get users", errorStringHTML(error), 'error');
 			} finally {
@@ -171,7 +161,7 @@ export default {
 		const getGroupList = async () => {
 			processing.value++;
 			try {
-				groups.value = await getGroups(domainJoined.value);
+				groups.value = await getGroups();
 			} catch (error) {
 				notifications.value.constructNotification("Failed to get groups", errorStringHTML(error), 'error');
 			} finally {
@@ -185,7 +175,7 @@ export default {
 				const smbConfFile = cockpit.file("/etc/samba/smb.conf", { superuser: 'try' });
 				const smbConf = await smbConfFile.read();
 				smbConfFile.close();
-				const globalSectionText = smbConf.match(/^\s*\[ ?global ?\]\s*$(?:\n^(?!\s*\[).*$)*/mi)?.[0];
+				const globalSectionText = smbConf.match(/^\s*\[ ?global ?\].*$(?:\n^(?!\s*\[).*$)*/mi)?.[0];
 				if (!globalSectionText || !/^[\t ]*include[\t ]*=[\t ]*registry/m.test(globalSectionText)) {
 					notifications.value.constructNotification(
 						"Samba is Misconfigured",
@@ -231,7 +221,6 @@ export default {
 		const refresh = async () => {
 			processing.value++;
 			try {
-				domainJoined.value = await checkIsDomain();
 				const procs = [];
 				procs.push(parseNetConf());
 				procs.push(getUserList());
