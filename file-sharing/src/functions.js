@@ -82,7 +82,7 @@ export async function getUsers() {
 					return { user, uid, domain: false, pretty: user };
 				return null;
 			}).filter(user => user !== null),
-		...(await useSpawn(['getent', '-s', 'winbind', '-s', 'sssd', 'passwd'], spawnOpts).promise()).stdout
+		...(await useSpawn(['getent', '-s', 'winbind', '-s', 'sss', '-s', 'ldap', 'passwd'], spawnOpts).promise()).stdout
 			.split('\n')
 			.map((record) => {
 				if (!record)
@@ -109,7 +109,7 @@ export async function getGroups() {
 					return { group, gid, domain: false, pretty: group };
 				return null;
 			}).filter(group => group !== null),
-		...(await useSpawn(['getent', '-s', 'winbind', '-s', 'sssd', 'group'], spawnOpts).promise()).stdout
+		...(await useSpawn(['getent', '-s', 'winbind', '-s', 'sss', '-s', 'ldap', 'group'], spawnOpts).promise()).stdout
 			.split('\n')
 			.map((record) => {
 				if (!record)
