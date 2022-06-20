@@ -69,7 +69,7 @@ const spawnOpts = {
 }
 
 export async function getUsers() {
-	const users = [
+	return [
 		...(await useSpawn(['getent', '-s', 'files', 'passwd'], spawnOpts).promise()).stdout
 			.split('\n')
 			.map((record) => {
@@ -96,12 +96,10 @@ export async function getUsers() {
 				return { user, uid, domain: true, pretty: user + " (domain)" };
 			}).filter(user => user !== null)
 	].sort((a, b) => a.pretty.localeCompare(b.pretty));
-	// console.log(users);
-	return users;
 }
 
 export async function getGroups() {
-	const groups = [
+	return [
 		...(await useSpawn(['getent', '-s', 'files', 'group'], spawnOpts).promise()).stdout
 			.split('\n')
 			.map((record) => {
@@ -128,6 +126,4 @@ export async function getGroups() {
 				return { group, gid, domain: true, pretty: group + " (domain)" };
 			}).filter(group => group !== null)
 	].sort((a, b) => a.pretty.localeCompare(b.pretty));
-	console.log(groups);
-	return groups;
 }
