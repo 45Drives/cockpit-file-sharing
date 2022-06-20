@@ -27,6 +27,11 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Jun 20 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.8-1
+- Remove realm and wbinfo dependencies by getting users and groups with `getent -s
+  winbind -s sss -s ldap`
+- Handle directory permissions by numeric ID rather than user/group name
+- Fixed yet another regex bug in validating smb.conf
 * Wed Jun 08 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.7-1
 - Use systemdUnitEscape() from cockpit-helpers to escape mount unit name instead
   of unreliable regex replace
