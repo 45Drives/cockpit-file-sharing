@@ -28,7 +28,6 @@
             "coreutils",
             "libc-bin",
             "nfs-kernel-server",
-            "realmd",
             "samba",
             "samba-common-bin",
             "systemd",
@@ -40,7 +39,6 @@
             "coreutils",
             "glibc-common",
             "nfs-utils",
-            "realmd",
             "samba-common-tools",
             "samba-winbind-clients",
             "systemd"
@@ -63,8 +61,8 @@
         "version": "3.1.8",
         "buildVersion": "1",
         "ignore": [],
-        "date": null,
-        "packager": "Josh Boudreau <jboudreau@45drives.com>",
+        "date": "2022-06-22T12:37:58.323441",
+        "packager": "Joshua Boudreau <jboudreau@45drives.com>",
         "changes": []
     }
 }
