@@ -68,62 +68,67 @@ const spawnOpts = {
 	superuser: 'try',
 }
 
-export async function getUsers() {
-	return [
-		...(await useSpawn(['getent', '-s', 'files', 'passwd'], spawnOpts).promise()).stdout
+/**
+ * 
+ * @param {String} type - 'group' or 'user'
+ * @param {boolean} domain 
+ * @returns 
+ */
+const parseRecord = (type, domain) => (record) => {
+	if (!record)
+		return null;
+	let nameKey = type;
+	let idKey = type === 'group' ? 'gid' : 'uid';
+
+	const fields = record.split(':');
+	const name = fields[0];
+	const id = fields[2];
+	if (id >= 1000 || id === '0') // include root
+		return { [nameKey]: name, [idKey]: id, domain, pretty: name + (domain ? ' (domain)' : '') };
+	return null;
+};
+
+const getent = async (db) => {
+	const [name, wbinfoFlag] = db === 'passwd' ? ['user', '-u'] : ['group', '-g'];
+	const entries = [];
+	try {
+		entries.push(
+			...(await useSpawn(['getent', '-s', 'files', db], spawnOpts).promise()).stdout
+				.split('\n')
+				.map(parseRecord(name, false))
+				.filter(user => user !== null)
+		);
+		const domainItemNames = (await useSpawn(['wbinfo', wbinfoFlag], spawnOpts).promise()).stdout
 			.split('\n')
-			.map((record) => {
-				if (!record)
-					return null;
-				const fields = record.split(':');
-				const user = fields[0];
-				const uid = fields[2];
-				if (uid >= 1000 || uid === '0') // include root
-					return { user, uid, domain: false, pretty: user };
-				return null;
-			}).filter(user => user !== null),
-		...[
-			...(await useSpawn(['getent', '-s', 'winbind', 'passwd'], spawnOpts).promise()).stdout.split('\n'),
-			...(await useSpawn(['getent', '-s', 'sss', 'passwd'], spawnOpts).promise()).stdout.split('\n'),
-			...(await useSpawn(['getent', '-s', 'ldap', 'passwd'], spawnOpts).promise()).stdout.split('\n'),
-		]
-			.map((record) => {
-				if (!record)
-					return null;
-				const fields = record.split(':');
-				const user = fields[0];
-				const uid = fields[2];
-				return { user, uid, domain: true, pretty: user + " (domain)" };
-			}).filter(user => user !== null)
-	].sort((a, b) => a.pretty.localeCompare(b.pretty));
+			.filter(entry => entry);
+		entries.push(
+			...(await useSpawn(['getent', db, ...domainItemNames], spawnOpts).promise().catch(state => {
+				console.error('getent error while getting domains:', state);
+				return state;
+			})).stdout
+				.split('\n')
+				.map(parseRecord(name, true))
+				.filter(item => item !== null)
+		);
+	} finally {
+		return entries.sort((a, b) => a.pretty.localeCompare(b.pretty));
+	}
 }
 
-export async function getGroups() {
-	return [
-		...(await useSpawn(['getent', '-s', 'files', 'group'], spawnOpts).promise()).stdout
-			.split('\n')
-			.map((record) => {
-				if (!record)
-					return null;
-				const fields = record.split(':');
-				const group = fields[0];
-				const gid = fields[2];
-				if (gid >= 1000 || gid === '0') // include root
-					return { group, gid, domain: false, pretty: group };
-				return null;
-			}).filter(group => group !== null),
-		...[
-			...(await useSpawn(['getent', '-s', 'winbind', 'group'], spawnOpts).promise()).stdout.split('\n'),
-			...(await useSpawn(['getent', '-s', 'sss', 'group'], spawnOpts).promise()).stdout.split('\n'),
-			...(await useSpawn(['getent', '-s', 'ldap', 'group'], spawnOpts).promise()).stdout.split('\n'),
-		]
-			.map((record) => {
-				if (!record)
-					return null;
-				const fields = record.split(':');
-				const group = fields[0];
-				const gid = fields[2];
-				return { group, gid, domain: true, pretty: group + " (domain)" };
-			}).filter(group => group !== null)
-	].sort((a, b) => a.pretty.localeCompare(b.pretty));
+/**
+ * get list of user objects from system and domain if joined
+ * 
+ * @returns {Promise<Object[]>}
+ */
+export function getUsers() {
+	return getent('passwd');
+}
+
+/**
+ * get list of group objects from system and domain if joined
+ * 
+ * @returns {Promise<Object[]>}
+ */
+export function getGroups() {
+	return getent('group');
 }
