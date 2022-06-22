@@ -1,3 +1,9 @@
+cockpit-file-sharing (3.1.9-1focal) focal; urgency=medium
+
+  * Fixed getting users and groups from system and domain
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 22 Jun 2022 09:39:33 -0300
+
 cockpit-file-sharing (3.1.8-1focal) focal; urgency=medium
 
   * Remove realm and wbinfo dependencies by getting users and groups with `getent

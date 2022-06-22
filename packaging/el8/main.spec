@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Jun 22 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.9-1
+- Fixed getting users and groups from system and domain
 * Mon Jun 20 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.8-1
 - Remove realm and wbinfo dependencies by getting users and groups with `getent -s
   winbind -s sss -s ldap`
