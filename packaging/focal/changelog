@@ -1,3 +1,11 @@
+cockpit-file-sharing (3.1.10-1focal) focal; urgency=medium
+
+  * Watch for newly added users, groups, and CTDB hosts and refresh lists automatically
+    in NFS tab too
+  * Set cursor to `cursor: wait` while processing for user feedback
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Thu, 23 Jun 2022 07:43:40 -0300
+
 cockpit-file-sharing (3.1.9-1focal) focal; urgency=medium
 
   * Fixed getting users and groups from system and domain
