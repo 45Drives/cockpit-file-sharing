@@ -16,7 +16,7 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="centered-column p-well space-y-well">
+	<div class="centered-column p-well space-y-well" :class="{'cursor-wait': processing}">
 		<div class="card">
 			<div class="card-header flex flex-row items-center gap-2">
 				<div class="text-header">Shares</div>
@@ -80,7 +80,7 @@ import NfsShare from "./NfsShare.vue";
 import NfsShareEditor from "./NfsShareEditor.vue";
 import { PlusIcon, XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/solid";
 import LoadingSpinner from "./LoadingSpinner.vue";
-import { ref, reactive, inject } from "vue";
+import { ref, reactive, inject, onBeforeUnmount } from "vue";
 import { NfsExportSyntax } from "@45drives/cockpit-syntaxes";
 import { useSpawn, errorString, errorStringHTML } from "@45drives/cockpit-helpers";
 import { getUsers, getGroups } from "../functions";
@@ -134,7 +134,7 @@ export default {
 		const getUserList = async () => {
 			processing.value++;
 			try {
-				users.value = await getUsers(false);
+				users.value = await getUsers();
 			} catch (error) {
 				notifications.value.constructNotification("Failed to get users", errorStringHTML(error), 'error', 0);
 			} finally {
@@ -145,7 +145,7 @@ export default {
 		const getGroupList = async () => {
 			processing.value++;
 			try {
-				groups.value = await getGroups(false);
+				groups.value = await getGroups();
 			} catch (error) {
 				notifications.value.constructNotification("Failed to get groups", errorStringHTML(error), 'error', 0);
 			} finally {
@@ -289,6 +289,13 @@ export default {
 			a.dispatchEvent(event);
 			document.body.removeChild(a);
 		}
+
+		const watchHandles = [];
+
+		watchHandles.push(cockpit.file('/etc/group', { superuser: 'try' }).watch(() => getGroupList(), { read: false }));
+		watchHandles.push(cockpit.file('/etc/passwd', { superuser: 'try' }).watch(() => getUserList(), { read: false }));
+		
+		onBeforeUnmount(() => watchHandles.map(handle => handle?.remove?.()));
 
 		return {
 			shares,
