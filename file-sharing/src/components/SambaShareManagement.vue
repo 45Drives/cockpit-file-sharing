@@ -16,7 +16,7 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="card">
+	<div class="card" :class="{'cursor-wait': processing}">
 		<div class="card-header flex flex-row items-center gap-2">
 			<div class="text-header">Shares</div>
 			<LoadingSpinner v-if="processing || parentProcessing" class="size-icon" />

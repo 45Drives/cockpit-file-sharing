@@ -16,7 +16,7 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="centered-column p-well space-y-well">
+	<div class="centered-column p-well space-y-well" :class="{'cursor-wait': processing}">
 		<SambaGlobalManagement :globalConfig="globalConfig" :processing="processing" @startProcessing="processing++"
 			@stopProcessing="processing--" />
 		<SambaShareManagement :shares="shares" @refreshShares="refresh" :groups="groups" :users="users"
