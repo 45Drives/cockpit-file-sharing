@@ -49,7 +49,7 @@ If not, see <https://www.gnu.org/licenses/>.
 import { XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/solid";
 import SambaShareManagement from "./SambaShareManagement.vue";
 import SambaGlobalManagement from "./SambaGlobalManagement.vue";
-import { useSpawn, errorString, errorStringHTML } from "@45drives/cockpit-helpers";
+import { useSpawn, errorString, errorStringHTML, processOutputDownload } from "@45drives/cockpit-helpers";
 import { ref, reactive, watch, inject, onBeforeUnmount } from "vue";
 import { getUsers, getGroups } from "../functions";
 import LoadingSpinner from "./LoadingSpinner.vue";
@@ -282,43 +282,7 @@ export default {
 			const backendPath = "/tmp/cockpit-file-sharing_samba_exported.conf";
 			const date = new Date();
 			const filename = `cockpit-file-sharing_samba_exported_${date.toISOString().replace(/:/g, '-').replace(/T/, '_')}.conf`;
-			let config;
-			try {
-				config = (await useSpawn(['net', 'conf', 'list'], { superuser: 'try' }).promise()).stdout;
-			} catch (state) {
-				notifications.value.constructNotification("Failed to get configuration", errorStringHTML(state), 'error');
-				return;
-			}
-			try {
-				await cockpit.file(backendPath).replace(config);
-			} catch (error) {
-				notifications.value.constructNotification("Failed to write configuration to temp file", errorStringHTML(error), 'error');
-				return;
-			}
-			let query = window.btoa(JSON.stringify({
-				payload: 'fsread1',
-				binary: 'raw',
-				path: backendPath,
-				superuser: false,
-				max_read_size: 1024 * 1024,
-				external: {
-					'content-disposition': 'attachment; filename="' + filename + '"',
-					'content-type': 'application/x-xz, application/octet-stream'
-				},
-			}));
-			let prefix = (new URL(cockpit.transport.uri('channel/' + cockpit.transport.csrf_token))).pathname;
-			var a = document.createElement("a");
-			a.href = prefix + "?" + query;
-			a.style.display = "none";
-			a.download = filename;
-			document.body.appendChild(a);
-			var event = new MouseEvent('click', {
-				'view': window,
-				'bubbles': false,
-				'cancelable': true
-			});
-			a.dispatchEvent(event);
-			document.body.removeChild(a);
+			processOutputDownload(['net', 'conf', 'list'], filename, { superuser: 'try' });
 		}
 
 		const watchHandles = [];

@@ -82,7 +82,7 @@ import { PlusIcon, XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/sol
 import LoadingSpinner from "./LoadingSpinner.vue";
 import { ref, reactive, inject, onBeforeUnmount } from "vue";
 import { NfsExportSyntax } from "@45drives/cockpit-syntaxes";
-import { useSpawn, errorString, errorStringHTML } from "@45drives/cockpit-helpers";
+import { useSpawn, errorString, errorStringHTML, fileDownload } from "@45drives/cockpit-helpers";
 import { getUsers, getGroups } from "../functions";
 import Table from "./Table.vue";
 import { notificationsInjectionKey } from "../keys";
@@ -264,30 +264,7 @@ export default {
 		const exportConfig = () => {
 			const date = new Date();
 			const filename = `cockpit-file-sharing_nfs_exported_${date.toISOString().replace(/:/g, '-').replace(/T/, '_')}.exports`;
-			let query = window.btoa(JSON.stringify({
-				payload: 'fsread1',
-				binary: 'raw',
-				path: exportsFile.path,
-				superuser: false,
-				max_read_size: 1024 * 1024,
-				external: {
-					'content-disposition': 'attachment; filename="' + filename + '"',
-					'content-type': 'application/x-xz, application/octet-stream'
-				},
-			}));
-			let prefix = (new URL(cockpit.transport.uri('channel/' + cockpit.transport.csrf_token))).pathname;
-			var a = document.createElement("a");
-			a.href = prefix + "?" + query;
-			a.style.display = "none";
-			a.download = filename;
-			document.body.appendChild(a);
-			var event = new MouseEvent('click', {
-				'view': window,
-				'bubbles': false,
-				'cancelable': true
-			});
-			a.dispatchEvent(event);
-			document.body.removeChild(a);
+			fileDownload(exportsFile.path, filename);
 		}
 
 		const watchHandles = [];
