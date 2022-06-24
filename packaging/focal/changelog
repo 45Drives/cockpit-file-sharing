@@ -1,3 +1,10 @@
+cockpit-file-sharing (3.1.11-1focal) focal; urgency=medium
+
+  * Use fileDownload() and processOutputDownload() from cockpit-helpers for exporting
+    configs
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 24 Jun 2022 13:00:41 -0300
+
 cockpit-file-sharing (3.1.10-1focal) focal; urgency=medium
 
   * Watch for newly added users, groups, and CTDB hosts and refresh lists automatically

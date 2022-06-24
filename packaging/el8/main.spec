@@ -27,6 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri Jun 24 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.11-1
+- Use fileDownload() and processOutputDownload() from cockpit-helpers for exporting
+  configs
 * Thu Jun 23 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.10-1
 - Watch for newly added users, groups, and CTDB hosts and refresh lists automatically
   in NFS tab too
