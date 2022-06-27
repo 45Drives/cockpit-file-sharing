@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Jun 27 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.12-1
+- Try to get ceph layout pools with /etc/ceph/ceph.client.samba.keyring first
 * Fri Jun 24 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.11-1
 - Use fileDownload() and processOutputDownload() from cockpit-helpers for exporting
   configs

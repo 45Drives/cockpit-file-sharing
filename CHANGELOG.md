@@ -1,3 +1,3 @@
-## Cockpit File Sharing 3.1.11-1
+## Cockpit File Sharing 3.1.12-1
 
-* Use fileDownload() and processOutputDownload() from cockpit-helpers for exporting configs
+* Try to get ceph layout pools with /etc/ceph/ceph.client.samba.keyring first
