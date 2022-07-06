@@ -331,11 +331,12 @@ export default {
 
 			shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
 			showAdvanced.value = Boolean(shareAdvancedSettingsStr.value);
-
+			await checkIfExists();
 			await checkIfCeph();
 			if (isCeph.value) {
 				getCephQuota();
 				getCephLayoutPool();
+				checkCephRemount();
 			}
 
 			setAdvancedToggleStates();
@@ -868,6 +869,8 @@ WantedBy=remote-fs.target
 		watch(() => ({ ...cephOptions }), async (current, old) => {
 			validateInputs();
 		});
+
+		watch(() => tmpShare.path, checkIfExists);
 
 		return {
 			tmpShare,
