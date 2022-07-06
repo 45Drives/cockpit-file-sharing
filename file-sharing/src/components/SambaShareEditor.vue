@@ -198,6 +198,7 @@ export default {
 		ctdbHosts: Array[String],
 		cephLayoutPools: Array[String],
 		shares: Array[Object],
+		isVisible: Boolean,
 	},
 	setup(props, { emit }) {
 		const tmpShare = reactive({});
@@ -870,7 +871,7 @@ WantedBy=remote-fs.target
 			validateInputs();
 		});
 
-		watch(() => tmpShare.path, checkIfExists);
+		watch([() => tmpShare.path, () => props.isVisible], checkIfExists);
 
 		return {
 			tmpShare,

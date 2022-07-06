@@ -49,6 +49,7 @@ If not, see <https://www.gnu.org/licenses/>.
 					:modalPopup="modalPopup"
 					:shares="shares"
 					class="py-2"
+					:isVisible="showEditor"
 				/>
 			</div>
 		</td>
