@@ -47,7 +47,7 @@ If not, see <https://www.gnu.org/licenses/>.
 			</div>
 			<div class="card-body button-group-row">
 				<input
-					@change="importConfig"
+					@change="importConfigUploadCallback"
 					type="file"
 					id="file-upload"
 					hidden
@@ -60,6 +60,19 @@ If not, see <https://www.gnu.org/licenses/>.
 					@click="exportConfig"
 					class="btn btn-primary"
 				>Export</button>
+				<div class="flex items-center">
+					<button
+						@click="importSmbConf"
+						class="btn btn-secondary"
+					>
+						Import configuration from <span class="text-sm font-mono">/etc/samba/smb.conf</span>
+					</button>
+					<InfoTip above>
+						File Sharing uses Samba's net registry to configure shares. Click this button to import
+						configuration from <span class="text-sm font-mono">/etc/samba/smb.conf</span> into the net
+						registry for management.
+					</InfoTip>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -72,9 +85,15 @@ If not, see <https://www.gnu.org/licenses/>.
 		:headerText="confirmationModal.headerText"
 	>
 		<template #icon>
-			<ExclamationCircleIcon class="size-icon-xl icon-danger shrink-0" />
+			<ExclamationCircleIcon
+				v-if="confirmationModal.showIcon"
+				class="size-icon-xl icon-danger shrink-0"
+			/>
 		</template>
-		{{ confirmationModal.bodyText }}
+		<div
+			class="whitespace-pre-wrap"
+			v-html="confirmationModal.bodyText"
+		/>
 	</ModalPopup>
 </template>
 
@@ -88,6 +107,7 @@ import { getUsers, getGroups } from "../functions";
 import LoadingSpinner from "./LoadingSpinner.vue";
 import { notificationsInjectionKey } from "../keys";
 import ModalPopup from "./ModalPopup.vue";
+import InfoTip from "./InfoTip.vue";
 
 export default {
 	setup(props, ctx) {
@@ -103,11 +123,13 @@ export default {
 			showModal: false,
 			headerText: "",
 			bodyText: "",
-			ask: (header, body) => {
+			showIcon: true,
+			ask: (header, body, showIcon = true) => {
+				confirmationModal.showModal = true;
+				confirmationModal.headerText = header;
+				confirmationModal.bodyText = body;
+				confirmationModal.showIcon = showIcon;
 				return new Promise((resolve, reject) => {
-					confirmationModal.showModal = true;
-					confirmationModal.headerText = header;
-					confirmationModal.bodyText = body;
 					const respond = (result) => {
 						confirmationModal.showModal = false;
 						resolve(result);
@@ -222,7 +244,7 @@ export default {
 									? content.replace(/^\s*\[ ?global ?\]\s*$(?:\n^(?!;?\s*\[).*$)*/mi, "$&\n\tinclude = registry # inserted by cockpit-file-sharing\n")
 									: "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + (content ?? "");
 							});
-							await useSpawn(['smbcontrol', 'all', 'reload-config'], { superuser: 'try' });
+							await useSpawn(['smbcontrol', 'all', 'reload-config'], { superuser: 'try' }).promise();
 						} catch (error) {
 							notifications.value.constructNotification("Failed to fix Samba configuration", errorStringHTML(error), 'error');
 						} finally {
@@ -299,28 +321,13 @@ export default {
 			document.getElementById("file-upload").click();
 		}
 
-		const importConfig = (event) => {
+		const importConfigUploadCallback = (event) => {
 			const file = event.target.files[0];
 			let reader = new FileReader();
 			reader.onload = async (event) => {
 				const content = event.target.result;
-				let tmpFile;
-				try {
-					tmpFile = (await useSpawn(['mktemp'], { superuser: 'try' }).promise()).stdout;
-					// could use cockpit.file here, but easier to use useSpawn with dd to
-					// catch the state object if there are any errors
-					const writerState = useSpawn(['dd', `of=${tmpFile}`], { superuser: 'try' });
-					writerState.proc.input(content);
-					await writerState.promise();
-					await useSpawn(['net', 'conf', 'import', tmpFile], { superuser: 'try' }).promise();
-					await refresh();
-				} catch (state) {
-					notifications.value.constructNotification("Failed to import config", errorStringHTML(error), 'error');
-				} finally {
-					if (tmpFile)
-						useSpawn(['rm', '-f', tmpFile], { superuser: 'try' });
-					processing.value--;
-				}
+				importConfig(content);
+				processing.value--;
 			}
 			reader.onerror = (event) => {
 				notifications.value.constructNotification("Failed to import config", "Error reading file on client side", 'error');
@@ -328,6 +335,96 @@ export default {
 			}
 			processing.value++;
 			reader.readAsText(file);
+		}
+
+		const importSmbConf = async () => {
+			const testContent = (await useSpawn(['net', 'conf', 'import', '-T', '/etc/samba/smb.conf'], { superuser: 'try' }).promise()).stdout;
+			if (!await confirmationModal.ask(
+				"This will permanently overwrite current configuration",
+				"New configuration content:\n" +
+				'<span class="text-sm font-mono whitespace-pre">\n' +
+				testContent
+					.replace(/^TEST MODE.*$\n/m, '')
+					.replace(/^[ \t]*(include|config backend)[ \t]*=[ \t]*registry.*$\n?/mi, '')
+					.trim() + '\n' +
+				'</span>\n' +
+				"Are you sure?"
+			))
+				return;
+			try {
+				processing.value++;
+				const smbConfFile = cockpit.file("/etc/samba/smb.conf", { superuser: 'try' });
+				const smbConf = await smbConfFile.read();
+				smbConfFile.close();
+				await importConfig(smbConf);
+			} catch (error) {
+				notifications.value.constructNotification("Failed to read /etc/samba/smb.conf", errorStringHTML(error), 'error');
+				return;
+			} finally {
+				processing.value--;
+			}
+			await new Promise(resolve => setTimeout(resolve, 300)); // temporary hack until modals are fixed
+			if (await confirmationModal.ask(
+				'Replace smb.conf to avoid conflicts?',
+				'Your original <span class="text-sm font-mono">/etc/samba/smb.conf</span> ' +
+				'will be backed up ' +
+				'to <span class="text-sm font-mono">/etc/samba/smb.conf.bak</span> and replaced with\n' +
+				'<span class="text-sm font-mono whitespace-pre">\n' +
+				'[global]\n' +
+				'	include = registry\n' +
+				'</span>\n' +
+				'to avoid any conflicting share definitions.',
+				false
+			)) {
+				try {
+					const backupDescription = (await useSpawn(['cp', '-v', '--backup=numbered', '/etc/samba/smb.conf', '/etc/samba/smb.conf.bak'], { superuser: 'try' }).promise()).stdout;
+					notifications.value.constructNotification("Backed up original smb.conf", backupDescription.trim(), 'info');
+					try {
+						await cockpit.file('/etc/samba/smb.conf', { superuser: 'try' }).replace(
+							'# this config was generated by cockpit-file-sharing after importing smb.conf\n' +
+							`# original smb.conf location:\n` +
+							backupDescription.replace(/^/m, '# ') +
+							'[global]\n' +
+							'	include = registry\n');
+						await useSpawn(['smbcontrol', 'all', 'reload-config'], { superuser: 'try' }).promise();
+					} catch (error) {
+						notifications.value.constructNotification("Failed to replace contents of /etc/samba/smb.conf", errorStringHTML(error), 'error');
+						return;
+					}
+				} catch (error) {
+					notifications.value.constructNotification("Failed to back up /etc/samba/smb.conf", "Original config is unmodified.\n" + errorStringHTML(error), 'error');
+					return;
+				}
+			}
+		}
+
+		/**
+		 * Import configuration from string, filters out `include = registry` and `config backend = registry`
+		 * @param {string} content - New config content in smb.conf format
+		 */
+		const importConfig = async (content) => {
+			let tmpFile;
+			try {
+				processing.value++;
+				// const state = useSpawn(['net', 'conf', 'import', '/dev/stdin'], { superuser: 'try' });
+				// state.proc.input(content.replace(/^[ \t]*(include|config backend)[ \t]*=[ \t]*registry.*$\n?/mi, ''));
+				// await state.promise();
+				tmpFile = (await useSpawn(['mktemp'], { superuser: 'try' }).promise()).stdout;
+				// could use cockpit.file here, but easier to use useSpawn with dd to
+				// catch the state object if there are any errors
+				const writerState = useSpawn(['dd', `of=${tmpFile}`], { superuser: 'try' });
+				writerState.proc.input(content.replace(/^[ \t]*(include|config backend)[ \t]*=[ \t]*registry.*$\n?/mi, ''));
+				await writerState.promise();
+				await useSpawn(['net', 'conf', 'import', tmpFile], { superuser: 'try' }).promise();
+				await refresh();
+				notifications.value.constructNotification("Success", "Imported configuration succefully.", 'success');
+			} catch (state) {
+				notifications.value.constructNotification("Failed to import config", errorStringHTML(state), 'error');
+			} finally {
+				if (tmpFile)
+					useSpawn(['rm', '-f', tmpFile], { superuser: 'try' });
+				processing.value--;
+			}
 		}
 
 		const exportConfig = async () => {
@@ -359,6 +456,8 @@ export default {
 			getGroupList,
 			refresh,
 			uploadConfig,
+			importConfigUploadCallback,
+			importSmbConf,
 			importConfig,
 			exportConfig,
 		}
@@ -370,6 +469,7 @@ export default {
 		LoadingSpinner,
 		ModalPopup,
 		ExclamationCircleIcon,
+		InfoTip,
 	}
 }
 </script>
