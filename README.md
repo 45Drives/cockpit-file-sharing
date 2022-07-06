@@ -1,6 +1,7 @@
 # cockpit-file-sharing
 A Cockpit plugin for managing Samba and NFS shares.
 
+![Example of creating a Samba share](docs/create-samba-share-example.gif)
 ## Features
 ### Samba
 - Manage global setings
