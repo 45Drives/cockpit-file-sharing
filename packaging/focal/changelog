@@ -1,3 +1,10 @@
+cockpit-file-sharing (3.2.0-1focal) focal; urgency=medium
+
+  * Add button to import configuration from /etc/samba/smb.conf, backup original
+    smb.conf, and replace it to just include registry
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 06 Jul 2022 12:05:36 -0300
+
 cockpit-file-sharing (3.1.12-1focal) focal; urgency=medium
 
   * Try to get ceph layout pools with /etc/ceph/ceph.client.samba.keyring first

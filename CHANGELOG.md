@@ -1,3 +1,3 @@
-## Cockpit File Sharing 3.1.12-1
+## Cockpit File Sharing 3.2.0-1
 
-* Try to get ceph layout pools with /etc/ceph/ceph.client.samba.keyring first
+* Add button to import configuration from /etc/samba/smb.conf, backup original smb.conf, and replace it to just include registry
