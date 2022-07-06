@@ -110,7 +110,7 @@ Click the pencil icon at the right side of the share list entry to edit the shar
 ### Removing a Share
 Click the trash can icon at the right side of the share list entry, then click `Yes` in the confirmation prompt to delete the share. This only removes the share definition from Samba, it does **not** remove any files.
 ### Import Shares (Exports) from `/etc/exports`
-To allow cockpit-file-sharing to manage existing shares defined in `/etc/exports`, do the following:
+To allow cockpit-file-sharing to manage existing shares defined in `/etc/exports`, do the following (as root):
 1. Create a backup copy of exports: `cp /etc/exports /etc/exports.bak`
 2. Move exports to cockpit-file-sharing managed location: `mv /etc/exports /etc/exports.d/cockpit-file-sharing.exports`
 3. Create an empty default exports file: `touch /etc/exports`
