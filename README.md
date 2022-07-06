@@ -26,6 +26,7 @@ User and group management was removed from cockpit-file-sharing in favour of man
 - Export and import of configuration (same format as `/etc/exports`)
 
 ## Installation
+Recommended: [cockpit-identities](https://github.com/45drives/cockpit-identities) for managing Samba password.
 ### From 45Drives Repo
 #### Ubuntu 20.04
 ```bash
