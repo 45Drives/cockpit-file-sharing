@@ -2,17 +2,20 @@ name: Build Packages
 on:
   push:
     branches: 
-      - main
+      - build
     tags:
       - 'v*.*.*'
 jobs:
   main:
     runs-on: self-hosted
+    permissions:
+      contents: write
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Package Binaries
-        run: build-packages ${{github.repository}} ${{github.workspace}}
+        run: build-packages ${{github.repository}} ${{github.workspace}} --env NPM_AUTH_TOKEN ${{secrets.NPM_AUTH_PAT}}
       - name: Set Variables
         if: startsWith(github.ref, 'refs/tags/')
         run: |

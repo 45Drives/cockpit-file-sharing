@@ -18,6 +18,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 %setup -q
 
 %build
+make OS_PACKAGE_RELEASE=el8
 
 %install
 make DESTDIR=%{buildroot} install
@@ -26,6 +27,60 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Jul 06 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.0-1
+- Add button to import configuration from /etc/samba/smb.conf, backup original smb.conf,
+  and replace it to just include registry
+* Mon Jun 27 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.12-1
+- Try to get ceph layout pools with /etc/ceph/ceph.client.samba.keyring first
+* Fri Jun 24 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.11-1
+- Use fileDownload() and processOutputDownload() from cockpit-helpers for exporting
+  configs
+* Thu Jun 23 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.10-1
+- Watch for newly added users, groups, and CTDB hosts and refresh lists automatically
+  in NFS tab too
+- Set cursor to `cursor: wait` while processing for user feedback
+* Wed Jun 22 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.9-1
+- Fixed getting users and groups from system and domain
+* Mon Jun 20 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.8-1
+- Remove realm and wbinfo dependencies by getting users and groups with `getent -s
+  winbind -s sss -s ldap`
+- Handle directory permissions by numeric ID rather than user/group name
+- Fixed yet another regex bug in validating smb.conf
+* Wed Jun 08 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.7-1
+- Use systemdUnitEscape() from cockpit-helpers to escape mount unit name instead
+  of unreliable regex replace
+- Fix regular expressions used to check for and insert 'include = registry' in smb.conf
+* Fri Jun 03 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.6-1
+- Fixed bug where regex would crash from too much recursion while parsing Ubuntu
+  default smb.conf
+- Watch for newly added users, groups, and CTDB hosts and refresh lists automatically
+* Wed Jun 01 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.5-1
+- Tweak input width to be full width for mobile
+* Wed Jun 01 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.4-1
+- Tweak styling of components
+- Fix bug where Ceph remount tries to apply when directory DNE
+* Thu May 19 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.3-2
+- Add dependencies for packaging
+* Thu May 19 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.3-1
+- fix typo in acl_xattr setting
+* Tue May 10 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.2-1
+- Fixed canonicalizing Samba share path to fix bug with Ceph remount unit file name
+- Canonicalize NFS share path
+* Fri May 06 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.1-1
+- Fix info button positioning
+* Wed May 04 2022 Joshua Boudreau <jboudreau@45drives.com> 3.1.0-1
+- Fix bugs with ceph remounting
+- Add fix button for missing ceph remounts
+- Clean up tab navigation
+- Allow for disabling ceph remount
+- Add plugin info button
+- Automatically canonicalize share path on input change
+* Thu Mar 24 2022 Joshua Boudreau <jboudreau@45drives.com> 3.0.1-1
+- Fix some placeholder text, add tooltip for valid users
+- Fix shadow copy settings for Ceph shares
+- Clean up systemd mount files after deleting a Ceph share
+* Wed Mar 23 2022 Joshua Boudreau <jboudreau@45drives.com> 3.0.0-1
+- Overhaul Plugin with Vue.js and Tailwind CSS
 * Tue Mar 08 2022 Brett Kelly <bkelly@45drives.com> 2.4.5-1
 - add support for using samba varibles in path names
 * Tue Mar 08 2022 Brett Kelly <bkelly@45drives.com> 2.4.5-1

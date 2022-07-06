@@ -1,3 +1,3 @@
-## Cockpit File Sharing 2.4.5-1
+## Cockpit File Sharing 3.2.0-1
 
-* add support for using samba varibles in path names
+* Add button to import configuration from /etc/samba/smb.conf, backup original smb.conf, and replace it to just include registry

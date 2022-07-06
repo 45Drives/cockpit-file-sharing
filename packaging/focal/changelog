@@ -1,3 +1,127 @@
+cockpit-file-sharing (3.2.0-1focal) focal; urgency=medium
+
+  * Add button to import configuration from /etc/samba/smb.conf, backup original
+    smb.conf, and replace it to just include registry
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 06 Jul 2022 12:05:36 -0300
+
+cockpit-file-sharing (3.1.12-1focal) focal; urgency=medium
+
+  * Try to get ceph layout pools with /etc/ceph/ceph.client.samba.keyring first
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 27 Jun 2022 10:17:15 -0300
+
+cockpit-file-sharing (3.1.11-1focal) focal; urgency=medium
+
+  * Use fileDownload() and processOutputDownload() from cockpit-helpers for exporting
+    configs
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 24 Jun 2022 13:00:41 -0300
+
+cockpit-file-sharing (3.1.10-1focal) focal; urgency=medium
+
+  * Watch for newly added users, groups, and CTDB hosts and refresh lists automatically
+    in NFS tab too
+  * Set cursor to `cursor: wait` while processing for user feedback
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Thu, 23 Jun 2022 07:43:40 -0300
+
+cockpit-file-sharing (3.1.9-1focal) focal; urgency=medium
+
+  * Fixed getting users and groups from system and domain
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 22 Jun 2022 09:39:33 -0300
+
+cockpit-file-sharing (3.1.8-1focal) focal; urgency=medium
+
+  * Remove realm and wbinfo dependencies by getting users and groups with `getent
+    -s winbind -s sss -s ldap`
+  * Handle directory permissions by numeric ID rather than user/group name
+  * Fixed yet another regex bug in validating smb.conf
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 20 Jun 2022 14:25:56 -0300
+
+cockpit-file-sharing (3.1.7-1focal) focal; urgency=medium
+
+  * Use systemdUnitEscape() from cockpit-helpers to escape mount unit name instead
+    of unreliable regex replace
+  * Fix regular expressions used to check for and insert 'include = registry' in
+    smb.conf
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 08 Jun 2022 14:34:24 -0300
+
+cockpit-file-sharing (3.1.6-1focal) focal; urgency=medium
+
+  * Fixed bug where regex would crash from too much recursion while parsing Ubuntu
+    default smb.conf
+  * Watch for newly added users, groups, and CTDB hosts and refresh lists automatically
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 03 Jun 2022 14:31:55 -0300
+
+cockpit-file-sharing (3.1.5-1focal) focal; urgency=medium
+
+  * Tweak input width to be full width for mobile
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 01 Jun 2022 15:05:49 -0300
+
+cockpit-file-sharing (3.1.4-1focal) focal; urgency=medium
+
+  * Tweak styling of components
+  * Fix bug where Ceph remount tries to apply when directory DNE
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 01 Jun 2022 14:41:41 -0300
+
+cockpit-file-sharing (3.1.3-2focal) focal; urgency=medium
+
+  * Add dependencies for packaging
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Thu, 19 May 2022 11:05:16 -0300
+
+cockpit-file-sharing (3.1.3-1focal) focal; urgency=medium
+
+  * fix typo in acl_xattr setting
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Thu, 19 May 2022 07:01:27 -0300
+
+cockpit-file-sharing (3.1.2-1focal) focal; urgency=medium
+
+  * Fixed canonicalizing Samba share path to fix bug with Ceph remount unit file
+    name
+  * Canonicalize NFS share path
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Tue, 10 May 2022 08:46:04 -0300
+
+cockpit-file-sharing (3.1.1-1focal) focal; urgency=medium
+
+  * Fix info button positioning
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 06 May 2022 10:16:33 -0300
+
+cockpit-file-sharing (3.1.0-1focal) focal; urgency=medium
+
+  * Fix bugs with ceph remounting
+  * Add fix button for missing ceph remounts
+  * Clean up tab navigation
+  * Allow for disabling ceph remount
+  * Add plugin info button
+  * Automatically canonicalize share path on input change
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 04 May 2022 14:13:40 -0300
+
+cockpit-file-sharing (3.0.1-1focal) focal; urgency=medium
+
+  * Fix some placeholder text, add tooltip for valid users
+  * Fix shadow copy settings for Ceph shares
+  * Clean up systemd mount files after deleting a Ceph share
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Thu, 24 Mar 2022 10:09:44 -0300
+
+cockpit-file-sharing (3.0.0-1focal) focal; urgency=medium
+
+  * Overhaul Plugin with Vue.js and Tailwind CSS
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 23 Mar 2022 12:02:23 -0300
+
 cockpit-file-sharing (2.4.5-1focal) focal; urgency=medium
 
   * add support for using samba varibles in path names

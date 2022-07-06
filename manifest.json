@@ -3,9 +3,9 @@
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
     "prerelease": false,
-    "version": "2.4.5",
+    "version": "3.2.0",
     "buildVersion": "1",
-    "author": "Brett Kelly <bkelly@45drives.com>",
+    "author": "Josh Boudreau <jboudreau@45drives.com>",
     "url": "https://github.com/45Drives/cockpit-file-sharing",
     "category": "utils",
     "priority": "optional",
@@ -24,41 +24,45 @@
     "dependencies": {
         "deb": [
             "cockpit",
-            "python3",
+            "attr",
+            "coreutils",
+            "libc-bin",
+            "nfs-kernel-server",
             "samba",
-            "nfs-kernel-server"
+            "samba-common-bin",
+            "systemd",
+            "winbind"
         ],
         "el": [
             "cockpit",
-            "python3",
-            "samba",
-            "nfs-utils"
+            "attr",
+            "coreutils",
+            "glibc-common",
+            "nfs-utils",
+            "samba-common-tools",
+            "samba-winbind-clients",
+            "systemd"
         ]
     },
     "releases": [
         {
-            "image": "ubuntu-focal-builder",
+            "image": "node-ubuntu-focal-builder",
             "codeName": "focal",
             "type": "deb"
         },
         {
-            "image": "rocky-el8-builder",
+            "image": "node-rocky-el8-builder",
             "codeName": "el8",
-            "type": "el"
-        },
-        {
-            "image": "centos-el7-builder",
-            "codeName": "el7",
             "type": "el"
         }
     ],
     "changelog": {
         "urgency": "medium",
-        "version": "2.4.5",
+        "version": "3.2.0",
         "buildVersion": "1",
         "ignore": [],
         "date": null,
-        "packager": "Brett Kelly <bkelly@45drives.com>",
+        "packager": "Josh Boudreau <jboudreau@45drives.com>",
         "changes": []
     }
 }
