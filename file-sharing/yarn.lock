@@ -2,24 +2,24 @@
 # yarn lockfile v1
 
 
-"@45drives/cockpit-css@0.1.12":
+"@45drives/cockpit-css@^0.1.12":
   version "0.1.12"
   resolved "https://npm.pkg.github.com/download/@45drives/cockpit-css/0.1.12/b5d0b428714271695e5e0af9932b87e26456156e53aa99fbbb4431be0c4c8880#42ecb717da68e4c31454b5bc6019e3a4fe7dcd6c"
   integrity sha512-RgyedX/5GuriDvLruvmbqb++cIBqIF5py2E4G8/wMtQfUf6QnJqsRLYNp7uzKcLpE2+kjm9pGASdvwV2I2b/YA==
 
-"@45drives/cockpit-helpers@0.1.19", "@45drives/cockpit-helpers@^0.1.2":
+"@45drives/cockpit-helpers@^0.1.19", "@45drives/cockpit-helpers@^0.1.2":
   version "0.1.19"
   resolved "https://npm.pkg.github.com/download/@45drives/cockpit-helpers/0.1.19/19fd0cc482777821a5c206a8c3c4f4e6de69e352ba105fbe79a4b0209e5d067e#29920cb9a0866220cfda58b9db4f34c8435f8960"
   integrity sha512-dyS3V+XG/9rLGGhFJEA2b+ohrZiGsHteOEktJk9mM9c6WsXJywrlnrHm0YrKksoTUPwXtBY44QrXJNd3zKtvKQ==
 
-"@45drives/cockpit-syntaxes@0.1.4":
+"@45drives/cockpit-syntaxes@^0.1.4":
   version "0.1.4"
   resolved "https://npm.pkg.github.com/download/@45drives/cockpit-syntaxes/0.1.4/e1d35e98f856398975e654f43776068aa511bf86906e97f653c94735993821c9#b386242f43e353ecc700ecba1d10a4d9ee6efca3"
   integrity sha512-8mDVoiuV9Wp5NO7QmY6DHgU8lKqwO++sVEzKsWuyrHdG+6q4afGd2iu/2OD0GMLvzakeN5DJGt97s7RErbgkVQ==
   dependencies:
     "@45drives/cockpit-helpers" "^0.1.2"
 
-"@45drives/regex@0.1.0":
+"@45drives/regex@^0.1.0":
   version "0.1.0"
   resolved "https://npm.pkg.github.com/download/@45drives/regex/0.1.0/0f5192aa2141b3cb3d2e41b12f1003bbb880f5552f71a776b74bad0f2e6ef15b#5bd4aaeb4f28521de4551869cd88e12d9f61f065"
   integrity sha512-YHjFxJv8vKoG+Jm5K5Q9/myz7lmenKmKyx4Cw04VJP+imTW+oYe8He41jibF1JSUqgZXOSOBWf4HpUcFaTKfmA==
@@ -29,17 +29,17 @@
   resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.18.6.tgz#845338edecad65ebffef058d3be851f1d28a63bc"
   integrity sha512-uQVSa9jJUe/G/304lXspfWVpKpK4euFLgGiMQFOCpM/bgcAdeoHwi/OQz23O9GK2osz26ZiXRRV9aV+Yl1O8tw==
 
-"@fontsource/red-hat-text@4.5.9":
+"@fontsource/red-hat-text@^4.5.9":
   version "4.5.9"
   resolved "https://registry.yarnpkg.com/@fontsource/red-hat-text/-/red-hat-text-4.5.9.tgz#08c095082ddc5bdd638c99d7b770717b4af6de8e"
   integrity sha512-7jBq3vSTtZt1kJpwRt04EFfAGepY2E9eq7p09zyD4Ibx0rItBy/uoF/6Wmx/1heJurbUxxcBHY/6dKNxBRpb4g==
 
-"@headlessui/vue@1.6.5":
+"@headlessui/vue@^1.6.5":
   version "1.6.5"
   resolved "https://registry.yarnpkg.com/@headlessui/vue/-/vue-1.6.5.tgz#d34005e7a19cac5cc95df82420a20bee529b65a1"
   integrity sha512-C/BeTVuowTDLkGgUd6UfiPZVDLdR7OTnd8o4wF37Ub9Js1uhQ3XSTfitdZvlJALUqeQ30j+5Hk3KyjVDLQ3GYQ==
 
-"@heroicons/vue@1.0.6":
+"@heroicons/vue@^1.0.6":
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/@heroicons/vue/-/vue-1.0.6.tgz#d8b90734b436eb5a87f40cc300b64a0fb0031f7f"
   integrity sha512-ng2YcCQrdoQWEFpw+ipFl2rZo8mZ56v0T5+MyfQQvNqfKChwgP6DMloZLW+rl17GEcHkE3H82UTAMKBKZr4+WA==
@@ -65,14 +65,14 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@tailwindcss/forms@0.5.2":
+"@tailwindcss/forms@^0.5.2":
   version "0.5.2"
   resolved "https://registry.yarnpkg.com/@tailwindcss/forms/-/forms-0.5.2.tgz#4ef45f9916dcb37838cbe7fecdcc4ba7a7c2ab59"
   integrity sha512-pSrFeJB6Bg1Mrg9CdQW3+hqZXAKsBrSG9MAfFLKy1pVA4Mb4W7C0k7mEhlmS2Dfo/otxrQOET7NJiJ9RrS563w==
   dependencies:
     mini-svg-data-uri "^1.2.3"
 
-"@vitejs/plugin-vue@2.3.3":
+"@vitejs/plugin-vue@^2.3.3":
   version "2.3.3"
   resolved "https://registry.yarnpkg.com/@vitejs/plugin-vue/-/plugin-vue-2.3.3.tgz#fbf80cc039b82ac21a1acb0f0478de8f61fbf600"
   integrity sha512-SmQLDyhz+6lGJhPELsBdzXGc+AcaT8stgkbiTFGpXPe8Tl1tJaBw1A6pxDqDuRsVkD8uscrkx3hA7QDOoKYtyw==
@@ -199,7 +199,7 @@ arg@^5.0.2:
   resolved "https://registry.yarnpkg.com/arg/-/arg-5.0.2.tgz#c81433cc427c92c4dcf4865142dbca6f15acd59c"
   integrity sha512-PYjyFOLKQ9y57JvQ6QLo8dAgNqswh8M1RMJYdQduT6xbWSgK36P/Z/v+p888pM69jMMfS8Xd8F6I1kQ/I9HUGg==
 
-autoprefixer@10.4.7:
+autoprefixer@^10.4.7:
   version "10.4.7"
   resolved "https://registry.yarnpkg.com/autoprefixer/-/autoprefixer-10.4.7.tgz#1db8d195f41a52ca5069b7593be167618edbbedf"
   integrity sha512-ypHju4Y2Oav95SipEcCcI5J7CGPuvz8oat7sUtYj3ClK44bldfvtvcxK6IEK++7rqB7YchDGzweZIBG+SD0ZAA==
@@ -654,7 +654,7 @@ postcss-value-parser@^4.0.0, postcss-value-parser@^4.2.0:
   resolved "https://registry.yarnpkg.com/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz#723c09920836ba6d3e5af019f92bc0971c02e514"
   integrity sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==
 
-postcss@8.4.14, postcss@^8.1.10, postcss@^8.4.13, postcss@^8.4.14:
+postcss@^8.1.10, postcss@^8.4.13, postcss@^8.4.14:
   version "8.4.14"
   resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.4.14.tgz#ee9274d5622b4858c1007a74d76e42e56fd21caf"
   integrity sha512-E398TUmfAYFPBSdzgeieK2Y1+1cpdxJx8yXbK/m57nRhKSmk1GB2tO4lbLBtlkfPQTDKfe4Xqv1ASWPpayPEig==
@@ -725,7 +725,7 @@ source-map@^0.6.1:
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.6.1.tgz#74722af32e9614e9c287a8d0bbde48b5e2f1a263"
   integrity sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
 
-source-sans-pro@3.6.0:
+source-sans-pro@^3.6.0:
   version "3.6.0"
   resolved "https://registry.yarnpkg.com/source-sans-pro/-/source-sans-pro-3.6.0.tgz#f4167065ebf096136b1b4f141dbd48886dda1486"
   integrity sha512-C1RFUGu+YASuqpgDRInTM7Y6OwqeWNOuKn7v0P/4Kh66epTI4PYWwPWP5kdA4l/VqzBAWiqoz5dk0trof73R7w==
@@ -740,7 +740,7 @@ supports-preserve-symlinks-flag@^1.0.0:
   resolved "https://registry.yarnpkg.com/supports-preserve-symlinks-flag/-/supports-preserve-symlinks-flag-1.0.0.tgz#6eda4bd344a3c94aea376d4cc31bc77311039e09"
   integrity sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==
 
-tailwindcss@3.1.4:
+tailwindcss@^3.1.4:
   version "3.1.4"
   resolved "https://registry.yarnpkg.com/tailwindcss/-/tailwindcss-3.1.4.tgz#64b09059805505902139fa805d97046080bd90b9"
   integrity sha512-NrxbFV4tYsga/hpWbRyUfIaBrNMXDxx5BsHgBS4v5tlyjf+sDsgBg5m9OxjrXIqAS/uR9kicxLKP+bEHI7BSeQ==
@@ -788,7 +788,7 @@ util-deprecate@^1.0.2:
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
   integrity sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==
 
-vite@2.9.13:
+vite@^2.9.13:
   version "2.9.13"
   resolved "https://registry.yarnpkg.com/vite/-/vite-2.9.13.tgz#859cb5d4c316c0d8c6ec9866045c0f7858ca6abc"
   integrity sha512-AsOBAaT0AD7Mhe8DuK+/kE4aWYFMx/i0ZNi98hJclxb4e0OhQcZYUrvLjIaQ8e59Ui7txcvKMiJC1yftqpQoDw==
@@ -800,7 +800,7 @@ vite@2.9.13:
   optionalDependencies:
     fsevents "~2.3.2"
 
-vue@3.2.37:
+vue@^3.2.37:
   version "3.2.37"
   resolved "https://registry.yarnpkg.com/vue/-/vue-3.2.37.tgz#da220ccb618d78579d25b06c7c21498ca4e5452e"
   integrity sha512-bOKEZxrm8Eh+fveCqS1/NkG/n6aMidsI6hahas7pa0w/l7jkbssJVsRhVDs07IdDq7h9KHswZOgItnwJAgtVtQ==
