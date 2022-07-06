@@ -18,7 +18,7 @@ If not, see <https://www.gnu.org/licenses/>.
 <template>
 	<div class="ml-1 relative overflow-visible inline-block" @click="show = !show" @mouseenter="show=true" @mouseleave="show=false" >
 		<QuestionMarkCircleIcon class="size-icon icon-default" />
-		<div class="absolute bg-accent shadow-lg border-default text-muted font-normal whitespace-normal text-sm rounded-lg p-2 z-50 w-60" v-if="show" >
+		<div :class="[above ? 'bottom-5' : '', 'text-left absolute bg-accent shadow-lg border-default text-muted font-normal whitespace-normal text-sm rounded-lg p-2 z-50 w-60']" v-if="show" >
 			<slot />
 		</div>
 	</div>
@@ -28,6 +28,9 @@ If not, see <https://www.gnu.org/licenses/>.
 import { ref } from "vue";
 import { QuestionMarkCircleIcon } from "@heroicons/vue/solid";
 export default {
+	props: {
+		above: Boolean,
+	},
 	setup() {
 		const show = ref(false);
 
