@@ -26,20 +26,56 @@ User and group management was removed from cockpit-file-sharing in favour of man
 - Manage individual client settings
 - Export and import of configuration (same format as `/etc/exports`)
 
-## Installation
+# Installation
 Recommended: [cockpit-identities](https://github.com/45drives/cockpit-identities) for managing Samba password.
-### From 45Drives Repo (Recommended)
-#### Ubuntu 20.04
+## Ubuntu 20.04
+### From 45Drives Repo (Recommended, Ubuntu 20.04 only)
 ```bash
-$ curl -sSL https://repo.45drives.com/setup | sudo bash
-$ sudo apt install cockpit-file-sharing
+curl -sSL https://repo.45drives.com/setup | sudo bash
+sudo apt install cockpit-file-sharing
 ```
-#### Rocky 8
+### Direct from .deb
+Installing this way may work for other versions of Ubuntu and Debian, but it is unsupported. You won't get automatic updates this way.
 ```bash
-$ curl -sSL https://repo.45drives.com/setup | sudo bash
-$ sudo dnf install cockpit-file-sharing
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.2.0/cockpit-file-sharing_3.2.0-1focal_all.deb
+sudo apt install ./cockpit-file-sharing_3.2.0-1focal_all.deb
 ```
-### Generic Installation
+## Rocky 8
+### From 45Drives Repo (Recommended, Rocky 8 only)
+```bash
+curl -sSL https://repo.45drives.com/setup | sudo bash
+sudo dnf install cockpit-file-sharing
+```
+### Direct from .rpm
+Installing this way may work for other versions of Rocky/Centos/RHEL/Fedora/etc, but it is unsupported. You won't get automatic updates this way.
+```bash
+# dnf or yum
+sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.2.0/cockpit-file-sharing-3.2.0-1.el8.noarch.rpm
+```
+## Generic Installation
+1. Install Dependencies
+```bash
+# debian-like
+cockpit
+attr
+coreutils
+libc-bin
+nfs-kernel-server
+samba
+samba-common-bin
+systemd
+winbin
+# RHEL-like
+cockpit
+attr
+coreutils
+glibc-common
+nfs-utils
+samba-common-tools
+samba-winbind-clients
+system
+```
+2. Download pre-built archive and install
 ```bash
 curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.2.0/cockpit-file-sharing_3.2.0_generic.zip
 unzip cockpit-file-sharing_3.2.0_generic.zip
@@ -47,7 +83,7 @@ cd cockpit-file-sharing_3.2.0_generic
 # no need to run `make` first, the plugin is pre-built
 sudo make install
 ```
-
+# Usage
 ## Samba Management Tab
 The Samba tab in cockpit-file-sharing is a front end UI for the [net conf](https://linux.die.net/man/8/net) registry used by Samba. Any shares manually configured in `/etc/samba/smb.conf` won't show up in the UI, but they can be imported with the `Import` button at the bottom of the page. Your Samba configuration file must have `include = registry` in the `[global]` section, which can be automatically configured in one click in the UI.
 ### Adding a Share
