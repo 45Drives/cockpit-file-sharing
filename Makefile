@@ -75,7 +75,7 @@ $(VERSION_FILES): ./manifest.json
 
 # build outputs
 .SECONDEXPANSION:
-$(OUTPUTS): %/dist/index.html: $$(shell find $$*/src -type f) $$(shell find $$*/public -type f) $$(shell find $$* -name 'yarn.lock' -o -name 'package.json' -not -path '*node_modules*') $$*/*.html  $$*/*.js
+$(OUTPUTS): %/dist/index.html: $$(shell find '$$*' -type d \( -name node_modules -o -path '$$*/dist' -o -path '*node_modules*'  \) -prune -o -type f -not \( -name .gitignore \) -print)
 	@echo -e $(call cyantext,Building $*)
 	$(NPM_PREFIX) $* install
 ifeq ($(AUTO_UPGRADE_DEPS),1)
@@ -88,7 +88,7 @@ endif
 # system install, requires `systemctl restart cockpit.socket`
 # runs plugin-install-* for each plugin
 .SECONDEXPANSION:
-install install-local install-remote: default $$(addprefix plugin-$$@-, $$(PLUGIN_SRCS)) system-files-$$@
+install install-local install-remote: $$(OUTPUTS) $$(addprefix plugin-$$@-, $$(PLUGIN_SRCS)) system-files-$$@
 ifeq ($(RESTART_COCKPIT), 1)
 ifndef DESTDIR
 	$(SSH) systemctl stop cockpit.socket
@@ -128,6 +128,15 @@ system-files-install-local:
 
 system-files-install-remote:
 	-rsync -avh system_files/* $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST):$(DESTDIR)/
+
+package-generic: default
+	PKG_NAME="$$(jq -r '[ .name, .version ] | join("_")' ./manifest.json)"'_generic' && \
+	rm -f "$${PKG_NAME}.{zip,tar.gz}" && \
+	ln -snf . "$${PKG_NAME}" && \
+	readarray -t FILES < <(find -H "$${PKG_NAME}" -type d \( -name 'src' -o -name 'node_modules' \) -prune -o -type f \( -path '*/dist/*' -o -path '*/system_files/*' -o -name package.json -o -iname 'makefile' -o -iname 'licen[sc]e' -o -iname 'readme.md' -o -name 'manifest.json' \) -print) && \
+	zip -q "$${PKG_NAME}.zip" "$${FILES[@]}" && \
+	tar -czf "$${PKG_NAME}.tar.gz" "$${FILES[@]}" && \
+	rm "$${PKG_NAME}"
 
 clean: FORCE
 	rm $(dir $(OUTPUTS)) -rf

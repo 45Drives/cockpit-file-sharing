@@ -28,7 +28,7 @@ User and group management was removed from cockpit-file-sharing in favour of man
 
 ## Installation
 Recommended: [cockpit-identities](https://github.com/45drives/cockpit-identities) for managing Samba password.
-### From 45Drives Repo
+### From 45Drives Repo (Recommended)
 #### Ubuntu 20.04
 ```bash
 $ curl -sSL https://repo.45drives.com/setup | sudo bash
@@ -38,6 +38,14 @@ $ sudo apt install cockpit-file-sharing
 ```bash
 $ curl -sSL https://repo.45drives.com/setup | sudo bash
 $ sudo dnf install cockpit-file-sharing
+```
+### Generic Installation
+```bash
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.2.0/cockpit-file-sharing_3.2.0_generic.zip
+unzip cockpit-file-sharing_3.2.0_generic.zip
+cd cockpit-file-sharing_3.2.0_generic
+# no need to run `make` first, the plugin is pre-built
+sudo make install
 ```
 
 ## Samba Management Tab
