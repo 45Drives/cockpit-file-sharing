@@ -1,3 +1,9 @@
+cockpit-file-sharing (3.2.1-1focal) focal; urgency=medium
+
+  * Fix bug where cockpit-ws kills session while querying too many groups with getent
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 20 Jul 2022 11:38:32 -0300
+
 cockpit-file-sharing (3.2.0-1focal) focal; urgency=medium
 
   * Add button to import configuration from /etc/samba/smb.conf, backup original

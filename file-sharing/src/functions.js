@@ -101,15 +101,19 @@ const getent = async (db) => {
 		const domainItemNames = (await useSpawn(['wbinfo', wbinfoFlag], spawnOpts).promise()).stdout
 			.split('\n')
 			.filter(entry => entry);
-		entries.push(
-			...(await useSpawn(['getent', db, ...domainItemNames], spawnOpts).promise().catch(state => {
-				console.error('getent error while getting domains:', state);
-				return state;
-			})).stdout
-				.split('\n')
-				.map(parseRecord(name, true))
-				.filter(item => item !== null)
-		);
+		// limit number of queries per execution of getent to avoid sending too much data and causing ws disconnect
+		const partitionSize = 1000;
+		for (let i = 0; i < domainItemNames.length; i += partitionSize) {
+			entries.push(
+				...(await useSpawn(['getent', db, ...domainItemNames.slice(i, i + partitionSize)], spawnOpts).promise().catch(state => {
+					console.error('getent error while getting domains:', state);
+					return state;
+				})).stdout
+					.split('\n')
+					.map(parseRecord(name, true))
+					.filter(item => item !== null)
+			);
+		}
 	} finally {
 		return entries.sort((a, b) => a.pretty.localeCompare(b.pretty));
 	}
