@@ -18,3 +18,8 @@
  * Notifications component instance to add notifs
  */
 export const notificationsInjectionKey = Symbol();
+
+export const usersInjectionKey = Symbol();
+export const groupsInjectionKey = Symbol();
+export const processingUsersListInjectionKey = Symbol();
+export const processingGroupsListInjectionKey = Symbol();

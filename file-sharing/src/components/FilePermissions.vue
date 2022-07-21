@@ -16,20 +16,38 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<ModalPopup :showModal="show" headerText="Share Directory Permissions" @apply="apply"
-		@cancel="$emit('hide')">
+	<ModalPopup
+		:showModal="show"
+		headerText="Share Directory Permissions"
+		@apply="apply"
+		@cancel="$emit('hide')"
+	>
 		<div class="flex flex-col space-y-content items-start">
 			<FileModeMatrix v-model="mode" />
 			<div>
 				<label class="block text-sm font-medium">Owner</label>
-				<select class="input-textlike" v-model.number="owner">
-					<option v-for="user in users" :value="user.uid">{{ user.pretty }}</option>
+				<select
+					:class="{ 'input-textlike': true, '!cursor-wait': processingUsersList }"
+					:disabled="processingUsersList"
+					v-model.number="owner"
+				>
+					<option
+						v-for="user in users"
+						:value="user.uid"
+					>{{ user.pretty }}</option>
 				</select>
 			</div>
 			<div>
 				<label class="block text-sm font-medium">Group</label>
-				<select class="input-textlike" v-model.number="group">
-					<option v-for="group in groups" :value="group.gid">{{ group.pretty }}</option>
+				<select
+					:class="{ 'input-textlike': true, '!cursor-wait': processingGroupsList }"
+					:disabled="processingGroupsList"
+					v-model.number="group"
+				>
+					<option
+						v-for="group in groups"
+						:value="group.gid"
+					>{{ group.pretty }}</option>
 				</select>
 			</div>
 		</div>
@@ -37,10 +55,11 @@ If not, see <https://www.gnu.org/licenses/>.
 </template>
 
 <script>
-import { watch, ref } from 'vue';
+import { watch, ref, inject } from 'vue';
 import ModalPopup from "./ModalPopup.vue";
 import FileModeMatrix from "./FileModeMatrix.vue";
 import { useSpawn, errorString, canonicalPath } from "@45drives/cockpit-helpers";
+import { processingUsersListInjectionKey, processingGroupsListInjectionKey } from '../keys';
 export default {
 	props: {
 		show: Boolean,
@@ -57,6 +76,8 @@ export default {
 		const mode = ref(0);
 		const owner = ref(0);
 		const group = ref(0);
+		const processingUsersList = inject(processingUsersListInjectionKey) ?? ref(false);
+		const processingGroupsList = inject(processingGroupsListInjectionKey) ?? ref(false);
 
 		const getPermissions = async () => {
 			try {
@@ -105,6 +126,8 @@ export default {
 			mode,
 			owner,
 			group,
+			processingUsersList,
+			processingGroupsList,
 			apply,
 		}
 	},

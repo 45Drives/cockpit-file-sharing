@@ -27,14 +27,18 @@ If not, see <https://www.gnu.org/licenses/>.
 		:notificationFIFO="notificationFIFO"
 		ref="notifications"
 	/>
-	<WhatsNew localStorageKey="cockpit-file-sharing-show-whats-new-3.2.0-update" class="text-default">
+	<WhatsNew
+		localStorageKey="cockpit-file-sharing-show-whats-new-3.2.0-update"
+		class="text-default"
+	>
 		<div>
 			<p>A lot has changed since cockpit-file-sharing v2.4.5.</p>
 			<p>See our <a
 					class="text-link"
 					href="https://github.com/45drives/cockpit-file-sharing"
 				>GitHub page</a> for full details of features</p>
-			<div class="text-sm px-4 py-2 m-2 bg-accent shadow-inner dark:shadow-none border dark:border-none border-default">
+			<div
+				class="text-sm px-4 py-2 m-2 bg-accent shadow-inner dark:shadow-none border dark:border-none border-default">
 				<ul class="list-disc list-inside">
 					<li>Improved UX with Vue and tailwindcss</li>
 					<li>Moved user & group management to <a
@@ -58,13 +62,20 @@ import NfsManager from './components/NfsManager.vue';
 import Notifications from './components/Notifications.vue';
 import WhatsNew from './components/WhatsNew.vue';
 import { onMounted, provide, ref } from 'vue';
-import { notificationsInjectionKey } from './keys';
+import { notificationsInjectionKey, usersInjectionKey, groupsInjectionKey, processingUsersListInjectionKey, processingGroupsListInjectionKey } from './keys';
 import { FIFO } from '@45drives/cockpit-helpers';
+import useUserGroupLists from './composables/useUserGroupLists';
 
 const props = defineProps({ notificationFIFO: FIFO });
 
 const notifications = ref(null);
 provide(notificationsInjectionKey, notifications);
+
+const { users, groups, processingUsersList, processingGroupsList } = useUserGroupLists();
+provide(usersInjectionKey, users);
+provide(groupsInjectionKey, groups);
+provide(processingUsersListInjectionKey, processingUsersList);
+provide(processingGroupsListInjectionKey, processingGroupsList);
 
 const tabs = ref([{ title: 'Samba', component: SambaManager }, { title: 'NFS', component: NfsManager }]);
 </script>
