@@ -206,7 +206,6 @@ export default {
 			try {
 				const smbConfFile = cockpit.file("/etc/samba/smb.conf", { superuser: 'try' });
 				const smbConf = await smbConfFile.read();
-				smbConfFile.close();
 				const globalSectionText = smbConf.match(/^\s*\[ ?global ?\].*$(?:\n^(?!\s*\[).*$)*/mi)?.[0];
 				if (!globalSectionText || !/^[\t ]*include[\t ]*=[\t ]*registry/m.test(globalSectionText)) {
 					notifications.value.constructNotification(
@@ -218,8 +217,8 @@ export default {
 						try {
 							await smbConfFile.modify((content) => {
 								return globalSectionText
-									? content.replace(/^\s*\[ ?global ?\]\s*$(?:\n^(?!;?\s*\[).*$)*/mi, "$&\n\tinclude = registry # inserted by cockpit-file-sharing\n")
-									: "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + (content ?? "");
+									? content.replace(/^\s*\[ ?global ?\]\s*$(?:\n^(?!;?\s*\[).*$)*/mi, "$&\n\t# inclusion of net registry, inserted by cockpit-file-sharing:\n\tinclude = registry\n")
+									: "[global] # inserted by cockpit-file-sharing\n\t# inclusion of net registry, inserted by cockpit-file-sharing:\n\tinclude = registry\n" + (content ?? "");
 							});
 							await useSpawn(['smbcontrol', 'all', 'reload-config'], { superuser: 'try' }).promise();
 						} catch (error) {
@@ -229,6 +228,10 @@ export default {
 						}
 					});
 				}
+				// fix end of line comment from previous version of file sharing
+				smbConfFile.modify(content =>
+					content.replace('include = registry # inserted by cockpit-file-sharing', '# inclusion of net registry, inserted by cockpit-file-sharing:\n\tinclude = registry')
+				);
 			} catch (error) {
 				notifications.value.constructNotification("Failed to validate /etc/samba/smb.conf: ", errorStringHTML(error), 'error');
 			} finally {
