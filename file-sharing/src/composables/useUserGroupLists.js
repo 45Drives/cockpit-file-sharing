@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onBeforeMount, onUnmounted } from 'vue';
 import { useSpawn, errorString } from '@45drives/cockpit-helpers';
 
 const spawnOpts = {
@@ -26,23 +26,20 @@ const parseRecord = (type, domain) => (record) => {
 
 const getent = async (db) => {
 	const [name, wbinfoFlag] = db === 'passwd' ? ['user', '-u'] : ['group', '-g'];
-	const entries = [];
 	const procs = [];
-	try {
-		procs.push(
-			useSpawn(['getent', '-s', 'files', db], spawnOpts).promise()
-				.then(({ stdout: getentDb }) => entries.push(
-					...getentDb.trim()
-						.split('\n')
-						.map(parseRecord(name, false))
-						.filter(user => user !== null)
-				))
-		);
-		const domainItemNames = (await useSpawn(['wbinfo', wbinfoFlag], spawnOpts).promise()).stdout
-			.trim()
-			.split('\n');
-		if (domainItemNames.length) {
-			// limit number of queries per execution of getent to avoid sending too much data and causing ws disconnect
+	procs.push(
+		useSpawn(['getent', '-s', 'files', db], spawnOpts).promise()
+			.then(({ stdout: getentDb }) =>
+				getentDb.trim()
+					.split('\n')
+					.map(parseRecord(name, false))
+			)
+	);
+	await useSpawn(['wbinfo', wbinfoFlag], spawnOpts).promise()
+		.then(({ stdout }) => {
+			const domainItemNames = stdout.trim().split('\n');
+			// limit number of queries per execution of getent to avoid
+			// sending too much data and causing cockpit ws to drop connection
 			const partitionSize = 1000;
 			for (let i = 0; i < domainItemNames.length; i += partitionSize) {
 				procs.push(
@@ -51,19 +48,19 @@ const getent = async (db) => {
 							console.error('getent error while getting domain entries:', state);
 							return state;
 						})
-						.then(({ stdout: getentDb }) => entries.push(
-							...getentDb.trim()
+						.then(({ stdout: getentDb }) =>
+							getentDb.trim()
 								.split('\n')
 								.map(parseRecord(name, true))
-								.filter(item => item !== null)
-						))
+						)
 				);
 			}
-			await Promise.all(procs);
-		}
-	} finally {
-		return entries.sort((a, b) => a.pretty.localeCompare(b.pretty));
-	}
+		})
+		.catch(e => console.warn(`Error getting list of ${name}s from domain. wbinfo:`, errorString(e)));
+	return await Promise.all(procs)
+		.then(nestedEntries =>
+			nestedEntries.flat().filter(entry => entry !== null).sort((a, b) => a.pretty.localeCompare(b.pretty))
+		);
 }
 
 /**
@@ -114,19 +111,17 @@ export default function useUserGroupLists() {
 		}
 	}
 
-	aquireUserList();
-	aquireGroupList();
-
-	onMounted(() => {
+	onBeforeMount(() => {
+		// cockpit.file.watch callbacks are always called once when initialized
 		cockpitWatchHandles.push(
 			cockpit.file('/etc/passwd', { superuser: 'try' }).watch(() => aquireUserList(), { read: false }),
-			cockpit.file('/etc/group', { superuser: 'try' }).watch(() => aquireGroupList(), { read: false }),
+			cockpit.file('/etc/group', { superuser: 'try' }).watch(() => aquireGroupList(), { read: false })
 		)
 	});
 
 	onUnmounted(() => {
 		cockpitWatchHandles.forEach(handle => handle?.remove?.())
-	})
+	});
 
 	return {
 		users,
