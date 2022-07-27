@@ -664,7 +664,7 @@ export default {
 		const checkIfCeph = async () => {
 			try {
 				const cephXattr =
-					(await useSpawn(['getfattr', '-n', 'ceph.dir.rctime', tmpShare.path]).promise()).stdout;
+					(await useSpawn(['getfattr', '-n', 'ceph.dir.rctime', tmpShare.path], { superuser: 'try' }).promise()).stdout;
 				if (cephXattr !== "") {
 					isCeph.value = true;
 				} else {
