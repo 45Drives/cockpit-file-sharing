@@ -1,3 +1,4 @@
-## Cockpit File Sharing 3.2.1-1
+## Cockpit File Sharing 3.2.2-1
 
-* Fix bug where cockpit-ws kills session while querying too many groups with getent
+* Remove end of line comment in automatically inserted content of smb.conf
+* Optimize getting users and groups from domain

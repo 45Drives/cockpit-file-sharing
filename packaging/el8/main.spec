@@ -27,6 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Jul 27 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.2-1
+- Remove end of line comment in automatically inserted content of smb.conf
+- Optimize getting users and groups from domain
 * Wed Jul 20 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.1-1
 - Fix bug where cockpit-ws kills session while querying too many groups with getent
 * Wed Jul 06 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.0-1
