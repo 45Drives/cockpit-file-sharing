@@ -83,9 +83,8 @@ import LoadingSpinner from "./LoadingSpinner.vue";
 import { ref, reactive, inject, onBeforeUnmount } from "vue";
 import { NfsExportSyntax } from "@45drives/cockpit-syntaxes";
 import { useSpawn, errorString, errorStringHTML, fileDownload } from "@45drives/cockpit-helpers";
-import { getUsers, getGroups } from "../functions";
 import Table from "./Table.vue";
-import { notificationsInjectionKey } from "../keys";
+import { notificationsInjectionKey, usersInjectionKey, groupsInjectionKey } from "../keys";
 import ModalPopup from "./ModalPopup.vue";
 
 export default {
@@ -94,8 +93,8 @@ export default {
 		const processing = ref(0);
 		const showAddShare = ref(false);
 		const exportsFile = reactive(cockpit.file("/etc/exports.d/cockpit-file-sharing.exports", { superuser: 'try', syntax: NfsExportSyntax }));
-		const users = ref([]);
-		const groups = ref([]);
+		const users = inject(usersInjectionKey);
+		const groups = inject(groupsInjectionKey);
 		const notifications = inject(notificationsInjectionKey);
 
 		const confirmationModal = reactive({
@@ -131,33 +130,9 @@ export default {
 			}
 		};
 
-		const getUserList = async () => {
-			processing.value++;
-			try {
-				users.value = await getUsers();
-			} catch (error) {
-				notifications.value.constructNotification("Failed to get users", errorStringHTML(error), 'error', 0);
-			} finally {
-				processing.value--;
-			}
-		}
-
-		const getGroupList = async () => {
-			processing.value++;
-			try {
-				groups.value = await getGroups();
-			} catch (error) {
-				notifications.value.constructNotification("Failed to get groups", errorStringHTML(error), 'error', 0);
-			} finally {
-				processing.value--;
-			}
-		}
-
 		const init = async () => {
 			const procs = [];
 			procs.push(loadShares());
-			procs.push(getUserList());
-			procs.push(getGroupList());
 			for (let proc of procs)
 				await proc;
 		};
@@ -266,13 +241,6 @@ export default {
 			const filename = `cockpit-file-sharing_nfs_exported_${date.toISOString().replace(/:/g, '-').replace(/T/, '_')}.exports`;
 			fileDownload(exportsFile.path, filename);
 		}
-
-		const watchHandles = [];
-
-		watchHandles.push(cockpit.file('/etc/group', { superuser: 'try' }).watch(() => getGroupList(), { read: false }));
-		watchHandles.push(cockpit.file('/etc/passwd', { superuser: 'try' }).watch(() => getUserList(), { read: false }));
-		
-		onBeforeUnmount(() => watchHandles.map(handle => handle?.remove?.()));
 
 		return {
 			shares,

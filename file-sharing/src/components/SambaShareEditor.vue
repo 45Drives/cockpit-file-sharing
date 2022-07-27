@@ -17,55 +17,119 @@ If not, see <https://www.gnu.org/licenses/>.
 
 <template>
 	<div class="space-y-content text-base">
-		<div class="text-header" v-if="!share">New Share</div>
+		<div
+			class="text-header"
+			v-if="!share"
+		>New Share</div>
 		<div>
 			<label class="block text-label">Share Name</label>
-			<input type="text" name="name" class="w-full input-textlike" placeholder="A unique name for your share"
-				v-model="tmpShare.name" :disabled="share" autocomplete="off" />
-			<div class="feedback-group" v-if="feedback.name">
+			<input
+				type="text"
+				name="name"
+				class="w-full input-textlike"
+				placeholder="A unique name for your share"
+				v-model="tmpShare.name"
+				:disabled="share"
+				autocomplete="off"
+			/>
+			<div
+				class="feedback-group"
+				v-if="feedback.name"
+			>
 				<ExclamationCircleIcon class="size-icon icon-error" />
 				<span class="text-feedback text-error">{{ feedback.name }}</span>
 			</div>
 		</div>
 		<div>
 			<label class="block text-label">Share Description</label>
-			<input type="text" name="description" class="w-full input-textlike" placeholder="Describe your share"
-				v-model="tmpShare.comment" />
+			<input
+				type="text"
+				name="description"
+				class="w-full input-textlike"
+				placeholder="Describe your share"
+				v-model="tmpShare.comment"
+			/>
 		</div>
 		<div>
 			<label class="block text-label">Path</label>
-			<input type="text" name="path" class="w-full input-textlike disabled:cursor-not-allowed"
-				placeholder="Share path/directory" v-model="tmpShare.path" :disabled="share !== null"
-				@change="tmpShare.path = canonicalPath(tmpShare.path)" />
-			<div class="feedback-group" v-if="feedback.path">
+			<input
+				type="text"
+				name="path"
+				class="w-full input-textlike disabled:cursor-not-allowed"
+				placeholder="Share path/directory"
+				v-model="tmpShare.path"
+				:disabled="share !== null"
+				@change="tmpShare.path = canonicalPath(tmpShare.path)"
+			/>
+			<div
+				class="feedback-group"
+				v-if="feedback.path"
+			>
 				<ExclamationCircleIcon class="size-icon icon-error" />
 				<span class="text-feedback text-error">{{ feedback.path }}</span>
 			</div>
-			<div v-else class="feedback-group">
-				<ExclamationIcon v-if="!pathExists" class="size-icon icon-warning" />
-				<span v-if="!pathExists" class="text-feedback text-warning">Path does not exist.</span>
-				<button v-if="!pathExists" class="text-feedback text-warning underline" @click="createDir">Create
+			<div
+				v-else
+				class="feedback-group"
+			>
+				<ExclamationIcon
+					v-if="!pathExists"
+					class="size-icon icon-warning"
+				/>
+				<span
+					v-if="!pathExists"
+					class="text-feedback text-warning"
+				>Path does not exist.</span>
+				<button
+					v-if="!pathExists"
+					class="text-feedback text-warning underline"
+					@click="createDir"
+				>Create
 					now</button>
-				<button v-else class="text-feedback text-primary" @click="showPermissionsEditor = true">Edit
+				<button
+					v-else
+					class="text-feedback text-primary"
+					@click="showPermissionsEditor = true"
+				>Edit
 					Permissions</button>
-				<FilePermissions :show="showPermissionsEditor" :path="tmpShare.path" :users="users" :groups="groups"
+				<FilePermissions
+					:show="showPermissionsEditor"
+					:path="tmpShare.path"
+					:users="users"
+					:groups="groups"
 					:onError="error => notifications.constructNotification(error.name, error.message, 'error')"
-					@hide="showPermissionsEditor = false" />
+					@hide="showPermissionsEditor = false"
+				/>
 			</div>
-			<div v-if="isCeph && cephNotRemounted && share !== null" class="feedback-group">
+			<div
+				v-if="isCeph && cephNotRemounted && share !== null"
+				class="feedback-group"
+			>
 				<ExclamationIcon class="size-icon icon-warning" />
 				<span class="text-feedback text-warning">Ceph filesystem not remounted at share.</span>
-				<button class="text-feedback text-warning underline" @click="remountCeph()"
-					:disabled="cephOptions.fixMountRunning">Fix now</button>
+				<button
+					class="text-feedback text-warning underline"
+					@click="remountCeph()"
+					:disabled="cephOptions.fixMountRunning"
+				>Fix now</button>
 				<InfoTip>
 					When creating a Ceph share, a new filesystem mount point is created on top of the share directory.
 					This is needed for Windows to properly report quotas through Samba.
 				</InfoTip>
-				<LoadingSpinner v-if="cephOptions.fixMountRunning" class="ml-2 size-icon" />
+				<LoadingSpinner
+					v-if="cephOptions.fixMountRunning"
+					class="ml-2 size-icon"
+				/>
 			</div>
 		</div>
-		<div v-if="isCeph && cephNotRemounted && share === null" class="flex flex-row items-center">
-			<LabelledSwitch v-model="cephOptions.enableRemount" class="grow sm:grow-0">
+		<div
+			v-if="isCeph && cephNotRemounted && share === null"
+			class="flex flex-row items-center"
+		>
+			<LabelledSwitch
+				v-model="cephOptions.enableRemount"
+				class="grow sm:grow-0"
+			>
 				<span class="inline-flex items-center">
 					<span>Enable Ceph remount</span>
 					<InfoTip>
@@ -79,67 +143,112 @@ If not, see <https://www.gnu.org/licenses/>.
 		<div v-if="isCeph">
 			<label class="block text-label">Ceph Quota</label>
 			<div class="relative rounded-md shadow-sm inline">
-				<input type="number" class="pr-12 input-textlike w-full sm:w-auto" placeholder="0.00"
-					v-model="cephOptions.quotaValue" />
+				<input
+					type="number"
+					class="pr-12 input-textlike w-full sm:w-auto"
+					placeholder="0.00"
+					v-model="cephOptions.quotaValue"
+				/>
 				<div class="absolute inset-y-0 right-0 flex items-center">
 					<label class="sr-only">Unit</label>
-					<select class="input-textlike border-transparent bg-transparent"
-						v-model="cephOptions.quotaMultiplier">
+					<select
+						class="input-textlike border-transparent bg-transparent"
+						v-model="cephOptions.quotaMultiplier"
+					>
 						<option :value="1024 ** 2">MiB</option>
 						<option :value="1024 ** 3">GiB</option>
 						<option :value="1024 ** 4">TiB</option>
 					</select>
 				</div>
 			</div>
-			<div class="feedback-group" v-if="feedback.cephQuota">
+			<div
+				class="feedback-group"
+				v-if="feedback.cephQuota"
+			>
 				<ExclamationCircleIcon class="size-icon icon-error" />
 				<span class="text-feedback text-error">{{ feedback.cephQuota }}</span>
 			</div>
 		</div>
 		<div v-if="isCeph">
 			<label class="block text-label">Ceph Layout Pool</label>
-			<select class="input-textlike disabled:cursor-not-allowed w-full sm:w-auto" v-model="cephOptions.layoutPool"
-				:disabled="share !== null">
+			<select
+				class="input-textlike disabled:cursor-not-allowed w-full sm:w-auto"
+				v-model="cephOptions.layoutPool"
+				:disabled="share !== null"
+			>
 				<option value>Select a Pool</option>
-				<option v-for="(pool, index) in cephLayoutPools" :value="pool">{{ pool }}</option>
+				<option
+					v-for="(pool, index) in cephLayoutPools"
+					:value="pool"
+				>{{ pool }}</option>
 			</select>
 		</div>
-		<div class="space-y-content"
-			:style="{ 'max-height': !shareWindowsAcls ? '500px' : '0', transition: !shareWindowsAcls ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out', overflow: 'hidden' }">
+		<div
+			class="space-y-content"
+			:style="{ 'max-height': !shareWindowsAcls ? '500px' : '0', transition: !shareWindowsAcls ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out', overflow: 'hidden' }"
+		>
 			<div>
 				<label class="text-label flex flex-row space-x-2">
 					<span>Valid Users</span>
 					<InfoTip>By default, any user and group can join a share. If a "valid user" or "valid group" is
 						added, it then acts as a whitelist.</InfoTip>
 				</label>
-				<PillList :list="shareValidUsers" @remove-item="removeValidUser" />
-				<DropdownSelector :options="users" placeholder="Add User" @select="addValidUser"
-					class="w-full sm:w-auto" />
+				<PillList
+					:list="shareValidUsers"
+					@remove-item="removeValidUser"
+				/>
+				<DropdownSelector
+					:options="users"
+					placeholder="Add User"
+					@select="addValidUser"
+					:disabled="processingUsersList"
+					:class="{ 'w-full sm:w-auto': true, '!cursor-wait': processingUsersList }"
+				/>
 			</div>
 			<div>
 				<label class="block text-label">Valid Groups</label>
-				<PillList :list="shareValidGroups" @remove-item="removeValidGroup" />
-				<DropdownSelector :options="groups" placeholder="Add Group" @select="addValidGroup"
-					class="w-full sm:w-auto" />
+				<PillList
+					:list="shareValidGroups"
+					@remove-item="removeValidGroup"
+				/>
+				<DropdownSelector
+					:options="groups"
+					placeholder="Add Group"
+					@select="addValidGroup"
+					:disabled="processingGroupsList"
+					:class="{ 'w-full sm:w-auto': true, '!cursor-wait': processingGroupsList }"
+				/>
 			</div>
 		</div>
 		<div class="inline-flex flex-col items-stretch gap-content w-full sm:w-auto">
 			<LabelledSwitch v-model="tmpShare['guest ok']">Guest OK</LabelledSwitch>
 			<LabelledSwitch v-model="tmpShare['read only']">Read Only</LabelledSwitch>
 			<LabelledSwitch v-model="tmpShare['browseable']">Browseable</LabelledSwitch>
-			<LabelledSwitch v-model="shareWindowsAcls" @change="value => switchWindowsAcls(value)">
+			<LabelledSwitch
+				v-model="shareWindowsAcls"
+				@change="value => switchWindowsAcls(value)"
+			>
 				Windows ACLs
 				<template #description>Administer share permissions from Windows</template>
 			</LabelledSwitch>
-			<LabelledSwitch v-model="shareShadowCopy" @change="value => switchShadowCopy(value)">
+			<LabelledSwitch
+				v-model="shareShadowCopy"
+				@change="value => switchShadowCopy(value)"
+			>
 				Shadow Copy
 				<template #description>Expose per-file snapshots to users</template>
 			</LabelledSwitch>
-			<LabelledSwitch v-model="shareMacOsShare" @change="value => switchMacOsShare(value)">
+			<LabelledSwitch
+				v-model="shareMacOsShare"
+				@change="value => switchMacOsShare(value)"
+			>
 				MacOS Share
 				<template #description>Optimize share for MacOS</template>
 			</LabelledSwitch>
-			<LabelledSwitch v-model="shareAuditLogs" @change="value => switchAuditLogs(value)">
+			<LabelledSwitch
+				v-model="shareAuditLogs"
+				@change="value => switchAuditLogs(value)"
+			>
 				Audit Logs
 				<template #description>Turn on audit logging</template>
 			</LabelledSwitch>
@@ -149,24 +258,46 @@ If not, see <https://www.gnu.org/licenses/>.
 				Advanced Settings
 				<ChevronDownIcon
 					:style="{ display: 'inline-block', transition: '0.5s', transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0)' }"
-					class="size-icon-sm" />
+					class="size-icon-sm"
+				/>
 			</label>
 		</div>
 		<div
 			:style="{ 'max-height': showAdvanced ? '500px' : '0', transition: showAdvanced ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out', overflow: 'hidden' }">
-			<textarea name="advanced-settings" rows="4" v-model="shareAdvancedSettingsStr" class="w-full input-textlike"
-				@change="setAdvancedToggleStates" placeholder="key = value" />
+			<textarea
+				name="advanced-settings"
+				rows="4"
+				v-model="shareAdvancedSettingsStr"
+				class="w-full input-textlike"
+				@change="setAdvancedToggleStates"
+				placeholder="key = value"
+			/>
 		</div>
 		<div class="button-group-row justify-end">
-			<button class="btn btn-secondary" @click="cancel">Cancel</button>
-			<button class="btn btn-primary" @click="apply" :disabled="!inputsValid">Confirm</button>
+			<button
+				class="btn btn-secondary"
+				@click="cancel"
+			>Cancel</button>
+			<button
+				class="btn btn-primary"
+				@click="apply"
+				:disabled="!inputsValid"
+			>Confirm</button>
 		</div>
-		<ModalPopup :showModal="cephOptions.showMountOptionsModal" headerText="Ceph Remount Options"
-			cancelText="Do not remount" @apply="cephOptions.mountOptionsApplyCallback"
-			@cancel="cephOptions.mountOptionsCancelCallback">
+		<ModalPopup
+			:showModal="cephOptions.showMountOptionsModal"
+			headerText="Ceph Remount Options"
+			cancelText="Do not remount"
+			@apply="cephOptions.mountOptionsApplyCallback"
+			@cancel="cephOptions.mountOptionsCancelCallback"
+		>
 			<div class="block">Could not automatically determine options for remounting Ceph at share point. Enter
 				options below.</div>
-			<input type="text" class="w-full input-textlike" v-model="cephOptions.mountOptions" />
+			<input
+				type="text"
+				class="w-full input-textlike"
+				v-model="cephOptions.mountOptions"
+			/>
 		</ModalPopup>
 	</div>
 </template>
@@ -180,7 +311,7 @@ import { ref, reactive, watch, inject, onMounted } from "vue";
 import { useSpawn, errorStringHTML, canonicalPath, systemdUnitEscape } from "@45drives/cockpit-helpers";
 import ModalPopup from "./ModalPopup.vue";
 import InfoTip from "./InfoTip.vue";
-import { notificationsInjectionKey } from "../keys";
+import { notificationsInjectionKey, processingUsersListInjectionKey, processingGroupsListInjectionKey } from "../keys";
 import LabelledSwitch from "./LabelledSwitch.vue";
 import { whitespaceDelimiterRegex } from "@45drives/regex";
 import LoadingSpinner from "./LoadingSpinner.vue";
@@ -212,6 +343,8 @@ export default {
 		const shareAuditLogs = ref(false);
 		const isCeph = ref(false);
 		const cephNotRemounted = ref(false);
+		const processingUsersList = inject(processingUsersListInjectionKey) ?? ref(false);
+		const processingGroupsList = inject(processingGroupsListInjectionKey) ?? ref(false);
 		const cephOptions = reactive({
 			quotaValue: 0,
 			quotaMultiplier: 0,
@@ -531,7 +664,7 @@ export default {
 		const checkIfCeph = async () => {
 			try {
 				const cephXattr =
-					(await useSpawn(['getfattr', '-n', 'ceph.dir.rctime', tmpShare.path]).promise()).stdout;
+					(await useSpawn(['getfattr', '-n', 'ceph.dir.rctime', tmpShare.path], { superuser: 'try' }).promise()).stdout;
 				if (cephXattr !== "") {
 					isCeph.value = true;
 				} else {
@@ -909,6 +1042,8 @@ WantedBy=remote-fs.target
 			canonicalPath, // for calling in template
 			notifications,
 			showPermissionsEditor,
+			processingUsersList,
+			processingGroupsList,
 		};
 	},
 	components: {

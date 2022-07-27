@@ -19,6 +19,7 @@ If not, see <https://www.gnu.org/licenses/>.
 	<select
 		@change="select($event)"
 		class="input-textlike"
+		:disabled="disabled"
 	>
 		<option value disabled selected hidden>{{ placeholder }}</option>
 		<option v-for="(option, index) in options" :value="index">{{ option?.pretty ?? option }}</option>
@@ -30,6 +31,11 @@ export default {
 	props: {
 		placeholder: String,
 		options: Array,
+		disabled: {
+			type: Boolean,
+			required: false,
+			default: false,
+		}
 	},
 	setup(props, { emit }) {
 		const select = (e) => {

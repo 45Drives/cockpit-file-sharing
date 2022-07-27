@@ -103,9 +103,8 @@ import SambaShareManagement from "./SambaShareManagement.vue";
 import SambaGlobalManagement from "./SambaGlobalManagement.vue";
 import { useSpawn, errorString, errorStringHTML, processOutputDownload } from "@45drives/cockpit-helpers";
 import { ref, reactive, watch, inject, onBeforeUnmount } from "vue";
-import { getUsers, getGroups } from "../functions";
 import LoadingSpinner from "./LoadingSpinner.vue";
-import { notificationsInjectionKey } from "../keys";
+import { notificationsInjectionKey, usersInjectionKey, groupsInjectionKey } from "../keys";
 import ModalPopup from "./ModalPopup.vue";
 import InfoTip from "./InfoTip.vue";
 
@@ -113,8 +112,8 @@ export default {
 	setup(props, ctx) {
 		const shares = ref([]);
 		const globalConfig = reactive({ advancedSettings: [] });
-		const users = ref([]);
-		const groups = ref([]);
+		const users = inject(usersInjectionKey);
+		const groups = inject(groupsInjectionKey);
 		const ctdbHosts = ref([]);
 		const cephLayoutPools = ref([]);
 		const processing = ref(0);
@@ -202,34 +201,11 @@ export default {
 			}
 		};
 
-		const getUserList = async () => {
-			processing.value++;
-			try {
-				users.value = await getUsers();
-			} catch (error) {
-				notifications.value.constructNotification("Failed to get users", errorStringHTML(error), 'error');
-			} finally {
-				processing.value--;
-			}
-		}
-
-		const getGroupList = async () => {
-			processing.value++;
-			try {
-				groups.value = await getGroups();
-			} catch (error) {
-				notifications.value.constructNotification("Failed to get groups", errorStringHTML(error), 'error');
-			} finally {
-				processing.value--;
-			}
-		}
-
 		const checkConf = async () => {
 			processing.value++;
 			try {
 				const smbConfFile = cockpit.file("/etc/samba/smb.conf", { superuser: 'try' });
 				const smbConf = await smbConfFile.read();
-				smbConfFile.close();
 				const globalSectionText = smbConf.match(/^\s*\[ ?global ?\].*$(?:\n^(?!\s*\[).*$)*/mi)?.[0];
 				if (!globalSectionText || !/^[\t ]*include[\t ]*=[\t ]*registry/m.test(globalSectionText)) {
 					notifications.value.constructNotification(
@@ -241,8 +217,8 @@ export default {
 						try {
 							await smbConfFile.modify((content) => {
 								return globalSectionText
-									? content.replace(/^\s*\[ ?global ?\]\s*$(?:\n^(?!;?\s*\[).*$)*/mi, "$&\n\tinclude = registry # inserted by cockpit-file-sharing\n")
-									: "[global] # inserted by cockpit-file-sharing\n\tinclude = registry # inserted by cockpit-file-sharing\n" + (content ?? "");
+									? content.replace(/^\s*\[ ?global ?\]\s*$(?:\n^(?!;?\s*\[).*$)*/mi, "$&\n\t# inclusion of net registry, inserted by cockpit-file-sharing:\n\tinclude = registry\n")
+									: "[global] # inserted by cockpit-file-sharing\n\t# inclusion of net registry, inserted by cockpit-file-sharing:\n\tinclude = registry\n" + (content ?? "");
 							});
 							await useSpawn(['smbcontrol', 'all', 'reload-config'], { superuser: 'try' }).promise();
 						} catch (error) {
@@ -252,6 +228,10 @@ export default {
 						}
 					});
 				}
+				// fix end of line comment from previous version of file sharing
+				smbConfFile.modify(content =>
+					content.replace('include = registry # inserted by cockpit-file-sharing', '# inclusion of net registry, inserted by cockpit-file-sharing:\n\tinclude = registry')
+				);
 			} catch (error) {
 				notifications.value.constructNotification("Failed to validate /etc/samba/smb.conf: ", errorStringHTML(error), 'error');
 			} finally {
@@ -296,15 +276,11 @@ export default {
 			processing.value++;
 			try {
 				const procs = [];
-				procs.push(parseNetConf());
-				procs.push(getUserList());
-				procs.push(getGroupList());
+				procs.push(parseNetConf().then(() => shares.value.sort((a, b) => a.name.localeCompare(b.name))));
 				procs.push(checkConf());
 				procs.push(getCtdbHosts());
 				procs.push(getCephLayoutPools());
-				for (let proc of procs)
-					await proc;
-				shares.value.sort((a, b) => a.name.localeCompare(b.name));
+				await Promise.all(procs);
 			} finally {
 				processing.value--;
 			}
@@ -436,8 +412,6 @@ export default {
 
 		const watchHandles = [];
 
-		watchHandles.push(cockpit.file('/etc/group', { superuser: 'try' }).watch(() => getGroupList(), { read: false }));
-		watchHandles.push(cockpit.file('/etc/passwd', { superuser: 'try' }).watch(() => getUserList(), { read: false }));
 		watchHandles.push(cockpit.file('/etc/ctdb/nodes', { superuser: 'try' }).watch(() => getCtdbHosts(), { read: false }));
 
 		onBeforeUnmount(() => watchHandles.map(handle => handle?.remove?.()));
@@ -452,8 +426,6 @@ export default {
 			ctdbHosts,
 			cephLayoutPools,
 			parseNetConf,
-			getUserList,
-			getGroupList,
 			refresh,
 			uploadConfig,
 			importConfigUploadCallback,
