@@ -1,4 +1,3 @@
-## Cockpit File Sharing 3.2.2-1
+## Cockpit File Sharing 3.2.3-1
 
-* Remove end of line comment in automatically inserted content of smb.conf
-* Optimize getting users and groups from domain
+* Fixed issue saving NFS exports file when /etc/exports.d DNE
