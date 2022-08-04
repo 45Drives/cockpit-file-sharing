@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu Aug 04 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.3-1
+- Fixed issue saving NFS exports file when /etc/exports.d DNE
 * Wed Jul 27 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.2-1
 - Remove end of line comment in automatically inserted content of smb.conf
 - Optimize getting users and groups from domain

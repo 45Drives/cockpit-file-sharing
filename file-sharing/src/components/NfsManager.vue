@@ -141,6 +141,7 @@ export default {
 
 		const writeExportsFile = async () => {
 			try {
+				await useSpawn(['mkdir', '-p', '/etc/exports.d'], { superuser: 'try' }).promise();
 				await exportsFile.replace(shares.value);
 			} catch (error) {
 				error.message = `Failed to write exports file: ${errorString(error.message)}`;

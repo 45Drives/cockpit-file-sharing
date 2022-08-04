@@ -1,3 +1,9 @@
+cockpit-file-sharing (3.2.3-1focal) focal; urgency=medium
+
+  * Fixed issue saving NFS exports file when /etc/exports.d DNE
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Thu, 04 Aug 2022 13:06:53 -0300
+
 cockpit-file-sharing (3.2.2-1focal) focal; urgency=medium
 
   * Remove end of line comment in automatically inserted content of smb.conf
