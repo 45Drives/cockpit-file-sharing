@@ -1,3 +1,4 @@
-## Cockpit File Sharing 3.2.3-1
+## Cockpit File Sharing 3.2.4-1
 
-* Fixed issue saving NFS exports file when /etc/exports.d DNE
+* Add settings menu for configuring smb.conf and exports file locations
+* Fix parsing "valid users" field for Samba shares

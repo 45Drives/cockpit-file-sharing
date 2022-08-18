@@ -1,3 +1,10 @@
+cockpit-file-sharing (3.2.4-1focal) focal; urgency=medium
+
+  * Add settings menu for configuring smb.conf and exports file locations
+  * Fix parsing "valid users" field for Samba shares
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Thu, 18 Aug 2022 15:05:29 -0300
+
 cockpit-file-sharing (3.2.3-1focal) focal; urgency=medium
 
   * Fixed issue saving NFS exports file when /etc/exports.d DNE

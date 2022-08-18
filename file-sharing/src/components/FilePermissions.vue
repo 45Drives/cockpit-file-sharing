@@ -55,7 +55,7 @@ If not, see <https://www.gnu.org/licenses/>.
 </template>
 
 <script>
-import { watch, ref, inject } from 'vue';
+import { watch, ref, inject, onMounted } from 'vue';
 import ModalPopup from "./ModalPopup.vue";
 import FileModeMatrix from "./FileModeMatrix.vue";
 import { useSpawn, errorString, canonicalPath } from "@45drives/cockpit-helpers";
@@ -118,9 +118,11 @@ export default {
 			emit('hide');
 		}
 
-		watch(() => props.show, (show, lastShow) => {
-			if (show || lastShow === undefined) getPermissions();
-		}, { immediate: true });
+		onMounted(() => {
+			watch(() => props.show, (show, lastShow) => {
+				if (show) getPermissions();
+			}, { immediate: true });
+		});
 
 		return {
 			mode,
