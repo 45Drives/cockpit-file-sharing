@@ -27,6 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu Aug 18 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.4-1
+- Add settings menu for configuring smb.conf and exports file locations
+- Fix parsing "valid users" field for Samba shares
 * Thu Aug 04 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.3-1
 - Fixed issue saving NFS exports file when /etc/exports.d DNE
 * Wed Jul 27 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.2-1
