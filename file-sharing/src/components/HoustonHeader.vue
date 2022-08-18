@@ -33,7 +33,10 @@ If not, see <https://www.gnu.org/licenses/>.
 				</h1>
 			</div>
 			<slot />
-			<LoadingSpinner v-if="showSpinner" class="size-icon self-center" />
+			<LoadingSpinner
+				v-if="showSpinner"
+				class="size-icon self-center"
+			/>
 		</div>
 		<h1
 			class="text-red-800 dark:text-white text-base sm:text-2xl cursor-pointer grow-0 text-center"
@@ -41,19 +44,30 @@ If not, see <https://www.gnu.org/licenses/>.
 		>{{ moduleName }}</h1>
 		<div class="flex basis-32 justify-end items-center grow shrink-0 gap-buttons">
 			<div
-				:class="[infoButtonInHeader ? '' : 'md:fixed md:right-2 md:bottom-2 md:z-50 flex flex-row items-stretch']"
-			>
-				<button @click="showInfo = true">
-					<QuestionMarkCircleIcon class="size-icon icon-default" />
-				</button>
+				:class="[infoButtonInHeader ? '' : 'md:fixed md:right-2 md:bottom-2 md:z-50 flex flex-row items-stretch']">
+				<div class="inline-button-group-row">
+					<Config />
+					<button @click="showInfo = true">
+						<QuestionMarkCircleIcon class="size-icon icon-default" />
+					</button>
+				</div>
 				<div
 					class="overflow-y-auto"
 					:style="{ 'scrollbar-gutter': infoNudgeScrollbar ? 'stable' : 'auto' }"
 				></div>
 			</div>
-			<button @click="darkMode = !darkMode" @click.right.prevent="vape">
-				<SunIcon v-if="darkMode" class="size-icon-lg icon-default" />
-				<MoonIcon v-else class="size-icon-lg icon-default" />
+			<button
+				@click="darkMode = !darkMode"
+				@click.right.prevent="vape"
+			>
+				<SunIcon
+					v-if="darkMode"
+					class="size-icon-lg icon-default"
+				/>
+				<MoonIcon
+					v-else
+					class="size-icon-lg icon-default"
+				/>
 			</button>
 		</div>
 	</div>
@@ -73,8 +87,16 @@ If not, see <https://www.gnu.org/licenses/>.
 					target="_blank"
 				>45Drives</a> for Houston UI (Cockpit)
 			</span>
-			<a class="text-link" :href="sourceURL" target="_blank">Source Code</a>
-			<a class="text-link" :href="issuesURL" target="_blank">Issue Tracker</a>
+			<a
+				class="text-link"
+				:href="sourceURL"
+				target="_blank"
+			>Source Code</a>
+			<a
+				class="text-link"
+				:href="issuesURL"
+				target="_blank"
+			>Issue Tracker</a>
 		</div>
 	</ModalPopup>
 </template>
@@ -87,6 +109,7 @@ import { SunIcon, MoonIcon, QuestionMarkCircleIcon } from "@heroicons/vue/solid"
 import { ref, watch, inject } from "vue";
 import LoadingSpinner from "./LoadingSpinner.vue";
 import ModalPopup from './ModalPopup.vue';
+import Config from "./Config.vue";
 
 export default {
 	props: {
@@ -167,6 +190,7 @@ export default {
 		LoadingSpinner,
 		ModalPopup,
 		QuestionMarkCircleIcon,
+		Config,
 	}
 };
 </script>

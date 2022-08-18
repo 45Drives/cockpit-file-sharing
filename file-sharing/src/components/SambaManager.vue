@@ -65,11 +65,11 @@ If not, see <https://www.gnu.org/licenses/>.
 						@click="importSmbConf"
 						class="btn btn-secondary"
 					>
-						Import configuration from <span class="text-sm font-mono">/etc/samba/smb.conf</span>
+						Import configuration from <span class="text-sm font-mono">{{ config.samba.confPath }}</span>
 					</button>
 					<InfoTip above>
 						File Sharing uses Samba's net registry to configure shares. Click this button to import
-						configuration from <span class="text-sm font-mono">/etc/samba/smb.conf</span> into the net
+						configuration from <span class="text-sm font-mono">{{ config.samba.confPath }}</span> into the net
 						registry for management.
 					</InfoTip>
 				</div>
@@ -107,9 +107,11 @@ import LoadingSpinner from "./LoadingSpinner.vue";
 import { notificationsInjectionKey, usersInjectionKey, groupsInjectionKey } from "../keys";
 import ModalPopup from "./ModalPopup.vue";
 import InfoTip from "./InfoTip.vue";
+import { useConfig } from "./Config.vue";
 
 export default {
 	setup(props, ctx) {
+		const config = useConfig();
 		const shares = ref([]);
 		const globalConfig = reactive({ advancedSettings: [] });
 		const users = inject(usersInjectionKey);
@@ -204,13 +206,13 @@ export default {
 		const checkConf = async () => {
 			processing.value++;
 			try {
-				const smbConfFile = cockpit.file("/etc/samba/smb.conf", { superuser: 'try' });
+				const smbConfFile = cockpit.file(config.samba.confPath, { superuser: 'try' });
 				const smbConf = await smbConfFile.read();
 				const globalSectionText = smbConf.match(/^\s*\[ ?global ?\].*$(?:\n^(?!\s*\[).*$)*/mi)?.[0];
 				if (!globalSectionText || !/^[\t ]*include[\t ]*=[\t ]*registry/m.test(globalSectionText)) {
 					notifications.value.constructNotification(
 						"Samba is Misconfigured",
-						"`include = registry` is missing from the global section of /etc/samba/smb.conf, which is required for File Sharing to manage shares.",
+						`'include = registry' is missing from the global section of ${config.samba.confPath}, which is required for File Sharing to manage shares.`,
 						'error'
 					).addAction("Fix now", async () => {
 						processing.value++;
@@ -235,7 +237,7 @@ export default {
 					);
 				}
 			} catch (error) {
-				notifications.value.constructNotification("Failed to validate /etc/samba/smb.conf: ", errorStringHTML(error), 'error');
+				notifications.value.constructNotification(`Failed to validate ${config.samba.confPath}: `, errorStringHTML(error), 'error');
 			} finally {
 				processing.value--;
 			}
@@ -279,7 +281,6 @@ export default {
 			try {
 				const procs = [];
 				procs.push(parseNetConf().then(() => shares.value.sort((a, b) => a.name.localeCompare(b.name))));
-				procs.push(checkConf());
 				procs.push(getCtdbHosts());
 				procs.push(getCephLayoutPools());
 				await Promise.all(procs);
@@ -316,7 +317,7 @@ export default {
 		}
 
 		const importSmbConf = async () => {
-			const testContent = (await useSpawn(['net', 'conf', 'import', '-T', '/etc/samba/smb.conf'], { superuser: 'try' }).promise()).stdout;
+			const testContent = (await useSpawn(['net', 'conf', 'import', '-T', config.samba.confPath], { superuser: 'try' }).promise()).stdout;
 			if (!await confirmationModal.ask(
 				"This will permanently overwrite current configuration",
 				"New configuration content:\n" +
@@ -331,12 +332,12 @@ export default {
 				return;
 			try {
 				processing.value++;
-				const smbConfFile = cockpit.file("/etc/samba/smb.conf", { superuser: 'try' });
+				const smbConfFile = cockpit.file(config.samba.confPath, { superuser: 'try' });
 				const smbConf = await smbConfFile.read();
 				smbConfFile.close();
 				await importConfig(smbConf);
 			} catch (error) {
-				notifications.value.constructNotification("Failed to read /etc/samba/smb.conf", errorStringHTML(error), 'error');
+				notifications.value.constructNotification(`Failed to read ${config.samba.confPath}`, errorStringHTML(error), 'error');
 				return;
 			} finally {
 				processing.value--;
@@ -344,9 +345,9 @@ export default {
 			await new Promise(resolve => setTimeout(resolve, 300)); // temporary hack until modals are fixed
 			if (await confirmationModal.ask(
 				'Replace smb.conf to avoid conflicts?',
-				'Your original <span class="text-sm font-mono">/etc/samba/smb.conf</span> ' +
+				`Your original <span class="text-sm font-mono">${config.samba.confPath}</span> ` +
 				'will be backed up ' +
-				'to <span class="text-sm font-mono">/etc/samba/smb.conf.bak</span> and replaced with\n' +
+				`to <span class="text-sm font-mono">${config.samba.confPath}.bak</span> and replaced with\n` +
 				'<span class="text-sm font-mono whitespace-pre">\n' +
 				'[global]\n' +
 				'	include = registry\n' +
@@ -355,10 +356,10 @@ export default {
 				false
 			)) {
 				try {
-					const backupDescription = (await useSpawn(['cp', '-v', '--backup=numbered', '/etc/samba/smb.conf', '/etc/samba/smb.conf.bak'], { superuser: 'try' }).promise()).stdout;
+					const backupDescription = (await useSpawn(['cp', '-v', '--backup=numbered', config.samba.confPath, `${config.samba.confPath}.bak`], { superuser: 'try' }).promise()).stdout;
 					notifications.value.constructNotification("Backed up original smb.conf", backupDescription.trim(), 'info');
 					try {
-						await cockpit.file('/etc/samba/smb.conf', { superuser: 'try' }).replace(
+						await cockpit.file(config.samba.confPath, { superuser: 'try' }).replace(
 							'# this config was generated by cockpit-file-sharing after importing smb.conf\n' +
 							`# original smb.conf location:\n` +
 							backupDescription.replace(/^/m, '# ') +
@@ -366,11 +367,11 @@ export default {
 							'	include = registry\n');
 						await useSpawn(['smbcontrol', 'all', 'reload-config'], { superuser: 'try' }).promise();
 					} catch (error) {
-						notifications.value.constructNotification("Failed to replace contents of /etc/samba/smb.conf", errorStringHTML(error), 'error');
+						notifications.value.constructNotification(`Failed to replace contents of ${config.samba.confPath}`, errorStringHTML(error), 'error');
 						return;
 					}
 				} catch (error) {
-					notifications.value.constructNotification("Failed to back up /etc/samba/smb.conf", "Original config is unmodified.\n" + errorStringHTML(error), 'error');
+					notifications.value.constructNotification(`Failed to back up ${config.samba.confPath}`, "Original config is unmodified.\n" + errorStringHTML(error), 'error');
 					return;
 				}
 			}
@@ -412,6 +413,8 @@ export default {
 			processOutputDownload(['net', 'conf', 'list'], filename, { superuser: 'try' });
 		}
 
+		watch(() => config.samba.confPath, () => checkConf(), { immediate: true });
+
 		const watchHandles = [];
 
 		watchHandles.push(cockpit.file('/etc/ctdb/nodes', { superuser: 'try' }).watch(() => getCtdbHosts(), { read: false }));
@@ -419,6 +422,7 @@ export default {
 		onBeforeUnmount(() => watchHandles.map(handle => handle?.remove?.()));
 
 		return {
+			config,
 			shares,
 			globalConfig,
 			users,

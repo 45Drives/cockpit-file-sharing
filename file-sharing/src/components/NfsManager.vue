@@ -16,27 +16,47 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="centered-column p-well space-y-well" :class="{'cursor-wait': processing}">
+	<div
+		class="centered-column p-well space-y-well"
+		:class="{ 'cursor-wait': processing }"
+	>
 		<div class="card">
 			<div class="card-header flex flex-row items-center gap-2">
 				<div class="text-header">Shares</div>
-				<LoadingSpinner v-if="processing" class="size-icon" />
+				<LoadingSpinner
+					v-if="processing"
+					class="size-icon"
+				/>
 			</div>
-			<div class="overflow-hidden"
-				:style="{ 'max-height': showAddShare ? '1500px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }">
+			<div
+				class="overflow-hidden"
+				:style="{ 'max-height': showAddShare ? '1500px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
+			>
 				<div class="card-body">
-					<NfsShareEditor @update-share="addShare" @hide="showAddShare = false" :users="users"
-						:groups="groups" />
+					<NfsShareEditor
+						@update-share="addShare"
+						@hide="showAddShare = false"
+						:users="users"
+						:groups="groups"
+					/>
 				</div>
 			</div>
 			<div :class="[showAddShare ? '' : '!border-t-0', 'card-body p-0 sm:p-6']">
 				<div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
-					<Table emptyText="No shares. Click '+' to add one." shrinkHeight noScroll noHeader
-						class="!border-none !shadow-none">
+					<Table
+						emptyText="No shares. Click '+' to add one."
+						shrinkHeight
+						noScroll
+						noHeader
+						class="!border-none !shadow-none"
+					>
 						<template #thead>
 							<tr>
 								<th scope="col">Path</th>
-								<th scope="col" class="flex flex-row justify-end">
+								<th
+									scope="col"
+									class="flex flex-row justify-end"
+								>
 									<span class="sr-only">Edit/Delete</span>
 									<button @click="showAddShare = !showAddShare">
 										<PlusIcon class="size-icon icon-default" />
@@ -45,9 +65,16 @@ If not, see <https://www.gnu.org/licenses/>.
 							</tr>
 						</template>
 						<template #tbody>
-							<NfsShare v-for="(share, index) in shares" :key="index" :share="shares[index]"
-								:index="index" @delete-share="deleteShare" @update-share="updateShare" :users="users"
-								:groups="groups" />
+							<NfsShare
+								v-for="(share, index) in shares"
+								:key="index"
+								:share="shares[index]"
+								:index="index"
+								@delete-share="deleteShare"
+								@update-share="updateShare"
+								:users="users"
+								:groups="groups"
+							/>
 						</template>
 					</Table>
 				</div>
@@ -56,18 +83,37 @@ If not, see <https://www.gnu.org/licenses/>.
 		<div class="card">
 			<div class="card-header flex flex-row space-x-2 items-center">
 				<div class="text-header">Import/Export Config</div>
-				<LoadingSpinner v-if="processing" class="size-icon" />
+				<LoadingSpinner
+					v-if="processing"
+					class="size-icon"
+				/>
 			</div>
 			<div class="card-body button-group-row">
-				<input @change="importConfig" type="file" id="file-upload" hidden />
-				<button @click="uploadConfig" class="btn btn-primary">Import</button>
-				<button @click="exportConfig" class="btn btn-primary">Export</button>
+				<input
+					@change="importConfig"
+					type="file"
+					id="file-upload"
+					hidden
+				/>
+				<button
+					@click="uploadConfig"
+					class="btn btn-primary"
+				>Import</button>
+				<button
+					@click="exportConfig"
+					class="btn btn-primary"
+				>Export</button>
 			</div>
 		</div>
 	</div>
-	<ModalPopup :showModal="confirmationModal.showModal" @apply="confirmationModal.applyCallback"
-		@cancel="confirmationModal.cancelCallback" applyDangerous applyText="Yes"
-		:headerText="confirmationModal.headerText">
+	<ModalPopup
+		:showModal="confirmationModal.showModal"
+		@apply="confirmationModal.applyCallback"
+		@cancel="confirmationModal.cancelCallback"
+		applyDangerous
+		applyText="Yes"
+		:headerText="confirmationModal.headerText"
+	>
 		<template #icon>
 			<ExclamationCircleIcon class="size-icon-xl icon-danger shrink-0" />
 		</template>
@@ -80,22 +126,25 @@ import NfsShare from "./NfsShare.vue";
 import NfsShareEditor from "./NfsShareEditor.vue";
 import { PlusIcon, XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/solid";
 import LoadingSpinner from "./LoadingSpinner.vue";
-import { ref, reactive, inject, onBeforeUnmount } from "vue";
+import { ref, reactive, inject, onBeforeUnmount, watch } from "vue";
 import { NfsExportSyntax } from "@45drives/cockpit-syntaxes";
 import { useSpawn, errorString, errorStringHTML, fileDownload } from "@45drives/cockpit-helpers";
 import Table from "./Table.vue";
 import { notificationsInjectionKey, usersInjectionKey, groupsInjectionKey } from "../keys";
 import ModalPopup from "./ModalPopup.vue";
+import { useConfig } from "./Config.vue";
 
 export default {
 	setup(props) {
+		const config = useConfig();
 		const shares = ref([]);
 		const processing = ref(0);
 		const showAddShare = ref(false);
-		const exportsFile = reactive(cockpit.file("/etc/exports.d/cockpit-file-sharing.exports", { superuser: 'try', syntax: NfsExportSyntax }));
 		const users = inject(usersInjectionKey);
 		const groups = inject(groupsInjectionKey);
 		const notifications = inject(notificationsInjectionKey);
+		let exportsFile = null;
+		let exportsFileWatchHandle = null;
 
 		const confirmationModal = reactive({
 			showModal: false,
@@ -118,11 +167,10 @@ export default {
 			cancelCallback: () => { },
 		});
 
-		const loadShares = async () => {
+		const loadShares = (sharesOnDisk) => {
 			processing.value++;
 			try {
-				shares.value = await exportsFile.read() ?? [];
-				shares.value.sort((a, b) => a.path.localeCompare(b.path));
+				shares.value = sharesOnDisk.sort((a, b) => a.path.localeCompare(b.path)) ?? [];
 			} catch (error) {
 				notifications.value.constructNotification("Failed to load share configuration", errorStringHTML(error), 'error', 0);
 			} finally {
@@ -130,18 +178,8 @@ export default {
 			}
 		};
 
-		const init = async () => {
-			const procs = [];
-			procs.push(loadShares());
-			for (let proc of procs)
-				await proc;
-		};
-
-		init();
-
 		const writeExportsFile = async () => {
 			try {
-				await useSpawn(['mkdir', '-p', '/etc/exports.d'], { superuser: 'try' }).promise();
 				await exportsFile.replace(shares.value);
 			} catch (error) {
 				error.message = `Failed to write exports file: ${errorString(error.message)}`;
@@ -160,13 +198,14 @@ export default {
 
 		const updateShare = async (share, newShare) => {
 			const oldShare = {};
+			const rollback = [...shares.value];
 			processing.value++;
 			try {
 				if (share) {
 					Object.assign(oldShare, share);
 					Object.assign(share, newShare);
 				} else {
-					shares.value.push({ ...newShare });
+					shares.value = [...shares.value, { ...newShare }];
 				}
 				await writeExportsFile();
 				await validateExportsFile();
@@ -176,7 +215,7 @@ export default {
 				if (share) {
 					Object.assign(share, oldShare);
 				} else {
-					shares.value.pop();
+					shares.value = rollback;
 				}
 				try {
 					await writeExportsFile();
@@ -184,7 +223,6 @@ export default {
 					notifications.value.constructNotification("Failed to revert exports file", errorStringHTML(error), 'error');
 				}
 			} finally {
-				shares.value.sort((a, b) => a.path.localeCompare(b.path));
 				processing.value--;
 			}
 		}
@@ -202,7 +240,6 @@ export default {
 				notifications.value.constructNotification(`Successfully deleted share`, "", 'success');
 			} catch (error) {
 				notifications.value.constructNotification("Failed to delete share", errorStringHTML(error), 'error');
-				loadShares();
 			}
 		}
 
@@ -226,7 +263,6 @@ export default {
 					notifications.value.constructNotification("Failed to import config", errorStringHTML(error), 'error');
 					shares.value = oldShares;
 				}
-				shares.value.sort((a, b) => a.path.localeCompare(b.path));
 				processing.value--;
 			}
 			reader.onerror = (event) => {
@@ -242,6 +278,12 @@ export default {
 			const filename = `cockpit-file-sharing_nfs_exported_${date.toISOString().replace(/:/g, '-').replace(/T/, '_')}.exports`;
 			fileDownload(exportsFile.path, filename);
 		}
+
+		watch(() => config.nfs.confPath, () => {
+			exportsFileWatchHandle?.remove();
+			exportsFile = cockpit.file(config.nfs.confPath, { superuser: 'try', syntax: NfsExportSyntax });
+			exportsFileWatchHandle = exportsFile.watch(loadShares);
+		}, { immediate: true });
 
 		return {
 			shares,
