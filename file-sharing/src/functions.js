@@ -63,3 +63,43 @@ export function strToBool(str) {
 	];
 	return trueStrings.includes(String(str).toLowerCase());
 }
+
+/**
+ * Split string by specified delimiters, ignoring delimiters in quotes
+ * Strips quotes from tokens
+ * @param {string} str - The string to split
+ * @param {string} delims - String of delimiters
+ * @returns {string[]} Array of tokens
+ */
+export function splitQuotedDelim(str, delims) {
+	const state = {
+		singleQuoted: false,
+		doubleQuoted: false,
+		/**
+		 * @type {string[]}
+		 */
+		tokens: [],
+	}
+	return str.split('').reduce((state, char, i, arr) => {
+		if (char === '"' && !state.singleQuoted) {
+			state.doubleQuoted = !state.doubleQuoted;
+		}
+		else if (char === '\'' && !state.doubleQuoted)
+			state.singleQuoted = !state.singleQuoted;
+		else if (delims.includes(char)) {
+			// found delim
+			if (state.doubleQuoted || state.singleQuoted) {
+				// found quoted delim
+				state.tokens.push((state.tokens.pop() ?? "") + char);
+			} else if (!delims.includes(arr[i - 1])) {
+				// start new token if first delim in a row
+				state.tokens.push("");
+			}
+			// else skip char
+		} else {
+			// append char to token
+			state.tokens.push((state.tokens.pop() ?? "") + char);
+		}
+		return state;
+	}, state).tokens;
+}

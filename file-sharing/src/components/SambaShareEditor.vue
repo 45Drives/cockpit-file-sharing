@@ -305,7 +305,7 @@ If not, see <https://www.gnu.org/licenses/>.
 <script>
 import PillList from "./PillList.vue";
 import DropdownSelector from "./DropdownSelector.vue";
-import { splitAdvancedSettings, joinAdvancedSettings, strToBool } from "../functions";
+import { splitAdvancedSettings, joinAdvancedSettings, strToBool, splitQuotedDelim } from "../functions";
 import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
 import { ref, reactive, watch, inject, onMounted } from "vue";
 import { useSpawn, errorStringHTML, canonicalPath, systemdUnitEscape } from "@45drives/cockpit-helpers";
@@ -443,9 +443,7 @@ export default {
 					advancedSettings: []
 				}
 			);
-			tmpShare["valid users"]
-				.match(/(?:[^\s"]+|"[^"]*")+/g)
-				?.map(entity => entity.replace(/^"/, '').replace(/"$/, ''))
+			splitQuotedDelim(tmpShare["valid users"], ', ')
 				.forEach((entity) => {
 					if (entity.at(0) === '@') {
 						const groupName = entity.substring(1);
