@@ -228,10 +228,12 @@ export default {
 						}
 					});
 				}
-				// fix end of line comment from previous version of file sharing
-				smbConfFile.modify(content =>
-					content.replace('include = registry # inserted by cockpit-file-sharing', '# inclusion of net registry, inserted by cockpit-file-sharing:\n\tinclude = registry')
-				);
+				if (/include = registry # inserted by cockpit-file-sharing/.test(smbConf)) {
+					// fix end of line comment from previous version of file sharing
+					smbConfFile.modify(content =>
+						content.replace('include = registry # inserted by cockpit-file-sharing', '# inclusion of net registry, inserted by cockpit-file-sharing:\n\tinclude = registry')
+					);
+				}
 			} catch (error) {
 				notifications.value.constructNotification("Failed to validate /etc/samba/smb.conf: ", errorStringHTML(error), 'error');
 			} finally {
