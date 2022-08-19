@@ -72,20 +72,34 @@ If not, see <https://www.gnu.org/licenses/>.
 				v-else
 				class="feedback-group"
 			>
-				<ExclamationIcon
-					v-if="!pathExists"
-					class="size-icon icon-warning"
-				/>
-				<span
-					v-if="!pathExists"
-					class="text-feedback text-warning"
-				>Path does not exist.</span>
-				<button
-					v-if="!pathExists"
-					class="text-feedback text-warning underline"
-					@click="createDir"
-				>Create
-					now</button>
+				<template v-if="!pathExists">
+					<ExclamationIcon class="size-icon icon-warning" />
+					<span class="text-feedback text-warning">Path does not exist.</span>
+					<button
+						v-if="!isZfs"
+						class="underline text-feedback text-warning"
+						@click="createDir"
+					>
+						Create now
+					</button>
+					<template v-else>
+						<button
+							class="underline text-feedback text-warning"
+							@click="createDir"
+						>
+							Create directory
+						</button>
+						<span class="text-feedback text-warning">
+							or
+						</span>
+						<button
+							class="underline text-feedback text-warning"
+							@click="createZfsDataset"
+						>
+							Create ZFS dataset
+						</button>
+					</template>
+				</template>
 				<button
 					v-else
 					class="text-feedback text-primary"
@@ -342,6 +356,8 @@ export default {
 		const shareMacOsShare = ref(false);
 		const shareAuditLogs = ref(false);
 		const isCeph = ref(false);
+		const isZfs = ref(false);
+		const zfsParent = ref(null);
 		const cephNotRemounted = ref(false);
 		const processingUsersList = inject(processingUsersListInjectionKey) ?? ref(false);
 		const processingGroupsList = inject(processingGroupsListInjectionKey) ?? ref(false);
@@ -418,7 +434,21 @@ export default {
 				await useSpawn(['mkdir', '-p', tmpShare.path], { superuser: 'try' }).promise();
 				tmpShareUpdateCallback();
 			} catch (state) {
-				notifications.constructNotification("Failed to create directory", errorStringHTML(state), 'error');
+				notifications.value.constructNotification("Failed to create directory", errorStringHTML(state), 'error');
+			}
+		}
+
+		const createZfsDataset = async () => {
+			try {
+				if (!isZfs.value)
+					throw new Error('Not a ZFS filesystem!');
+				const filesystem = (await useSpawn(['zfs', 'get', 'name', zfsParent.value, '-o', 'value', '-H'], { superuser: 'try' }).promise()).stdout.trim();
+				const dataset = tmpShare.path.replace(new RegExp(`^${zfsParent.value}`), filesystem);
+				console.log('ZFS: new dataset:', dataset);
+				await useSpawn(['zfs', 'create', '-p', dataset], { superuser: 'try' }).promise();
+				tmpShareUpdateCallback();
+			} catch (state) {
+				notifications.value.constructNotification("Failed to create ZFS dataset", errorStringHTML(state), 'error');
 			}
 		}
 
@@ -901,6 +931,28 @@ WantedBy=remote-fs.target
 			}
 		}
 
+		const checkIfParentZFS = async () => {
+			isZfs.value = false;
+			const pathArr = tmpShare.path.split(/\/+/);
+			while (pathArr.length > 2) {
+				try {
+					const path = pathArr.join('/');
+					const type = (await useSpawn(['stat', '-f', '-c', '%T', path], { superuser: 'try' }).promise()).stdout.trim();
+					if (type === 'zfs') {
+						isZfs.value = true;
+						zfsParent.value = path;
+					} else {
+						isZfs.value = false;
+						zfsParent.value = null;
+					}
+					break;
+				} catch {
+					pathArr.pop();
+					continue;
+				}
+			}
+		}
+
 		const apply = () => {
 			tmpShare["valid users"] = shareWindowsAcls.value ? "" : [...shareValidGroups.value.map(group => `"@${group.group}"`).sort(), ...shareValidUsers.value.map(user => `"${user.user}"`).sort()].join(" ");
 			tmpShare.advancedSettings = splitAdvancedSettings(shareAdvancedSettingsStr.value);
@@ -977,6 +1029,7 @@ WantedBy=remote-fs.target
 			validateInputs();
 			if (old === undefined || current.path !== old.path) {
 				await checkIfExists();
+				checkIfParentZFS();
 				const lastIsCeph = isCeph.value;
 				await checkIfCeph();
 				if (isCeph.value !== lastIsCeph) {
@@ -1027,7 +1080,10 @@ WantedBy=remote-fs.target
 			removeValidGroup,
 			pathExists,
 			createDir,
+			createZfsDataset,
 			isCeph,
+			isZfs,
+			zfsParent,
 			cephNotRemounted,
 			checkIfCeph,
 			cephOptions,
