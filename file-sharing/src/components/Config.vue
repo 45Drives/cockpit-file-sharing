@@ -127,11 +127,7 @@ const configDefaults: FileSharingConfig = {
 const config: FileSharingConfig = reactive(deepCopy(configDefaults));
 
 const loadConfig = (onDiskConfig: FileSharingConfig | null) => {
-	console.log(onDiskConfig);
-	if (onDiskConfig === null) {
-		console.log('file DNE');
-	} else {
-		console.log('has content');
+	if (onDiskConfig !== null) {
 		assignConfig(config, onDiskConfig, configDefaults);
 	}
 }
