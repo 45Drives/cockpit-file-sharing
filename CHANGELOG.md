@@ -1,4 +1,4 @@
-## Cockpit File Sharing 3.2.4-1
+## Cockpit File Sharing 3.2.5-1
 
-* Add settings menu for configuring smb.conf and exports file locations
-* Fix parsing "valid users" field for Samba shares
+* Added ability to create ZFS datasets when path DNE and is within ZFS mountpoint
+* Fixed CSS styling of directory permission editor
