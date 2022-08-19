@@ -27,6 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri Aug 19 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.5-1
+- Added ability to create ZFS datasets when path DNE and is within ZFS mountpoint
+- Fixed CSS styling of directory permission editor
 * Thu Aug 18 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.4-1
 - Add settings menu for configuring smb.conf and exports file locations
 - Fix parsing "valid users" field for Samba shares
