@@ -1,3 +1,9 @@
+cockpit-file-sharing (3.2.7-1focal) focal; urgency=medium
+
+  * Fix scrolling in Safari
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 24 Aug 2022 13:58:34 -0300
+
 cockpit-file-sharing (3.2.6-1focal) focal; urgency=medium
 
   * Support Safari by removing regex lookbehinds

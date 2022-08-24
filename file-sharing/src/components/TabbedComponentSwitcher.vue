@@ -33,8 +33,8 @@ If not, see <https://www.gnu.org/licenses/>.
 				>{{ entry.title }}</button>
 			</div>
 		</HoustonHeader>
-		<div class="overflow-hidden grow basis-0">
-			<div class="bg-well overflow-y-auto h-full" style="scrollbar-gutter: stable both-edges;">
+		<div class="overflow-hidden grow basis-0 flex items-stretch">
+			<div class="bg-well overflow-y-auto grow" style="scrollbar-gutter: stable both-edges;">
 				<component :modalPopup="modalPopup" :is="components[currentTab].component" />
 			</div>
 		</div>
