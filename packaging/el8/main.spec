@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Aug 24 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.6-1
+- Support Safari by removing regex lookbehinds
 * Fri Aug 19 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.5-1
 - Added ability to create ZFS datasets when path DNE and is within ZFS mountpoint
 - Fixed CSS styling of directory permission editor

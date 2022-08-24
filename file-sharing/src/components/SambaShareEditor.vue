@@ -327,7 +327,6 @@ import ModalPopup from "./ModalPopup.vue";
 import InfoTip from "./InfoTip.vue";
 import { notificationsInjectionKey, processingUsersListInjectionKey, processingGroupsListInjectionKey } from "../keys";
 import LabelledSwitch from "./LabelledSwitch.vue";
-import { whitespaceDelimiterRegex } from "@45drives/regex";
 import LoadingSpinner from "./LoadingSpinner.vue";
 import FilePermissions from "./FilePermissions.vue";
 
@@ -374,7 +373,7 @@ export default {
 					const respond = (handle, response) => {
 						cephOptions.showMountOptionsModal = false;
 						handle(response);
-					}
+					};
 					cephOptions.mountOptionsApplyCallback = () => respond(resolve, cephOptions.mountOptions);
 					cephOptions.mountOptionsCancelCallback = () => respond(reject);
 					cephOptions.showMountOptionsModal = true;
@@ -402,7 +401,7 @@ export default {
 					&& /shadow: ?format ?=/.test(shareAdvancedSettingsStr.value)
 					&& /vfs objects ?=.*shadow_copy2/.test(shareAdvancedSettingsStr.value))
 				|| (isCeph.value
-					&& /vfs objects ?=.*ceph_snapshots/.test(shareAdvancedSettingsStr.value))
+					&& /vfs objects ?=.*ceph_snapshots/.test(shareAdvancedSettingsStr.value));
 			shareMacOsShare.value =
 				/fruit: ?encoding ?=/.test(shareAdvancedSettingsStr.value)
 				&& /fruit: ?metadata ?=/.test(shareAdvancedSettingsStr.value)
@@ -418,7 +417,7 @@ export default {
 				&& /full_audit: ?failure ?=/.test(shareAdvancedSettingsStr.value)
 				&& /full_audit: ?prefix ?=/.test(shareAdvancedSettingsStr.value)
 				&& /vfs objects ?=.*full_audit/.test(shareAdvancedSettingsStr.value);
-		}
+		};
 
 		const checkIfExists = async () => {
 			try {
@@ -436,7 +435,7 @@ export default {
 			} catch (state) {
 				notifications.value.constructNotification("Failed to create directory", errorStringHTML(state), 'error');
 			}
-		}
+		};
 
 		const createZfsDataset = async () => {
 			try {
@@ -450,7 +449,7 @@ export default {
 			} catch (state) {
 				notifications.value.constructNotification("Failed to create ZFS dataset", errorStringHTML(state), 'error');
 			}
-		}
+		};
 
 		const tmpShareInit = async () => {
 			shareValidUsers.value = [];
@@ -502,7 +501,7 @@ export default {
 			}
 
 			setAdvancedToggleStates();
-		}
+		};
 
 		onMounted(() => tmpShareInit());
 
@@ -514,19 +513,19 @@ export default {
 				if (/map acl inherit/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value =
 						shareAdvancedSettingsStr.value
-							.replace(/(?<=map acl inherit ?=).*/, " yes");
+							.replace(/(map acl inherit ?=).*/, "$1 yes");
 				else
 					shareAdvancedSettingsStr.value += "\nmap acl inherit = yes";
 				if (/acl_xattr:ignore system acls/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value =
 						shareAdvancedSettingsStr.value
-							.replace(/(?<=acl_xattr: ?ignore system acls ?=).*/, " yes");
+							.replace(/(acl_xattr: ?ignore system acls ?=).*/, "$1 yes");
 				else
 					shareAdvancedSettingsStr.value += "\nacl_xattr:ignore system acls = yes";
 				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value =
 						shareAdvancedSettingsStr.value
-							.replace(/(?<=vfs objects ?=)(?!.*acl_xattr.*)/, " acl_xattr ");
+							.replace(/(vfs objects ?=)(?!.*acl_xattr.*)/, "$1 acl_xattr ");
 				else
 					shareAdvancedSettingsStr.value += "\nvfs objects = acl_xattr";
 			} else {
@@ -534,7 +533,7 @@ export default {
 					shareAdvancedSettingsStr.value
 						.replace(/map acl inherit ?= ?(yes|true|1)\n?/, "")
 						.replace(/acl_xattr: ?ignore system acls ?= ?(yes|true|1)\n?/, "")
-						.replace(/(?<=vfs objects ?=.*)acl_xattr ?/, "");
+						.replace(/(vfs objects ?=.*)acl_xattr ?/, "$1");
 			}
 			shareAdvancedSettingsStr.value =
 				shareAdvancedSettingsStr.value
@@ -556,7 +555,7 @@ export default {
 				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value =
 						shareAdvancedSettingsStr.value
-							.replace(/(?<=vfs objects ?=)(?!.*shadow_copy2.*)/, " shadow_copy2 ");
+							.replace(/(vfs objects ?=)(?!.*shadow_copy2.*)/, "$1 shadow_copy2 ");
 				else
 					shareAdvancedSettingsStr.value += "\nvfs objects = shadow_copy2";
 			};
@@ -566,20 +565,20 @@ export default {
 						.replace(/shadow: ?snapdir ?=.*\n?/, "")
 						.replace(/shadow: ?sort.*\n?/, "")
 						.replace(/shadow: ?format.*\n?/, "")
-						.replace(/(?<=vfs objects ?=.*)shadow_copy2 ?/, "");
+						.replace(/(vfs objects ?=.*)shadow_copy2 ?/, "$1");
 			};
 			const addCephShadowCopy = () => {
 				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value =
 						shareAdvancedSettingsStr.value
-							.replace(/(?<=vfs objects ?=)(?!.*ceph_snapshots.*)/, " ceph_snapshots ");
+							.replace(/(vfs objects ?=)(?!.*ceph_snapshots.*)/, "$1 ceph_snapshots ");
 				else
 					shareAdvancedSettingsStr.value += "\nvfs objects = ceph_snapshots";
 			};
 			const removeCephShadowCopy = () => {
 				shareAdvancedSettingsStr.value =
 					shareAdvancedSettingsStr.value
-						.replace(/(?<=vfs objects ?=.*)ceph_snapshots ?/, "");
+						.replace(/(vfs objects ?=.*)ceph_snapshots ?/, "$1");
 			};
 			if (value) {
 				showAdvanced.value = true;
@@ -606,28 +605,28 @@ export default {
 		const switchMacOsShare = (value) => {
 			if (value) {
 				showAdvanced.value = true;
-				if (!/fruit: ?encoding/.test(shareAdvancedSettingsStr.value)) 1
+				if (!/fruit: ?encoding/.test(shareAdvancedSettingsStr.value)) 1;
 				shareAdvancedSettingsStr.value += "\nfruit:encoding = native";
 				if (!/fruit: ?metadata/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value += "\nfruit:metadata = stream";
 				if (/fruit: ?zero_file_id/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value =
 						shareAdvancedSettingsStr.value
-							.replace(/(?<=fruit: ?zero_file_id ?=).*/, " yes");
+							.replace(/(fruit: ?zero_file_id ?=).*/, "$1 yes");
 				else
 					shareAdvancedSettingsStr.value += "\nfruit:zero_file_id = yes";
 				if (/fruit: ?nfs_aces/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value =
 						shareAdvancedSettingsStr.value
-							.replace(/(?<=fruit: ?nfs_aces ?=).*/, " no");
+							.replace(/(fruit: ?nfs_aces ?=).*/, "$1 no");
 				else
 					shareAdvancedSettingsStr.value += "\nfruit:nfs_aces = no";
 				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value =
 						shareAdvancedSettingsStr.value
-							.replace(/(?<=vfs objects ?=)(?!.*streams_xattr.*)/, " streams_xattr ")
-							.replace(/(?<=vfs objects ?=)(?!.*fruit.*)/, " fruit ")
-							.replace(/(?<=vfs objects ?=)(?!.*catia.*)/, " catia ");
+							.replace(/(vfs objects ?=)(?!.*streams_xattr.*)/, "$1 streams_xattr ")
+							.replace(/(vfs objects ?=)(?!.*fruit.*)/, "$1 fruit ")
+							.replace(/(vfs objects ?=)(?!.*catia.*)/, "$1 catia ");
 				else
 					shareAdvancedSettingsStr.value += "\nvfs objects = catia fruit streams_xattr";
 			} else {
@@ -637,9 +636,9 @@ export default {
 						.replace(/fruit: ?metadata.*\n?/, "")
 						.replace(/fruit: ?zero_file_id.*\n?/, "")
 						.replace(/fruit: ?nfs_aces.*\n?/, "")
-						.replace(/(?<=vfs objects ?=.*)catia ?/, "")
-						.replace(/(?<=vfs objects ?=.*)fruit ?/, "")
-						.replace(/(?<=vfs objects ?=.*)streams_xattr ?/, "");
+						.replace(/(vfs objects ?=.*)catia ?/, "$1")
+						.replace(/(vfs objects ?=.*)fruit ?/, "$1")
+						.replace(/(vfs objects ?=.*)streams_xattr ?/, "$1");
 			}
 			shareAdvancedSettingsStr.value =
 				shareAdvancedSettingsStr.value
@@ -667,7 +666,7 @@ export default {
 				if (/vfs objects ?=/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value =
 						shareAdvancedSettingsStr.value
-							.replace(/(?<=vfs objects ?=)(?!.*full_audit.*)/, " full_audit ");
+							.replace(/(vfs objects ?=)(?!.*full_audit.*)/, "$1 full_audit ");
 				else
 					shareAdvancedSettingsStr.value += "\nvfs objects = full_audit";
 			} else {
@@ -678,7 +677,7 @@ export default {
 						.replace(/full_audit: ?success.*\n?/, "")
 						.replace(/full_audit: ?failure.*\n?/, "")
 						.replace(/full_audit: ?prefix.*\n?/, "")
-						.replace(/(?<=vfs objects ?=.*)full_audit ?/, "");
+						.replace(/(vfs objects ?=.*)full_audit ?/, "$1");
 			}
 			shareAdvancedSettingsStr.value =
 				shareAdvancedSettingsStr.value
@@ -731,7 +730,7 @@ export default {
 			} catch (err) { /* ignore */ }
 			cephOptions.quotaValue = 0;
 			cephOptions.quotaMultiplier = 1024 ** 3; // default to GiB
-		}
+		};
 
 		const getCephLayoutPool = async () => {
 			try {
@@ -775,7 +774,7 @@ export default {
 			} catch (state) {
 				notifications.value.constructNotification("Failed to set Ceph quota", errorStringHTML(state), 'error');
 			}
-		}
+		};
 
 		const setCephLayoutPool = async () => {
 			try {
@@ -789,7 +788,7 @@ export default {
 			} catch (state) {
 				notifications.value.constructNotification("Failed to set Ceph layout pool", errorStringHTML(state), 'error');
 			}
-		}
+		};
 
 		const checkCephRemount = async () => {
 			try {
@@ -802,21 +801,25 @@ export default {
 				notifications.value.constructNotification("Failed to determine if Ceph was remounted", errorStringHTML(state), 'error');
 				cephNotRemounted.value = true;
 			}
-		}
+		};
 
 		const getCephMountOpts = async (mainFsMount) => {
 			try {
-				const regex = new RegExp(`\\s${mainFsMount}\\s`);
-				const possibleMatches = (await cockpit.file('/etc/fstab', { superuser: 'try' }).read())
+				/**
+				 * @type {string[]}
+				 */
+				const fstabRecords = (await cockpit.file('/etc/fstab', { superuser: 'try' }).read())
 					.split('\n')
-					.filter(line => regex.test(line));
-				if (possibleMatches.length < 1)
-					throw new Error("No matches in fstab");
-				const opts = possibleMatches[0].split(whitespaceDelimiterRegex)[3];
-				cephOptions.mountOptions = opts;
-				if (possibleMatches.length > 1)
-					throw new Error("Too many matches in fstab");
-				return opts;
+					.map(line => line.trim())
+					.filter(line => line && line[0] !== '#');
+				for (const record of fstabRecords) {
+					const [_fsSource, mountPoint, fsType, options, _dump, _pass] = splitQuotedDelim(record, '\t ');
+					if (fsType === 'ceph' && mountPoint === mainFsMount) {
+						cephOptions.value = options;
+						return options;
+					}
+				}
+				throw new Error(`No matches in fstab with type==ceph and mountpoint==${mainFsMount}`);
 			} catch (error) {
 				notifications.value.constructNotification("Failed to determine Ceph mount options", error.message, 'warning');
 				try {
@@ -825,7 +828,7 @@ export default {
 					throw new Error("Cancelled by user");
 				}
 			}
-		}
+		};
 
 		const remountCeph = async () => {
 			cephOptions.fixMountRunning = true;
@@ -836,7 +839,7 @@ export default {
 					`/etc/systemd/system/${unitName}.mount`;
 				const df = (await useSpawn(['df', '--output=source,target', sharePath], { superuser: 'try' }).promise()).stdout.split('\n')[1];
 				let mainFsSrc, mainFsTgt, remainder;
-				[mainFsSrc, mainFsTgt, ...remainder] = df.split(whitespaceDelimiterRegex);
+				[mainFsSrc, mainFsTgt, ...remainder] = splitQuotedDelim(df, '\t ');
 				if (canonicalPath(mainFsTgt) === canonicalPath(sharePath))
 					return;
 				const fsLeaf = sharePath.slice(mainFsTgt.length);
@@ -863,7 +866,7 @@ Options=${await getCephMountOpts(mainFsTgt)}
 
 [Install]
 WantedBy=remote-fs.target
-`
+`;
 				if (props.ctdbHosts?.length) {
 					for (const host of props.ctdbHosts) {
 						await cockpit.file(systemdMountFile, { superuser: 'try', host }).replace(systemdMountContents);
@@ -880,7 +883,7 @@ WantedBy=remote-fs.target
 				cephOptions.fixMountRunning = false;
 				checkCephRemount();
 			}
-		}
+		};
 
 		const applyCeph = async (force = false) => {
 			if (!isCeph.value)
@@ -893,7 +896,7 @@ WantedBy=remote-fs.target
 					procs.push(remountCeph());
 			}
 			await Promise.all(procs);
-		}
+		};
 
 		const removeCephMount = async () => {
 			const isRemount = async (systemdMountFile, host) => {
@@ -906,12 +909,12 @@ WantedBy=remote-fs.target
 				if (/share remount created by cockpit-file-sharing$/mg.test(mountContent))
 					return true; // remount generated by cockpit-file-sharing
 				return false; // not generated by cockpit-file-sharing
-			}
+			};
 			const sharePathUnique = !props.shares.find(s => s.name !== tmpShare.name && s.path === tmpShare.path);
 			if (!sharePathUnique)
 				return; // don't blow away mount if other share needs it
 			try {
-				const systemdMountUnit = `${tmpShare.path.substring(1).replace(/\//g, '-').replace(/[^A-Za-z0-9\-_]/g, '')}.mount`;
+				const systemdMountUnit = `${systemdUnitEscape(tmpShare.path, true)}.mount`;
 				const systemdMountFile = `/etc/systemd/system/${systemdMountUnit}`;
 				if (props.ctdbHosts?.length) {
 					for (const host of props.ctdbHosts) {
@@ -929,7 +932,7 @@ WantedBy=remote-fs.target
 			} catch (state) {
 				notifications.value.constructNotification("Failed to remove Ceph systemd mount for share", errorStringHTML(state), 'error');
 			}
-		}
+		};
 
 		const checkIfParentZFS = async () => {
 			isZfs.value = false;
@@ -951,7 +954,7 @@ WantedBy=remote-fs.target
 					continue;
 				}
 			}
-		}
+		};
 
 		const apply = () => {
 			tmpShare["valid users"] = shareWindowsAcls.value ? "" : [...shareValidGroups.value.map(group => `"@${group.group}"`).sort(), ...shareValidUsers.value.map(user => `"${user.user}"`).sort()].join(" ");
@@ -968,7 +971,7 @@ WantedBy=remote-fs.target
 		const cancel = () => {
 			tmpShareInit();
 			emit('hide');
-		}
+		};
 
 		const addValidUser = (user) => {
 			shareValidUsers.value = [...new Set([...shareValidUsers.value, user])];
@@ -1023,7 +1026,7 @@ WantedBy=remote-fs.target
 			}
 
 			inputsValid.value = result;
-		}
+		};
 
 		const tmpShareUpdateCallback = async (current, old) => {
 			validateInputs();
@@ -1041,7 +1044,7 @@ WantedBy=remote-fs.target
 					await checkCephRemount();
 				}
 			}
-		}
+		};
 
 		watch(() => props.share, () => {
 			tmpShareInit();
@@ -1116,7 +1119,7 @@ WantedBy=remote-fs.target
 		'applyShare',
 		'hide',
 	],
-}
+};
 </script>
 
 <style scoped>

@@ -1,4 +1,3 @@
-## Cockpit File Sharing 3.2.5-1
+## Cockpit File Sharing 3.2.6-1
 
-* Added ability to create ZFS datasets when path DNE and is within ZFS mountpoint
-* Fixed CSS styling of directory permission editor
+* Support Safari by removing regex lookbehinds

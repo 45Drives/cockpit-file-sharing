@@ -115,9 +115,9 @@ export default {
 		const deleteShare = async () => {
 			if (!await confirmationModal.ask(`Permanently delete ${props.share.name}?`, "This cannot be undone."))
 				return;
-			emit('deleteShare', props.share);
 			if (editorRef.value.isCeph && !editorRef.value.cephNotRemounted)
 				editorRef.value.removeCephMount();
+			emit('deleteShare', props.share);
 		}
 
 		return {

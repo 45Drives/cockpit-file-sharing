@@ -129,19 +129,19 @@ export default {
 				if (!/fruit: ?metadata/.test(globalConfigAdvancedSettingsStr.value))
 					globalConfigAdvancedSettingsStr.value += "\nfruit:metadata = stream";
 				if (/fruit: ?zero_file_id/.test(globalConfigAdvancedSettingsStr.value))
-					globalConfigAdvancedSettingsStr.value = globalConfigAdvancedSettingsStr.value.replace(/(?<=fruit: ?zero_file_id ?=).*/, " yes");
+					globalConfigAdvancedSettingsStr.value = globalConfigAdvancedSettingsStr.value.replace(/(fruit: ?zero_file_id ?=).*/, "$1 yes");
 				else
 					globalConfigAdvancedSettingsStr.value += "\nfruit:zero_file_id = yes";
 				if (/fruit: ?nfs_aces/.test(globalConfigAdvancedSettingsStr.value))
-					globalConfigAdvancedSettingsStr.value = globalConfigAdvancedSettingsStr.value.replace(/(?<=fruit: ?nfs_aces ?=).*/, " no");
+					globalConfigAdvancedSettingsStr.value = globalConfigAdvancedSettingsStr.value.replace(/(fruit: ?nfs_aces ?=).*/, "$1 no");
 				else
 					globalConfigAdvancedSettingsStr.value += "\nfruit:nfs_aces = no";
 				if (/vfs objects/.test(globalConfigAdvancedSettingsStr.value))
 					globalConfigAdvancedSettingsStr.value =
 						globalConfigAdvancedSettingsStr.value
-							.replace(/(?<=vfs objects ?=)(?!.*streams_xattr.*)/, " streams_xattr ")
-							.replace(/(?<=vfs objects ?=)(?!.*fruit.*)/, " fruit ")
-							.replace(/(?<=vfs objects ?=)(?!.*catia.*)/, " catia ");
+							.replace(/(vfs objects ?=)(?!.*streams_xattr.*)/, "$1 streams_xattr ")
+							.replace(/(vfs objects ?=)(?!.*fruit.*)/, "$1 fruit ")
+							.replace(/(vfs objects ?=)(?!.*catia.*)/, "$1 catia ");
 				else
 					globalConfigAdvancedSettingsStr.value += "\nvfs objects = catia fruit streams_xattr";
 			} else {
@@ -151,9 +151,9 @@ export default {
 						.replace(/fruit: ?metadata.*\n?/, "")
 						.replace(/fruit: ?zero_file_id.*\n?/, "")
 						.replace(/fruit: ?nfs_aces.*\n?/, "")
-						.replace(/(?<=vfs objects ?=.*)catia ?/, "")
-						.replace(/(?<=vfs objects ?=.*)fruit ?/, "")
-						.replace(/(?<=vfs objects ?=.*)streams_xattr ?/, "");
+						.replace(/(vfs objects ?=.*)catia ?/, "$1")
+						.replace(/(vfs objects ?=.*)fruit ?/, "$1")
+						.replace(/(vfs objects ?=.*)streams_xattr ?/, "$1");
 			}
 			globalConfigAdvancedSettingsStr.value = globalConfigAdvancedSettingsStr.value.split('\n').filter((line) => line !== "").join('\n').replace(/[\t ]+/g, " ").replace(/\s+$/gm, "");
 			changesMade.value = true;
