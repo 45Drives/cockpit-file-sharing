@@ -28,6 +28,7 @@ If not, see <https://www.gnu.org/licenses/>.
 		ref="notifications"
 	/>
 	<WhatsNew
+		v-if="false"
 		localStorageKey="cockpit-file-sharing-show-whats-new-3.2.0-update"
 		class="text-default"
 	>
