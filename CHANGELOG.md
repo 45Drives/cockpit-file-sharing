@@ -1,3 +1,3 @@
-## Cockpit File Sharing 3.2.6-1
+## Cockpit File Sharing 3.2.7-1
 
-* Support Safari by removing regex lookbehinds
+* Fix scrolling in Safari
