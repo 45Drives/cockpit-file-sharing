@@ -1,3 +1,9 @@
+cockpit-file-sharing (3.2.8-1focal) focal; urgency=medium
+
+  * Handle case where NFS exports.d directory does not exist.
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 12 Sep 2022 11:33:10 -0300
+
 cockpit-file-sharing (3.2.7-1focal) focal; urgency=medium
 
   * Fix scrolling in Safari
