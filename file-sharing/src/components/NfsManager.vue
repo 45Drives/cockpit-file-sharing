@@ -170,7 +170,7 @@ export default {
 		const loadShares = (sharesOnDisk) => {
 			processing.value++;
 			try {
-				shares.value = sharesOnDisk.sort((a, b) => a.path.localeCompare(b.path)) ?? [];
+				shares.value = sharesOnDisk?.sort((a, b) => a.path.localeCompare(b.path)) ?? [];
 			} catch (error) {
 				notifications.value.constructNotification("Failed to load share configuration", errorStringHTML(error), 'error', 0);
 			} finally {
@@ -180,6 +180,11 @@ export default {
 
 		const writeExportsFile = async () => {
 			try {
+				const filePath = config.nfs.confPath;
+				if (filePath[0] !== '/')
+					throw new Error('NFS Exports path must be absolute.');
+				const parentDir = filePath.split('/').slice(0, -1).join('/') || '/';
+				await useSpawn(['mkdir', '-p', parentDir], { superuser: 'try' }).promise();
 				await exportsFile.replace(shares.value);
 			} catch (error) {
 				error.message = `Failed to write exports file: ${errorString(error.message)}`;
