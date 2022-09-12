@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Sep 12 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.8-1
+- Handle case where NFS exports.d directory does not exist.
 * Wed Aug 24 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.7-1
 - Fix scrolling in Safari
 * Wed Aug 24 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.6-1

@@ -1,3 +1,3 @@
-## Cockpit File Sharing 3.2.7-1
+## Cockpit File Sharing 3.2.8-1
 
-* Fix scrolling in Safari
+* Handle case where NFS exports.d directory does not exist.
