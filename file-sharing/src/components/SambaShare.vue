@@ -41,8 +41,6 @@ If not, see <https://www.gnu.org/licenses/>.
 					:share="share"
 					@applyShare="updateShare"
 					@hide="showEditor = false"
-					:users="users"
-					:groups="groups"
 					ref="editorRef"
 					:ctdbHosts="ctdbHosts"
 					:cephLayoutPools="cephLayoutPools"
@@ -77,8 +75,6 @@ import ModalPopup from "./ModalPopup.vue";
 export default {
 	props: {
 		share: Object,
-		users: Array[Object],
-		groups: Array[Object],
 		ctdbHosts: Array[String],
 		cephLayoutPools: Array[String],
 		shares: Array[Object],

@@ -325,7 +325,7 @@ import { ref, reactive, watch, inject, onMounted } from "vue";
 import { useSpawn, errorStringHTML, canonicalPath, systemdUnitEscape } from "@45drives/cockpit-helpers";
 import ModalPopup from "./ModalPopup.vue";
 import InfoTip from "./InfoTip.vue";
-import { notificationsInjectionKey, processingUsersListInjectionKey, processingGroupsListInjectionKey } from "../keys";
+import { notificationsInjectionKey, usersInjectionKey, groupsInjectionKey, processingUsersListInjectionKey, processingGroupsListInjectionKey } from "../keys";
 import LabelledSwitch from "./LabelledSwitch.vue";
 import LoadingSpinner from "./LoadingSpinner.vue";
 import FilePermissions from "./FilePermissions.vue";
@@ -337,7 +337,6 @@ export default {
 			required: false,
 			default: null
 		},
-		users: Array[Object],
 		groups: Array[Object],
 		ctdbHosts: Array[String],
 		cephLayoutPools: Array[String],
@@ -346,6 +345,8 @@ export default {
 	},
 	setup(props, { emit }) {
 		const tmpShare = reactive({});
+		const users = inject(usersInjectionKey);
+		const groups = inject(groupsInjectionKey);
 		const showAdvanced = ref(false);
 		const shareValidUsers = ref([]);
 		const shareValidGroups = ref([]);
@@ -452,8 +453,6 @@ export default {
 		};
 
 		const tmpShareInit = async () => {
-			shareValidUsers.value = [];
-			shareValidGroups.value = [];
 			Object.assign(tmpShare, props.share
 				? {
 					...props.share,
@@ -472,23 +471,6 @@ export default {
 					advancedSettings: []
 				}
 			);
-			splitQuotedDelim(tmpShare["valid users"], ', ')
-				.forEach((entity) => {
-					if (entity.at(0) === '@') {
-						const groupName = entity.substring(1);
-						shareValidGroups.value
-							.push(
-								props.groups.find(group => group.group === groupName)
-								?? { group: groupName, domain: false, pretty: groupName }
-							);
-					} else if (entity) {
-						shareValidUsers.value
-							.push(
-								props.users.find(user => user.user === entity)
-								?? { user: entity, domain: false, pretty: entity }
-							);
-					}
-				});
 
 			shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
 			showAdvanced.value = Boolean(shareAdvancedSettingsStr.value);
@@ -502,6 +484,27 @@ export default {
 
 			setAdvancedToggleStates();
 		};
+		watch([() => props.share, users, groups], () => {
+			shareValidUsers.value = [];
+			shareValidGroups.value = [];
+			splitQuotedDelim(tmpShare["valid users"], ', ')
+				.forEach((entity) => {
+					if (entity.at(0) === '@') {
+						const groupName = entity.substring(1);
+						shareValidGroups.value
+							.push(
+								groups.value.find(group => group.group === groupName)
+								?? { group: groupName, domain: false, pretty: groupName }
+							);
+					} else if (entity) {
+						shareValidUsers.value
+							.push(
+								users.value.find(user => user.user === entity)
+								?? { user: entity, domain: false, pretty: entity }
+							);
+					}
+				});
+		})
 
 		onMounted(() => tmpShareInit());
 
@@ -1062,6 +1065,8 @@ WantedBy=remote-fs.target
 
 		return {
 			tmpShare,
+			users,
+			groups,
 			showAdvanced,
 			shareValidUsers,
 			shareValidGroups,

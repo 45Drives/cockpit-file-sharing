@@ -24,7 +24,7 @@ If not, see <https://www.gnu.org/licenses/>.
 		<div class="overflow-hidden"
 			:style="{ 'max-height': showAddShare ? '1500px' : '0', transition: showAddShare ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }">
 			<div class="card-body">
-				<SambaShareEditor @applyShare="addShare" @hide="showAddShare = false" :users="users" :groups="groups"
+				<SambaShareEditor @applyShare="addShare" @hide="showAddShare = false"
 					:ctdbHosts="ctdbHosts" :cephLayoutPools="cephLayoutPools" :shares="shares"
 					ref="newShareEditorRef" />
 			</div>
@@ -47,7 +47,7 @@ If not, see <https://www.gnu.org/licenses/>.
 					</template>
 					<template #tbody>
 						<SambaShare v-for="(share, index) in shares" :share="shares[index]" :index="index"
-							@deleteShare="deleteShare" @updateShare="updateShare" :users="users" :groups="groups"
+							@deleteShare="deleteShare" @updateShare="updateShare"
 							:ctdbHosts="ctdbHosts" :cephLayoutPools="cephLayoutPools" :shares="shares" />
 					</template>
 				</Table>
@@ -70,8 +70,6 @@ import Table from "./Table.vue";
 export default {
 	props: {
 		shares: Array[Object],
-		users: Array[String],
-		groups: Array[String],
 		ctdbHosts: Array[String],
 		cephLayoutPools: Array[String],
 		parentProcessing: Number,
