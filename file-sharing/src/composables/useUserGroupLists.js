@@ -3,65 +3,93 @@ import { useSpawn, errorString } from '@45drives/cockpit-helpers';
 
 const spawnOpts = {
 	superuser: 'try',
-}
-
-/**
- * @param {String} type - 'group' or 'user'
- * @param {boolean} domain 
- * @returns 
- */
-const parseRecord = (type, domain) => (record) => {
-	if (!record)
-		return null;
-	let nameKey = type;
-	let idKey = type === 'group' ? 'gid' : 'uid';
-
-	const fields = record.split(':');
-	const name = fields[0];
-	const id = fields[2];
-	if (id >= 1000 || id === '0') // include root
-		return { [nameKey]: name, [idKey]: id, domain, pretty: name + (domain ? ' (domain)' : '') };
-	return null;
 };
 
-const getent = async (db) => {
-	const [name, wbinfoFlag] = db === 'passwd' ? ['user', '-u'] : ['group', '-g'];
-	const procs = [];
-	procs.push(
-		useSpawn(['getent', '-s', 'files', db], spawnOpts).promise()
-			.then(({ stdout: getentDb }) =>
-				getentDb.trim()
-					.split('\n')
-					.map(parseRecord(name, false))
-			)
-	);
-	await useSpawn(['wbinfo', wbinfoFlag], spawnOpts).promise()
-		.then(({ stdout }) => {
-			const domainItemNames = stdout.trim().split('\n');
-			// limit number of queries per execution of getent to avoid
-			// sending too much data and causing cockpit ws to drop connection
-			const partitionSize = 1000;
-			for (let i = 0; i < domainItemNames.length; i += partitionSize) {
-				procs.push(
-					useSpawn(['getent', db, ...domainItemNames.slice(i, i + partitionSize)], spawnOpts).promise()
-						.catch(state => {
-							console.error('getent error while getting domain entries:', state);
-							return state;
-						})
-						.then(({ stdout: getentDb }) =>
-							getentDb.trim()
-								.split('\n')
-								.map(parseRecord(name, true))
-						)
-				);
-			}
-		})
-		.catch(e => console.warn(`Error getting list of ${name}s from domain. wbinfo:`, errorString(e)));
-	return await Promise.all(procs)
-		.then(nestedEntries =>
-			nestedEntries.flat().filter(entry => entry !== null).sort((a, b) => a.pretty.localeCompare(b.pretty))
-		);
-}
+// /**
+//  * @param {String} type - 'group' or 'user'
+//  * @param {boolean} domain 
+//  * @returns 
+//  */
+// const parseRecord = (type, domain) => {
+// 	const nameKey = type;
+// 	const idKey = type === 'group' ? 'gid' : 'uid';
+// 	const prettySuffix = domain ? ' (domain)' : '';
+
+// 	return (record) => {
+// 		if (!record)
+// 			return null;
+// 		const fields = record.split(':');
+// 		const name = fields[0];
+// 		const id = fields[2];
+// 		if (id >= 1000 || id === '0') // include root
+// 			return { [nameKey]: name, [idKey]: id, domain, pretty: name + prettySuffix };
+// 		return null;
+// 	};
+// };
+
+// const getent = async (db) => {
+// 	const [name, wbinfoFlag] = db === 'passwd' ? ['user', '-u'] : ['group', '-g'];
+// 	const localParseFunctor = parseRecord(name, false);
+// 	const domainParseFunctor = parseRecord(name, true);
+// 	return await Promise.all([
+// 		useSpawn(['getent', '-s', 'files', db], spawnOpts).promise()
+// 			.then(({ stdout: getentDb }) =>
+// 				getentDb.trim()
+// 					.split('\n')
+// 					.map(localParseFunctor)
+// 			),
+// 		useSpawn(['bash', '-c', `wbinfo ${wbinfoFlag} | xargs -r getent ${db}`], spawnOpts).promise()
+// 			.catch(state => {
+// 				console.warn(`Error getting list of ${name}s from AD/domain:`, errorString(state));
+// 				return state;
+// 			})
+// 			.then(({ stdout: getentDb }) =>
+// 				getentDb.trim()
+// 					.split('\n')
+// 					.map(domainParseFunctor)
+// 			)
+// 	])
+// 		.then(nestedEntries =>
+// 			nestedEntries.flat().filter(entry => entry !== null).sort((a, b) => a.pretty.localeCompare(b.pretty))
+// 		);
+// };
+
+const getentScript = (db, isDomain) => {
+	const [nameKey, idKey, wbinfoFlag] = {
+		'passwd': ['user', 'uid', '-u'],
+		'group': ['group', 'gid', '-g']
+	}[db];
+	const getent = isDomain ? `wbinfo ${wbinfoFlag} | xargs -r getent` : `getent -s files`;
+	return `set -o pipefail; ${getent} ${db} | awk -F: '
+		BEGIN { printf "[" }
+		$3 >= 1000 || $3 == 0 {
+			printf sep;
+			printf "{";
+			printf "\\"${nameKey}\\":\\"%s\\",",$1;
+			printf "\\"${idKey}\\":%d,",$3;
+			printf "\\"domain\\":${isDomain.toString()},";
+			printf "\\"pretty\\":\\"%s${isDomain ? ' (domain)' : ''}\\"",$1;
+			printf "}";
+			sep = ",";
+		}
+		END { printf "]" }
+		'`;
+};
+
+const getent = (db) => {
+	return Promise.all([
+		useSpawn(['bash', '-c', getentScript(db, false)], spawnOpts).promise()
+			.then(({ stdout }) => {
+				return JSON.parse(stdout);
+			}),
+		useSpawn(['bash', '-c', getentScript(db, true)], spawnOpts).promise()
+			.catch(state => {
+				console.warn(`Error getting users/groups from AD/domain:`, errorString(state));
+				return state;
+			})
+			.then(({ stdout }) => JSON.parse(stdout)),
+	]).then(nested => nested.flat());
+};
 
 /**
  * get list of user objects from system and domain if joined
@@ -116,11 +144,11 @@ export default function useUserGroupLists() {
 		cockpitWatchHandles.push(
 			cockpit.file('/etc/passwd', { superuser: 'try' }).watch(() => aquireUserList(), { read: false }),
 			cockpit.file('/etc/group', { superuser: 'try' }).watch(() => aquireGroupList(), { read: false })
-		)
+		);
 	});
 
 	onUnmounted(() => {
-		cockpitWatchHandles.forEach(handle => handle?.remove?.())
+		cockpitWatchHandles.forEach(handle => handle?.remove?.());
 	});
 
 	return {
@@ -128,5 +156,5 @@ export default function useUserGroupLists() {
 		groups,
 		processingUsersList,
 		processingGroupsList,
-	}
+	};
 }
