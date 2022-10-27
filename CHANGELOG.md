@@ -1,3 +1,3 @@
-## Cockpit File Sharing 3.2.8-1
+## Cockpit File Sharing 3.2.9-1
 
-* Handle case where NFS exports.d directory does not exist.
+* Optimize getting users and groups from AD/domain
