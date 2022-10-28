@@ -31,6 +31,10 @@ If not, see <https://www.gnu.org/licenses/>.
 		:disableContinue="noChanges"
 	>
 		<div class="flex flex-col items-stretch gap-content">
+			<LabelledSwtich v-model="configTmp.includeSystemAccounts">
+				Include System Accounts
+				<template #description>Include local users/groups with uids/gids between 0 and 1000 in dropdown lists.</template>
+			</LabelledSwtich>
 			<div class="text-header">Samba</div>
 			<div>
 				<label class="text-label block">
@@ -63,9 +67,11 @@ If not, see <https://www.gnu.org/licenses/>.
 import { reactive, ref, defineComponent, watch, computed } from 'vue';
 import { CogIcon } from '@heroicons/vue/solid';
 import ModalPopup from './ModalPopup.vue';
+import InfoTip from './InfoTip.vue';
+import LabelledSwtich from './LabelledSwitch.vue';
 
 declare global {
-	var cockpit: any = {};
+	var cockpit: any;
 }
 
 interface FileSharingConfig {
@@ -77,7 +83,7 @@ interface FileSharingConfig {
 		 * Path to smb.conf
 		 */
 		confPath: string;
-	}
+	};
 	/**
 	 * NFS-specific settings
 	 */
@@ -86,7 +92,11 @@ interface FileSharingConfig {
 		 * Path to cockpit-file-sharing.exports or equivalent
 		 */
 		confPath: string;
-	}
+	};
+	/**
+	 * Include users and groups with uid and gid from 1 to 999
+	 */
+	includeSystemAccounts: boolean;
 }
 
 function deepCopy<T>(obj: T): T {
@@ -100,10 +110,11 @@ const assignConfig = (target: any, source: FileSharingConfig, defaults: FileShar
 		},
 		nfs: {
 			confPath: source?.nfs?.confPath || defaults.nfs.confPath,
-		}
+		},
+		includeSystemAccounts: source?.includeSystemAccounts ?? defaults.includeSystemAccounts,
 	});
 	return target as FileSharingConfig;
-}
+};
 
 const configPath = "/etc/cockpit-file-sharing.conf.json";
 
@@ -121,7 +132,8 @@ const configDefaults: FileSharingConfig = {
 	},
 	nfs: {
 		confPath: "/etc/exports.d/cockpit-file-sharing.exports"
-	}
+	},
+	includeSystemAccounts: false,
 };
 
 const config: FileSharingConfig = reactive(deepCopy(configDefaults));
@@ -130,10 +142,13 @@ const loadConfig = (onDiskConfig: FileSharingConfig | null) => {
 	if (onDiskConfig !== null) {
 		assignConfig(config, onDiskConfig, configDefaults);
 	}
-}
+};
 
 configFile.watch(loadConfig);
 
+/**
+ * @returns {FileSharingConfig}
+ */
 export function useConfig() {
 	return config;
 }
@@ -141,19 +156,23 @@ export function useConfig() {
 export default defineComponent({
 	setup() {
 		const show = ref(false);
-		const noChanges = computed(() => configTmp.nfs.confPath === config.nfs.confPath && configTmp.samba.confPath === config.samba.confPath);
+		const noChanges = computed(() =>
+			configTmp.nfs.confPath === config.nfs.confPath
+			&& configTmp.samba.confPath === config.samba.confPath
+			&& configTmp.includeSystemAccounts === config.includeSystemAccounts);
 
 		const configTmp: FileSharingConfig = reactive(deepCopy(configDefaults));
 
 		const writeConfig = () => {
 			assignConfig(config, configTmp, configDefaults);
 			configFile.replace(config);
-		}
+			show.value = false;
+		};
 
 		const hide = () => {
 			show.value = false;
-			configFile.read(); // trigger watch to reset fields
-		}
+			setTimeout(() => configFile.read(), 500); // trigger watch to reset fields
+		};
 
 		watch(config, () => {
 			assignConfig(configTmp, config, configDefaults);
@@ -166,11 +185,13 @@ export default defineComponent({
 			hide,
 			writeConfig,
 			config,
-		}
+		};
 	},
 	components: {
 		ModalPopup,
 		CogIcon,
+		InfoTip,
+		LabelledSwtich
 	}
-})
+});
 </script>
