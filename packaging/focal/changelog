@@ -1,3 +1,10 @@
+cockpit-file-sharing (3.2.9-1focal) focal; urgency=medium
+
+  * Optimize getting users and groups from AD/domain
+  * Add second Windows ACLs option for Linux/Mac clients
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Thu, 27 Oct 2022 14:52:33 -0300
+
 cockpit-file-sharing (3.2.8-1focal) focal; urgency=medium
 
   * Handle case where NFS exports.d directory does not exist.

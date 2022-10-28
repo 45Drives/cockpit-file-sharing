@@ -199,7 +199,7 @@ If not, see <https://www.gnu.org/licenses/>.
 		</div>
 		<div
 			class="space-y-content"
-			:style="{ 'max-height': !shareWindowsAcls ? '500px' : '0', transition: !shareWindowsAcls ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out', overflow: 'hidden' }"
+			:style="{ 'max-height': !(shareWindowsAcls || shareWindowsAclsPlusLinux) ? '500px' : '0', transition: !(shareWindowsAcls || shareWindowsAclsPlusLinux) ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out', overflow: 'hidden' }"
 		>
 			<div>
 				<label class="text-label flex flex-row space-x-2">
@@ -244,6 +244,13 @@ If not, see <https://www.gnu.org/licenses/>.
 			>
 				Windows ACLs
 				<template #description>Administer share permissions from Windows</template>
+			</LabelledSwitch>
+			<LabelledSwitch
+				v-model="shareWindowsAclsPlusLinux"
+				@change="value => switchWindowsAclsPlusLinux(value)"
+			>
+				Windows ACLs with Linux/MacOS Support
+				<template #description>Administer share permissions from Windows for Windows, Mac, and Linux clients</template>
 			</LabelledSwitch>
 			<LabelledSwitch
 				v-model="shareShadowCopy"
@@ -325,7 +332,7 @@ import { ref, reactive, watch, inject, onMounted } from "vue";
 import { useSpawn, errorStringHTML, canonicalPath, systemdUnitEscape } from "@45drives/cockpit-helpers";
 import ModalPopup from "./ModalPopup.vue";
 import InfoTip from "./InfoTip.vue";
-import { notificationsInjectionKey, processingUsersListInjectionKey, processingGroupsListInjectionKey } from "../keys";
+import { notificationsInjectionKey, usersInjectionKey, groupsInjectionKey, processingUsersListInjectionKey, processingGroupsListInjectionKey } from "../keys";
 import LabelledSwitch from "./LabelledSwitch.vue";
 import LoadingSpinner from "./LoadingSpinner.vue";
 import FilePermissions from "./FilePermissions.vue";
@@ -337,7 +344,6 @@ export default {
 			required: false,
 			default: null
 		},
-		users: Array[Object],
 		groups: Array[Object],
 		ctdbHosts: Array[String],
 		cephLayoutPools: Array[String],
@@ -346,11 +352,14 @@ export default {
 	},
 	setup(props, { emit }) {
 		const tmpShare = reactive({});
+		const users = inject(usersInjectionKey);
+		const groups = inject(groupsInjectionKey);
 		const showAdvanced = ref(false);
 		const shareValidUsers = ref([]);
 		const shareValidGroups = ref([]);
 		const shareAdvancedSettingsStr = ref("");
 		const shareWindowsAcls = ref(false);
+		const shareWindowsAclsPlusLinux = ref(false);
 		const shareShadowCopy = ref(false);
 		const shareMacOsShare = ref(false);
 		const shareAuditLogs = ref(false);
@@ -393,7 +402,11 @@ export default {
 		const setAdvancedToggleStates = () => {
 			shareWindowsAcls.value =
 				/map acl inherit ?=/.test(shareAdvancedSettingsStr.value)
-				&& /acl_xattr: ?ignore system acls ?=/.test(shareAdvancedSettingsStr.value)
+				&& /acl_xattr: ?ignore system acls ?=.*yes/.test(shareAdvancedSettingsStr.value)
+				&& /vfs objects ?=.*acl_xattr.*/.test(shareAdvancedSettingsStr.value);
+			shareWindowsAclsPlusLinux.value =
+				/map acl inherit ?=/.test(shareAdvancedSettingsStr.value)
+				&& !/acl_xattr: ?ignore system acls ?=.*yes/.test(shareAdvancedSettingsStr.value)
 				&& /vfs objects ?=.*acl_xattr.*/.test(shareAdvancedSettingsStr.value);
 			shareShadowCopy.value =
 				(/shadow: ?snapdir ?=/.test(shareAdvancedSettingsStr.value)
@@ -452,8 +465,6 @@ export default {
 		};
 
 		const tmpShareInit = async () => {
-			shareValidUsers.value = [];
-			shareValidGroups.value = [];
 			Object.assign(tmpShare, props.share
 				? {
 					...props.share,
@@ -472,23 +483,6 @@ export default {
 					advancedSettings: []
 				}
 			);
-			splitQuotedDelim(tmpShare["valid users"], ', ')
-				.forEach((entity) => {
-					if (entity.at(0) === '@') {
-						const groupName = entity.substring(1);
-						shareValidGroups.value
-							.push(
-								props.groups.find(group => group.group === groupName)
-								?? { group: groupName, domain: false, pretty: groupName }
-							);
-					} else if (entity) {
-						shareValidUsers.value
-							.push(
-								props.users.find(user => user.user === entity)
-								?? { user: entity, domain: false, pretty: entity }
-							);
-					}
-				});
 
 			shareAdvancedSettingsStr.value = joinAdvancedSettings(tmpShare.advancedSettings);
 			showAdvanced.value = Boolean(shareAdvancedSettingsStr.value);
@@ -502,12 +496,34 @@ export default {
 
 			setAdvancedToggleStates();
 		};
+		watch([() => props.share, users, groups], () => {
+			shareValidUsers.value = [];
+			shareValidGroups.value = [];
+			splitQuotedDelim(tmpShare["valid users"], ', ')
+				.forEach((entity) => {
+					if (entity.at(0) === '@') {
+						const groupName = entity.substring(1);
+						shareValidGroups.value
+							.push(
+								groups.value.find(group => group.group === groupName)
+								?? { group: groupName, domain: false, pretty: groupName }
+							);
+					} else if (entity) {
+						shareValidUsers.value
+							.push(
+								users.value.find(user => user.user === entity)
+								?? { user: entity, domain: false, pretty: entity }
+							);
+					}
+				});
+		})
 
 		onMounted(() => tmpShareInit());
 
 		// these switch methods were watch, but I don't want settings to be removed
 		// when changing a line turns off the switch automatically through setAdvancedToggleStates
 		const switchWindowsAcls = (value) => {
+			shareWindowsAclsPlusLinux.value = false;
 			if (value) {
 				showAdvanced.value = true;
 				if (/map acl inherit/.test(shareAdvancedSettingsStr.value))
@@ -533,6 +549,41 @@ export default {
 					shareAdvancedSettingsStr.value
 						.replace(/map acl inherit ?= ?(yes|true|1)\n?/, "")
 						.replace(/acl_xattr: ?ignore system acls ?= ?(yes|true|1)\n?/, "")
+						.replace(/(vfs objects ?=.*)acl_xattr ?/, "$1");
+			}
+			shareAdvancedSettingsStr.value =
+				shareAdvancedSettingsStr.value
+					.split('\n')
+					.filter((line) => line !== "")
+					.join('\n')
+					.replace(/[\t ]+/g, " ")
+					.replace(/\s+$/gm, "");
+		};
+
+		const switchWindowsAclsPlusLinux = (value) => {
+			shareWindowsAcls.value = false;
+			if (value) {
+				showAdvanced.value = true;
+				if (/map acl inherit/.test(shareAdvancedSettingsStr.value))
+					shareAdvancedSettingsStr.value =
+						shareAdvancedSettingsStr.value
+							.replace(/(map acl inherit ?=).*/, "$1 yes");
+				else
+					shareAdvancedSettingsStr.value += "\nmap acl inherit = yes";
+				if (/acl_xattr:ignore system acls/.test(shareAdvancedSettingsStr.value))
+					shareAdvancedSettingsStr.value =
+						shareAdvancedSettingsStr.value
+							.replace(/(acl_xattr: ?ignore system acls ?=).*\n?/, "");
+				if (/vfs objects/.test(shareAdvancedSettingsStr.value))
+					shareAdvancedSettingsStr.value =
+						shareAdvancedSettingsStr.value
+							.replace(/(vfs objects ?=)(?!.*acl_xattr.*)/, "$1 acl_xattr ");
+				else
+					shareAdvancedSettingsStr.value += "\nvfs objects = acl_xattr";
+			} else {
+				shareAdvancedSettingsStr.value =
+					shareAdvancedSettingsStr.value
+						.replace(/map acl inherit ?= ?(yes|true|1)\n?/, "")
 						.replace(/(vfs objects ?=.*)acl_xattr ?/, "$1");
 			}
 			shareAdvancedSettingsStr.value =
@@ -1062,16 +1113,20 @@ WantedBy=remote-fs.target
 
 		return {
 			tmpShare,
+			users,
+			groups,
 			showAdvanced,
 			shareValidUsers,
 			shareValidGroups,
 			shareAdvancedSettingsStr,
 			shareWindowsAcls,
+			shareWindowsAclsPlusLinux,
 			shareShadowCopy,
 			shareMacOsShare,
 			shareAuditLogs,
 			setAdvancedToggleStates,
 			switchWindowsAcls,
+			switchWindowsAclsPlusLinux,
 			switchShadowCopy,
 			switchMacOsShare,
 			switchAuditLogs,

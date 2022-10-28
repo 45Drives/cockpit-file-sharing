@@ -29,8 +29,6 @@ If not, see <https://www.gnu.org/licenses/>.
 		<SambaShareManagement
 			:shares="shares"
 			@refreshShares="refresh"
-			:groups="groups"
-			:users="users"
 			:cephLayoutPools="cephLayoutPools"
 			:ctdbHosts="ctdbHosts"
 			:parentProcessing="processing"
@@ -104,7 +102,7 @@ import SambaGlobalManagement from "./SambaGlobalManagement.vue";
 import { useSpawn, errorString, errorStringHTML, processOutputDownload } from "@45drives/cockpit-helpers";
 import { ref, reactive, watch, inject, onBeforeUnmount } from "vue";
 import LoadingSpinner from "./LoadingSpinner.vue";
-import { notificationsInjectionKey, usersInjectionKey, groupsInjectionKey } from "../keys";
+import { notificationsInjectionKey } from "../keys";
 import ModalPopup from "./ModalPopup.vue";
 import InfoTip from "./InfoTip.vue";
 import { useConfig } from "./Config.vue";
@@ -114,8 +112,6 @@ export default {
 		const config = useConfig();
 		const shares = ref([]);
 		const globalConfig = reactive({ advancedSettings: [] });
-		const users = inject(usersInjectionKey);
-		const groups = inject(groupsInjectionKey);
 		const ctdbHosts = ref([]);
 		const cephLayoutPools = ref([]);
 		const processing = ref(0);
@@ -425,8 +421,6 @@ export default {
 			config,
 			shares,
 			globalConfig,
-			users,
-			groups,
 			processing,
 			confirmationModal,
 			ctdbHosts,
