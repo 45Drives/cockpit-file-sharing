@@ -1,4 +1,3 @@
-## Cockpit File Sharing 3.2.9-1
+## Cockpit File Sharing 3.2.9-2
 
-* Optimize getting users and groups from AD/domain
-* Add second Windows ACLs option for Linux/Mac clients
+* add gawk as dependency
