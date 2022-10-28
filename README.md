@@ -37,8 +37,8 @@ sudo apt install cockpit-file-sharing
 ### Direct from .deb
 Installing this way may work for other versions of Ubuntu and Debian, but it is unsupported. You won't get automatic updates this way.
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.2.9/cockpit-file-sharing_3.2.9-1focal_all.deb
-sudo apt install ./cockpit-file-sharing_3.2.9-1focal_all.deb
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.2.9/cockpit-file-sharing_3.2.9-2focal_all.deb
+sudo apt install ./cockpit-file-sharing_3.2.9-2focal_all.deb
 ```
 ## Rocky 8
 ### From 45Drives Repo (Recommended, Rocky 8 only)
@@ -50,7 +50,7 @@ sudo dnf install cockpit-file-sharing
 Installing this way may work for other versions of Rocky/Centos/RHEL/Fedora/etc, but it is unsupported. You won't get automatic updates this way.
 ```bash
 # dnf or yum
-sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.2.9/cockpit-file-sharing-3.2.9-1.el8.noarch.rpm
+sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.2.9/cockpit-file-sharing-3.2.9-2.el8.noarch.rpm
 ```
 ## Generic Installation
 1. Install Dependencies
@@ -65,6 +65,7 @@ samba
 samba-common-bin
 systemd
 winbin
+gawk
 # RHEL-like
 cockpit
 attr
@@ -74,6 +75,7 @@ nfs-utils
 samba-common-tools
 samba-winbind-clients
 system
+gawk
 ```
 2. Download pre-built archive and install
 ```bash

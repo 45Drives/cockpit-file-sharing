@@ -4,7 +4,7 @@
     "title": "Cockpit File Sharing",
     "prerelease": false,
     "version": "3.2.9",
-    "buildVersion": "1",
+    "buildVersion": "2",
     "author": "Josh Boudreau <jboudreau@45drives.com>",
     "url": "https://github.com/45Drives/cockpit-file-sharing",
     "category": "utils",
@@ -31,7 +31,8 @@
             "samba",
             "samba-common-bin",
             "systemd",
-            "winbind"
+            "winbind",
+            "gawk"
         ],
         "el": [
             "cockpit",
@@ -41,7 +42,8 @@
             "nfs-utils",
             "samba-common-tools",
             "samba-winbind-clients",
-            "systemd"
+            "systemd",
+            "gawk"
         ]
     },
     "releases": [
@@ -59,7 +61,7 @@
     "changelog": {
         "urgency": "medium",
         "version": "3.2.9",
-        "buildVersion": "1",
+        "buildVersion": "2",
         "ignore": [],
         "date": null,
         "packager": "Josh Boudreau <jboudreau@45drives.com>",

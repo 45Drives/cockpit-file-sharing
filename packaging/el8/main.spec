@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri Oct 28 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.9-2
+- add gawk as dependency
 * Thu Oct 27 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.9-1
 - Optimize getting users and groups from AD/domain
 - Add second Windows ACLs option for Linux/Mac clients
