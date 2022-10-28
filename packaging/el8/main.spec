@@ -29,6 +29,7 @@ make DESTDIR=%{buildroot} install
 %changelog
 * Thu Oct 27 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.9-1
 - Optimize getting users and groups from AD/domain
+- Add second Windows ACLs option for Linux/Mac clients
 * Mon Sep 12 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.8-1
 - Handle case where NFS exports.d directory does not exist.
 * Wed Aug 24 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.7-1
