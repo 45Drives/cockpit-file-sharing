@@ -38,6 +38,9 @@ If not, see <https://www.gnu.org/licenses/>.
 						@hide="showAddShare = false"
 						:users="users"
 						:groups="groups"
+						:shares="shares"
+						:corosyncHosts="corosyncHosts"
+						:cephLayoutPools="cephLayoutPools"
 					/>
 				</div>
 			</div>
@@ -74,6 +77,9 @@ If not, see <https://www.gnu.org/licenses/>.
 								@update-share="updateShare"
 								:users="users"
 								:groups="groups"
+								:shares="shares"
+								:corosyncHosts="corosyncHosts"
+								:cephLayoutPools="cephLayoutPools"
 							/>
 						</template>
 					</Table>
@@ -133,15 +139,18 @@ import Table from "./Table.vue";
 import { notificationsInjectionKey, usersInjectionKey, groupsInjectionKey } from "../keys";
 import ModalPopup from "./ModalPopup.vue";
 import { useConfig } from "./Config.vue";
+import { getCephLayoutPools } from "../functions";
 
 export default {
-	setup(props) {
+	setup() {
 		const config = useConfig();
 		const shares = ref([]);
 		const processing = ref(0);
 		const showAddShare = ref(false);
 		const users = inject(usersInjectionKey);
 		const groups = inject(groupsInjectionKey);
+		const corosyncHosts = ref([]);
+		const cephLayoutPools = ref([]);
 		const notifications = inject(notificationsInjectionKey);
 		let exportsFile = null;
 		let exportsFileWatchHandle = null;
@@ -176,6 +185,13 @@ export default {
 			} finally {
 				processing.value--;
 			}
+		};
+
+		const getCorosyncHosts = async () => {
+			try {
+				const pcsConfig = await useSpawn(['pcs', 'cluster', 'config', 'show', '--output-format', 'json'], { superuser: 'try' }).promise();
+				corosyncHosts.value = JSON.parse(pcsConfig.stdout.trim()).nodes.map(node => node.addrs[0].addr);
+			} catch { /* not using corosync */ }
 		};
 
 		const writeExportsFile = async () => {
@@ -237,8 +253,8 @@ export default {
 		}
 
 		const deleteShare = async (share) => {
-			if (!await confirmationModal.ask(`Permanently delete share for "${share.path}"?`, "This cannot be undone."))
-				return;
+			// if (!await confirmationModal.ask(`Permanently delete share for "${share.path}"?`, "This cannot be undone."))
+			// 	return;
 			try {
 				shares.value = shares.value.filter((testShare) => share !== testShare);
 				await writeExportsFile();
@@ -290,12 +306,25 @@ export default {
 			exportsFileWatchHandle = exportsFile.watch(loadShares);
 		}, { immediate: true });
 
+		getCephLayoutPools('client.nfs')
+			.then(pools => {
+				cephLayoutPools.value = pools;
+			});
+
+		const watchHandles = [];
+
+		watchHandles.push(cockpit.file('/etc/corosync/corosync.conf', { superuser: 'try' }).watch(() => getCorosyncHosts(), { read: false }));
+
+		onBeforeUnmount(() => watchHandles.map(handle => handle?.remove?.()));
+
 		return {
 			shares,
 			processing,
 			showAddShare,
 			users,
 			groups,
+			corosyncHosts,
+			cephLayoutPools,
 			confirmationModal,
 			loadShares,
 			updateShare,
