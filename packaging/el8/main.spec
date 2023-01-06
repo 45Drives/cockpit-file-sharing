@@ -27,6 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri Jan 06 2023 Josh Boudreau <jboudreau@45drives.com> 3.3.0-1
+- Add Ceph settings to the NFS tab
+- Propagate remount units across corosync cluster
 * Fri Oct 28 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.9-2
 - add gawk as dependency
 * Thu Oct 27 2022 Joshua Boudreau <jboudreau@45drives.com> 3.2.9-1

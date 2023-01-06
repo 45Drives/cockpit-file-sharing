@@ -1,3 +1,4 @@
-## Cockpit File Sharing 3.2.9-2
+## Cockpit File Sharing 3.3.0-1
 
-* add gawk as dependency
+* Add Ceph settings to the NFS tab
+* Propagate remount units across corosync cluster
