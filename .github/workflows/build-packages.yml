@@ -3,6 +3,7 @@ on:
   push:
     branches: 
       - build
+      - nfs-ceph-multinode
     tags:
       - 'v*.*.*'
 jobs:
