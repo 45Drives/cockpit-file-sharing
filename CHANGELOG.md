@@ -1,4 +1,3 @@
-## Cockpit File Sharing 3.3.0-1
+## Cockpit File Sharing 3.3.1-1
 
-* Add Ceph settings to the NFS tab
-* Propagate remount units across corosync cluster
+* Propagate the NFS exports to all corosync hosts when configured
