@@ -1,3 +1,3 @@
-## Cockpit File Sharing 3.2.9-2
+## Cockpit File Sharing 3.3.1-1
 
-* add gawk as dependency
+* Propagate the NFS exports to all corosync hosts when configured

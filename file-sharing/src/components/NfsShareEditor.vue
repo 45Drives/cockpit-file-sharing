@@ -38,6 +38,9 @@ If not, see <https://www.gnu.org/licenses/>.
 					@hide="showPermissionsEditor = false" />
 			</div>
 		</div>
+
+		<CephShareOptions ref="cephShareRef" :shares="shares" :share="share" :tmpShare="tmpShare" :pathExists="pathExists" :cephLayoutPools="cephLayoutPools" vipProvider="corosync" :gatewayHosts="corosyncHosts" />
+
 		<Table shrinkHeight noScroll class="rounded-lg">
 			<template #header>
 				<div class="flex flex-row items-center justify-between">
@@ -87,6 +90,7 @@ import ModalPopup from "./ModalPopup.vue";
 import { notificationsInjectionKey } from "../keys";
 import FilePermissions from "./FilePermissions.vue";
 import Table from "./Table.vue";
+import CephShareOptions from "./CephShareOptions.vue";
 
 const clientTemplate = {
 	host: "*",
@@ -103,12 +107,16 @@ export default {
 		share: {
 			type: Object,
 			required: false,
-			default: null
+			default: null,
 		},
 		users: Array[Object],
 		groups: Array[Object],
+		shares: Array[Object],
+		corosyncHosts: Array[String],
+		cephLayoutPools: Array[String],
 	},
 	setup(props, { emit }) {
+		const cephShareRef = ref(null);
 		const pathExists = ref(false);
 		const inputsValid = ref(false);
 		const tmpShare = reactive({});
@@ -131,11 +139,14 @@ export default {
 
 		tmpShareInit();
 
-		const apply = () => {
+		const apply = async () => {
 			tmpShare.path = tmpShare.path.trim();
 			for (const client of tmpShare.clients) {
 				client.host = client.host.replace(/\s+/, '');
 				client.settings = client.settings.replace(/\s+/, '');
+			}
+			if (cephShareRef.value.applyCeph) {
+				await cephShareRef.value?.applyCeph?.();
 			}
 			emit('updateShare', tmpShare);
 			emit('hide');
@@ -215,16 +226,18 @@ export default {
 			createDir,
 			canonicalPath,
 			notifications,
-		}
+			cephShareRef,
+		};
 	},
 	components: {
 		PlusIcon,
 		MinusIcon,
 		ExclamationCircleIcon,
 		ExclamationIcon,
+		CephShareOptions,
 		ModalPopup,
 		FilePermissions,
-		Table
-	}
-}
+		Table,
+	},
+};
 </script>

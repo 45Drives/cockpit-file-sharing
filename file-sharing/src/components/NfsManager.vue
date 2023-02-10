@@ -38,6 +38,9 @@ If not, see <https://www.gnu.org/licenses/>.
 						@hide="showAddShare = false"
 						:users="users"
 						:groups="groups"
+						:shares="shares"
+						:corosyncHosts="corosyncHosts"
+						:cephLayoutPools="cephLayoutPools"
 					/>
 				</div>
 			</div>
@@ -74,6 +77,9 @@ If not, see <https://www.gnu.org/licenses/>.
 								@update-share="updateShare"
 								:users="users"
 								:groups="groups"
+								:shares="shares"
+								:corosyncHosts="corosyncHosts"
+								:cephLayoutPools="cephLayoutPools"
 							/>
 						</template>
 					</Table>
@@ -133,18 +139,22 @@ import Table from "./Table.vue";
 import { notificationsInjectionKey, usersInjectionKey, groupsInjectionKey } from "../keys";
 import ModalPopup from "./ModalPopup.vue";
 import { useConfig } from "./Config.vue";
+import { getCephLayoutPools } from "../functions";
 
 export default {
-	setup(props) {
+	setup() {
 		const config = useConfig();
 		const shares = ref([]);
 		const processing = ref(0);
 		const showAddShare = ref(false);
 		const users = inject(usersInjectionKey);
 		const groups = inject(groupsInjectionKey);
+		const corosyncHosts = ref([]);
+		const cephLayoutPools = ref([]);
 		const notifications = inject(notificationsInjectionKey);
 		let exportsFile = null;
-		let exportsFileWatchHandle = null;
+		let exportsFiles = [];
+		let exportsFileWatchHandles = [];
 
 		const confirmationModal = reactive({
 			showModal: false,
@@ -178,14 +188,32 @@ export default {
 			}
 		};
 
+		const getCorosyncHosts = async () => {
+			try {
+				const pcsConfig = await useSpawn(['pcs', 'cluster', 'config', 'show', '--output-format', 'json'], { superuser: 'try' }).promise();
+				corosyncHosts.value = JSON.parse(pcsConfig.stdout.trim()).nodes.map(node => node.addrs[0].addr);
+			} catch { /* not using corosync */ }
+		};
+
 		const writeExportsFile = async () => {
 			try {
 				const filePath = config.nfs.confPath;
 				if (filePath[0] !== '/')
 					throw new Error('NFS Exports path must be absolute.');
 				const parentDir = filePath.split('/').slice(0, -1).join('/') || '/';
-				await useSpawn(['mkdir', '-p', parentDir], { superuser: 'try' }).promise();
-				await exportsFile.replace(shares.value);
+				if (corosyncHosts.value.length > 0) {
+					for (let i = 0; i < corosyncHosts.value.length; i++) {
+						const host = corosyncHosts.value[i];
+
+						await useSpawn(['mkdir', '-p', parentDir], { superuser: 'try', host, }).promise();
+						// await exportsFile.replace(shares.value);
+						await Promise.all(exportsFiles.map(exportsFile => exportsFile.replace(shares.value)));
+					}
+				} else {
+					await useSpawn(['mkdir', '-p', parentDir], { superuser: 'try' }).promise();
+					// await exportsFile.replace(shares.value);
+					await Promise.all(exportsFiles.map(exportsFile => exportsFile.replace(shares.value)));
+				}
 			} catch (error) {
 				error.message = `Failed to write exports file: ${errorString(error.message)}`;
 				throw error;
@@ -194,7 +222,15 @@ export default {
 
 		const validateExportsFile = async () => {
 			try {
-				await useSpawn(['exportfs', '-ra'], { superuser: 'try' }).promise();
+				if (corosyncHosts.value.length > 0) {
+					for (let i = 0; i < corosyncHosts.value.length; i++) {
+						const host = corosyncHosts.value[i];
+
+						await useSpawn(['exportfs', '-ra'], { superuser: 'try', host }).promise();
+					}
+				} else {
+					await useSpawn(['exportfs', '-ra'], { superuser: 'try' }).promise();
+				}
 			} catch (error) {
 				error.message = `Failed to validate exports file: ${errorString(error)}`;
 				throw error;
@@ -237,8 +273,8 @@ export default {
 		}
 
 		const deleteShare = async (share) => {
-			if (!await confirmationModal.ask(`Permanently delete share for "${share.path}"?`, "This cannot be undone."))
-				return;
+			// if (!await confirmationModal.ask(`Permanently delete share for "${share.path}"?`, "This cannot be undone."))
+			// 	return;
 			try {
 				shares.value = shares.value.filter((testShare) => share !== testShare);
 				await writeExportsFile();
@@ -284,11 +320,35 @@ export default {
 			fileDownload(exportsFile.path, filename);
 		}
 
-		watch(() => config.nfs.confPath, () => {
-			exportsFileWatchHandle?.remove();
+		watch([() => config.nfs.confPath, corosyncHosts], async () => {
+			await exportsFileWatchHandles.map(exportsFileWatchHandle => exportsFileWatchHandle?.remove?.());
+
+			exportsFiles = [];
+			exportsFileWatchHandles = [];
+
 			exportsFile = cockpit.file(config.nfs.confPath, { superuser: 'try', syntax: NfsExportSyntax });
-			exportsFileWatchHandle = exportsFile.watch(loadShares);
-		}, { immediate: true });
+
+			if (corosyncHosts.length > 0) {
+				for (let i = 0; i < corosyncHosts.value.length; i++) {
+					exportsFiles[i] = cockpit.file(config.nfs.confPath, { superuser: 'try', syntax: NfsExportSyntax, host });
+					exportsFileWatchHandles[i] = [exportsFiles[i].watch(loadShares)];
+				}
+			} else {
+				exportsFiles[0] = cockpit.file(config.nfs.confPath, { superuser: 'try', syntax: NfsExportSyntax });
+				exportsFileWatchHandles[0] = exportsFiles[0].watch(loadShares);
+			}
+		}, { immediate: true, deep: true });
+
+		getCephLayoutPools('client.nfs')
+			.then(pools => {
+				cephLayoutPools.value = pools;
+			});
+
+		const watchHandles = [];
+
+		watchHandles.push(cockpit.file('/etc/corosync/corosync.conf', { superuser: 'try' }).watch(() => getCorosyncHosts(), { read: false }));
+
+		onBeforeUnmount(() => watchHandles.map(handle => handle?.remove?.()));
 
 		return {
 			shares,
@@ -296,6 +356,8 @@ export default {
 			showAddShare,
 			users,
 			groups,
+			corosyncHosts,
+			cephLayoutPools,
 			confirmationModal,
 			loadShares,
 			updateShare,

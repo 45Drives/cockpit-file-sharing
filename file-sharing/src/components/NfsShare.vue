@@ -23,7 +23,7 @@ If not, see <https://www.gnu.org/licenses/>.
 				<span class="sr-only">Edit share for {{ share.path }}</span>
 				<PencilAltIcon class="size-icon icon-default" />
 			</button>
-			<button @click="$emit('delete-share', share)">
+			<button @click="deleteShare">
 				<span class="sr-only">Delete share for {{ share.path }}</span>
 				<TrashIcon class="size-icon icon-danger" />
 			</button>
@@ -41,43 +41,98 @@ If not, see <https://www.gnu.org/licenses/>.
 					@update-share="updateShare"
 					@hide="showEditor = false"
 					ref="editorRef"
+					class="py-2"
 					:users="users"
 					:groups="groups"
-					class="py-2"
+					:shares="shares"
+					:corosyncHosts="corosyncHosts"
+					:cephLayoutPools="cephLayoutPools"
 				/>
 			</div>
 		</td>
 	</tr>
+
+	<ModalPopup
+		:showModal="confirmationModal.showModal"
+		@apply="confirmationModal.applyCallback"
+		@cancel="confirmationModal.cancelCallback"
+		applyDangerous
+		applyText="Yes"
+		:headerText="confirmationModal.headerText"
+	>
+		<template #icon>
+			<ExclamationCircleIcon class="size-icon-xl icon-danger shrink-0" />
+		</template>
+		{{ confirmationModal.bodyText }}
+	</ModalPopup>
+
 </template>
 
 <script>
-import { ref } from "vue";
+import { reactive, ref } from "vue";
 import NfsShareEditor from "./NfsShareEditor.vue";
-import { PencilAltIcon, TrashIcon } from "@heroicons/vue/solid";
+import { ExclamationCircleIcon, PencilAltIcon, TrashIcon } from "@heroicons/vue/solid";
+import ModalPopup from "./ModalPopup.vue";
 export default {
 	props: {
 		share: Object,
 		users: Array[Object],
 		groups: Array[Object],
+		shares: Array[Object],
+		corosyncHosts: Array[String],
+		cephLayoutPools: Array[String],
 	},
 	setup(props, { emit }) {
 		const editorRef = ref();
 		const showEditor = ref(false);
 
+		const confirmationModal = reactive({
+			showModal: false,
+			headerText: "",
+			bodyText: "",
+			ask: (header, body) => {
+				return new Promise((resolve, reject) => {
+					confirmationModal.showModal = true;
+					confirmationModal.headerText = header;
+					confirmationModal.bodyText = body;
+					const respond = (result) => {
+						confirmationModal.showModal = false;
+						resolve(result);
+					}
+					confirmationModal.applyCallback = () => respond(true);
+					confirmationModal.cancelCallback = () => respond(false);
+				});
+			},
+			applyCallback: () => { },
+			cancelCallback: () => { },
+		});
+
 		const updateShare = (newShare) => {
 			emit('update-share', props.share, newShare);
 		}
 
+		const deleteShare = async () => {
+			if (!await confirmationModal.ask(`Permanently delete ${props.share.path}?`, "This cannot be undone."))
+				return;
+			if (editorRef.value.cephShareRef.isCeph && !editorRef.value.cephShareRef.cephNotRemounted)
+				editorRef.value.cephShareRef.removeCephMount();
+			emit('delete-share', props.share);
+		}
+
 		return {
 			showEditor,
-			updateShare,
 			editorRef,
-		}
+			confirmationModal,
+			deleteShare,
+			updateShare,
+		};
 	},
 	components: {
 		NfsShareEditor,
 		PencilAltIcon,
 		TrashIcon,
+		ModalPopup,
+		ExclamationCircleIcon,
 	}
 }
 </script>

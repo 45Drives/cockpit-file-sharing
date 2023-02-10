@@ -103,3 +103,36 @@ export function splitQuotedDelim(str, delims) {
 		return state;
 	}, state).tokens;
 }
+
+export const getCephLayoutPools = async clientName => {
+	try {
+		const cephFsStatus = JSON.parse((await useSpawn([
+			'ceph',
+			'fs',
+			'status',
+			`--keyring=/etc/ceph/ceph.${clientName}.keyring`,
+			'-n',
+			clientName,
+			'--format=json',
+		], { superuser: 'try' }).promise()).stdout);
+
+		return cephFsStatus.pools
+			.filter(pool => pool.type === 'data')
+			.map(pool => pool.name);
+	} catch {
+		try {
+			const cephFsStatus = JSON.parse((await useSpawn([
+				'ceph',
+				'fs',
+				'status',
+				'--format=json',
+			], { superuser: 'try' }).promise()).stdout);
+
+			return cephFsStatus.pools
+				.filter(pool => pool.type === 'data')
+				.map(pool => pool.name);
+		} catch { /* assuming not ceph */ }
+	}
+
+	return [];
+};
