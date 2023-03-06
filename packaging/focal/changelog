@@ -1,3 +1,9 @@
+cockpit-file-sharing (3.3.1-2focal) focal; urgency=medium
+
+  * Bug fix for exports.d file replicating across servers.
+
+ -- Dawson Della Valle <ddellavalle@45drives.com>  Mon, 06 Mar 2023 10:59:47 -0400
+
 cockpit-file-sharing (3.3.1-1focal) focal; urgency=medium
 
   * Propagate the NFS exports to all corosync hosts when configured

@@ -1,3 +1,3 @@
-## Cockpit File Sharing 3.3.1-1
+## Cockpit File Sharing 3.3.1-2
 
-* Propagate the NFS exports to all corosync hosts when configured
+* Bug fix for exports.d file replicating across servers.

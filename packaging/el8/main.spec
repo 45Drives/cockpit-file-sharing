@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Mar 06 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-2
+- Bug fix for exports.d file replicating across servers.
 * Tue Jan 24 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-1
 - Propagate the NFS exports to all corosync hosts when configured
 * Fri Jan 06 2023 Josh Boudreau <jboudreau@45drives.com> 3.3.0-1

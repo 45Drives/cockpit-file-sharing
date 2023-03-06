@@ -328,9 +328,12 @@ export default {
 
 			exportsFile = cockpit.file(config.nfs.confPath, { superuser: 'try', syntax: NfsExportSyntax });
 
-			if (corosyncHosts.length > 0) {
+			if (corosyncHosts.value.length > 0) {
 				for (let i = 0; i < corosyncHosts.value.length; i++) {
-					exportsFiles[i] = cockpit.file(config.nfs.confPath, { superuser: 'try', syntax: NfsExportSyntax, host });
+					const host = corosyncHosts.value[i];
+
+					exportsFiles[i] = cockpit.file(config.nfs.confPath, { superuser: 'try', syntax: NfsExportSyntax, host, });
+
 					exportsFileWatchHandles[i] = [exportsFiles[i].watch(loadShares)];
 				}
 			} else {
