@@ -1,3 +1,10 @@
+cockpit-file-sharing (3.3.1-3focal) focal; urgency=medium
+
+  * Use a universal method to read in corosync hosts (While PCS 0.10.4 default on
+    Ubuntu)
+
+ -- Dawson Della Valle <ddellavalle@45drives.com>  Thu, 09 Mar 2023 06:58:37 -0400
+
 cockpit-file-sharing (3.3.1-2focal) focal; urgency=medium
 
   * Bug fix for exports.d file replicating across servers.

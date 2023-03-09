@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu Mar 09 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-3
+- Use a universal method to read in corosync hosts (While PCS 0.10.4 default on Ubuntu)
 * Mon Mar 06 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-2
 - Bug fix for exports.d file replicating across servers.
 * Tue Jan 24 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-1

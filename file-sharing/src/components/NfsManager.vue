@@ -190,8 +190,14 @@ export default {
 
 		const getCorosyncHosts = async () => {
 			try {
-				const pcsConfig = await useSpawn(['pcs', 'cluster', 'config', 'show', '--output-format', 'json'], { superuser: 'try' }).promise();
-				corosyncHosts.value = JSON.parse(pcsConfig.stdout.trim()).nodes.map(node => node.addrs[0].addr);
+				// const pcsConfig = await useSpawn(['pcs', 'cluster', 'config', 'show', '--output-format', 'json'], { superuser: 'try' }).promise();
+				// corosyncHosts.value = JSON.parse(pcsConfig.stdout.trim()).nodes.map(node => node.addrs[0].addr);
+				const pcsAddrs = await useSpawn(['bash', '-c', "cat /etc/corosync/corosync.conf | grep 'ring0_addr' | awk -F: '{print $2}'"], { superuser: 'try' }).promise();
+
+				if (pcsAddrs.stdout?.trim()) {
+					corosyncHosts.value = pcsConfig.stdout.split('\n').map(ip => ip.trim());
+					console.log(corosyncHosts.value);
+				}
 			} catch { /* not using corosync */ }
 		};
 
