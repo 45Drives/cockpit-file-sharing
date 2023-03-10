@@ -195,7 +195,7 @@ export default {
 				const pcsAddrs = await useSpawn(['bash', '-c', "cat /etc/corosync/corosync.conf | grep 'ring0_addr' | awk -F: '{print $2}'"], { superuser: 'try' }).promise();
 
 				if (pcsAddrs.stdout?.trim()) {
-					corosyncHosts.value = pcsConfig.stdout.split('\n').map(ip => ip.trim());
+					corosyncHosts.value = pcsAddrs.stdout.split('\n').map(ip => ip.trim());
 					console.log(corosyncHosts.value);
 				}
 			} catch { /* not using corosync */ }

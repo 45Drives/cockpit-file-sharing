@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri Mar 10 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-4
+- Fix typo in corosync hosts update.
 * Thu Mar 09 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-3
 - Use a universal method to read in corosync hosts (While PCS 0.10.4 default on Ubuntu)
 * Mon Mar 06 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-2
