@@ -195,7 +195,7 @@ export default {
 				const pcsAddrs = await useSpawn(['bash', '-c', "cat /etc/corosync/corosync.conf | grep 'ring0_addr' | awk -F: '{print $2}'"], { superuser: 'try' }).promise();
 
 				if (pcsAddrs.stdout?.trim()) {
-					corosyncHosts.value = pcsAddrs.stdout.split('\n').map(ip => ip.trim());
+					corosyncHosts.value = pcsAddrs.stdout.split('\n').map(ip => ip.trim()).filter(ip => ip);
 					console.log(corosyncHosts.value);
 				}
 			} catch { /* not using corosync */ }
@@ -212,9 +212,9 @@ export default {
 						const host = corosyncHosts.value[i];
 
 						await useSpawn(['mkdir', '-p', parentDir], { superuser: 'try', host, }).promise();
-						// await exportsFile.replace(shares.value);
-						await Promise.all(exportsFiles.map(exportsFile => exportsFile.replace(shares.value)));
 					}
+
+					await Promise.all(exportsFiles.map(exportsFile => exportsFile.replace(shares.value)));
 				} else {
 					await useSpawn(['mkdir', '-p', parentDir], { superuser: 'try' }).promise();
 					// await exportsFile.replace(shares.value);

@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Mar 13 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-5
+- Separate /etc/exports.d creation from exports file write
 * Fri Mar 10 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-4
 - Fix typo in corosync hosts update.
 * Thu Mar 09 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-3

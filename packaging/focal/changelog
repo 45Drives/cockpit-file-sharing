@@ -1,3 +1,9 @@
+cockpit-file-sharing (3.3.1-5focal) focal; urgency=medium
+
+  * Separate /etc/exports.d creation from exports file write
+
+ -- Dawson Della Valle <ddellavalle@45drives.com>  Mon, 13 Mar 2023 09:57:48 -0300
+
 cockpit-file-sharing (3.3.1-4focal) focal; urgency=medium
 
   * Fix typo in corosync hosts update.

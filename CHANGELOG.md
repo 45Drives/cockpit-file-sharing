@@ -1,3 +1,3 @@
-## Cockpit File Sharing 3.3.1-4
+## Cockpit File Sharing 3.3.1-5
 
-* Fix typo in corosync hosts update.
+* Separate /etc/exports.d creation from exports file write
