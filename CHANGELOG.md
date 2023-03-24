@@ -1,3 +1,4 @@
-## Cockpit File Sharing 3.3.1-5
+## Cockpit File Sharing 3.3.2-1
 
-* Separate /etc/exports.d creation from exports file write
+* Add Ceph + NFS support
+* Add NFS config propagation aligning with corosync cluster hosts

@@ -27,16 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
-* Mon Mar 13 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-5
-- Separate /etc/exports.d creation from exports file write
-* Fri Mar 10 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-4
-- Fix typo in corosync hosts update.
-* Thu Mar 09 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-3
-- Use a universal method to read in corosync hosts (While PCS 0.10.4 default on Ubuntu)
-* Mon Mar 06 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-2
-- Bug fix for exports.d file replicating across servers.
-* Tue Jan 24 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.1-1
-- Propagate the NFS exports to all corosync hosts when configured
+* Fri Mar 24 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.2-1
+- Add Ceph + NFS support
+- Add NFS config propagation aligning with corosync cluster hosts
 * Fri Jan 06 2023 Josh Boudreau <jboudreau@45drives.com> 3.3.0-1
 - Add Ceph settings to the NFS tab
 - Propagate remount units across corosync cluster

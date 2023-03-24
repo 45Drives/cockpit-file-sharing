@@ -1,33 +1,9 @@
-cockpit-file-sharing (3.3.1-5focal) focal; urgency=medium
+cockpit-file-sharing (3.3.2-1focal) focal; urgency=medium
 
-  * Separate /etc/exports.d creation from exports file write
+  * Add Ceph + NFS support
+  * Add NFS config propagation aligning with corosync cluster hosts
 
- -- Dawson Della Valle <ddellavalle@45drives.com>  Mon, 13 Mar 2023 09:57:48 -0300
-
-cockpit-file-sharing (3.3.1-4focal) focal; urgency=medium
-
-  * Fix typo in corosync hosts update.
-
- -- Dawson Della Valle <ddellavalle@45drives.com>  Fri, 10 Mar 2023 06:40:30 -0400
-
-cockpit-file-sharing (3.3.1-3focal) focal; urgency=medium
-
-  * Use a universal method to read in corosync hosts (While PCS 0.10.4 default on
-    Ubuntu)
-
- -- Dawson Della Valle <ddellavalle@45drives.com>  Thu, 09 Mar 2023 06:58:37 -0400
-
-cockpit-file-sharing (3.3.1-2focal) focal; urgency=medium
-
-  * Bug fix for exports.d file replicating across servers.
-
- -- Dawson Della Valle <ddellavalle@45drives.com>  Mon, 06 Mar 2023 10:59:47 -0400
-
-cockpit-file-sharing (3.3.1-1focal) focal; urgency=medium
-
-  * Propagate the NFS exports to all corosync hosts when configured
-
- -- Dawson Della Valle <ddellavalle@45drives.com>  Tue, 24 Jan 2023 03:44:05 -0400
+ -- Dawson Della Valle <ddellavalle@45drives.com>  Fri, 24 Mar 2023 11:16:40 -0300
 
 cockpit-file-sharing (3.3.0-1focal) focal; urgency=medium
 
