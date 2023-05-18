@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu May 18 2023 Jordan Keough <jkeough@45drives.com> 3.3.2-2
+- Hides Edit Permissions button
 * Fri Mar 24 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.2-1
 - Add Ceph + NFS support
 - Add NFS config propagation aligning with corosync cluster hosts

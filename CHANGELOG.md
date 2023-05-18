@@ -1,4 +1,3 @@
-## Cockpit File Sharing 3.3.2-1
+## Cockpit File Sharing 3.3.2-2
 
-* Add Ceph + NFS support
-* Add NFS config propagation aligning with corosync cluster hosts
+* Hides Edit Permissions button
