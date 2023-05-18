@@ -100,12 +100,12 @@ If not, see <https://www.gnu.org/licenses/>.
 						</button>
 					</template>
 				</template>
-				<button
+				<!-- <button 
 					v-else
 					class="text-feedback text-primary"
 					@click="showPermissionsEditor = true"
 				>Edit
-					Permissions</button>
+					Permissions</button> -->
 				<FilePermissions
 					:show="showPermissionsEditor"
 					:path="tmpShare.path"
