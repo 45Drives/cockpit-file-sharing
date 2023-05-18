@@ -1,3 +1,4 @@
-## Cockpit File Sharing 3.3.1-1
+## Cockpit File Sharing 3.3.2-1
 
-* Propagate the NFS exports to all corosync hosts when configured
+* Add Ceph + NFS support
+* Add NFS config propagation aligning with corosync cluster hosts

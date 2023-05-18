@@ -1,8 +1,9 @@
-cockpit-file-sharing (3.3.1-1focal) focal; urgency=medium
+cockpit-file-sharing (3.3.2-1focal) focal; urgency=medium
 
-  * Propagate the NFS exports to all corosync hosts when configured
+  * Add Ceph + NFS support
+  * Add NFS config propagation aligning with corosync cluster hosts
 
- -- Dawson Della Valle <ddellavalle@45drives.com>  Tue, 24 Jan 2023 03:44:05 -0400
+ -- Dawson Della Valle <ddellavalle@45drives.com>  Fri, 24 Mar 2023 11:16:40 -0300
 
 cockpit-file-sharing (3.3.0-1focal) focal; urgency=medium
 

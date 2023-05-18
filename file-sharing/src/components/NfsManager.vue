@@ -190,8 +190,14 @@ export default {
 
 		const getCorosyncHosts = async () => {
 			try {
-				const pcsConfig = await useSpawn(['pcs', 'cluster', 'config', 'show', '--output-format', 'json'], { superuser: 'try' }).promise();
-				corosyncHosts.value = JSON.parse(pcsConfig.stdout.trim()).nodes.map(node => node.addrs[0].addr);
+				// const pcsConfig = await useSpawn(['pcs', 'cluster', 'config', 'show', '--output-format', 'json'], { superuser: 'try' }).promise();
+				// corosyncHosts.value = JSON.parse(pcsConfig.stdout.trim()).nodes.map(node => node.addrs[0].addr);
+				const pcsAddrs = await useSpawn(['bash', '-c', "cat /etc/corosync/corosync.conf | grep 'ring0_addr' | awk -F: '{print $2}'"], { superuser: 'try' }).promise();
+
+				if (pcsAddrs.stdout?.trim()) {
+					corosyncHosts.value = pcsAddrs.stdout.split('\n').map(ip => ip.trim()).filter(ip => ip);
+					console.log(corosyncHosts.value);
+				}
 			} catch { /* not using corosync */ }
 		};
 
@@ -206,9 +212,9 @@ export default {
 						const host = corosyncHosts.value[i];
 
 						await useSpawn(['mkdir', '-p', parentDir], { superuser: 'try', host, }).promise();
-						// await exportsFile.replace(shares.value);
-						await Promise.all(exportsFiles.map(exportsFile => exportsFile.replace(shares.value)));
 					}
+
+					await Promise.all(exportsFiles.map(exportsFile => exportsFile.replace(shares.value)));
 				} else {
 					await useSpawn(['mkdir', '-p', parentDir], { superuser: 'try' }).promise();
 					// await exportsFile.replace(shares.value);
@@ -328,9 +334,12 @@ export default {
 
 			exportsFile = cockpit.file(config.nfs.confPath, { superuser: 'try', syntax: NfsExportSyntax });
 
-			if (corosyncHosts.length > 0) {
+			if (corosyncHosts.value.length > 0) {
 				for (let i = 0; i < corosyncHosts.value.length; i++) {
-					exportsFiles[i] = cockpit.file(config.nfs.confPath, { superuser: 'try', syntax: NfsExportSyntax, host });
+					const host = corosyncHosts.value[i];
+
+					exportsFiles[i] = cockpit.file(config.nfs.confPath, { superuser: 'try', syntax: NfsExportSyntax, host, });
+
 					exportsFileWatchHandles[i] = [exportsFiles[i].watch(loadShares)];
 				}
 			} else {
