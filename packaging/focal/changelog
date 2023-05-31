@@ -1,3 +1,9 @@
+cockpit-file-sharing (3.3.3-1focal) focal; urgency=medium
+
+  * updates audit params
+
+ -- Jordan Keough <jkeough@45drives.com>  Wed, 31 May 2023 07:58:03 -0300
+
 cockpit-file-sharing (3.3.2-2focal) focal; urgency=medium
 
   * Hides Edit Permissions button

@@ -1,3 +1,3 @@
-## Cockpit File Sharing 3.3.2-2
+## Cockpit File Sharing 3.3.3-1
 
-* Hides Edit Permissions button
+* updates audit params
