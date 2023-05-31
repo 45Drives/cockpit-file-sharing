@@ -709,11 +709,11 @@ export default {
 					shareAdvancedSettingsStr.value += "\nfull_audit:facility = local5";
 				if (!/full_audit: ?success ?=/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value +=
-						"\nfull_audit:success = connect disconnect mkdir rmdir read write rename";
+						"\nfull_audit:success = connect disconnect openat renameat linkat unlinkat";
 				if (!/full_audit: ?failure ?=/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value += "\nfull_audit:failure = connect";
 				if (!/full_audit: ?prefix ?=/.test(shareAdvancedSettingsStr.value))
-					shareAdvancedSettingsStr.value += "\nfull_audit:prefix = %u|%I|%S";
+					shareAdvancedSettingsStr.value += "\nfull_audit:prefix = ???%I???%u???%m???%S???%T???";
 				if (/vfs objects ?=/.test(shareAdvancedSettingsStr.value))
 					shareAdvancedSettingsStr.value =
 						shareAdvancedSettingsStr.value
