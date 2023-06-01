@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu Jun 01 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.3-2
+- Test build
 * Wed May 31 2023 Jordan Keough <jkeough@45drives.com> 3.3.3-1
 - updates audit params
 * Thu May 18 2023 Jordan Keough <jkeough@45drives.com> 3.3.2-2
