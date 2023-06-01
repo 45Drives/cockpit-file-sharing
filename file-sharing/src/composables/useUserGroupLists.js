@@ -43,12 +43,12 @@ const getent = (db, includeSystemAccounts) => {
 			.then(({ stdout }) => {
 				return JSON.parse(stdout);
 			}),
-		useSpawn(['bash', '-c', getentScript(db, true, includeSystemAccounts)], spawnOpts).promise()
-			.catch(state => {
-				console.warn(`Error getting users/groups from AD/domain:`, errorString(state));
-				return state;
-			})
-			.then(({ stdout }) => JSON.parse(stdout)),
+		// useSpawn(['bash', '-c', getentScript(db, true, includeSystemAccounts)], spawnOpts).promise()
+		// 	.catch(state => {
+		// 		console.warn(`Error getting users/groups from AD/domain:`, errorString(state));
+		// 		return state;
+		// 	})
+		// 	.then(({ stdout }) => JSON.parse(stdout)),
 	]).then(nested => nested.flat());
 };
 
