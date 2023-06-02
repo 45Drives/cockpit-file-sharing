@@ -1,3 +1,4 @@
-## Cockpit File Sharing 3.3.3-2
+## Cockpit File Sharing 3.3.4-1
 
-* Test build
+* Remove AD users from Edit Permissions modal
+* Update Samba Audit parameters to conform with SnapShield requirements
