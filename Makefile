@@ -29,6 +29,20 @@ DEBUG?=0
 # Run yarn upgrade or npm update for each project before build
 AUTO_UPGRADE_DEPS?=0
 
+
+# Define variables
+PACKAGE_NAME := $(shell awk '/"name":/ {gsub(/[",]/, "", $$2); print $$2}' package.json)
+RPM_NAME := cockpit-$(PACKAGE_NAME)
+VERSION := $(shell T=$$(git describe 2>/dev/null) || T=1; echo $$T | tr '-' '.')
+TARFILE=$(RPM_NAME)-$(VERSION).tar.xz
+DIST_TEST=dist/manifest.json
+SPEC=$(RPM_NAME).spec
+NODE_MODULES_TEST=package-lock.json
+COCKPIT_REPO_FILES = \
+	pkg/lib \
+	test/common \
+	$(NULL)
+
 # USAGE
 # installation:
 # $ make
@@ -67,6 +81,14 @@ OS_PACKAGE_RELEASE?=built_from_source
 default: $(VERSION_FILES) $(OUTPUTS)
 
 all: default
+
+$(TARFILE): $(DIST_TEST) $(SPEC)
+	if type appstream-util >/dev/null 2>&1; then appstream-util validate-relax --nonet *.metainfo.xml; fi
+	tar --xz $(TAR_ARGS) -cf $(TARFILE) --transform 's,^,$(RPM_NAME)/,' \
+		--exclude packaging/$(SPEC).in --exclude node_modules \
+		$$(git ls-files) $(COCKPIT_REPO_FILES) $(NODE_MODULES_TEST) $(SPEC) dist/
+
+all: $(TARFILE)
 
 .PHONY: default all install clean help install-local install-remote install
 
