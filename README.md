@@ -65,7 +65,7 @@ nfs-kernel-server
 samba
 samba-common-bin
 systemd
-winbin
+winbind
 gawk
 # RHEL-like
 cockpit
