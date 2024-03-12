@@ -501,7 +501,7 @@ export default {
 			shareValidGroups.value = [];
 			splitQuotedDelim(tmpShare["valid users"], ', ')
 				.forEach((entity) => {
-					if (entity.at(0) === '@') {
+					if (entity.charAt(0) === '@') {
 						const groupName = entity.substring(1);
 						shareValidGroups.value
 							.push(
