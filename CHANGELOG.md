@@ -1,4 +1,3 @@
-## Cockpit File Sharing 3.3.4-1
+## Cockpit File Sharing 3.3.5-1
 
-* Remove AD users from Edit Permissions modal
-* Update Samba Audit parameters to conform with SnapShield requirements
+* Workaround for Safari < 15.4 missing String.prototype.at()
