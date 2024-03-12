@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Mar 12 2024 Joshua Boudreau <jboudreau@45drives.com> 3.3.5-1
+- Workaround for Safari < 15.4 missing String.prototype.at()
 * Fri Jun 02 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.4-1
 - Remove AD users from Edit Permissions modal
 - Update Samba Audit parameters to conform with SnapShield requirements
