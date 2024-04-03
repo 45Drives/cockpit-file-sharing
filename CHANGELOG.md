@@ -1,3 +1,3 @@
-## Cockpit File Sharing 3.3.5-1
+## Cockpit File Sharing 3.3.6-1
 
-* Workaround for Safari < 15.4 missing String.prototype.at()
+* Fix import smb.conf modal overflow
