@@ -67,8 +67,8 @@ If not, see <https://www.gnu.org/licenses/>.
 					</button>
 					<InfoTip above>
 						File Sharing uses Samba's net registry to configure shares. Click this button to import
-						configuration from <span class="text-sm font-mono">{{ config.samba.confPath }}</span> into the net
-						registry for management.
+						configuration from <span class="text-sm font-mono">{{ config.samba.confPath }}</span> into the
+						net registry for management.
 					</InfoTip>
 				</div>
 			</div>
@@ -88,10 +88,12 @@ If not, see <https://www.gnu.org/licenses/>.
 				class="size-icon-xl icon-danger shrink-0"
 			/>
 		</template>
-		<div
-			class="whitespace-pre-wrap"
-			v-html="confirmationModal.bodyText"
-		/>
+		<div class="max-h-[70vh]">
+			<div
+				class="whitespace-pre-wrap"
+				v-html="confirmationModal.bodyText"
+			/>
+		</div>
 	</ModalPopup>
 </template>
 
@@ -130,7 +132,7 @@ export default {
 					const respond = (result) => {
 						confirmationModal.showModal = false;
 						resolve(result);
-					}
+					};
 					confirmationModal.applyCallback = () => respond(true);
 					confirmationModal.cancelCallback = () => respond(false);
 				});
@@ -237,14 +239,14 @@ export default {
 			} finally {
 				processing.value--;
 			}
-		}
+		};
 
 		const getCtdbHosts = async () => {
 			try {
 				const nodes = await cockpit.file("/etc/ctdb/nodes", { superuser: "try" }).read();
 				ctdbHosts.value = nodes.split('\n').filter(line => line !== "");
 			} catch { /* not using ctdb */ }
-		}
+		};
 
 		const getCephLayoutPools = async () => {
 			try {
@@ -270,7 +272,7 @@ export default {
 						.map(pool => pool.name);
 				} catch { /* assuming not ceph */ }
 			}
-		}
+		};
 
 		const refresh = async () => {
 			processing.value++;
@@ -294,7 +296,7 @@ export default {
 			))
 				return;
 			document.getElementById("file-upload").click();
-		}
+		};
 
 		const importConfigUploadCallback = (event) => {
 			const file = event.target.files[0];
@@ -303,14 +305,14 @@ export default {
 				const content = event.target.result;
 				importConfig(content);
 				processing.value--;
-			}
+			};
 			reader.onerror = (event) => {
 				notifications.value.constructNotification("Failed to import config", "Error reading file on client side", 'error');
 				processing.value--;
-			}
+			};
 			processing.value++;
 			reader.readAsText(file);
-		}
+		};
 
 		const importSmbConf = async () => {
 			const testContent = (await useSpawn(['net', 'conf', 'import', '-T', config.samba.confPath], { superuser: 'try' }).promise()).stdout;
@@ -371,7 +373,7 @@ export default {
 					return;
 				}
 			}
-		}
+		};
 
 		/**
 		 * Import configuration from string, filters out `include = registry` and `config backend = registry`
@@ -400,14 +402,14 @@ export default {
 					useSpawn(['rm', '-f', tmpFile], { superuser: 'try' });
 				processing.value--;
 			}
-		}
+		};
 
 		const exportConfig = async () => {
 			const backendPath = "/tmp/cockpit-file-sharing_samba_exported.conf";
 			const date = new Date();
 			const filename = `cockpit-file-sharing_samba_exported_${date.toISOString().replace(/:/g, '-').replace(/T/, '_')}.conf`;
 			processOutputDownload(['net', 'conf', 'list'], filename, { superuser: 'try' });
-		}
+		};
 
 		watch(() => config.samba.confPath, () => checkConf(), { immediate: true });
 
@@ -432,7 +434,7 @@ export default {
 			importSmbConf,
 			importConfig,
 			exportConfig,
-		}
+		};
 	},
 	components: {
 		SambaShareManagement,
@@ -443,5 +445,5 @@ export default {
 		ExclamationCircleIcon,
 		InfoTip,
 	}
-}
+};
 </script>

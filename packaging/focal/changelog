@@ -1,3 +1,9 @@
+cockpit-file-sharing (3.3.6-1focal) focal; urgency=medium
+
+  * Fix import smb.conf modal overflow
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 03 Apr 2024 07:11:29 -0300
+
 cockpit-file-sharing (3.3.5-1focal) focal; urgency=medium
 
   * Workaround for Safari < 15.4 missing String.prototype.at()

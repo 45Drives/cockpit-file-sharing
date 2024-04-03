@@ -38,8 +38,8 @@ sudo apt install cockpit-file-sharing
 ### Direct from .deb
 Installing this way may work for other versions of Ubuntu and Debian, but it is unsupported. You won't get automatic updates this way.
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.2.9/cockpit-file-sharing_3.2.9-2focal_all.deb
-sudo apt install ./cockpit-file-sharing_3.2.9-2focal_all.deb
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.3.6/cockpit-file-sharing_3.3.6-1focal_all.deb
+sudo apt install ./cockpit-file-sharing_3.3.6-1focal_all.deb
 ```
 ## Rocky 8
 ### From 45Drives Repo (Recommended, Rocky 8 only)
@@ -51,7 +51,7 @@ sudo dnf install cockpit-file-sharing
 Installing this way may work for other versions of Rocky/Centos/RHEL/Fedora/etc, but it is unsupported. You won't get automatic updates this way.
 ```bash
 # dnf or yum
-sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.2.9/cockpit-file-sharing-3.2.9-2.el8.noarch.rpm
+sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.3.6/cockpit-file-sharing-3.3.6-1.el8.noarch.rpm
 ```
 ## Generic Installation
 1. Install Dependencies
@@ -80,9 +80,9 @@ gawk
 ```
 2. Download pre-built archive and install
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.2.9/cockpit-file-sharing_3.2.9_generic.zip
-unzip cockpit-file-sharing_3.2.9_generic.zip
-cd cockpit-file-sharing_3.2.9_generic
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.3.6/cockpit-file-sharing_3.3.6_generic.zip
+unzip cockpit-file-sharing_3.3.6_generic.zip
+cd cockpit-file-sharing_3.3.6_generic
 # no need to run `make` first, the plugin is pre-built
 sudo make install
 ```

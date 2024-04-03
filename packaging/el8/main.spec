@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Apr 03 2024 Joshua Boudreau <jboudreau@45drives.com> 3.3.6-1
+- Fix import smb.conf modal overflow
 * Tue Mar 12 2024 Joshua Boudreau <jboudreau@45drives.com> 3.3.5-1
 - Workaround for Safari < 15.4 missing String.prototype.at()
 * Fri Jun 02 2023 Dawson Della Valle <ddellavalle@45drives.com> 3.3.4-1
