@@ -1,3 +1,4 @@
-## Cockpit File Sharing 3.3.6-1
+## Cockpit File Sharing 3.3.7-1
 
-* Fix import smb.conf modal overflow
+* Samba - fix saving global advanced settings with '=' in their value
+* NFS - better whitespace handling while parsing exports file
