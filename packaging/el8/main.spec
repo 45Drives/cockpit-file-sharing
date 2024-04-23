@@ -27,6 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Apr 23 2024 Joshua Boudreau <jboudreau@45drives.com> 3.3.7-1
+- Samba - fix saving global advanced settings with '=' in their value
+- NFS - better whitespace handling while parsing exports file
 * Wed Apr 03 2024 Joshua Boudreau <jboudreau@45drives.com> 3.3.6-1
 - Fix import smb.conf modal overflow
 * Tue Mar 12 2024 Joshua Boudreau <jboudreau@45drives.com> 3.3.5-1

@@ -1,3 +1,10 @@
+cockpit-file-sharing (3.3.7-1focal) focal; urgency=medium
+
+  * Samba - fix saving global advanced settings with '=' in their value
+  * NFS - better whitespace handling while parsing exports file
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Tue, 23 Apr 2024 09:52:27 -0300
+
 cockpit-file-sharing (3.3.6-1focal) focal; urgency=medium
 
   * Fix import smb.conf modal overflow

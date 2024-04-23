@@ -22,13 +22,20 @@ export function generateConfDiff(conf, newConf) {
 		if (conf === null || newConf[key] !== conf[key]) {
 			confDiff.add.push([key, newConf[key]]);
 		}
-	})
+	});
 	if (conf) {
 		confDiff.add = [
 			...confDiff.add,
 			...newConf.advancedSettings
 				.filter(x => !conf.advancedSettings.includes(x))
-				.map((str) => [...str.split('=').map(a => a.trim())])
+				.map((setting) => {
+					let match;
+					if ((match = setting.match(/^([^=]+)=(.*)$/))) {
+						let key = match[1].trim();
+						let value = match[2].trim();
+						return [key, value];
+					}
+				})
 		];
 		let confAdvancedSettingsKeysOnly = conf.advancedSettings
 			.map(a => a.split('=')[0].trim());
@@ -41,7 +48,14 @@ export function generateConfDiff(conf, newConf) {
 		confDiff.add = [
 			...confDiff.add,
 			...newConf.advancedSettings
-				.map((str) => [...str.split('=').map(a => a.trim())])
+				.map((setting) => {
+					let match;
+					if ((match = setting.match(/^([^=]+)=(.*)$/))) {
+						let key = match[1].trim();
+						let value = match[2].trim();
+						return [key, value];
+					}
+				})
 		];
 	}
 	return confDiff;
@@ -79,7 +93,7 @@ export function splitQuotedDelim(str, delims) {
 		 * @type {string[]}
 		 */
 		tokens: [],
-	}
+	};
 	return str.split('').reduce((state, char, i, arr) => {
 		if (char === '"' && !state.singleQuoted) {
 			state.doubleQuoted = !state.doubleQuoted;
