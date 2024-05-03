@@ -101,7 +101,7 @@ If not, see <https://www.gnu.org/licenses/>.
 <script>
 import DropdownSelector from "./DropdownSelector.vue";
 import { generateConfDiff, splitAdvancedSettings, joinAdvancedSettings } from "../functions";
-import { ChevronDownIcon } from "@heroicons/vue/solid";
+import { ChevronDownIcon } from "@heroicons/vue/20/solid";
 import { useSpawn, errorStringHTML } from "@45drives/cockpit-helpers";
 import { ref, reactive, watch, inject } from "vue";
 import LoadingSpinner from "./LoadingSpinner.vue";

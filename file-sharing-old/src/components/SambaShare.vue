@@ -17,41 +17,41 @@ If not, see <https://www.gnu.org/licenses/>.
 
 <template>
 	<tr>
-		<td>{{ share.path }}</td>
+		<td>{{ share.name }}</td>
+		<td class="text-muted">{{ share.path }}</td>
 		<td class="button-group-row justify-end">
 			<button @click="showEditor ? editorRef.cancel() : showEditor = true">
-				<span class="sr-only">Edit share for {{ share.path }}</span>
+				<span class="sr-only">Edit</span>
 				<PencilAltIcon class="size-icon icon-default" />
 			</button>
 			<button @click="deleteShare">
-				<span class="sr-only">Delete share for {{ share.path }}</span>
+				<span class="sr-only">Delete</span>
 				<TrashIcon class="size-icon icon-danger" />
 			</button>
 		</td>
 	</tr>
 	<tr></tr> <!-- needed to make backgrounds match -->
 	<tr>
-		<td colspan="2" class="!py-0">
+		<td colspan="3" class="!py-0">
 			<div
 				class="overflow-hidden"
 				:style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
 			>
-				<NfsShareEditor
+				<SambaShareEditor
 					:share="share"
-					@update-share="updateShare"
+					@applyShare="updateShare"
 					@hide="showEditor = false"
 					ref="editorRef"
-					class="py-2"
-					:users="users"
-					:groups="groups"
-					:shares="shares"
-					:corosyncHosts="corosyncHosts"
+					:ctdbHosts="ctdbHosts"
 					:cephLayoutPools="cephLayoutPools"
+					:modalPopup="modalPopup"
+					:shares="shares"
+					class="py-2"
+					:isVisible="showEditor"
 				/>
 			</div>
 		</td>
 	</tr>
-
 	<ModalPopup
 		:showModal="confirmationModal.showModal"
 		@apply="confirmationModal.applyCallback"
@@ -65,27 +65,23 @@ If not, see <https://www.gnu.org/licenses/>.
 		</template>
 		{{ confirmationModal.bodyText }}
 	</ModalPopup>
-
 </template>
 
 <script>
-import { reactive, ref } from "vue";
-import NfsShareEditor from "./NfsShareEditor.vue";
-import { ExclamationCircleIcon, PencilAltIcon, TrashIcon } from "@heroicons/vue/solid";
+import SambaShareEditor from "./SambaShareEditor.vue";
+import { ref, reactive } from "vue";
+import { ExclamationCircleIcon, PencilAltIcon, TrashIcon } from "@heroicons/vue/20/solid";
 import ModalPopup from "./ModalPopup.vue";
 export default {
 	props: {
 		share: Object,
-		users: Array[Object],
-		groups: Array[Object],
-		shares: Array[Object],
-		corosyncHosts: Array[String],
+		ctdbHosts: Array[String],
 		cephLayoutPools: Array[String],
+		shares: Array[Object],
 	},
 	setup(props, { emit }) {
 		const editorRef = ref();
 		const showEditor = ref(false);
-
 		const confirmationModal = reactive({
 			showModal: false,
 			headerText: "",
@@ -107,32 +103,37 @@ export default {
 			cancelCallback: () => { },
 		});
 
-		const updateShare = (newShare) => {
-			emit('update-share', props.share, newShare);
+		const updateShare = (newShare, doneHook) => {
+			emit('updateShare', props.share, newShare, doneHook);
+			showEditor.value = false;
 		}
 
 		const deleteShare = async () => {
-			if (!await confirmationModal.ask(`Permanently delete ${props.share.path}?`, "This cannot be undone."))
+			if (!await confirmationModal.ask(`Permanently delete ${props.share.name}?`, "This cannot be undone."))
 				return;
-			if (editorRef.value.cephShareRef.isCeph && !editorRef.value.cephShareRef.cephNotRemounted)
-				editorRef.value.cephShareRef.removeCephMount();
-			emit('delete-share', props.share);
+			if (editorRef.value.isCeph && !editorRef.value.cephNotRemounted)
+				editorRef.value.removeCephMount();
+			emit('deleteShare', props.share);
 		}
 
 		return {
 			showEditor,
-			editorRef,
 			confirmationModal,
-			deleteShare,
 			updateShare,
-		};
+			deleteShare,
+			editorRef,
+		}
 	},
 	components: {
-		NfsShareEditor,
+		SambaShareEditor,
+		ExclamationCircleIcon,
 		PencilAltIcon,
 		TrashIcon,
 		ModalPopup,
-		ExclamationCircleIcon,
-	}
+	},
+	emits: [
+		'updateShare',
+		'deleteShare',
+	]
 }
 </script>

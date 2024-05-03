@@ -53,7 +53,7 @@ BUILD_FLAGS=-- --minify false
 endif
 
 ifndef PLUGIN_SRCS
-PLUGIN_SRCS:=$(patsubst %/package.json,%,$(wildcard */package.json))
+PLUGIN_SRCS:=$(filter-out %-old, $(patsubst %/package.json,%,$(filter-out houston-common%, $(wildcard */package.json))))
 endif
 
 OUTPUTS:=$(addsuffix /dist/index.html, $(PLUGIN_SRCS))

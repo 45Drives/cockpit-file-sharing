@@ -105,7 +105,7 @@ If not, see <https://www.gnu.org/licenses/>.
 import "@fontsource/red-hat-text/700.css";
 import "@fontsource/red-hat-text/400.css";
 import "source-sans-pro/source-sans-pro.css";
-import { SunIcon, MoonIcon, QuestionMarkCircleIcon } from "@heroicons/vue/solid";
+import { SunIcon, MoonIcon, QuestionMarkCircleIcon } from "@heroicons/vue/20/solid";
 import { ref, watch, inject } from "vue";
 import LoadingSpinner from "./LoadingSpinner.vue";
 import ModalPopup from './ModalPopup.vue';

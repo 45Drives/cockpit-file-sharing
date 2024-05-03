@@ -60,7 +60,7 @@ If not, see <https://www.gnu.org/licenses/>.
 import SambaShare from "./SambaShare.vue";
 import SambaShareEditor from "./SambaShareEditor.vue";
 import { generateConfDiff } from "../functions";
-import { PlusIcon } from "@heroicons/vue/solid";
+import { PlusIcon } from "@heroicons/vue/20/solid";
 import { useSpawn, errorString, errorStringHTML } from "@45drives/cockpit-helpers";
 import { ref, inject } from "vue";
 import LoadingSpinner from "./LoadingSpinner.vue";

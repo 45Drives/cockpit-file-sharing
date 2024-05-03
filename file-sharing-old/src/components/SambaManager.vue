@@ -98,7 +98,7 @@ If not, see <https://www.gnu.org/licenses/>.
 </template>
 
 <script>
-import { XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/solid";
+import { XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/20/solid";
 import SambaShareManagement from "./SambaShareManagement.vue";
 import SambaGlobalManagement from "./SambaGlobalManagement.vue";
 import { useSpawn, errorString, errorStringHTML, processOutputDownload } from "@45drives/cockpit-helpers";

@@ -1,0 +1,21 @@
+{
+    "version": 2.0,
+
+    "menu": {
+        "file-sharing": {
+            "label": "File Sharing",
+            "path": "index.html",
+            "order": 116,
+            "docs": [
+                {
+                  "label": "Managing SMB/CIFS",
+                  "url": "http://knowledgebase.45drives.com/kb/kb045281-managing-smb-cifs-in-houston-ui/"
+                },
+                {
+                  "label": "Managing NFS",
+                  "url": "http://knowledgebase.45drives.com/kb/kb045282-managing-nfs-in-houston-ui/"
+                }
+              ]
+        }
+    }
+}

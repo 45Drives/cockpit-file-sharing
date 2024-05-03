@@ -130,7 +130,7 @@ If not, see <https://www.gnu.org/licenses/>.
 <script>
 import NfsShare from "./NfsShare.vue";
 import NfsShareEditor from "./NfsShareEditor.vue";
-import { PlusIcon, XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/solid";
+import { PlusIcon, XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/20/solid";
 import LoadingSpinner from "./LoadingSpinner.vue";
 import { ref, reactive, inject, onBeforeUnmount, watch } from "vue";
 import { NfsExportSyntax } from "@45drives/cockpit-syntaxes";

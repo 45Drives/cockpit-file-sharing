@@ -84,7 +84,7 @@ If not, see <https://www.gnu.org/licenses/>.
 
 <script>
 import { inject, reactive, ref, watch } from "vue";
-import { PlusIcon, MinusIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
+import { PlusIcon, MinusIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/20/solid";
 import { useSpawn, errorStringHTML, canonicalPath } from "@45drives/cockpit-helpers";
 import ModalPopup from "./ModalPopup.vue";
 import { notificationsInjectionKey } from "../keys";

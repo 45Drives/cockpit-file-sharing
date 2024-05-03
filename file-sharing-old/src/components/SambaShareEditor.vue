@@ -327,7 +327,7 @@ If not, see <https://www.gnu.org/licenses/>.
 import PillList from "./PillList.vue";
 import DropdownSelector from "./DropdownSelector.vue";
 import { splitAdvancedSettings, joinAdvancedSettings, strToBool, splitQuotedDelim } from "../functions";
-import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/solid";
+import { ChevronDownIcon, ExclamationCircleIcon, ExclamationIcon } from "@heroicons/vue/20/solid";
 import { ref, reactive, watch, inject, onMounted } from "vue";
 import { useSpawn, errorStringHTML, canonicalPath, systemdUnitEscape } from "@45drives/cockpit-helpers";
 import ModalPopup from "./ModalPopup.vue";

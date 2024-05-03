@@ -1,0 +1,11 @@
+{
+    "private": true,
+    "workspaces": [
+        "file-sharing",
+        "houston-common"
+    ],
+    "scripts": {
+        "build": "yarn build:common && yarn build:app"
+    },
+    "packageManager": "yarn@4.1.1"
+}

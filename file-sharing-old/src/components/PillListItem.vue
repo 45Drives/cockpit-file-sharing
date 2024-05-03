@@ -16,28 +16,28 @@ If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<div class="ml-1 relative overflow-visible inline-block" @click="show = !show" @mouseenter="show=true" @mouseleave="show=false" >
-		<QuestionMarkCircleIcon class="size-icon icon-default" />
-		<div :class="[above ? 'bottom-5' : '', 'text-left absolute bg-accent shadow-lg border-default text-muted font-normal whitespace-normal text-sm rounded-lg p-2 z-50 w-60']" v-if="show" >
-			<slot />
-		</div>
+	<div
+		class="border border-default bg-default flex flex-row items-center space-x-1 pl-4 pr-3 py-1 my-1 rounded-full"
+	>
+		<span>{{ item?.pretty ?? item }}</span>
+		<XIcon
+			@click="$emit('remove-item')"
+			class="size-icon-sm cursor-pointer icon-default hover:icon-danger"
+		/>
 	</div>
 </template>
 
 <script>
-import { ref } from "vue";
-import { QuestionMarkCircleIcon } from "@heroicons/vue/solid";
+import { XIcon } from "@heroicons/vue/20/solid";
 export default {
 	props: {
-		above: Boolean,
-	},
-	setup() {
-		const show = ref(false);
-
-		return { show };
+		item: String
 	},
 	components: {
-		QuestionMarkCircleIcon,
+		XIcon,
 	}
 }
 </script>
+
+<style scoped>
+</style>
