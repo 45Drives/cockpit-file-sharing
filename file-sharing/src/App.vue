@@ -5,10 +5,10 @@ import {
 import { onMounted, watch } from 'vue';
 import {
   SambaTabMain
-} from '@/components/tabs/samba';
+} from '@/tabs/samba/ui';
 import {
   NfsTabMain
-} from '@/components/tabs/nfs';
+} from '@/tabs/nfs/ui';
 
 const { globalProcessingState, globalProcessingWrapPromise } = useGlobalProcessingState();
 

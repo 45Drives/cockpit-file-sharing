@@ -8,7 +8,7 @@
     "build:app": "run-p type-check \"build-only {@}\" --",
     "build": "run-p build:app",
     "preview": "vite preview",
-    "test:unit": "vitest",
+    "test:app": "vitest run",
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",

@@ -9,6 +9,28 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "strict": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"esModuleInterop": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noImplicitReturns": true,
+		"skipLibCheck": true,
+		"alwaysStrict": true,
+		"strictFunctionTypes": true,
+		"strictNullChecks": true,
+		"strictPropertyInitialization": true,
+		"forceConsistentCasingInFileNames": true,
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"noFallthroughCasesInSwitch": true,
+		"experimentalDecorators": true,
+		"downlevelIteration": true,
+		"pretty": true,
+		"allowJs": false,
+		"checkJs": false,
+		"noUncheckedIndexedAccess": true,
   }
 }
