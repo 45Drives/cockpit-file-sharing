@@ -1,10 +1,10 @@
-import { createApp } from 'vue'
+import { createApp } from "vue";
 
-import App from './App.vue'
+import App from "./App.vue";
 
-import '@45drives/houston-common-css/src/index.css';
-import '@45drives/houston-common-ui/style.css';
+import "@45drives/houston-common-css/src/index.css";
+import "@45drives/houston-common-ui/style.css";
 
-const app = createApp(App)
+const app = createApp(App);
 
-app.mount('#app')
+app.mount("#app");

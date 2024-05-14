@@ -10,7 +10,7 @@ import {
   NfsTabMain
 } from '@/tabs/nfs/ui';
 
-const { globalProcessingState, globalProcessingWrapPromise } = useGlobalProcessingState();
+const { globalProcessingWrapPromise } = useGlobalProcessingState();
 
 onMounted(() => {
   const notif =

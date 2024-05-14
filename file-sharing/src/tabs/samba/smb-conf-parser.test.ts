@@ -1,7 +1,7 @@
 import { SmbGlobalParser, SmbShareParser, SmbConfParser } from "@/tabs/samba/smb-conf-parser";
 import { Path, type KeyValueData } from "@45drives/houston-common-lib";
 import type { SambaConfig, SambaGlobalConfig, SambaShareConfig } from "@/tabs/samba/data-types";
-import { Ok } from "@45drives/houston-common-lib";
+import { ok } from "neverthrow";
 import { suite, test, expect } from "vitest";
 import exp from "constants";
 
@@ -11,7 +11,7 @@ suite("Samba", () => {
     suite("SmbGlobalParser", () => {
       test("default values", () => {
         expect(globalParser.apply({})).toEqual(
-          Ok({
+          ok({
             logLevel: 0,
             serverString: "Samba %v",
             workgroup: "WORKGROUP",
@@ -27,27 +27,29 @@ suite("Samba", () => {
           "vfs objects": "acl xattr ceph",
           "os level": "25",
         };
-        const parsed = globalParser.apply(unparsed).unwrap();
-        expect(parsed).toEqual({
-          logLevel: 3,
-          serverString: "Hello World",
-          workgroup: "goofy goobers",
-          advancedOptions: {
-            "vfs objects": "acl xattr ceph",
-            "os level": "25",
-          },
-        } as SambaGlobalConfig);
-        expect(globalParser.unapply(parsed).unwrap()).toEqual(unparsed);
+        const parsed = globalParser.apply(unparsed);
+        expect(parsed).toEqual(
+          ok({
+            logLevel: 3,
+            serverString: "Hello World",
+            workgroup: "goofy goobers",
+            advancedOptions: {
+              "vfs objects": "acl xattr ceph",
+              "os level": "25",
+            },
+          } as SambaGlobalConfig)
+        );
+        expect(parsed.andThen(globalParser.unapply)).toEqual(ok(unparsed));
       });
     });
     suite("SmbShareParser", () => {
       const parser = SmbShareParser("share name");
       test("default values", () => {
         expect(parser.apply({})).toEqual(
-          Ok({
+          ok({
             name: "share name",
             description: "",
-            path: new Path(""),
+            path: "",
             readOnly: true,
             guestOk: false,
             browseable: true,
@@ -65,20 +67,22 @@ suite("Samba", () => {
           "vfs objects": "acl xattr ceph",
           "os level": "25",
         };
-        const parsed = parser.apply(unparsed).unwrap();
-        expect(parsed).toEqual({
-          name: "share name",
-          description: "Description",
-          path: new Path("/tmp/testshare"),
-          readOnly: false,
-          guestOk: true,
-          browseable: false,
-          advancedOptions: {
-            "vfs objects": "acl xattr ceph",
-            "os level": "25",
-          },
-        } as SambaShareConfig);
-        expect(parser.unapply(parsed).unwrap()).toEqual(unparsed);
+        const parsed = parser.apply(unparsed);
+        expect(parsed).toEqual(
+          ok({
+            name: "share name",
+            description: "Description",
+            path: "/tmp/testshare",
+            readOnly: false,
+            guestOk: true,
+            browseable: false,
+            advancedOptions: {
+              "vfs objects": "acl xattr ceph",
+              "os level": "25",
+            },
+          } as SambaShareConfig)
+        );
+        expect(parsed.andThen(parser.unapply)).toEqual(ok(unparsed));
       });
     });
     test("SmbConfParser", () => {
@@ -140,7 +144,7 @@ some adv opt = some other value`,
               {
                 name: "share1",
                 description: "hello, world!",
-                path: new Path("/lksdf/sdfkjrt/dflk"),
+                path: "/lksdf/sdfkjrt/dflk",
                 guestOk: true,
                 readOnly: false,
                 browseable: false,
@@ -152,22 +156,21 @@ some adv opt = some other value`,
               {
                 name: "share2",
                 description: "hello, world!",
-                path: new Path("/lksdf/sdfkjrt/dflk"),
+                path: "/lksdf/sdfkjrt/dflk",
                 guestOk: true,
                 readOnly: true,
                 browseable: false,
                 advancedOptions: {
-                    "vfs objects": "lkjsdlf jfk kejsdf kje",
-                    "some adv opt": "some other value"
-                }
+                  "vfs objects": "lkjsdlf jfk kejsdf kje",
+                  "some adv opt": "some other value",
+                },
               } as SambaShareConfig,
             ],
           } as SambaConfig,
         },
       ];
       for (const { unparsed, expected } of input) {
-        const parsed = parser.apply(unparsed).unwrap();
-        expect(parsed).toEqual(expected);
+        expect(parser.apply(unparsed)).toEqual(ok(expected));
       }
     });
   });

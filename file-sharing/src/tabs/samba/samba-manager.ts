@@ -1,10 +1,6 @@
 import {
   Server,
   Command,
-  type Result,
-  Ok,
-  Err,
-  isErr,
   type CommandOptions,
   ProcessError,
   ParsingError,
@@ -18,6 +14,7 @@ import {
   type SambaShareConfig,
 } from "@/tabs/samba/data-types";
 import { SmbConfParser, SmbGlobalParser, SmbShareParser } from "@/tabs/samba/smb-conf-parser";
+import { Result, ok, err, ResultAsync, okAsync, errAsync } from "neverthrow";
 
 export namespace SambaManager {
   const netConfCommandOptions: CommandOptions = {
@@ -25,9 +22,7 @@ export namespace SambaManager {
   };
 
   const loadSettingsCommand = new Command(["net", "conf", "list"], netConfCommandOptions);
-  const loadSettingsParse = (commandOutput: string): Result<SambaConfig, ParsingError> => {
-    return SmbConfParser().apply(commandOutput);
-  };
+  const loadSettingsParse = (commandOutput: string) => SmbConfParser().apply(commandOutput);
 
   const addShareCommand = (name: string, path: string) =>
     new Command(["net", "conf", "addshare", name, path], netConfCommandOptions);
@@ -43,151 +38,103 @@ export namespace SambaManager {
   const showShareParse = (commandOutput: string): Result<SambaShareConfig, ParsingError> => {
     return IniSyntax()
       .apply(commandOutput)
-      .andThen((shareIniData): Result<[string, KeyValueData], ParsingError> => {
+      .andThen((shareIniData) => {
         const objKeys = Object.keys(shareIniData);
         const [shareName] = objKeys;
         if (shareName === undefined) {
-          return Err(
-            new ParsingError(
-              `net conf showshare returned invalid data:\n${JSON.stringify(shareIniData)}`
-            )
+          return err(
+            new ParsingError(`net conf showshare returned invalid data:\n${commandOutput}`)
           );
         }
-        return Ok([shareName, shareIniData[shareName]!]);
-      })
-      .andThen(([shareName, shareParams]) => SmbShareParser(shareName).apply(shareParams));
+        return SmbShareParser(shareName).apply(shareIniData[shareName]!);
+      });
   };
 
   const delShareCommand = (section: string) =>
     new Command(["net", "conf", "delshare", section], netConfCommandOptions);
 
-  const setSectionParams = async (
-    server: Server,
-    section: string,
-    params: KeyValueData
-  ): Promise<Result<null, ProcessError>> => {
-    for (const [key, value] of Object.entries(params)) {
-      const result = await server.execute(setParmCommand(section, key, value));
-      if (isErr(result)) {
-        return result;
-      }
-    }
-    return Ok(null);
-  };
+  const setSectionParams = (server: Server, section: string, params: KeyValueData) =>
+    ResultAsync.combine(
+      Object.entries(params).map(([key, value]) =>
+        server.execute(setParmCommand(section, key, value), true)
+      )
+    );
 
-  const delSectionParms = async (
-    server: Server,
-    section: string,
-    params: string[]
-  ): Promise<Result<null, ProcessError>> => {
-    for (const param of params) {
-      const result = await server.execute(delParmCommand(section, param));
-      if (isErr(result)) {
-        return result;
-      }
-    }
-    return Ok(null);
-  };
+  const delSectionParms = (server: Server, section: string, params: string[]) =>
+    ResultAsync.combine(
+      params.map((param) => server.execute(delParmCommand(section, param), true))
+    );
 
-  export async function loadSettings(
+  export function loadSettings(
     server: Server
-  ): Promise<Result<SambaConfig, ProcessError | ParsingError>> {
-    return (await server.execute(loadSettingsCommand))
+  ): ResultAsync<SambaConfig, ProcessError | ParsingError> {
+    return server
+      .execute(loadSettingsCommand)
       .map((proc) => proc.getStdout())
       .andThen(loadSettingsParse);
   }
 
-  export async function getGlobalConfig(
+  export function getGlobalConfig(
     server: Server
-  ): Promise<Result<SambaGlobalConfig, ParsingError | ProcessError>> {
-    return (await server.execute(showShareCommand("global")))
+  ): ResultAsync<SambaGlobalConfig, ParsingError | ProcessError> {
+    return server
+      .execute(showShareCommand("global"))
       .map((p) => p.getStdout())
       .andThen(SmbConfParser().apply)
       .map(({ global }) => global);
   }
 
-  export async function getShare(
+  export function getShare(
     server: Server,
     shareName: string
-  ): Promise<Result<SambaShareConfig, ParsingError | ProcessError>> {
-    return (await server.execute(showShareCommand(shareName)))
+  ): ResultAsync<SambaShareConfig, ParsingError | ProcessError> {
+    return server
+      .execute(showShareCommand(shareName))
       .map((p) => p.getStdout())
       .andThen(showShareParse);
   }
 
-  export async function addShare(
-    server: Server,
-    share: SambaShareConfig
-  ): Promise<Result<null, ProcessError>> {
-    const addResult = await server.execute(addShareCommand(share.name, share.path.path));
-    if (isErr(addResult)) {
-      return addResult;
-    }
-    return await SmbShareParser(share.name)
+  export function addShare(server: Server, share: SambaShareConfig) {
+    return SmbShareParser(share.name)
       .unapply(share)
-      .match({
-        ok: (shareParams) => setSectionParams(server, share.name, shareParams),
-        err: async (e) => Err(e),
+      .asyncAndThen((shareParams) => {
+        return server
+          .execute(addShareCommand(share.name, share.path), true)
+          .andThen(() => setSectionParams(server, share.name, shareParams));
       });
   }
 
-  export async function editShare(
-    server: Server,
-    share: SambaShareConfig
-  ): Promise<Result<null, ProcessError>> {
-    return (await getShare(server, share.name))
-      .andThen((originalShare) => SmbShareParser(originalShare.name).unapply(originalShare))
+  export function editShare(server: Server, share: SambaShareConfig) {
+    const shareParser = SmbShareParser("");
+    return getShare(server, share.name)
+      .andThen(shareParser.unapply)
       .andThen((originalShareKV) =>
-        SmbShareParser(share.name)
-          .unapply(share)
-          .map((shareKV) => ({ originalShareKV, shareKV }))
+        shareParser.unapply(share).map((shareKV) => keyValueDiff(originalShareKV, shareKV))
       )
-      .map(({ originalShareKV, shareKV }) => keyValueDiff(originalShareKV, shareKV))
-      .match({
-        ok: async ({ added, removed, changed, same: _ }) => {
-          const setResult = await setSectionParams(server, share.name, { ...added, ...changed });
-          if (isErr(setResult)) {
-            return setResult;
-          }
-          return await delSectionParms(server, share.name, Object.keys(removed));
-        },
-        err: async (e) => Err(e),
-      });
+      .andThen(({ added, removed, changed }) =>
+        setSectionParams(server, share.name, { ...added, ...changed }).andThen(() =>
+          delSectionParms(server, share.name, Object.keys(removed))
+        )
+      );
   }
 
-  export async function removeShare(
-    server: Server,
-    share: SambaShareConfig
-  ): Promise<Result<null, ProcessError>> {
-    return (await server.execute(delShareCommand(share.name))).map(() => null);
+  export function removeShare(server: Server, share: SambaShareConfig) {
+    return server.execute(delShareCommand(share.name));
   }
 
-  export async function editGlobal(
-    server: Server,
-    globalConfig: SambaGlobalConfig
-  ): Promise<Result<null, ProcessError | ParsingError>> {
+  export function editGlobal(server: Server, globalConfig: SambaGlobalConfig) {
     const globalParser = SmbGlobalParser();
-    return (await getGlobalConfig(server))
-    .andThen(SmbGlobalParser().unapply)
-    .andThen((originalGlobalKV) =>
-      SmbGlobalParser()
-        .unapply(globalConfig)
-        .map((globalKV) => ({ originalGlobalKV, globalKV }))
-    )
-    .map(({ originalGlobalKV, globalKV }) => keyValueDiff(originalGlobalKV, globalKV))
-    .match({
-      ok: async ({ added, removed, changed, same: _ }) => {
-        const setResult = await setSectionParams(server, "global", { ...added, ...changed });
-        if (isErr(setResult)) {
-          return setResult;
-        }
-        return await delSectionParms(server, "global", Object.keys(removed));
-      },
-      err: async (e) => Err(e),
-    });
+    return getGlobalConfig(server)
+      .andThen(globalParser.unapply)
+      .andThen((originalGlobalKV) =>
+        globalParser
+          .unapply(globalConfig)
+          .map((globalKV) => keyValueDiff(originalGlobalKV, globalKV))
+      )
+      .andThen(({ added, removed, changed }) =>
+        setSectionParams(server, "global", { ...added, ...changed }).andThen(() =>
+          delSectionParms(server, "global", Object.keys(removed))
+        )
+      );
   }
-
-  export const _testing = {
-    loadSettingsParse,
-  };
 }
