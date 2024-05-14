@@ -2,7 +2,8 @@
   "private": true,
   "workspaces": [
     "file-sharing",
-    "houston-common"
+    "houston-common",
+    "houston-common/houston-common-*"
   ],
   "scripts": {
     "build": "yarn build:common && yarn build:app"

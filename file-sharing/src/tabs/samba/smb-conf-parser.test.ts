@@ -3,7 +3,6 @@ import { Path, type KeyValueData } from "@45drives/houston-common-lib";
 import type { SambaConfig, SambaGlobalConfig, SambaShareConfig } from "@/tabs/samba/data-types";
 import { ok } from "neverthrow";
 import { suite, test, expect } from "vitest";
-import exp from "constants";
 
 suite("Samba", () => {
   suite("Config Parser", () => {

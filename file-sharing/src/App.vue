@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-  pushNotification, Notification, useGlobalProcessingState, HoustonAppContainer
+  pushNotification, Notification, HoustonAppContainer, globalProcessingWrapPromise
 } from '@45drives/houston-common-ui';
 import { onMounted, watch } from 'vue';
 import {
@@ -9,8 +9,6 @@ import {
 import {
   NfsTabMain
 } from '@/tabs/nfs/ui';
-
-const { globalProcessingWrapPromise } = useGlobalProcessingState();
 
 onMounted(() => {
   const notif =

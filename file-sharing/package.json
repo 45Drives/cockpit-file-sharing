@@ -20,7 +20,7 @@
     "@45drives/houston-common-ui": "workspace:^",
     "monet": "^0.9.3",
     "neverthrow": "^6.2.1",
-    "vue": "^3.4.21",
+    "vue": "^3.4.27",
     "vue-router": "^4.3.0"
   },
   "devDependencies": {
