@@ -13,6 +13,8 @@ yarn set version stable
 
 yarn config set nodeLinker node-modules
 
-yarn
+yarn install
+
+yarn workspace @45drives/houston-common install
 
 yarn build:common
