@@ -43,6 +43,7 @@ __metadata:
     "@rushstack/eslint-patch": "npm:^1.8.0"
     "@tailwindcss/forms": "npm:^0.5.7"
     "@tsconfig/node20": "npm:^20.1.4"
+    "@types/deep-equal": "npm:^1.0.4"
     "@types/jsdom": "npm:^21.1.6"
     "@types/node": "npm:^20.12.5"
     "@vitejs/plugin-vue": "npm:^5.0.4"

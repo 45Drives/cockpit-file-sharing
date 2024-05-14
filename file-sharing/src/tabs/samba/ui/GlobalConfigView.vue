@@ -34,7 +34,7 @@ onMounted(load);
     <CardContainer>
         <template v-slot:header>
             Global
-            <span v-if="modified">*</span>
+            <span v-if="modified" class="ml-1"> *</span>
         </template>
 
         <div
