@@ -73,6 +73,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@45drives/houston-common@workspace:houston-common":
+  version: 0.0.0-use.local
+  resolution: "@45drives/houston-common@workspace:houston-common"
+  dependencies:
+    typedoc: "npm:^0.25.13"
+    typedoc-plugin-mdn-links: "npm:^3.1.23"
+    typedoc-plugin-vue: "npm:^1.1.0"
+    typedoc-umlclass: "npm:^0.9.0"
+    typescript: "npm:^5.4.5"
+  languageName: unknown
+  linkType: soft
+
 "@aashutoshrathi/word-wrap@npm:^1.2.3":
   version: 1.2.6
   resolution: "@aashutoshrathi/word-wrap@npm:1.2.6"
@@ -6522,6 +6534,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"typedoc-plugin-vue@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "typedoc-plugin-vue@npm:1.1.0"
+  peerDependencies:
+    typedoc: 0.25.x
+  checksum: 10c0/b1e99c5eea9520fe3d8dc76fafd17685d60a7405d3a0c19cd607de0de6b9a25f494f302c3700778a72a24808eede1d0d81afdf306ec5a7cffbf18361b5a88c33
+  languageName: node
+  linkType: hard
+
 "typedoc-umlclass@npm:^0.9.0":
   version: 0.9.0
   resolution: "typedoc-umlclass@npm:0.9.0"
@@ -6563,7 +6584,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:~5.4.0":
+"typescript@npm:^5.4.5, typescript@npm:~5.4.0":
   version: 5.4.5
   resolution: "typescript@npm:5.4.5"
   bin:
@@ -6583,7 +6604,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A~5.4.0#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A^5.4.5#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A~5.4.0#optional!builtin<compat/typescript>":
   version: 5.4.5
   resolution: "typescript@patch:typescript@npm%3A5.4.5#optional!builtin<compat/typescript>::version=5.4.5&hash=5adc0c"
   bin:
