@@ -133,7 +133,7 @@ import NfsShareEditor from "./NfsShareEditor.vue";
 import { PlusIcon, XCircleIcon, ExclamationCircleIcon } from "@heroicons/vue/solid";
 import LoadingSpinner from "./LoadingSpinner.vue";
 import { ref, reactive, inject, onBeforeUnmount, watch } from "vue";
-import { NfsExportSyntax } from "@45drives/cockpit-syntaxes";
+import { NfsExportSyntax } from "../NFSExportsSyntax";
 import { useSpawn, errorString, errorStringHTML, fileDownload } from "@45drives/cockpit-helpers";
 import Table from "./Table.vue";
 import { notificationsInjectionKey, usersInjectionKey, groupsInjectionKey } from "../keys";

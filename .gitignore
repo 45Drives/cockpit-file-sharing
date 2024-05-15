@@ -1,1 +1,6 @@
 TODO
+node_modules/
+.yarn/
+.yarnrc.yml
+file-sharing-old/
+houston-common/
