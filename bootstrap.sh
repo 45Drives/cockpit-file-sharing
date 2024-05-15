@@ -3,6 +3,9 @@
 
 set -e
 set -o pipefail
+set -x
+
+command -v sponge >/dev/null || { echo "Missing 'sponge'. Please install moreutils." >&2 ; exit 1 ; }
 
 git submodule update --init
 
@@ -16,6 +19,6 @@ yarn config set nodeLinker node-modules
 
 yarn install
 
-yarn workspace @45drives/houston-common install
+yarn workspaces foreach -A install
 
 yarn build:common
