@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed May 15 2024 Joshua Boudreau <jboudreau@45drives.com> 3.3.8-1
+- Fix parsing NFS Exports files where path includes whitespace
 * Tue Apr 23 2024 Joshua Boudreau <jboudreau@45drives.com> 3.3.7-1
 - Samba - fix saving global advanced settings with '=' in their value
 - NFS - better whitespace handling while parsing exports file

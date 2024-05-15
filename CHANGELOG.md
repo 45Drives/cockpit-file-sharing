@@ -1,4 +1,3 @@
-## Cockpit File Sharing 3.3.7-1
+## Cockpit File Sharing 3.3.8-1
 
-* Samba - fix saving global advanced settings with '=' in their value
-* NFS - better whitespace handling while parsing exports file
+* Fix parsing NFS Exports files where path includes whitespace

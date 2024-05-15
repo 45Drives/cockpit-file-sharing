@@ -4,3 +4,5 @@ node_modules/
 .yarnrc.yml
 file-sharing-old/
 houston-common/
+*_generic.tar.gz
+*_generic.zip

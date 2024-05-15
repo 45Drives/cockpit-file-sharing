@@ -1,3 +1,9 @@
+cockpit-file-sharing (3.3.8-1focal) focal; urgency=medium
+
+  * Fix parsing NFS Exports files where path includes whitespace
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 15 May 2024 13:09:21 -0300
+
 cockpit-file-sharing (3.3.7-1focal) focal; urgency=medium
 
   * Samba - fix saving global advanced settings with '=' in their value
