@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { InputField } from "@/common/ui";
-import KeyValueTextArea from '@/tabs/samba/ui/KeyValueTextArea.vue';
 import type { SambaGlobalConfig } from '@/tabs/samba/data-types';
 import { ref, onMounted } from 'vue';
-import { CardContainer, reportError, globalProcessingWrapResult, useTempObjectStaging } from "@45drives/houston-common-ui";
-import { getServer } from '@45drives/houston-common-lib';
+import { CardContainer, useTempObjectStaging, ParsedTextArea, defineActions } from "@45drives/houston-common-ui";
+import { getServer, KeyValueSyntax } from '@45drives/houston-common-lib';
 import { SambaManager } from '@/tabs/samba/samba-manager';
 import { err } from "neverthrow";
 
@@ -12,22 +11,23 @@ const globalConf = ref<SambaGlobalConfig>();
 
 const { tempObject: tempGlobalConfig, modified, resetChanges } = useTempObjectStaging(globalConf);
 
-const load = globalProcessingWrapResult(() =>
+const loadGlobalSettings = () =>
     getServer()
         .andThen(SambaManager.getGlobalConfig)
-        .map(config => globalConf.value = config)
-        .mapErr(reportError));
+        .map(config => globalConf.value = config);
 
-const apply = globalProcessingWrapResult(() =>
+const applyGlobalSettings = (newSettings: SambaGlobalConfig) =>
     getServer()
         .andThen(server =>
-            tempGlobalConfig.value
-                ? SambaManager.editGlobal(server, tempGlobalConfig.value)
-                : err(new Error("Global config never loaded!")))
-        .mapErr(reportError)
-        .andThen(load));
+            SambaManager.editGlobal(server, newSettings))
+        .andThen(loadGlobalSettings);
 
-onMounted(load);
+const actions = defineActions({
+    loadGlobalSettings,
+    applyGlobalSettings,
+});
+
+onMounted(actions.loadGlobalSettings);
 
 </script>
 
@@ -55,7 +55,10 @@ onMounted(load);
                 placeholder="WORKGROUP"
                 v-model="tempGlobalConfig.workgroup"
             />
-            <KeyValueTextArea v-model="tempGlobalConfig.advancedOptions" />
+            <ParsedTextArea
+                :parser="KeyValueSyntax()"
+                v-model="tempGlobalConfig.advancedOptions"
+            />
 
         </div>
 
@@ -69,7 +72,7 @@ onMounted(load);
                     >Cancel</button>
                     <button
                         class="btn btn-primary"
-                        @click="globalProcessingWrapResult(apply)()"
+                        @click="() => tempGlobalConfig && actions.applyGlobalSettings(tempGlobalConfig)"
                         :disabled="!modified"
                     >Apply</button>
                 </button>
