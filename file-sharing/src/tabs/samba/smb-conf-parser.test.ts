@@ -52,6 +52,7 @@ suite("Samba", () => {
             readOnly: true,
             guestOk: false,
             browseable: true,
+            inheritPermissions: false,
             advancedOptions: {},
           } as SambaShareConfig)
         );
@@ -63,6 +64,7 @@ suite("Samba", () => {
           "read only": "no",
           "guest ok": "yes",
           browseable: "no",
+          "inherit permissions": "yes",
           "vfs objects": "acl xattr ceph",
           "os level": "25",
         };
@@ -75,6 +77,7 @@ suite("Samba", () => {
             readOnly: false,
             guestOk: true,
             browseable: false,
+            inheritPermissions: true,
             advancedOptions: {
               "vfs objects": "acl xattr ceph",
               "os level": "25",
@@ -128,6 +131,7 @@ path = /lksdf/sdfkjrt/dflk
 guest ok = 1
 writable = false
 browsable = no
+inherit permissions = yes
 vfs objects = lkjsdlf jfk kejsdf kje
 some adv opt = some other value`,
           expected: {
@@ -147,6 +151,7 @@ some adv opt = some other value`,
                 guestOk: true,
                 readOnly: false,
                 browseable: false,
+                inheritPermissions: false,
                 advancedOptions: {
                   "vfs objects": "ceph xattr",
                   "some adv opt": "some value",
@@ -159,6 +164,7 @@ some adv opt = some other value`,
                 guestOk: true,
                 readOnly: true,
                 browseable: false,
+                inheritPermissions: true,
                 advancedOptions: {
                   "vfs objects": "lkjsdlf jfk kejsdf kje",
                   "some adv opt": "some other value",

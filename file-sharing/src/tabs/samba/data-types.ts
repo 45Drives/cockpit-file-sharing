@@ -14,6 +14,7 @@ export type SambaShareConfig = {
   guestOk: boolean;
   readOnly: boolean;
   browseable: boolean;
+  inheritPermissions: boolean;
   advancedOptions: KeyValueData;
 }
 

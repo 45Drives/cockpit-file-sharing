@@ -69,6 +69,7 @@ export function SmbShareParser(name: string): Transformer<SambaShareConfig, KeyV
         guestOk: false,
         browseable: true,
         readOnly: true,
+        inheritPermissions: false,
         advancedOptions: {},
       };
       const grabbers = KVGrabberCollection([
@@ -80,6 +81,7 @@ export function SmbShareParser(name: string): Transformer<SambaShareConfig, KeyV
           sambaStringToBooleanCaster(s).map((b) => !b)
         ),
         KVGrabber(config, "browseable", ["browseable", "browsable"], sambaStringToBooleanCaster),
+        KVGrabber(config, "inheritPermissions", ["inherit permissions"], sambaStringToBooleanCaster),
         KVRemainderGrabber(config, "advancedOptions"),
       ]);
       if (
@@ -99,6 +101,7 @@ export function SmbShareParser(name: string): Transformer<SambaShareConfig, KeyV
         KVGrabber(config, "guest ok", ["guestOk"], sambaBooleanToStringCaster),
         KVGrabber(config, "read only", ["readOnly"], sambaBooleanToStringCaster),
         KVGrabber(config, "browseable", ["browseable"], sambaBooleanToStringCaster),
+        KVGrabber(config, "inherit permissions", ["inheritPermissions"], sambaBooleanToStringCaster),
       ]);
       if (
         !Object.entries(parsed)
