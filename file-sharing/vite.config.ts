@@ -12,7 +12,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-    }
+    },
+    dedupe: ['vue'],
   },
   build: {
     target: ['chrome87', 'edge88', 'firefox78', 'safari14'],
