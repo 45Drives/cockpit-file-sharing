@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# bootstrap.sh
 
 set -e
 set -o pipefail

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { InputField } from "@/common/ui";
+import KeyValueTextArea from '@/tabs/samba/ui/KeyValueTextArea.vue';
 import type { SambaGlobalConfig } from '@/tabs/samba/data-types';
 import { ref, onMounted } from 'vue';
 import { CardContainer, reportError, globalProcessingWrapResult, useTempObjectStaging } from "@45drives/houston-common-ui";
@@ -34,7 +35,10 @@ onMounted(load);
     <CardContainer>
         <template v-slot:header>
             Global
-            <span v-if="modified" class="ml-1"> *</span>
+            <span
+                v-if="modified"
+                class="ml-1"
+            > *</span>
         </template>
 
         <div
@@ -51,6 +55,7 @@ onMounted(load);
                 placeholder="WORKGROUP"
                 v-model="tempGlobalConfig.workgroup"
             />
+            <KeyValueTextArea v-model="tempGlobalConfig.advancedOptions" />
 
         </div>
 

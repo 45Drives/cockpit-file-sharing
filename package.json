@@ -2,11 +2,11 @@
   "private": true,
   "workspaces": [
     "file-sharing",
-    "houston-common",
     "houston-common/houston-common-*"
   ],
   "scripts": {
-    "build": "yarn build:common && yarn build:app"
+    "build": "yarn build:common && yarn build:app",
+    "build:common": "yarn build:css && yarn build:lib && yarn build:ui"
   },
   "packageManager": "yarn@4.2.2"
 }
