@@ -5,7 +5,6 @@ import { ref, onMounted } from 'vue';
 import { CardContainer, useTempObjectStaging, ParsedTextArea, defineActions } from "@45drives/houston-common-ui";
 import { getServer, KeyValueSyntax } from '@45drives/houston-common-lib';
 import { SambaManager } from '@/tabs/samba/samba-manager';
-import { err } from "neverthrow";
 
 const globalConf = ref<SambaGlobalConfig>();
 
@@ -20,7 +19,7 @@ const applyGlobalSettings = (newSettings: SambaGlobalConfig) =>
     getServer()
         .andThen(server =>
             SambaManager.editGlobal(server, newSettings))
-        .andThen(loadGlobalSettings);
+        .andThen(() => loadGlobalSettings());
 
 const actions = defineActions({
     loadGlobalSettings,
