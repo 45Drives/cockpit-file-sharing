@@ -1,14 +1,65 @@
 <script setup lang="ts">
-import { InputField } from "@/common/ui";
 import type { SambaGlobalConfig } from '@/tabs/samba/data-types';
-import { ref, onMounted } from 'vue';
-import { CardContainer, useTempObjectStaging, ParsedTextArea, defineActions } from "@45drives/houston-common-ui";
+import { ref, onMounted, watch } from 'vue';
+import { InputField, ToggleSwitch, ToggleSwitchGroup, CardContainer, useTempObjectStaging, ParsedTextArea, defineActions } from "@45drives/houston-common-ui";
 import { getServer, KeyValueSyntax } from '@45drives/houston-common-lib';
 import { SambaManager } from '@/tabs/samba/samba-manager';
+
+const _ = cockpit.gettext;
 
 const globalConf = ref<SambaGlobalConfig>();
 
 const { tempObject: tempGlobalConfig, modified, resetChanges } = useTempObjectStaging(globalConf);
+
+import { computed, toRaw } from 'vue';
+import Disclosure from '@/tabs/samba/ui/Disclosure.vue';
+
+const BooleanKeyValueSuite = <TCtx extends {}>(ctx: TCtx, objGetter: (ctx: TCtx) => Record<string, string>, trueContents: Record<string, string>) => {
+    return computed<boolean>({
+        get() {
+            for (const key of Object.keys(trueContents)) {
+                const wantedValues = trueContents[key]!.split(/\s+/);
+                const currentValues = objGetter(ctx)[key]?.split(/\s+/);
+                console.log(key, "want:", wantedValues, "has:", currentValues);
+                if (currentValues === undefined) {
+                    return false;
+                }
+                if (!wantedValues.every((wantedValue) => currentValues.includes(wantedValue))) {
+                    return false;
+                }
+            }
+            return true;
+        },
+        set(value) {
+            for (const key of Object.keys(trueContents)) {
+                const wantedValues = trueContents[key]!.split(/\s+/);
+                const currentValues = objGetter(ctx)[key]?.split(/\s+/) ?? [];
+                if (value) {
+                    // add
+                    objGetter(ctx)[key] = [...new Set([...currentValues, ...wantedValues])].join(" ");
+                } else {
+                    // remove
+                    const filteredValues = currentValues.filter((v) => !wantedValues.includes(v));
+                    if (filteredValues.length) {
+                        objGetter(ctx)[key] = filteredValues.join(" ");
+                    } else {
+                        delete objGetter(ctx)[key];
+                    }
+                }
+            }
+        }
+    });
+};
+
+const showAdvanced = ref(false);
+
+const macOSSharesOptions = BooleanKeyValueSuite(tempGlobalConfig, (tmpcfg) => tmpcfg.value?.advancedOptions ?? {}, {
+    "fruit:encoding": "native",
+    "fruit:metadata": "stream",
+    "fruit:zero_file_id": "yes",
+    "fruit:nfs_aces": "no",
+    "vfs objects": "catia fruit streams_xattr",
+});
 
 const loadGlobalSettings = () =>
     getServer()
@@ -28,12 +79,18 @@ const actions = defineActions({
 
 onMounted(actions.loadGlobalSettings);
 
+watch(() => tempGlobalConfig.value?.advancedOptions ?? {}, (advOpts) => {
+    if (Object.entries(advOpts).length) {
+        showAdvanced.value = true;
+    }
+}, { deep: true });
+
 </script>
 
 <template>
     <CardContainer>
         <template v-slot:header>
-            Global
+            {{ _("Global Configuration") }}
             <span
                 v-if="modified"
                 class="ml-1"
@@ -45,36 +102,52 @@ onMounted(actions.loadGlobalSettings);
             class="space-y-content"
         >
             <InputField
-                label="Server Description"
                 placeholder="Description of server"
                 v-model="tempGlobalConfig.serverString"
-            />
+            >
+                Server Description
+                <template v-slot:tooltip>
+                    Test tooltip
+                </template>
+            </InputField>
             <InputField
                 label="Workgroup"
                 placeholder="WORKGROUP"
                 v-model="tempGlobalConfig.workgroup"
-            />
-            <ParsedTextArea
-                :parser="KeyValueSyntax()"
-                v-model="tempGlobalConfig.advancedOptions"
-            />
-
+            >
+                Workgroup
+            </InputField>
+            <ToggleSwitchGroup>
+                <ToggleSwitch v-model="macOSSharesOptions">
+                    Global MacOS Shares
+                    <template v-slot:description>
+                        Optimize all shares for MacOS
+                    </template>
+                </ToggleSwitch>
+            </ToggleSwitchGroup>
+            <Disclosure v-model:show="showAdvanced">
+                <template v-slot:label>
+                    Advanced
+                </template>
+                <ParsedTextArea
+                    :parser="KeyValueSyntax()"
+                    v-model="tempGlobalConfig.advancedOptions"
+                />
+            </Disclosure>
         </div>
 
         <template v-slot:footer>
             <div class="button-group-row justify-end grow">
-                <button>
-                    <button
-                        class="btn btn-secondary"
-                        @click="resetChanges"
-                        v-if="modified"
-                    >Cancel</button>
-                    <button
-                        class="btn btn-primary"
-                        @click="() => tempGlobalConfig && actions.applyGlobalSettings(tempGlobalConfig)"
-                        :disabled="!modified"
-                    >Apply</button>
-                </button>
+                <button
+                    class="btn btn-secondary"
+                    @click="resetChanges"
+                    v-if="modified"
+                >Cancel</button>
+                <button
+                    class="btn btn-primary"
+                    @click="() => tempGlobalConfig && actions.applyGlobalSettings(tempGlobalConfig)"
+                    :disabled="!modified"
+                >Apply</button>
             </div>
         </template>
     </CardContainer>
