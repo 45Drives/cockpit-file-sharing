@@ -1,8 +1,18 @@
 <script setup lang="ts">
-import type { SambaGlobalConfig } from '@/tabs/samba/data-types';
 import { ref, onMounted, watch } from 'vue';
-import { InputField, ToggleSwitch, ToggleSwitchGroup, CardContainer, useTempObjectStaging, ParsedTextArea, defineActions } from "@45drives/houston-common-ui";
+import type { SambaGlobalConfig } from '@/tabs/samba/data-types';
+import {
+    InputField,
+    ToggleSwitch,
+    ToggleSwitchGroup,
+    CardContainer,
+    ParsedTextArea,
+    Disclosure,
+    useTempObjectStaging,
+    wrapActions
+} from "@45drives/houston-common-ui";
 import { getServer, KeyValueSyntax } from '@45drives/houston-common-lib';
+import { BooleanKeyValueSuite } from '@/tabs/samba/ui/BooleanKeyValueSuite'; // TODO: move to common-ui
 import { SambaManager } from '@/tabs/samba/samba-manager';
 
 const _ = cockpit.gettext;
@@ -11,49 +21,9 @@ const globalConf = ref<SambaGlobalConfig>();
 
 const { tempObject: tempGlobalConfig, modified, resetChanges } = useTempObjectStaging(globalConf);
 
-import { computed, toRaw } from 'vue';
-import Disclosure from '@/tabs/samba/ui/Disclosure.vue';
+const revealAdvancedTextarea = ref(false);
 
-const BooleanKeyValueSuite = <TCtx extends {}>(ctx: TCtx, objGetter: (ctx: TCtx) => Record<string, string>, trueContents: Record<string, string>) => {
-    return computed<boolean>({
-        get() {
-            for (const key of Object.keys(trueContents)) {
-                const wantedValues = trueContents[key]!.split(/\s+/);
-                const currentValues = objGetter(ctx)[key]?.split(/\s+/);
-                console.log(key, "want:", wantedValues, "has:", currentValues);
-                if (currentValues === undefined) {
-                    return false;
-                }
-                if (!wantedValues.every((wantedValue) => currentValues.includes(wantedValue))) {
-                    return false;
-                }
-            }
-            return true;
-        },
-        set(value) {
-            for (const key of Object.keys(trueContents)) {
-                const wantedValues = trueContents[key]!.split(/\s+/);
-                const currentValues = objGetter(ctx)[key]?.split(/\s+/) ?? [];
-                if (value) {
-                    // add
-                    objGetter(ctx)[key] = [...new Set([...currentValues, ...wantedValues])].join(" ");
-                } else {
-                    // remove
-                    const filteredValues = currentValues.filter((v) => !wantedValues.includes(v));
-                    if (filteredValues.length) {
-                        objGetter(ctx)[key] = filteredValues.join(" ");
-                    } else {
-                        delete objGetter(ctx)[key];
-                    }
-                }
-            }
-        }
-    });
-};
-
-const showAdvanced = ref(false);
-
-const macOSSharesOptions = BooleanKeyValueSuite(tempGlobalConfig, (tmpcfg) => tmpcfg.value?.advancedOptions ?? {}, {
+const macOSSharesOptions = BooleanKeyValueSuite(() => tempGlobalConfig.value?.advancedOptions ?? {}, {
     "fruit:encoding": "native",
     "fruit:metadata": "stream",
     "fruit:zero_file_id": "yes",
@@ -72,7 +42,7 @@ const applyGlobalSettings = (newSettings: SambaGlobalConfig) =>
             SambaManager.editGlobal(server, newSettings))
         .andThen(() => loadGlobalSettings());
 
-const actions = defineActions({
+const actions = wrapActions({
     loadGlobalSettings,
     applyGlobalSettings,
 });
@@ -81,7 +51,7 @@ onMounted(actions.loadGlobalSettings);
 
 watch(() => tempGlobalConfig.value?.advancedOptions ?? {}, (advOpts) => {
     if (Object.entries(advOpts).length) {
-        showAdvanced.value = true;
+        revealAdvancedTextarea.value = true;
     }
 }, { deep: true });
 
@@ -125,7 +95,7 @@ watch(() => tempGlobalConfig.value?.advancedOptions ?? {}, (advOpts) => {
                     </template>
                 </ToggleSwitch>
             </ToggleSwitchGroup>
-            <Disclosure v-model:show="showAdvanced">
+            <Disclosure v-model:show="revealAdvancedTextarea">
                 <template v-slot:label>
                     Advanced
                 </template>
