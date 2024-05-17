@@ -11,7 +11,8 @@ import {
     SelectMenu,
     useTempObjectStaging,
     wrapActions,
-    type SelectMenuOption
+    reportSuccess,
+    type SelectMenuOption,
 } from "@45drives/houston-common-ui";
 import { getServer, KeyValueSyntax } from '@45drives/houston-common-lib';
 import { BooleanKeyValueSuite } from '@/tabs/samba/ui/BooleanKeyValueSuite'; // TODO: move to common-ui
@@ -44,7 +45,8 @@ const applyGlobalSettings = (newSettings: SambaGlobalConfig) =>
     getServer()
         .andThen(server =>
             SambaManager.editGlobal(server, newSettings))
-        .andThen(() => loadGlobalSettings());
+        .andThen(() => loadGlobalSettings())
+        .map(() => reportSuccess(_("Updated global Samba configuration.")));
 
 const actions = wrapActions({
     loadGlobalSettings,
@@ -76,23 +78,23 @@ watch(() => tempGlobalConfig.value?.advancedOptions ?? {}, (advOpts) => {
             class="space-y-content"
         >
             <InputField
-                placeholder="Description of server"
+                :placeholder="_('Description of server')"
                 v-model="tempGlobalConfig.serverString"
             >
-                Server Description
+                {{ _("Server Description") }}
             </InputField>
             <InputField
                 label="Workgroup"
                 placeholder="WORKGROUP"
                 v-model="tempGlobalConfig.workgroup"
             >
-                Workgroup
+                {{ _("Workgroup") }}
             </InputField>
             <ToggleSwitchGroup>
                 <ToggleSwitch v-model="macOSSharesOptions">
-                    Global MacOS Shares
+                    {{ _("Global MacOS Shares") }}
                     <template v-slot:description>
-                        Optimize all shares for MacOS
+                        {{ _("Optimize all shares for MacOS") }}
                     </template>
                 </ToggleSwitch>
             </ToggleSwitchGroup>
@@ -100,11 +102,11 @@ watch(() => tempGlobalConfig.value?.advancedOptions ?? {}, (advOpts) => {
                 v-model="tempGlobalConfig.logLevel"
                 :options="logLevelOptions"
             >
-                Log Level
+                {{ _("Log Level") }}
             </SelectMenu>
             <Disclosure v-model:show="revealAdvancedTextarea">
                 <template v-slot:label>
-                    Advanced
+                    {{ _("Advanced") }}
                 </template>
                 <ParsedTextArea
                     :parser="KeyValueSyntax({ trailingNewline: false })"
@@ -119,12 +121,12 @@ watch(() => tempGlobalConfig.value?.advancedOptions ?? {}, (advOpts) => {
                     class="btn btn-secondary"
                     @click="resetChanges"
                     v-if="modified"
-                >Cancel</button>
+                >{{ _("Cancel") }}</button>
                 <button
                     class="btn btn-primary"
                     @click="() => tempGlobalConfig && actions.applyGlobalSettings(tempGlobalConfig)"
                     :disabled="!modified"
-                >Apply</button>
+                >{{ _("Apply") }}</button>
             </div>
         </template>
     </CardContainer>
