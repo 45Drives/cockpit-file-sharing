@@ -8,8 +8,10 @@ import {
     CardContainer,
     ParsedTextArea,
     Disclosure,
+    SelectMenu,
     useTempObjectStaging,
-    wrapActions
+    wrapActions,
+    type SelectMenuOption
 } from "@45drives/houston-common-ui";
 import { getServer, KeyValueSyntax } from '@45drives/houston-common-lib';
 import { BooleanKeyValueSuite } from '@/tabs/samba/ui/BooleanKeyValueSuite'; // TODO: move to common-ui
@@ -30,6 +32,8 @@ const macOSSharesOptions = BooleanKeyValueSuite(() => tempGlobalConfig.value?.ad
     "fruit:nfs_aces": "no",
     "vfs objects": "catia fruit streams_xattr",
 });
+
+const logLevelOptions: SelectMenuOption<number>[] = [5, 4, 3, 2, 1, 0].map(n => ({ label: n.toString(), value: n }));
 
 const loadGlobalSettings = () =>
     getServer()
@@ -76,9 +80,6 @@ watch(() => tempGlobalConfig.value?.advancedOptions ?? {}, (advOpts) => {
                 v-model="tempGlobalConfig.serverString"
             >
                 Server Description
-                <template v-slot:tooltip>
-                    Test tooltip
-                </template>
             </InputField>
             <InputField
                 label="Workgroup"
@@ -95,12 +96,18 @@ watch(() => tempGlobalConfig.value?.advancedOptions ?? {}, (advOpts) => {
                     </template>
                 </ToggleSwitch>
             </ToggleSwitchGroup>
+            <SelectMenu
+                v-model="tempGlobalConfig.logLevel"
+                :options="logLevelOptions"
+            >
+                Log Level
+            </SelectMenu>
             <Disclosure v-model:show="revealAdvancedTextarea">
                 <template v-slot:label>
                     Advanced
                 </template>
                 <ParsedTextArea
-                    :parser="KeyValueSyntax()"
+                    :parser="KeyValueSyntax({ trailingNewline: false })"
                     v-model="tempGlobalConfig.advancedOptions"
                 />
             </Disclosure>
