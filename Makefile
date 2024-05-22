@@ -53,7 +53,7 @@ BUILD_FLAGS=-- --minify false
 endif
 
 ifndef PLUGIN_SRCS
-PLUGIN_SRCS:=$(filter-out %-old, $(patsubst %/package.json,%,$(filter-out houston-common%, $(wildcard */package.json))))
+PLUGIN_SRCS:=$(filter-out %-old houston-common, $(patsubst %/package.json,%,$(wildcard */package.json)))
 endif
 
 OUTPUTS:=$(addsuffix /dist/index.html, $(PLUGIN_SRCS))
@@ -64,24 +64,35 @@ NPM_UPDATE:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn upgrade --cwd
 VERSION_FILES:=$(addsuffix /src/version.js, $(PLUGIN_SRCS))
 OS_PACKAGE_RELEASE?=built_from_source
 
+BOOTSTRAP:=.yarnrc.yml
+
 default: $(VERSION_FILES) $(OUTPUTS)
 
 all: default
 
-.PHONY: default all install clean help install-local install-remote install
+.PHONY: default all install clean help install-local install-remote install houston-common
+
+$(BOOTSTRAP):
+	./bootstrap.sh
+
+houston-common: houston-common/Makefile $(BOOTSTRAP)
+	$(MAKE) -C houston-common
+
+houston-common/Makefile:
+	git submodule update --init
 
 $(VERSION_FILES): ./manifest.json
 	echo 'export const pluginVersion = "$(shell jq -r '.version' ./manifest.json)-$(shell jq -r '.buildVersion' ./manifest.json)$(OS_PACKAGE_RELEASE)";' > $@
 
 # build outputs
 .SECONDEXPANSION:
-$(OUTPUTS): %/dist/index.html: $$(shell find '$$*' -type d \( -name node_modules -o -path '$$*/dist' -o -path '*node_modules*'  \) -prune -o -type f -not \( -name .gitignore \) -print)
+$(OUTPUTS): %/dist/index.html: houston-common $$(shell find '$$*' -type d \( -name node_modules -o -path '$$*/dist' -o -path '*node_modules*'  \) -prune -o -type f -not \( -name .gitignore \) -print)
 	@echo -e $(call cyantext,Building $*)
-	$(NPM_PREFIX) $* install
+	yarn --cwd $* install
 ifeq ($(AUTO_UPGRADE_DEPS),1)
-	$(NPM_UPDATE) $*
+	yarn upgrade --cwd $*
 endif
-	$(NPM_PREFIX) $* run build $(BUILD_FLAGS)
+	yarn --cwd $* run build $(BUILD_FLAGS)
 	@echo -e $(call greentext,Done building $*)
 	@echo
 
