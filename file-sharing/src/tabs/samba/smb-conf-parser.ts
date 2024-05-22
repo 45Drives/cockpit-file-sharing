@@ -15,7 +15,7 @@ import {
   type IniConfigData,
   ParsingError,
 } from "@45drives/houston-common-lib";
-import type { SambaConfig, SambaGlobalConfig, SambaShareConfig } from "./data-types";
+import { defaultSambaGlobalConfig, defaultSambaShareConfig, type SambaConfig, type SambaGlobalConfig, type SambaShareConfig } from "./data-types";
 import { Result, ok, err } from "neverthrow";
 import { Some } from "monet";
 
@@ -29,12 +29,7 @@ const sambaBooleanToStringCaster = BooleanToStringCaster("yes", "no");
 export function SmbGlobalParser(): Transformer<SambaGlobalConfig, KeyValueData> {
   return {
     apply: (unparsed) => {
-      const config = {
-        serverString: "Samba %v",
-        logLevel: 0,
-        workgroup: "WORKGROUP",
-        advancedOptions: {},
-      };
+      const config = defaultSambaGlobalConfig();
       Object.entries(unparsed).forEach(
         KVGrabberCollection([
           KVGrabber(config, "logLevel", ["log level", "debuglevel"], StringToIntCaster()),
@@ -62,16 +57,7 @@ export function SmbGlobalParser(): Transformer<SambaGlobalConfig, KeyValueData> 
 export function SmbShareParser(name: string): Transformer<SambaShareConfig, KeyValueData> {
   return {
     apply: (unparsed: KeyValueData) => {
-      const config = {
-        name,
-        description: "",
-        path: "",
-        guestOk: false,
-        browseable: true,
-        readOnly: true,
-        inheritPermissions: false,
-        advancedOptions: {},
-      };
+      const config = defaultSambaShareConfig(name);
       const grabbers = KVGrabberCollection([
         KVGrabber(config, "description", ["comment"], IdentityCaster<string>()),
         KVGrabber(config, "path", ["path", "directory"], IdentityCaster<string>()),

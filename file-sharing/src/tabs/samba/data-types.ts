@@ -5,7 +5,7 @@ export type SambaGlobalConfig = {
   workgroup: string;
   serverString: string;
   advancedOptions: KeyValueData;
-}
+};
 
 export type SambaShareConfig = {
   name: string;
@@ -16,9 +16,27 @@ export type SambaShareConfig = {
   browseable: boolean;
   inheritPermissions: boolean;
   advancedOptions: KeyValueData;
-}
+};
 
 export type SambaConfig = {
   global: SambaGlobalConfig;
   shares: SambaShareConfig[];
 };
+
+export const defaultSambaShareConfig = (name: string = "") => ({
+  name,
+  description: "",
+  path: "",
+  guestOk: false,
+  browseable: true,
+  readOnly: true,
+  inheritPermissions: false,
+  advancedOptions: {},
+});
+
+export const defaultSambaGlobalConfig = () => ({
+  serverString: "Samba %v",
+  logLevel: 0,
+  workgroup: "WORKGROUP",
+  advancedOptions: {},
+});

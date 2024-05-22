@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, watchEffect } from 'vue';
 import type { SambaGlobalConfig } from '@/tabs/samba/data-types';
 import {
     InputField,
@@ -16,7 +16,7 @@ import {
 } from "@45drives/houston-common-ui";
 import { getServer, KeyValueSyntax } from '@45drives/houston-common-lib';
 import { BooleanKeyValueSuite } from '@/tabs/samba/ui/BooleanKeyValueSuite'; // TODO: move to common-ui
-import { SambaManager } from '@/tabs/samba/samba-manager';
+import { getSambaManager } from '@/tabs/samba/samba-manager';
 
 const _ = cockpit.gettext;
 
@@ -25,26 +25,36 @@ const globalConf = ref<SambaGlobalConfig>();
 const { tempObject: tempGlobalConfig, modified, resetChanges } = useTempObjectStaging(globalConf);
 
 const revealAdvancedTextarea = ref(false);
+watchEffect(() => {
+    if (Object.entries(tempGlobalConfig.value?.advancedOptions ?? {}).length) {
+        revealAdvancedTextarea.value = true;
+    }
+});
 
 const macOSSharesOptions = BooleanKeyValueSuite(() => tempGlobalConfig.value?.advancedOptions ?? {}, {
-    "fruit:encoding": "native",
-    "fruit:metadata": "stream",
-    "fruit:zero_file_id": "yes",
-    "fruit:nfs_aces": "no",
-    "vfs objects": "catia fruit streams_xattr",
+    include: {
+        "fruit:encoding": "native",
+        "fruit:metadata": "stream",
+        "fruit:zero_file_id": "yes",
+        "fruit:nfs_aces": "no",
+        "vfs objects": "catia fruit streams_xattr",
+    },
+    exclude: {}
 });
 
 const logLevelOptions: SelectMenuOption<number>[] = [5, 4, 3, 2, 1, 0].map(n => ({ label: n.toString(), value: n }));
 
+const sambaManager = getSambaManager();
+
 const loadGlobalSettings = () =>
-    getServer()
-        .andThen(SambaManager.getGlobalConfig)
+    sambaManager
+        .andThen(sm => sm.getGlobalConfig())
         .map(config => globalConf.value = config);
 
 const applyGlobalSettings = (newSettings: SambaGlobalConfig) =>
-    getServer()
-        .andThen(server =>
-            SambaManager.editGlobal(server, newSettings))
+    sambaManager
+        .andThen(sm =>
+            sm.editGlobal(newSettings))
         .andThen(() => loadGlobalSettings())
         .map(() => reportSuccess(_("Updated global Samba configuration.")));
 
@@ -54,12 +64,6 @@ const actions = wrapActions({
 });
 
 onMounted(actions.loadGlobalSettings);
-
-watch(() => tempGlobalConfig.value?.advancedOptions ?? {}, (advOpts) => {
-    if (Object.entries(advOpts).length) {
-        revealAdvancedTextarea.value = true;
-    }
-}, { deep: true });
 
 </script>
 

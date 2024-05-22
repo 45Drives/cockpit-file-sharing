@@ -2,6 +2,7 @@
 import { CenteredCardColumn } from "@45drives/houston-common-ui";
 
 import GlobalConfigView from './GlobalConfigView.vue';
+import ShareListView from '@/tabs/samba/ui/ShareListView.vue';
 
 
 </script>
@@ -9,5 +10,6 @@ import GlobalConfigView from './GlobalConfigView.vue';
 <template>
     <CenteredCardColumn>
         <GlobalConfigView />
+        <ShareListView />
     </CenteredCardColumn>
 </template>
