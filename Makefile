@@ -13,11 +13,10 @@
 # If not, see <https://www.gnu.org/licenses/>. 
 
 # PLUGIN_SRCS is space-delimited list of subdirectories containg a plugin project.
-# You can leave it empty for automatic detection based on directories containing a package.json file.
-PLUGIN_SRCS=
+PLUGIN_SRCS=file-sharing
 
 # For installing to a remote machine for testing with `make install-remote`
-REMOTE_TEST_HOST=192.168.207.27
+REMOTE_TEST_HOST=192.168.13.40
 REMOTE_TEST_USER=root
 
 # Restarts cockpit after install
@@ -53,7 +52,8 @@ BUILD_FLAGS=-- --minify false
 endif
 
 ifndef PLUGIN_SRCS
-PLUGIN_SRCS:=$(filter-out %-old houston-common, $(patsubst %/package.json,%,$(wildcard */package.json)))
+# PLUGIN_SRCS:=$(filter-out %-old houston-common, $(patsubst %/package.json,%,$(wildcard */package.json)))
+$(error PLUGIN_SRCS not set - please edit Makefile)
 endif
 
 OUTPUTS:=$(addsuffix /dist/index.html, $(PLUGIN_SRCS))
@@ -64,29 +64,30 @@ NPM_UPDATE:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn upgrade --cwd
 VERSION_FILES:=$(addsuffix /src/version.js, $(PLUGIN_SRCS))
 OS_PACKAGE_RELEASE?=built_from_source
 
-BOOTSTRAP:=.yarnrc.yml
-
 default: $(VERSION_FILES) $(OUTPUTS)
 
 all: default
 
-.PHONY: default all install clean help install-local install-remote install houston-common
+.PHONY: default all install clean help install-local install-remote install houston-common bootstrap-yarn
 
-$(BOOTSTRAP):
+bootstrap-yarn: .yarnrc.yml
+
+.yarnrc.yml:
 	./bootstrap.sh
-
-houston-common: houston-common/Makefile $(BOOTSTRAP)
-	$(MAKE) -C houston-common
 
 houston-common/Makefile:
 	git submodule update --init
 
+houston-common: houston-common/Makefile bootstrap-yarn
+	$(MAKE) -C houston-common
+
 $(VERSION_FILES): ./manifest.json
+	mkdir -p $(dir $@)
 	echo 'export const pluginVersion = "$(shell jq -r '.version' ./manifest.json)-$(shell jq -r '.buildVersion' ./manifest.json)$(OS_PACKAGE_RELEASE)";' > $@
 
 # build outputs
 .SECONDEXPANSION:
-$(OUTPUTS): %/dist/index.html: houston-common $$(shell find '$$*' -type d \( -name node_modules -o -path '$$*/dist' -o -path '*node_modules*'  \) -prune -o -type f -not \( -name .gitignore \) -print)
+$(OUTPUTS): %/dist/index.html: bootstrap-yarn houston-common $$(shell find '$$*' -type d \( -name node_modules -o -path '$$*/dist' -o -path '*node_modules*'  \) -prune -o -type f -not \( -name .gitignore \) -print)
 	@echo -e $(call cyantext,Building $*)
 	yarn --cwd $* install
 ifeq ($(AUTO_UPGRADE_DEPS),1)
@@ -151,6 +152,10 @@ package-generic: default
 
 clean: FORCE
 	rm $(dir $(OUTPUTS)) -rf
+
+clean-all: clean FORCE
+	rm .yarnrc.yml .yarn/ -rf
+	find . -name node_modules -type d -exec rm -rf {} \; -prune
 
 help:
 	@echo 'make usage'
