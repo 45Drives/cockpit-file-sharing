@@ -89,7 +89,7 @@ export default {
 </script>
 
 <style>
-@import "../../../../../houston-common/houston-common-css/src/index.css";
+@import "../../../../../../houston-common/houston-common-css/src/index.css";
 
 table.houston-table thead.use-sticky tr th {
 	@apply sticky z-10 top-0;

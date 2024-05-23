@@ -8,7 +8,7 @@ import type { Portal } from "./Portal";
 import type { Session } from "./Session";
 import type { Target } from "./Target";
 import type { ISCSIDriver } from "./ISCSIDriver";
-import { BashCommand, Command, ExitedProcess, ParsingError, ProcessError, Server, StringToIntCaster, getServer } from "@45drives/houston-common-lib";
+import { BashCommand, Command, ExitedProcess, ParsingError, ProcessError, Server, StringToIntCaster } from "@45drives/houston-common-lib";
 import { ResultAsync, err, ok } from "neverthrow";
 
 export class ISCSIDriverSingleServer implements ISCSIDriver {
@@ -25,7 +25,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     addVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "add_device $1 $2" > $3`, [virtualDevice.deviceName, "filename=" + virtualDevice.filePath, this.deviceTypeToHandlerFolder[virtualDevice.deviceType] + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "add_device $1 $2" > $3`, [virtualDevice.deviceName, "filename=" + virtualDevice.filePath + ";blocksize=" + virtualDevice.blockSize, this.deviceTypeToHandlerFolder[virtualDevice.deviceType] + "/mgmt"]));
     }
 
     removeVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<ExitedProcess, ProcessError> {
