@@ -70,9 +70,9 @@
 import { CardContainer, InputField, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, type InputValidator } from '@45drives/houston-common-ui';
 import type { ResultAsync } from 'neverthrow';
 import { inject, ref } from 'vue';
-import { DeviceType, VirtualDevice } from '../types/VirtualDevice';
+import { DeviceType, VirtualDevice } from '../../types/VirtualDevice';
 import { Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
-import type { ISCSIDriver } from '../types/ISCSIDriver';
+import type { ISCSIDriver } from '../../types/ISCSIDriver';
 
     const props = defineProps<{existingDevices: VirtualDevice[]}>();
 

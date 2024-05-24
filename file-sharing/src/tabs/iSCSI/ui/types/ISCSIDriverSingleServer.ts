@@ -1,13 +1,13 @@
 import { VirtualDevice, DeviceType } from "./VirtualDevice";
-import type { CHAPConfiguration } from "./CHAPConfiguration";
-import type { Connection } from "./Connection";
-import type { Initiator } from "./Initiator";
-import type { InitiatorGroup } from "./InitiatorGroup";
-import type { LogicalUnitNumber } from "./LogicalUnitNumber";
-import type { Portal } from "./Portal";
-import type { Session } from "./Session";
-import type { Target } from "./Target";
-import type { ISCSIDriver } from "./ISCSIDriver";
+import { CHAPConfiguration } from "./CHAPConfiguration";
+import { Connection } from "./Connection";
+import { Initiator } from "./Initiator";
+import { InitiatorGroup } from "./InitiatorGroup";
+import { LogicalUnitNumber } from "./LogicalUnitNumber";
+import { Portal } from "./Portal";
+import { Session } from "./Session";
+import { Target } from "./Target";
+import { ISCSIDriver } from "./ISCSIDriver";
 import { BashCommand, Command, ExitedProcess, ParsingError, ProcessError, Server, StringToIntCaster } from "@45drives/houston-common-lib";
 import { ResultAsync, err, ok } from "neverthrow";
 
@@ -19,6 +19,8 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         [DeviceType.BlockIO]: "/sys/kernel/scst_tgt/handlers/vdisk_blockio",
         [DeviceType.FileIO]: "/sys/kernel/scst_tgt/handlers/vdisk_fileio"
     };
+
+    targetFolder = "/sys/kernel/scst_tgt/targets/iscsi";
 
     constructor(server: Server) {
         this.server = server;
@@ -32,12 +34,12 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(`echo "del_device $1" > $2`, [virtualDevice.deviceName, this.deviceTypeToHandlerFolder[virtualDevice.deviceType] + "/mgmt"]));
     }
 
-    createTarget(targetName: string): void {
-        throw new Error("Method not implemented.");
+    createTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "add_target $1" > $2`, [target.name, this.targetFolder + "/mgmt"]));
     }
 
-    removeTarget(targetName: string): void {
-        throw new Error("Method not implemented.");
+    removeTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "del_target $1" > $2`, [target.name, this.targetFolder + "/mgmt"]));
     }
 
     addPortalToTarget(target: Target, portal: Portal): void {
@@ -90,11 +92,9 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     getVirtualDevicesOfDeviceType(deviceType: DeviceType): ResultAsync<VirtualDevice[], ProcessError> { 
-        const ignoredFiles = ["mgmt", "trace_level", "type"];
-
-        return this.server.execute(new Command(["ls", this.deviceTypeToHandlerFolder[deviceType]])).map(
+        return this.server.execute(new Command(["find", this.deviceTypeToHandlerFolder[deviceType], ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
             (proc) => {
-                const virtualDeviceNames = proc.getStdout().split(/\s+/g).filter((name) => name && !ignoredFiles.includes(name));
+                const virtualDeviceNames = proc.getStdout().split("\0").slice(0, -1);
                 return virtualDeviceNames;
             }
         ).andThen((virtualDeviceNames) => {
@@ -127,8 +127,19 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         })
     }
 
-    getTargets(): Target[] {
-        throw new Error("Method not implemented.");
+    getTargets(): ResultAsync<Target[], ProcessError> {
+        const targetDirectory = "/sys/kernel/scst_tgt/targets/iscsi";
+
+        const result = this.server.execute(new Command(["find", targetDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
+            (proc) => {
+                const targetNames = proc.getStdout().split("\0").slice(0, -1);
+                return targetNames;
+            }
+        ).map((targetNames) => {
+            return targetNames.map((targetName) => new Target(targetName))
+        });
+
+        return result;
     }
 
     getPortalsOfTarget(target: Target): Portal[] {

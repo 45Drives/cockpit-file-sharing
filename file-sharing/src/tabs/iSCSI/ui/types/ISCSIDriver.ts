@@ -11,11 +11,11 @@ import type { Target } from "./Target";
 import type { ExitedProcess, ProcessError } from "@45drives/houston-common-lib";
 
 export abstract class ISCSIDriver {
-    abstract addVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<ExitedProcess, ProcessError> ;
+    abstract addVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<ExitedProcess, ProcessError>;
     abstract removeVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<ExitedProcess, ProcessError>;
 
-    abstract createTarget(targetName: string): void;
-    abstract removeTarget(targetName: string): void;
+    abstract createTarget(target: Target): ResultAsync<ExitedProcess, ProcessError>;
+    abstract removeTarget(target: Target): ResultAsync<ExitedProcess, ProcessError>;
 
     abstract addPortalToTarget(target: Target, portal: Portal): void;
     abstract deletePortalFromTarget(target: Target, portal: Portal): void;
@@ -33,7 +33,7 @@ export abstract class ISCSIDriver {
     abstract removeCHAPConfigurationToTarget(chapConfiguration: CHAPConfiguration, target: Target): void;
 
     abstract getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError>;
-    abstract getTargets(): Target[];
+    abstract getTargets(): ResultAsync<Target[], ProcessError>;
 
     abstract getPortalsOfTarget(target: Target): Portal[];
     abstract getInitatorGroupsOfTarget(target: Target): InitiatorGroup[];

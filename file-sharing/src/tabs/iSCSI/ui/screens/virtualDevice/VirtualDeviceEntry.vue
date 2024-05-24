@@ -16,11 +16,11 @@
 </template>
 
 <script setup lang="ts">
-	import { VirtualDevice } from "../types/VirtualDevice";
+	import { VirtualDevice } from "../../types/VirtualDevice";
 	import { TrashIcon } from "@heroicons/vue/20/solid";
 	import { ModalConfirm, wrapActions } from "@45drives/houston-common-ui";
 	import { inject, ref } from "vue";
-	import type { ISCSIDriver } from "../types/ISCSIDriver";
+	import type { ISCSIDriver } from "../../types/ISCSIDriver";
 	import { ResultAsync } from "neverthrow";
 	import { ProcessError } from "@45drives/houston-common-lib";
 	import { confirmBeforeAction } from "@/common/confirmBeforeAction";
