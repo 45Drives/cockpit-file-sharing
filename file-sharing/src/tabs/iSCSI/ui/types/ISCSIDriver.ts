@@ -17,32 +17,31 @@ export abstract class ISCSIDriver {
     abstract createTarget(target: Target): ResultAsync<ExitedProcess, ProcessError>;
     abstract removeTarget(target: Target): ResultAsync<ExitedProcess, ProcessError>;
 
-    abstract addPortalToTarget(target: Target, portal: Portal): void;
-    abstract deletePortalFromTarget(target: Target, portal: Portal): void;
+    abstract addPortalToTarget(target: Target, portal: Portal): ResultAsync<ExitedProcess, ProcessError>;
+    abstract deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<ExitedProcess, ProcessError>;
 
-    abstract addInitiatorGroupToTarget(target: Target, initiatorGroup: InitiatorGroup): void;
-    abstract deleteInitiatorGroupFromTarget(target: Target, initiatorGroup: InitiatorGroup): void;
+    abstract addInitiatorGroupToTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError>;
+    abstract deleteInitiatorGroupFromTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError>;
 
-    abstract addInitiatorToGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): void;
-    abstract removeInitiatorFromGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): void;
+    abstract addInitiatorToGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<ExitedProcess, ProcessError>;
+    abstract removeInitiatorFromGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<ExitedProcess, ProcessError>;
 
-    abstract addLogicalUnitNumberToGroup(logicalUnitNumber: LogicalUnitNumber, initiatorGroup: InitiatorGroup): void;
-    abstract removeLogicalUnitNumberFromGroup(logicalUnitNumber: LogicalUnitNumber, initiatorGroup: InitiatorGroup): void;
+    abstract addLogicalUnitNumberToGroup(logicalUnitNumber: LogicalUnitNumber, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError>;
+    abstract removeLogicalUnitNumberFromGroup(logicalUnitNumber: LogicalUnitNumber, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError>;
 
-    abstract addCHAPConfigurationToTarget(chapConfiguration: CHAPConfiguration, target: Target): void;
-    abstract removeCHAPConfigurationToTarget(chapConfiguration: CHAPConfiguration, target: Target): void;
+    abstract addCHAPConfigurationToTarget(chapConfiguration: CHAPConfiguration, target: Target): ResultAsync<ExitedProcess, ProcessError>;
+    abstract removeCHAPConfigurationToTarget(chapConfiguration: CHAPConfiguration, target: Target): ResultAsync<ExitedProcess, ProcessError>;
 
     abstract getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError>;
     abstract getTargets(): ResultAsync<Target[], ProcessError>;
 
-    abstract getPortalsOfTarget(target: Target): Portal[];
-    abstract getInitatorGroupsOfTarget(target: Target): InitiatorGroup[];
-    abstract getSessionsOfTarget(target: Target): Session[];
-    abstract getCHAPConfigurationsOfTarget(target: Target): CHAPConfiguration[];
+    abstract getPortalsOfTarget(target: Target): ResultAsync<Portal[], ProcessError>;
+    abstract getInitatorGroupsOfTarget(target: Target): ResultAsync<InitiatorGroup[], ProcessError>;
+    abstract getSessionsOfTarget(target: Target): ResultAsync<Session[], ProcessError>;
+    abstract getCHAPConfigurationsOfTarget(target: Target): ResultAsync<CHAPConfiguration[], ProcessError>;
 
-    abstract getConnectionsOfSession(session: Session): Connection[];
+    abstract getConnectionsOfSession(session: Session): ResultAsync<Connection[], ProcessError>;
 
-    abstract getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: InitiatorGroup): LogicalUnitNumber[];
-
-    abstract getInitiatorsOfInitiatorGroup(initiatorGroup: InitiatorGroup): InitiatorGroup[];
+    abstract getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<LogicalUnitNumber[], ProcessError>;
+    abstract getInitiatorsOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<Initiator[], ProcessError>;
 }

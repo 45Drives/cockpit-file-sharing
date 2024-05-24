@@ -11,27 +11,22 @@
 			</button>
 		</td>
     </tr>
-
-	<ModalConfirm ref="modalConfirmRef"/>
 </template>
 
 <script setup lang="ts">
 	import { VirtualDevice } from "../../types/VirtualDevice";
 	import { TrashIcon } from "@heroicons/vue/20/solid";
-	import { ModalConfirm, wrapActions } from "@45drives/houston-common-ui";
-	import { inject, ref } from "vue";
+	import { wrapActions, confirmBeforeAction } from "@45drives/houston-common-ui";
+	import { inject } from "vue";
 	import type { ISCSIDriver } from "../../types/ISCSIDriver";
 	import { ResultAsync } from "neverthrow";
 	import { ProcessError } from "@45drives/houston-common-lib";
-	import { confirmBeforeAction } from "@/common/confirmBeforeAction";
 
 	const props = defineProps<{device: VirtualDevice}>();
 
 	const emit = defineEmits(['deleteDevice']);
 
 	const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
-
-	const modalConfirmRef = ref<InstanceType<typeof ModalConfirm> | null>(null); 
 
 	if (driver === undefined) {
 		throw new Error("iSCSI Driver is null");
@@ -46,6 +41,6 @@
 
 	const actions = wrapActions({deleteDevice});
 
-	const promptDeletion = confirmBeforeAction(actions.deleteDevice, modalConfirmRef, "Confirm", `Delete device ${props.device.deviceName}?`);
+	const promptDeletion = confirmBeforeAction({header: "Confirm", body: `Delete device ${props.device.deviceName}?`}, actions.deleteDevice);
 
 </script>

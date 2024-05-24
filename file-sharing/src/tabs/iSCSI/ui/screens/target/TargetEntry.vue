@@ -2,21 +2,32 @@
     <tr>
         <td>{{ target.name }}</td>
 		<td class="button-group-row justify-end">
+			<button @click="showEditor = !showEditor">
+				<span class="sr-only">Edit</span>
+				<WrenchIcon class="size-icon icon-default" />
+			</button>
 			<button @click="promptDeletion">
 				<span class="sr-only">Delete</span>
 				<TrashIcon class="size-icon icon-danger" />
 			</button>
 		</td>
     </tr>
-
-	<ModalConfirm ref="modalConfirmRef"/>
+	<tr>
+		<td colspan="3" class="!py-0">
+			<div
+				class="overflow-hidden"
+				:style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
+			>
+				
+			</div>
+		</td>
+	</tr>
 </template>
 
 <script setup lang="ts">
 import type { Target } from '../../types/Target';
-import { TrashIcon } from "@heroicons/vue/20/solid";
-import { ModalConfirm, wrapActions } from "@45drives/houston-common-ui";
-import { confirmBeforeAction } from "@/common/confirmBeforeAction";
+import { TrashIcon, WrenchIcon } from "@heroicons/vue/20/solid";
+import { wrapActions, confirmBeforeAction } from "@45drives/houston-common-ui";
 import { ProcessError } from '@45drives/houston-common-lib';
 import type { ResultAsync } from 'neverthrow';
 import { inject, ref } from 'vue';
@@ -28,7 +39,7 @@ const emit = defineEmits(['deleteTarget']);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
 
-const modalConfirmRef = ref<InstanceType<typeof ModalConfirm> | null>(null); 
+const showEditor = ref(false);
 
 if (driver === undefined) {
 	throw new Error("iSCSI Driver is null");
@@ -43,6 +54,6 @@ const deleteTarget = () => {
 
 const actions = wrapActions({deleteTarget: deleteTarget});
 
-const promptDeletion = confirmBeforeAction(actions.deleteTarget, modalConfirmRef, "Confirm", `Delete target ${props.target.name}?`);
+const promptDeletion = confirmBeforeAction({header: "Confirm", body:`Delete target ${props.target.name}?`}, actions.deleteTarget);
 
 </script>

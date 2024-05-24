@@ -1,3 +1,4 @@
+import { File } from "@45drives/houston-common-lib";
 import { VirtualDevice, DeviceType } from "./VirtualDevice";
 import { CHAPConfiguration } from "./CHAPConfiguration";
 import { Connection } from "./Connection";
@@ -8,7 +9,7 @@ import { Portal } from "./Portal";
 import { Session } from "./Session";
 import { Target } from "./Target";
 import { ISCSIDriver } from "./ISCSIDriver";
-import { BashCommand, Command, ExitedProcess, ParsingError, ProcessError, Server, StringToIntCaster } from "@45drives/houston-common-lib";
+import { BashCommand, Command, ExitedProcess, ParsingError, ProcessError, Server, StringToIntCaster, getServer } from "@45drives/houston-common-lib";
 import { ResultAsync, err, ok } from "neverthrow";
 
 export class ISCSIDriverSingleServer implements ISCSIDriver {
@@ -20,7 +21,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         [DeviceType.FileIO]: "/sys/kernel/scst_tgt/handlers/vdisk_fileio"
     };
 
-    targetFolder = "/sys/kernel/scst_tgt/targets/iscsi";
+    targetMangementFolder = "/sys/kernel/scst_tgt/targets/iscsi";
 
     constructor(server: Server) {
         this.server = server;
@@ -35,50 +36,50 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     createTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "add_target $1" > $2`, [target.name, this.targetFolder + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "add_target $1" > $2`, [target.name, this.targetMangementFolder + "/mgmt"]));
     }
 
     removeTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "del_target $1" > $2`, [target.name, this.targetFolder + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "del_target $1" > $2`, [target.name, this.targetMangementFolder + "/mgmt"]));
     }
 
-    addPortalToTarget(target: Target, portal: Portal): void {
+    addPortalToTarget(target: Target, portal: Portal): ResultAsync<ExitedProcess, ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    deletePortalFromTarget(target: Target, portal: Portal): void {
+    deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<ExitedProcess, ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    addInitiatorGroupToTarget(target: Target, initiatorGroup: InitiatorGroup): void {
+    addInitiatorGroupToTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    deleteInitiatorGroupFromTarget(target: Target, initiatorGroup: InitiatorGroup): void {
+    deleteInitiatorGroupFromTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    addInitiatorToGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): void {
+    addInitiatorToGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<ExitedProcess, ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    removeInitiatorFromGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): void {
+    removeInitiatorFromGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<ExitedProcess, ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    addLogicalUnitNumberToGroup(logicalUnitNumber: LogicalUnitNumber, initiatorGroup: InitiatorGroup): void {
+    addLogicalUnitNumberToGroup(logicalUnitNumber: LogicalUnitNumber, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    removeLogicalUnitNumberFromGroup(logicalUnitNumber: LogicalUnitNumber, initiatorGroup: InitiatorGroup): void {
+    removeLogicalUnitNumberFromGroup(logicalUnitNumber: LogicalUnitNumber, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    addCHAPConfigurationToTarget(chapConfiguration: CHAPConfiguration, target: Target): void {
+    addCHAPConfigurationToTarget(chapConfiguration: CHAPConfiguration, target: Target): ResultAsync<ExitedProcess, ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    removeCHAPConfigurationToTarget(chapConfiguration: CHAPConfiguration, target: Target): void {
+    removeCHAPConfigurationToTarget(chapConfiguration: CHAPConfiguration, target: Target): ResultAsync<ExitedProcess, ProcessError> {
         throw new Error("Method not implemented.");
     }
 
@@ -120,9 +121,9 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
                     return ok(filePathString);
                 });  
 
-                return ResultAsync.combine([blockSizeResult, filePathResult]).map((([blockSize, filePath]) => {
+                return ResultAsync.combine([blockSizeResult, filePathResult]).map(([blockSize, filePath]) => {
                     return new VirtualDevice(virtualDeviceName, filePath, blockSize, deviceType);
-                }));
+                });
             }));
         })
     }
@@ -130,43 +131,73 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     getTargets(): ResultAsync<Target[], ProcessError> {
         const targetDirectory = "/sys/kernel/scst_tgt/targets/iscsi";
 
-        const result = this.server.execute(new Command(["find", targetDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
+        return this.server.execute(new Command(["find", targetDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
             (proc) => {
                 const targetNames = proc.getStdout().split("\0").slice(0, -1);
                 return targetNames;
             }
-        ).map((targetNames) => {
-            return targetNames.map((targetName) => new Target(targetName))
+        ).andThen((targetNames) => {
+            return ResultAsync.combine(targetNames.map((targetName) => {
+                const target = new Target(targetName);
+                
+                const portalResult = this.getPortalsOfTarget(target).map((portals) => (portals));
+
+                return ResultAsync.combine([portalResult]).map(([portalResult]) => {
+                    target.portals = portalResult;
+                    return target;
+                });
+            }))
         });
-
-        return result;
     }
 
-    getPortalsOfTarget(target: Target): Portal[] {
+    getPortalsOfTarget(target: Target): ResultAsync<Portal[], ProcessError> {
+        const targetFolder = this.targetMangementFolder + "/" + target.name;
+        
+        return this.server.execute(new Command(["find", targetFolder, ..."-name allowed_portal* -printf %f\\0".split(" ")])).map(
+            (proc) => {
+                const portalAddressFileNames = proc.getStdout().split("\0").slice(0, -1);
+                return portalAddressFileNames;
+            }
+        ).andThen((portalAddressFileNames) => {
+            const addressResults = portalAddressFileNames.map((portalAddressFileName) => {
+                return getServer().andThen((server) => {
+                    const file = new File(server, targetFolder + "/" + portalAddressFileName)
+                    return file.read().andThen((fileContent) => {
+                        const address = fileContent.split('\n')[0]
+
+                        if (address === undefined)
+                            return err(new ProcessError(`Could not parse address from allowed_portal file: ${file.basename}`));
+
+                        return ok(address);
+                    });
+                });
+            })
+
+            return ResultAsync.combine(addressResults).map((addresses) => addresses.map((address) => new Portal(address)));
+        })
+    }
+
+    getInitatorGroupsOfTarget(target: Target): ResultAsync<InitiatorGroup[], ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    getInitatorGroupsOfTarget(target: Target): InitiatorGroup[] {
+    getSessionsOfTarget(target: Target): ResultAsync<Session[], ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    getSessionsOfTarget(target: Target): Session[] {
+    getCHAPConfigurationsOfTarget(target: Target): ResultAsync<CHAPConfiguration[], ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    getCHAPConfigurationsOfTarget(target: Target): CHAPConfiguration[] {
-        throw new Error("Method not implemented.");
-    }
-
-    getConnectionsOfSession(session: Session): Connection[] {
+    getConnectionsOfSession(session: Session): ResultAsync<Connection[], ProcessError> {
         throw new Error("Method not implemented.");
     }
     
-    getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: InitiatorGroup): LogicalUnitNumber[] {
+    getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<LogicalUnitNumber[], ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    getInitiatorsOfInitiatorGroup(initiatorGroup: InitiatorGroup): InitiatorGroup[] {
+    getInitiatorsOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<Initiator[], ProcessError> {
         throw new Error("Method not implemented.");
     }
 }

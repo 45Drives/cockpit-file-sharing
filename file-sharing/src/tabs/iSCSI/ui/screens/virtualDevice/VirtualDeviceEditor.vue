@@ -43,6 +43,7 @@
                 <InputField
                         :placeholder="'Size'"
                         :validator="deviceBlockSizeValidator"
+                        :disabled="tempDevice.deviceType === DeviceType.BlockIO"
                         v-model="tempDevice.blockSize"
                     >
                     {{ ("Block Size") }}
@@ -58,7 +59,7 @@
                 >{{ ("Cancel") }}</button>
                 <button
                     class="btn btn-primary"
-                    @click="actions.createDevice"
+                    @click="finalizeDevice"
                     :disabled="!modified"
                 >{{ ("Create") }}</button>
             </div>
@@ -68,10 +69,10 @@
 
 <script setup lang="ts">
 import { CardContainer, InputField, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, type InputValidator } from '@45drives/houston-common-ui';
-import type { ResultAsync } from 'neverthrow';
+import { err, ok, type ResultAsync } from 'neverthrow';
 import { inject, ref } from 'vue';
 import { DeviceType, VirtualDevice } from '../../types/VirtualDevice';
-import { Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
+import { Command, Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
 import type { ISCSIDriver } from '../../types/ISCSIDriver';
 
     const props = defineProps<{existingDevices: VirtualDevice[]}>();
@@ -93,6 +94,17 @@ import type { ISCSIDriver } from '../../types/ISCSIDriver';
     const handleClose = () => {
         emit("closeEditor");
         resetChanges();
+    }
+
+    const finalizeDevice = async () => {
+        if (tempDevice.value.deviceType === DeviceType.BlockIO) {
+            await fetchBlockSize(tempDevice.value.filePath).map((blockSize) => {
+                console.log(blockSize);
+                tempDevice.value.blockSize = blockSize
+            })
+        }
+
+        actions.createDevice()
     }
 
     const createDevice = () => {
@@ -163,5 +175,19 @@ import type { ISCSIDriver } from '../../types/ISCSIDriver';
         
         return;
     }
+
+    function fetchBlockSize(filePath: string): ResultAsync<number, ProcessError> {
+		return getServer().andThen((server) => {
+			return server.execute(new Command(["stat", "-fc %s", filePath])).andThen((proc) => {
+				const blockSize = StringToIntCaster()(proc.getStdout());
+
+                if (blockSize.isNone()){
+                    return err(new ProcessError(`Could not determine block size for disk.`))
+                }
+                    
+                return ok(blockSize.some());
+			})
+		})
+	}
 
 </script>
