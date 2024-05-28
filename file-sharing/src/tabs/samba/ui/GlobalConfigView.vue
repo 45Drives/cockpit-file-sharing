@@ -94,6 +94,12 @@ onMounted(actions.loadGlobalSettings);
             >
                 {{ _("Workgroup") }}
             </InputField>
+            <SelectMenu
+                v-model="tempGlobalConfig.logLevel"
+                :options="logLevelOptions"
+            >
+                {{ _("Log Level") }}
+            </SelectMenu>
             <ToggleSwitchGroup>
                 <ToggleSwitch v-model="macOSSharesOptions">
                     {{ _("Global MacOS Shares") }}
@@ -102,12 +108,6 @@ onMounted(actions.loadGlobalSettings);
                     </template>
                 </ToggleSwitch>
             </ToggleSwitchGroup>
-            <SelectMenu
-                v-model="tempGlobalConfig.logLevel"
-                :options="logLevelOptions"
-            >
-                {{ _("Log Level") }}
-            </SelectMenu>
             <Disclosure v-model:show="revealAdvancedTextarea">
                 <template v-slot:label>
                     {{ _("Advanced") }}
