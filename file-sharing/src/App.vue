@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { HoustonAppContainer } from '@45drives/houston-common-ui';
-import { SambaTabMain } from '@/tabs/samba/ui';
-import { NfsTabMain } from '@/tabs/nfs/ui';
-
+import { HoustonAppContainer } from "@45drives/houston-common-ui";
+import { SambaTabMain } from "@/tabs/samba/ui";
+import { NfsTabMain } from "@/tabs/nfs/ui";
 </script>
 
 <template>
@@ -11,12 +10,11 @@ import { NfsTabMain } from '@/tabs/nfs/ui';
     :tabs="[
       {
         label: 'Samba',
-        component:
-          SambaTabMain
+        component: SambaTabMain,
       },
       {
         label: 'NFS',
-        component: NfsTabMain
+        component: NfsTabMain,
       },
     ]"
   />

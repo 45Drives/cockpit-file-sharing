@@ -1,1 +1,1 @@
-export { default as NfsTabMain } from './NfsTabMain.vue'
+export { default as NfsTabMain } from "./NfsTabMain.vue";
