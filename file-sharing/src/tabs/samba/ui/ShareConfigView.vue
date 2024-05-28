@@ -1,32 +1,24 @@
 <script setup lang="ts">
-import { defineProps, computed, defineEmits, ref, onMounted, watchEffect, type Ref, type ComponentPublicInstance } from 'vue';
+import { defineProps, computed, defineEmits, ref, watchEffect } from 'vue';
 import {
     InputField,
     ToggleSwitch,
     ToggleSwitchGroup,
-    CardContainer,
     ParsedTextArea,
     Disclosure,
-    SelectMenu,
     useTempObjectStaging,
-    wrapActions,
-    reportSuccess,
-    reportError,
-    type SelectMenuOption,
     type InputValidator,
 } from "@45drives/houston-common-ui";
 import { type SambaShareConfig, defaultSambaShareConfig } from '@/tabs/samba/data-types';
-import { Directory, getServer, KeyValueSyntax } from '@45drives/houston-common-lib';
-import { getSambaManager } from '@/tabs/samba/samba-manager';
-import { okAsync, errAsync } from "neverthrow";
+import { KeyValueSyntax } from '@45drives/houston-common-lib';
 import { BooleanKeyValueSuite } from '@/tabs/samba/ui/BooleanKeyValueSuite'; // TODO: move to common-ui
-import { DirectoryCheckerAndPermissions } from '@/common/ui';
+import { ShareDirectoryInputAndOptions } from '@/common/ui';
 
 const _ = cockpit.gettext;
 
 const props = defineProps<({
     newShare?: false;
-    shareName: string;
+    share: SambaShareConfig;
 } | {
     newShare: true;
 }) & {
@@ -36,41 +28,12 @@ const props = defineProps<({
 const emit = defineEmits<{
     (e: 'cancel'): void;
     (e: 'apply', value: SambaShareConfig): void;
-    (e: 'editedShare', value: SambaShareConfig): void;
-    (e: 'addedShare', value: SambaShareConfig): void;
 }>();
 
-const shareConf = ref<SambaShareConfig>();
+const shareConf = computed<SambaShareConfig>(() => props.newShare ? defaultSambaShareConfig() : props.share);
 
 const { tempObject: tempShareConfig, modified, resetChanges } =
     useTempObjectStaging(shareConf);
-
-const sambaManager = getSambaManager();
-
-const loadShareSettings = () =>
-    (props.newShare
-        ? okAsync(defaultSambaShareConfig())
-        : sambaManager
-            .andThen(sm => sm.getShare(props.shareName)))
-        .map(sc => shareConf.value = sc);
-
-const applyShareSettings =
-    () => sambaManager.andThen((sm) => {
-        const newShareSettings = tempShareConfig.value;
-        if (newShareSettings === undefined) {
-            return errAsync(new Error("tempShareConfig.value was undefined!"));
-        }
-        return props.newShare
-            ? sm.addShare(newShareSettings).map(() => emit("addedShare", newShareSettings))
-            : sm.editShare(newShareSettings).map(() => emit("editedShare", newShareSettings));
-    }).andThen(loadShareSettings);
-
-const actions = wrapActions({
-    loadShareSettings,
-    applyShareSettings,
-});
-
-onMounted(actions.loadShareSettings);
 
 const shareNameValidator: InputValidator = (name: string) => {
     if (!props.newShare) {
@@ -104,7 +67,7 @@ const shareNameValidator: InputValidator = (name: string) => {
     return;
 };
 
-const pathChecker = ref<InstanceType<typeof DirectoryCheckerAndPermissions> | null>(null);
+const pathChecker = ref<InstanceType<typeof ShareDirectoryInputAndOptions> | null>(null);
 
 const inputsValid = computed<boolean>(() =>
     tempShareConfig.value !== undefined &&
@@ -202,16 +165,9 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
             </InputField>
 
             <div>
-
-                <InputField
-                    v-model="tempShareConfig.path"
-                    :placeholder="_('Share path/directory')"
+                <ShareDirectoryInputAndOptions
+                    v-model:path="tempShareConfig.path"
                     :disabled="!newShare"
-                >
-                    Path
-                </InputField>
-                <DirectoryCheckerAndPermissions
-                    :path="tempShareConfig.path"
                     ref="pathChecker"
                 />
             </div>
@@ -225,6 +181,9 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
                 </ToggleSwitch>
                 <ToggleSwitch v-model="tempShareConfig.browseable">
                     {{ _("Browseable") }}
+                </ToggleSwitch>
+                <ToggleSwitch v-model="tempShareConfig.inheritPermissions">
+                    {{ _("Inherit Permissions") }}
                 </ToggleSwitch>
                 <ToggleSwitch v-model="windowsACLsOptions">
                     {{ _("Windows ACLs") }}
@@ -275,7 +234,7 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
                 >{{ _("Cancel") }}</button>
                 <button
                     class="btn btn-primary"
-                    @click="() => { $emit('apply', tempShareConfig!); actions.applyShareSettings(); }"
+                    @click="$emit('apply', tempShareConfig)"
                     :disabled="!inputsValid"
                 >{{ _("Apply") }}</button>
             </div>

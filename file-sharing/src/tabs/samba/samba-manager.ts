@@ -30,11 +30,14 @@ export interface ISambaManager {
 
   getShare(shareName: string): ResultAsync<SambaShareConfig, ParsingError | ProcessError>;
 
+  getShares(): ResultAsync<SambaShareConfig[], ParsingError | ProcessError>;
+
   addShare(share: SambaShareConfig): ResultAsync<null, ProcessError>;
 
   editShare(share: SambaShareConfig): ResultAsync<null, ProcessError>;
 
   removeShare(share: SambaShareConfig): ResultAsync<null, ProcessError>;
+  removeShare(shareName: string): ResultAsync<null, ProcessError>;
 }
 
 export namespace SambaManagerImplementation {
@@ -91,11 +94,6 @@ export namespace SambaManagerImplementation {
       params.map((param) => server.execute(delParmCommand(section, param), true))
     );
 
-  // export const loadSettings = (server: Server) =>
-  //   server
-  //     .execute(loadSettingsCommand)
-  //     .map((proc) => proc.getStdout())
-  //     .andThen(loadSettingsParse);
   export const getGlobalConfig = (server: Server) =>
     server
       .execute(showShareCommand("global"))
@@ -133,6 +131,10 @@ export namespace SambaManagerImplementation {
       .execute(showShareCommand(shareName))
       .map((p) => p.getStdout())
       .andThen(showShareParse);
+  export const getShares = (server: Server) =>
+    listShareNames(server).andThen((shareNames) =>
+      ResultAsync.combine(shareNames.map((shareName) => getShare(server, shareName)))
+    );
   export const addShare = (server: Server, share: SambaShareConfig) =>
     SmbShareParser(share.name)
       .unapply(share)
@@ -154,8 +156,10 @@ export namespace SambaManagerImplementation {
         )
       );
   };
-  export const removeShare = (server: Server, share: SambaShareConfig) =>
-    server.execute(delShareCommand(share.name));
+  export const removeShare = (server: Server, share: SambaShareConfig | string) => {
+    const shareName = typeof share === "string" ? share : share.name;
+    return server.execute(delShareCommand(shareName));
+  };
 }
 
 export function SambaManagerSingleServer(server: Server): ISambaManager {
@@ -167,11 +171,12 @@ export function SambaManagerSingleServer(server: Server): ISambaManager {
     getShareProperty: (shareName: string, property: string) =>
       SambaManagerImplementation.getShareProperty(server, shareName, property),
     getShare: (shareName: string) => SambaManagerImplementation.getShare(server, shareName),
+    getShares: () => SambaManagerImplementation.getShares(server),
     addShare: (share: SambaShareConfig) =>
       SambaManagerImplementation.addShare(server, share).map(() => null),
     editShare: (share: SambaShareConfig) =>
       SambaManagerImplementation.editShare(server, share).map(() => null),
-    removeShare: (share: SambaShareConfig) =>
+    removeShare: (share: SambaShareConfig | string) =>
       SambaManagerImplementation.removeShare(server, share).map(() => null),
   };
 }
@@ -188,6 +193,7 @@ export function SambaManagerClustered(servers: [Server, ...Server[]]): ISambaMan
     getShareProperty: (shareName: string, property: string) =>
       SambaManagerImplementation.getShareProperty(getterServer, shareName, property),
     getShare: (shareName: string) => SambaManagerImplementation.getShare(getterServer, shareName),
+    getShares: () => SambaManagerImplementation.getShares(getterServer),
     addShare: (share: SambaShareConfig) =>
       ResultAsync.combine(
         servers.map((server) => SambaManagerImplementation.addShare(server, share))
@@ -196,7 +202,7 @@ export function SambaManagerClustered(servers: [Server, ...Server[]]): ISambaMan
       ResultAsync.combine(
         servers.map((server) => SambaManagerImplementation.editShare(server, share))
       ).map(() => null),
-    removeShare: (share: SambaShareConfig) =>
+    removeShare: (share: SambaShareConfig | string) =>
       ResultAsync.combine(
         servers.map((server) => SambaManagerImplementation.removeShare(server, share))
       ).map(() => null),
@@ -215,11 +221,12 @@ export function getSambaManager(): ResultAsync<ISambaManager, ProcessError> {
               .map((n) => n.trim())
               .filter((n) => n)
               .map((node) => getServer(node))
-          ).andThen((servers) => {
+          ).map((servers) => {
             if (servers.length < 1) {
-              return err(new ProcessError("No CTDB nodes in /etc/ctdb/nodes!"));
+              console.warn("SambaManager: Found /etc/ctdb/nodes file, but contained no hosts");
+              return SambaManagerSingleServer(server);
             }
-            return ok(SambaManagerClustered(servers as [Server, ...Server[]]));
+            return SambaManagerClustered(servers as [Server, ...Server[]]);
           })
         );
       } else {
