@@ -37,21 +37,23 @@ const showEditor = ref(false);
   <!-- needed to match bg color -->
   <tr>
     <td colspan="100%" class="!p-0">
-      <Disclosure noButton v-model:show="showEditor" v-slot="{ visible }">
-        <ShareConfigView
-          v-if="visible"
-          :share="share"
-          :allShareNames="allShareNames"
-          class="!shadow-none px-4 sm:px-6 py-5"
-          @cancel="showEditor = false"
-          @apply="
-            (share) =>
-              emit('editShare', share, () => {
-                showEditor = false;
-              })
-          "
-        />
-      </Disclosure>
+      <div class="whitespace-normal">
+        <Disclosure noButton v-model:show="showEditor" v-slot="{ visible }">
+          <ShareConfigView
+            v-if="visible"
+            :share="share"
+            :allShareNames="allShareNames"
+            class="!shadow-none px-4 sm:px-6 py-5"
+            @cancel="showEditor = false"
+            @apply="
+              (share) =>
+                emit('editShare', share, () => {
+                  showEditor = false;
+                })
+            "
+          />
+        </Disclosure>
+      </div>
     </td>
   </tr>
 </template>
