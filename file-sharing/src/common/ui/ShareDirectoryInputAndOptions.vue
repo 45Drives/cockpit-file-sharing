@@ -2,11 +2,13 @@
 import { ref, defineModel, watchEffect, type Ref, computed, defineExpose } from "vue";
 import {
   InputFeedback,
+  InputLabelWrapper,
   wrapActions,
-  type Feedback,
-  reportError,
   InputField,
   reportSuccess,
+  Modal,
+  CardContainer,
+  ModeAndPermissionsEditor,
 } from "@45drives/houston-common-ui";
 import {
   getServer,
@@ -19,7 +21,7 @@ import {
   type FilesystemMount,
   Command,
 } from "@45drives/houston-common-lib";
-import { ResultAsync, okAsync, ok, errAsync, err } from "neverthrow";
+import { ResultAsync, ok, errAsync, err } from "neverthrow";
 import CephOptions from "@/common/ui/CephOptions.vue";
 
 const _ = cockpit.gettext;
@@ -134,9 +136,13 @@ const usePathInfo = (
 const path = defineModel<string>("path", { required: true });
 
 const { exists, isDirectory, isAbsolute, mountInfo, subdirSuggestions, forceUpdatePathInfo } =
-  usePathInfo(path);
+  usePathInfo(path, props.server);
 
 const isValid = computed<boolean>(() => isAbsolute.value && (isDirectory.value || !exists.value));
+
+const showPermissionsEditor = ref(false);
+
+const modeAndPermissionsEditorRef = ref<InstanceType<typeof ModeAndPermissionsEditor> | null>(null);
 
 defineExpose({
   isValid,
@@ -185,14 +191,18 @@ const actions = wrapActions({
 </script>
 
 <template>
-  <InputField
-    v-model="path"
-    :placeholder="_('Share path/directory')"
-    :disabled="disabled"
-    :suggestions="subdirSuggestions"
-  >
-    Path
-  </InputField>
+  <InputLabelWrapper>
+    <template #label>
+      {{ _("Path") }}
+    </template>
+    <InputField
+      v-model="path"
+      :placeholder="_('Share path/directory')"
+      :disabled="disabled"
+      :suggestions="subdirSuggestions"
+    />
+  </InputLabelWrapper>
+
   <InputFeedback v-if="!path" type="error">
     {{ _("Share path is required.") }}
   </InputFeedback>
@@ -219,13 +229,32 @@ const actions = wrapActions({
   <InputFeedback v-else-if="!isDirectory" type="error">
     {{ _("Path exists but is not a directory.") }}
   </InputFeedback>
-  <button v-else class="text-feedback text-primary">
+  <button v-else @click="showPermissionsEditor = true" class="text-feedback text-primary">
     {{ _("Edit permissions") }}
   </button>
+  <Modal :show="showPermissionsEditor">
+    <CardContainer>
+      <template #header> {{ _("Share Directory Permissions") }} </template>
+      <ModeAndPermissionsEditor
+        :path="path"
+        :server="server"
+        @apply="showPermissionsEditor = false"
+        @cancel="showPermissionsEditor = false"
+        ref="modeAndPermissionsEditorRef"
+      />
+      <template #footer>
+        <div class="button-group-row justify-end grow">
+          <button class="btn btn-secondary" @click="() => modeAndPermissionsEditorRef?.cancel()">
+            {{ _("Cancel") }}
+          </button>
+          <button class="btn btn-primary" @click="() => modeAndPermissionsEditorRef?.apply()">
+            {{ _("Apply") }}
+          </button>
+        </div>
+      </template>
+    </CardContainer>
+  </Modal>
   <!-- Filesystem-specific checks/fixes -->
-  <div>
-    {{ mountInfo }}
-  </div>
   <CephOptions v-if="mountInfo?.filesystem.type === 'ceph'" />
   <template v-else-if="mountInfo?.filesystem.type === 'cifs'">
     <InputFeedback type="warning">
