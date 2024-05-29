@@ -153,7 +153,7 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
 
 <template>
   <div class="space-y-content">
-    <div v-if="newShare" class="text-header">New Share</div>
+    <div v-if="newShare" class="text-header">{{ _("New Share") }}</div>
     <div v-if="tempShareConfig" class="space-y-content">
       <InputField
         v-model="tempShareConfig.name"
@@ -161,11 +161,11 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
         :validator="shareNameValidator"
         :disabled="!newShare"
       >
-        Share Name
+        {{ _("Share Name") }}
       </InputField>
 
       <InputField v-model="tempShareConfig.description" :placeholder="_('Describe your share')">
-        Share Description
+        {{ _("Share Description") }}
       </InputField>
 
       <div>
@@ -191,7 +191,7 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
         </ToggleSwitch>
         <ToggleSwitch v-model="windowsACLsOptions">
           {{ _("Windows ACLs") }}
-          <template #description> Administer share permissions from Windows </template>
+          <template #description> {{ _("Administer share permissions from Windows") }} </template>
         </ToggleSwitch>
         <ToggleSwitch v-model="windowsACLsWithLinuxOptions">
           {{ _("Windows ACLs with Linux/MacOS Support") }}
