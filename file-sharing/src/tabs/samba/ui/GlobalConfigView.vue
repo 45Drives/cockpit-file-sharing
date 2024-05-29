@@ -3,6 +3,7 @@ import { ref, onMounted, watch, watchEffect } from "vue";
 import type { SambaGlobalConfig } from "@/tabs/samba/data-types";
 import {
   InputField,
+  InputLabelWrapper,
   ToggleSwitch,
   ToggleSwitchGroup,
   CardContainer,
@@ -77,15 +78,34 @@ onMounted(actions.loadGlobalSettings);
     </template>
 
     <div v-if="tempGlobalConfig" class="space-y-content">
-      <InputField :placeholder="_('Description of server')" v-model="tempGlobalConfig.serverString">
-        {{ _("Server Description") }}
-      </InputField>
-      <InputField label="Workgroup" placeholder="WORKGROUP" v-model="tempGlobalConfig.workgroup">
-        {{ _("Workgroup") }}
-      </InputField>
-      <SelectMenu v-model="tempGlobalConfig.logLevel" :options="logLevelOptions">
-        {{ _("Log Level") }}
-      </SelectMenu>
+      <InputLabelWrapper>
+        <template #label>
+          {{ _("Server Description") }}
+        </template>
+        <InputField
+          :placeholder="_('Description of server')"
+          v-model="tempGlobalConfig.serverString"
+        />
+      </InputLabelWrapper>
+
+      <InputLabelWrapper>
+        <template #label>
+          {{ _("Workgroup") }}
+        </template>
+        <InputField
+          label="Workgroup"
+          placeholder="WORKGROUP"
+          v-model="tempGlobalConfig.workgroup"
+        />
+      </InputLabelWrapper>
+
+      <InputLabelWrapper>
+        <template #label>
+          {{ _("Log Level") }}
+        </template>
+        <SelectMenu v-model="tempGlobalConfig.logLevel" :options="logLevelOptions" />
+      </InputLabelWrapper>
+
       <ToggleSwitchGroup>
         <ToggleSwitch v-model="macOSSharesOptions">
           {{ _("Global MacOS Shares") }}

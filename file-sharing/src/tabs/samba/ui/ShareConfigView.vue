@@ -4,6 +4,7 @@ import {
   InputField,
   ToggleSwitch,
   ToggleSwitchGroup,
+  InputLabelWrapper,
   ParsedTextArea,
   Disclosure,
   useTempObjectStaging,
@@ -155,18 +156,22 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
   <div class="space-y-content">
     <div v-if="newShare" class="text-header">{{ _("New Share") }}</div>
     <div v-if="tempShareConfig" class="space-y-content">
-      <InputField
-        v-model="tempShareConfig.name"
-        :placeholder="_('A unique name for your share')"
-        :validator="shareNameValidator"
-        :disabled="!newShare"
-      >
-        {{ _("Share Name") }}
-      </InputField>
+      <InputLabelWrapper>
+        <template #label>
+          {{ _("Share Name") }}
+        </template>
+        <InputField
+          v-model="tempShareConfig.name"
+          :placeholder="_('A unique name for your share')"
+          :validator="shareNameValidator"
+          :disabled="!newShare"
+        />
+      </InputLabelWrapper>
 
-      <InputField v-model="tempShareConfig.description" :placeholder="_('Describe your share')">
-        {{ _("Share Description") }}
-      </InputField>
+      <InputLabelWrapper>
+        <template #label>{{ _("Share Description") }} </template>
+        <InputField v-model="tempShareConfig.description" :placeholder="_('Describe your share')" />
+      </InputLabelWrapper>
 
       <div>
         <ShareDirectoryInputAndOptions
