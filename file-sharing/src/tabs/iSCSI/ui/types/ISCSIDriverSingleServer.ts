@@ -44,11 +44,11 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     addPortalToTarget(target: Target, portal: Portal): ResultAsync<ExitedProcess, ProcessError> {
-        throw new Error("Method not implemented.");
+        return this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, this.targetMangementFolder + "/mgmt"]));
     }
 
     deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<ExitedProcess, ProcessError> {
-        throw new Error("Method not implemented.");
+        return this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, this.targetMangementFolder + "/mgmt"]));
     }
 
     addInitiatorGroupToTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {

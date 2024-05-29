@@ -12,13 +12,14 @@
 			</button>
 		</td>
     </tr>
+	<tr></tr>
 	<tr>
 		<td colspan="3" class="!py-0">
 			<div
 				class="overflow-hidden"
 				:style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
 			>
-				
+			<PortalTable :target="target"/>
 			</div>
 		</td>
 	</tr>
@@ -32,6 +33,7 @@ import { ProcessError } from '@45drives/houston-common-lib';
 import type { ResultAsync } from 'neverthrow';
 import { inject, ref } from 'vue';
 import type { ISCSIDriver } from '../../types/ISCSIDriver';
+import PortalTable from '../portal/PortalTable.vue';
 
 const props = defineProps<{target: Target}>();
 

@@ -11,7 +11,7 @@
         </div>
         <div class="card">
             <div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
-                <Table emptyText="No targets. Click '+' to add one." noScroll noHeader
+                <Table emptyText="No targets. Click '+' to add one." noScroll noHeader noShrink noShrinkHeight="h-120"
                     class="!border-none !shadow-none">
                     <template #thead>
                         <tr>
