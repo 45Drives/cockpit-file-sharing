@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, defineProps, inject } from "vue";
 import type { SambaShareConfig } from "@/tabs/samba/data-types";
 import {
   CardContainer,
   Disclosure,
+  DisclosureController,
   SelectMenu,
   useTempObjectStaging,
   wrapActions,
@@ -11,18 +12,23 @@ import {
   confirm,
   type SelectMenuOption,
 } from "@45drives/houston-common-ui";
-import { getServer, KeyValueSyntax } from "@45drives/houston-common-lib";
-import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
 import { getSambaManager } from "@/tabs/samba/samba-manager";
 import Table from "@/tabs/samba/ui/Table.vue";
 import { PlusIcon } from "@heroicons/vue/20/solid";
-import ShareTableRow from "@/tabs/samba/ui/ShareTableRow.vue";
-import ShareConfigView from "@/tabs/samba/ui/ShareConfigView.vue";
+import ShareEditor from "@/tabs/samba/ui/ShareEditor.vue";
 import { okAsync, errAsync } from "neverthrow";
+import { clusterScopeInjectionKey } from "@/common/injectionKeys";
+import { PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
 
 const _ = cockpit.gettext;
 
-const sambaManager = getSambaManager();
+const clusterScope = inject(clusterScopeInjectionKey);
+
+if (clusterScope === undefined) {
+  throw new Error("clusterScope not provided!");
+}
+
+const sambaManager = clusterScope.map((scope) => getSambaManager(scope));
 
 const showNewShareEditor = ref(false);
 
@@ -100,7 +106,7 @@ onMounted(actions.loadShares);
     </template>
 
     <Disclosure noButton v-model:show="showNewShareEditor" v-slot="{ visible }">
-      <ShareConfigView
+      <ShareEditor
         v-if="visible"
         newShare
         :allShareNames="shareNames"
@@ -135,12 +141,46 @@ onMounted(actions.loadShares);
       </template>
       <template #tbody>
         <template v-for="share in shares" :key="share.name">
-          <ShareTableRow
+          <!-- <ShareTableRow
             :share="share"
             :allShareNames="shareNames"
             @editShare="(s, callback) => actions.editShare(s).map(() => callback())"
             @removeShare="(s) => actions.removeShare(s)"
-          />
+          /> -->
+          <DisclosureController v-slot="{ show: showEditor, setShow: setShowEditor }">
+            <tr>
+              <td>{{ share.name }}</td>
+              <td class="text-muted">{{ share.path }}</td>
+              <td class="button-group-row justify-end">
+                <button @click="setShowEditor(!showEditor)">
+                  <span class="sr-only">Edit</span>
+                  <PencilSquareIcon class="size-icon icon-default" />
+                </button>
+                <button @click="actions.removeShare(share)">
+                  <span class="sr-only">Delete</span>
+                  <TrashIcon class="size-icon icon-danger" />
+                </button>
+              </td>
+            </tr>
+            <tr></tr>
+            <!-- needed to match bg color -->
+            <tr>
+              <td colspan="100%" class="!p-0">
+                <div class="whitespace-normal">
+                  <Disclosure noButton :show="showEditor" v-slot="{ visible }">
+                    <ShareEditor
+                      v-if="visible"
+                      :share="share"
+                      :allShareNames="shareNames"
+                      class="!shadow-none px-4 sm:px-6 py-5"
+                      @cancel="setShowEditor(false)"
+                      @apply="(share) => actions.editShare(share).map(() => setShowEditor(false))"
+                    />
+                  </Disclosure>
+                </div>
+              </td>
+            </tr>
+          </DisclosureController>
         </template>
       </template>
     </Table>

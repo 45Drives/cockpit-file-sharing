@@ -23,16 +23,13 @@ import {
 } from "@45drives/houston-common-lib";
 import { ResultAsync, ok, errAsync, err } from "neverthrow";
 import CephOptions from "@/common/ui/CephOptions.vue";
+import { useMountpointInfo } from "@/common/useMountpointInfo";
 
 const _ = cockpit.gettext;
 
-const props = withDefaults(
-  defineProps<{
-    server?: ResultAsync<Server, ProcessError>;
-    disabled?: boolean;
-  }>(),
-  { server: () => getServer() }
-);
+const props = defineProps<{
+  disabled?: boolean;
+}>();
 
 const usePathInfo = (
   path: Ref<string>,
@@ -76,28 +73,11 @@ const usePathInfo = (
   const isAbsolute = computed<boolean>(() => new Path(path.value).isAbsolute());
   const isRelative = computed<boolean>(() => !isAbsolute.value);
 
-  const mountInfo = ref<FilesystemMount>();
-  const updateMountInfo = () => {
-    fsNode(path.value)
-      .andThen((node) => node.findLongestExistingStem(commandOptions))
-      .andThen((node) => node.getFilesystemMount(commandOptions))
-      .map((mi) => (mountInfo.value = mi));
-  };
-  watchEffect(updateMountInfo);
-
-  const remountedForCephQuotas = ref<boolean>(false);
-  const updateRemountedForCephQuotas = () => {
-    if (mountInfo.value?.filesystem.type === "ceph") {
-      fsNode(path.value)
-        .andThen((node) => node.resolve(true))
-        .map((node) => {
-          remountedForCephQuotas.value = node.path === mountInfo.value?.mountpoint;
-        });
-    } else {
-      remountedForCephQuotas.value = false;
-    }
-  };
-  watchEffect(updateRemountedForCephQuotas);
+  const { mountpointInfo, updateMountpointInfo } = useMountpointInfo(
+    path,
+    serverResult,
+    commandOptions
+  );
 
   const subdirSuggestions = ref<string[]>([]);
   const updateSubdirSuggestions = () => {
@@ -115,8 +95,7 @@ const usePathInfo = (
     updateExists();
     updateIsDirectory();
     updateIsFile();
-    updateMountInfo();
-    updateRemountedForCephQuotas();
+    updateMountpointInfo();
     updateSubdirSuggestions();
   };
 
@@ -126,17 +105,18 @@ const usePathInfo = (
     isFile,
     isAbsolute,
     isRelative,
-    mountInfo,
+    mountpointInfo,
     forceUpdatePathInfo,
-    remountedForCephQuotas,
     subdirSuggestions,
   };
 };
 
+const server = getServer();
+
 const path = defineModel<string>("path", { required: true });
 
-const { exists, isDirectory, isAbsolute, mountInfo, subdirSuggestions, forceUpdatePathInfo } =
-  usePathInfo(path, props.server);
+const { exists, isDirectory, isAbsolute, mountpointInfo, subdirSuggestions, forceUpdatePathInfo } =
+  usePathInfo(path, server);
 
 const isValid = computed<boolean>(() => isAbsolute.value && (isDirectory.value || !exists.value));
 
@@ -148,8 +128,6 @@ defineExpose({
   isValid,
 });
 
-const server = getServer();
-
 const createDirectory = () =>
   server
     .andThen((server) => new Directory(server, path.value).create(true, { superuser: "try" }))
@@ -157,7 +135,7 @@ const createDirectory = () =>
     .map(forceUpdatePathInfo);
 
 const createZfsDataset = () =>
-  mountInfo.value?.filesystem.type !== "zfs"
+  mountpointInfo.value?.filesystem.type !== "zfs"
     ? errAsync(new Error(`Not a ZFS filesystem: ${path.value}`))
     : server
         .andThen((server) => {
@@ -167,11 +145,11 @@ const createZfsDataset = () =>
               if (!path.isAbsolute()) {
                 return err(new Error(`Path not absolute: ${path.path}`));
               }
-              if (mountInfo.value === undefined) {
-                return err(new Error(`mountInfo undefined`));
+              if (mountpointInfo.value === undefined) {
+                return err(new Error(`mountpointInfo undefined`));
               }
-              const zfsFilesystem = mountInfo.value.filesystem.source;
-              const mountPoint = mountInfo.value.mountpoint;
+              const zfsFilesystem = mountpointInfo.value.filesystem.source;
+              const mountPoint = mountpointInfo.value.mountpoint;
               if (!path.path.startsWith(mountPoint)) {
                 return err(new Error(`Path (${path.path}) not within mountpoint (${mountPoint})`));
               }
@@ -212,7 +190,7 @@ const actions = wrapActions({
   <InputFeedback v-else-if="!exists" type="warning">
     <span class="space-x-1">
       <span>{{ _("Path does not exist.") }}</span>
-      <template v-if="mountInfo?.filesystem.type === 'zfs'">
+      <template v-if="mountpointInfo?.filesystem.type === 'zfs'">
         <button @click="actions.createDirectory" class="underline">
           {{ _("Create directory") }}
         </button>
@@ -255,8 +233,8 @@ const actions = wrapActions({
     </CardContainer>
   </Modal>
   <!-- Filesystem-specific checks/fixes -->
-  <CephOptions v-if="mountInfo?.filesystem.type === 'ceph'" />
-  <template v-else-if="mountInfo?.filesystem.type === 'cifs'">
+  <CephOptions v-if="mountpointInfo?.filesystem.type === 'ceph' && isDirectory" :path="path" />
+  <template v-else-if="mountpointInfo?.filesystem.type === 'cifs'">
     <InputFeedback type="warning">
       {{ path + _(" is already shared through Samba/CIFS") }}
     </InputFeedback>

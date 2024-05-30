@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import { CenteredCardColumn } from "@45drives/houston-common-ui";
 
-import GlobalConfigView from "./GlobalConfigView.vue";
+import GlobalConfigEditor from "./GlobalConfigEditor.vue";
 import ShareListView from "@/tabs/samba/ui/ShareListView.vue";
+import { getClusterScope } from "@/common/getClusterScope";
+
+import { provide } from 'vue';
+import { clusterScopeInjectionKey } from '@/common/injectionKeys';
+
+provide(clusterScopeInjectionKey, getClusterScope("ctdb"));
+
 </script>
 
 <template>
   <CenteredCardColumn>
-    <GlobalConfigView />
+    <GlobalConfigEditor />
     <ShareListView />
   </CenteredCardColumn>
 </template>

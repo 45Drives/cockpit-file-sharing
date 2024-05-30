@@ -249,7 +249,7 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
         <button
           class="btn btn-primary"
           @click="$emit('apply', tempShareConfig)"
-          :disabled="!inputsValid"
+          :disabled="!inputsValid || !modified"
         >
           {{ _("Apply") }}
         </button>

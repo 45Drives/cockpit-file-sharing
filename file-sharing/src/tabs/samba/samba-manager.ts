@@ -9,7 +9,7 @@ import {
   keyValueDiff,
   getServer,
   File,
-  newlineSplitterRegex,
+  RegexSnippets,
 } from "@45drives/houston-common-lib";
 import {
   type SambaConfig,
@@ -121,7 +121,7 @@ export namespace SambaManagerImplementation {
       .map((p) => p.getStdout().trim())
       .map((shareNames) =>
         shareNames
-          .split(newlineSplitterRegex)
+          .split(RegexSnippets.newlineSplitter)
           .filter((shareName) => shareName.toLowerCase() !== "global")
       );
   export const getShareProperty = (server: Server, shareName: string, property: string) =>
@@ -209,29 +209,10 @@ export function SambaManagerClustered(servers: [Server, ...Server[]]): ISambaMan
   };
 }
 
-export function getSambaManager(): ResultAsync<ISambaManager, ProcessError> {
-  return getServer().andThen((server) => {
-    const ctdbNodesFile = new File(server, "/etc/ctdb/nodes");
-    return ctdbNodesFile.exists().andThen((ctdbNodesFileExists) => {
-      if (ctdbNodesFileExists) {
-        return ctdbNodesFile.read(false, { superuser: "try" }).andThen((nodesString) =>
-          ResultAsync.combine(
-            nodesString
-              .split(newlineSplitterRegex)
-              .map((n) => n.trim())
-              .filter((n) => n)
-              .map((node) => getServer(node))
-          ).map((servers) => {
-            if (servers.length < 1) {
-              console.warn("SambaManager: Found /etc/ctdb/nodes file, but contained no hosts");
-              return SambaManagerSingleServer(server);
-            }
-            return SambaManagerClustered(servers as [Server, ...Server[]]);
-          })
-        );
-      } else {
-        return ok(SambaManagerSingleServer(server));
-      }
-    });
-  });
+export function getSambaManager(clusterScope: Server | [Server, ...Server[]]): ISambaManager {
+  clusterScope = [clusterScope].flat() as [Server, ...Server[]];
+  if (clusterScope.length === 1) {
+    return SambaManagerSingleServer(clusterScope[0]);
+  }
+  return SambaManagerClustered(clusterScope);
 }
