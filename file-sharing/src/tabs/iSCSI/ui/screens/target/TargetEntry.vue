@@ -19,7 +19,8 @@
 				class="overflow-hidden"
 				:style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
 			>
-			<PortalTable :target="target"/>
+				<PortalTable :target="target"/>
+				<InitiatorGroupTable :target="target"/>
 			</div>
 		</td>
 	</tr>
@@ -34,6 +35,7 @@ import type { ResultAsync } from 'neverthrow';
 import { inject, ref } from 'vue';
 import type { ISCSIDriver } from '../../types/ISCSIDriver';
 import PortalTable from '../portal/PortalTable.vue';
+import InitiatorGroupTable from '../initiatorGroups/InitiatorGroupTable.vue';
 
 const props = defineProps<{target: Target}>();
 

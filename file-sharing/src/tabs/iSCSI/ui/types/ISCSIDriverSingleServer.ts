@@ -3,14 +3,14 @@ import { VirtualDevice, DeviceType } from "./VirtualDevice";
 import { CHAPConfiguration } from "./CHAPConfiguration";
 import { Connection } from "./Connection";
 import { Initiator } from "./Initiator";
-import { InitiatorGroup } from "./InitiatorGroup";
+import { type InitiatorGroup } from "./InitiatorGroup";
 import { LogicalUnitNumber } from "./LogicalUnitNumber";
 import { Portal } from "./Portal";
 import { Session } from "./Session";
-import { Target } from "./Target";
+import { type Target } from "./Target";
 import { ISCSIDriver } from "./ISCSIDriver";
 import { BashCommand, Command, ExitedProcess, ParsingError, ProcessError, Server, StringToIntCaster, getServer } from "@45drives/houston-common-lib";
-import { ResultAsync, err, ok } from "neverthrow";
+import { ResultAsync, err, ok, safeTry } from "neverthrow";
 
 export class ISCSIDriverSingleServer implements ISCSIDriver {
 
@@ -21,7 +21,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         [DeviceType.FileIO]: "/sys/kernel/scst_tgt/handlers/vdisk_fileio"
     };
 
-    targetMangementFolder = "/sys/kernel/scst_tgt/targets/iscsi";
+    targetManagementFolder = "/sys/kernel/scst_tgt/targets/iscsi";
 
     constructor(server: Server) {
         this.server = server;
@@ -36,27 +36,27 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     createTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "add_target $1" > $2`, [target.name, this.targetMangementFolder + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "add_target $1" > $2`, [target.name, this.targetManagementFolder + "/mgmt"]));
     }
 
     removeTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "del_target $1" > $2`, [target.name, this.targetMangementFolder + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "del_target $1" > $2`, [target.name, this.targetManagementFolder + "/mgmt"]));
     }
 
     addPortalToTarget(target: Target, portal: Portal): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, this.targetMangementFolder + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, `${target.devicePath}/../mgmt`]));
     }
 
     deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, this.targetMangementFolder + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, `${target.devicePath}/../mgmt`]));
     }
 
     addInitiatorGroupToTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {
-        throw new Error("Method not implemented.");
+        return this.server.execute(new BashCommand(`echo "create $1" > $2`, [initiatorGroup.name, `${target.devicePath}/ini_groups/mgmt`]));
     }
 
-    deleteInitiatorGroupFromTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {
-        throw new Error("Method not implemented.");
+    deleteInitiatorGroupFromTarget(initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "del $1" > $2`, [initiatorGroup.name, `${initiatorGroup.devicePath}/../mgmt`]));
     }
 
     addInitiatorToGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<ExitedProcess, ProcessError> {
@@ -129,7 +129,10 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     getTargets(): ResultAsync<Target[], ProcessError> {
+        const self = this;
+        
         const targetDirectory = "/sys/kernel/scst_tgt/targets/iscsi";
+
 
         return this.server.execute(new Command(["find", targetDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
             (proc) => {
@@ -138,21 +141,27 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
             }
         ).andThen((targetNames) => {
             return ResultAsync.combine(targetNames.map((targetName) => {
-                const target = new Target(targetName);
-                
-                const portalResult = this.getPortalsOfTarget(target).map((portals) => (portals));
+                return new ResultAsync(safeTry(async function * () {
+                    const partialTarget = {
+                        name: targetName,  
+                        devicePath: targetDirectory + "/" + targetName,
+                    };
 
-                return ResultAsync.combine([portalResult]).map(([portalResult]) => {
-                    target.portals = portalResult;
-                    return target;
-                });
+                    return ok<Target>({
+                        ...partialTarget,
+                        portals: yield * self.getPortalsOfTarget(partialTarget).safeUnwrap(),
+                        chapConfigurations: [],//yield * self.getCHAPConfigurationsOfTarget(partialTarget).safeUnwrap(),
+                        initiatorGroups: yield * self.getInitatorGroupsOfTarget(partialTarget).safeUnwrap(),
+                        sessions: [],//yield * self.getSessionsOfTarget(partialTarget).safeUnwrap()
+                    });
+                }))
             }))
         });
     }
 
-    getPortalsOfTarget(target: Target): ResultAsync<Portal[], ProcessError> {
-        const targetFolder = this.targetMangementFolder + "/" + target.name;
-        
+    getPortalsOfTarget(target: Pick<Target, "name">): ResultAsync<Portal[], ProcessError> {
+        const targetFolder = this.targetManagementFolder + "/" + target.name;
+
         return this.server.execute(new Command(["find", targetFolder, ..."-name allowed_portal* -printf %f\\0".split(" ")])).map(
             (proc) => {
                 const portalAddressFileNames = proc.getStdout().split("\0").slice(0, -1);
@@ -177,8 +186,33 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         })
     }
 
-    getInitatorGroupsOfTarget(target: Target): ResultAsync<InitiatorGroup[], ProcessError> {
-        throw new Error("Method not implemented.");
+    getInitatorGroupsOfTarget(target: Pick<Target, "name"> ): ResultAsync<InitiatorGroup[], ProcessError> {
+        const self = this;
+
+        const initiatorGroupFolder = `${this.targetManagementFolder}/${target.name}/ini_groups`;
+
+        return this.server.execute(new Command(["find", initiatorGroupFolder, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
+            (proc) => {
+                const groupNames = proc.getStdout().split("\0").slice(0, -1);
+                return groupNames;
+            }
+        ).andThen((groupNames) => {
+            return ResultAsync.combine(groupNames.map((groupName) => {
+                
+                return new ResultAsync(safeTry(async function * () {
+                    const partialInitiatorGroup = {
+                        name: groupName,
+                        devicePath: `${initiatorGroupFolder}/${groupName}`,
+                    };
+
+                    return ok<InitiatorGroup>({
+                        ...partialInitiatorGroup,
+                        initiators: [],//yield * self.getInitiatorsOfInitiatorGroup(partialInitiatorGroup).safeUnwrap(),
+                        logicalUnitNumbers: [],//yield * self.getLogicalUnitNumbersOfInitiatorGroup(partialInitiatorGroup).safeUnwrap(),
+                    });
+                }))
+            }))
+        });
     }
 
     getSessionsOfTarget(target: Target): ResultAsync<Session[], ProcessError> {
@@ -193,11 +227,11 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         throw new Error("Method not implemented.");
     }
     
-    getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<LogicalUnitNumber[], ProcessError> {
+    getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "name">): ResultAsync<LogicalUnitNumber[], ProcessError> {
         throw new Error("Method not implemented.");
     }
 
-    getInitiatorsOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<Initiator[], ProcessError> {
+    getInitiatorsOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "name">): ResultAsync<Initiator[], ProcessError> {
         throw new Error("Method not implemented.");
     }
 }

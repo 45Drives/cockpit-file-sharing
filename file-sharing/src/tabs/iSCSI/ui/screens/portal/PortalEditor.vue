@@ -41,7 +41,7 @@
 import { CardContainer, InputField, useTempObjectStaging, wrapActions, type InputValidator } from '@45drives/houston-common-ui';
 import type { ResultAsync } from 'neverthrow';
 import { inject, ref } from 'vue';
-import { Target } from '../../types/Target';
+import { type Target } from '../../types/Target';
 import { ProcessError } from '@45drives/houston-common-lib';
 import type { ISCSIDriver } from '../../types/ISCSIDriver';
 import { Portal } from '../../types/Portal';

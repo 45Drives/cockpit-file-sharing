@@ -1,28 +1,28 @@
 <template>
     <CardContainer>
         <div class="overflow-hidden"
-            :style="{ 'max-height': showAddPortal ? '1500px' : '0', transition: showAddPortal ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }">
+            :style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }">
             <div class="card">
-                <PortalEditor :target="props.target" @close-editor="() => {showAddPortal = false; actions.refreshPortals()}"/>
+                <InitiatorGroupEditor :target="target" @close-editor="() => {showEditor = false; actions.refreshTable()}"/>
             </div>
         </div>
         <div class="card">
             <div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
-                <Table headerText="Portals" emptyText="No portals. Click '+' to add one." noScroll
+                <Table headerText="Initiator Groups" emptyText="No initiator groups. Click '+' to add one." noScroll
                     class="!border-none !shadow-none">
                     <template #thead>
                         <tr>
-                            <th scope="col">Address</th>
+                            <th scope="col">Group Name</th>
                             <th scope="col" class="flex flex-row justify-end">
                                 <span class="sr-only">Delete</span>
-                                <button @click="showAddPortal = !showAddPortal">
+                                <button @click="showEditor = !showEditor">
                                     <PlusIcon class="size-icon icon-default" />
                                 </button>
                             </th>
                         </tr>
                     </template>
                     <template #tbody>
-                        <PortalEntry v-for="(portal, index) in target.portals" :key="index" :target="target" :portal="portal" @deletePortal="actions.refreshPortals"/>
+                        <InitiatorGroupEntry v-for="(group, index) in target.initiatorGroups" :key="index" :initiatorGroup="group" @deleteEntry="actions.refreshTable"/>
                     </template>
                 </Table>
             </div>
@@ -38,11 +38,11 @@
     import type { ResultAsync } from "neverthrow";
     import type { ISCSIDriver } from "../../types/ISCSIDriver";
     import type { ProcessError } from "@45drives/houston-common-lib";
-    import PortalEntry from "./PortalEntry.vue";
-    import PortalEditor from "./PortalEditor.vue";
     import type { Target } from "../../types/Target";
+    import InitiatorGroupEntry from "./InitiatorGroupEntry.vue"
+    import InitiatorGroupEditor from "./InitiatorGroupEditor.vue";
 
-    const showAddPortal = ref(false);
+    const showEditor = ref(false);
 
     const props = defineProps<{target: Target}>();
 
@@ -52,15 +52,15 @@
 		throw new Error("iSCSI Driver is null");
 	}
 
-	const refreshPortals = () => {
+	const refreshTable = () => {
 		return driver.andThen((driver) => {
-			return driver.getPortalsOfTarget(props.target).map((portals) => {
-				props.target.portals = portals;
+            return driver.getInitatorGroupsOfTarget(props.target).map((groups) => {
+				props.target.initiatorGroups = groups;
 			});
 		});
 	}
 
-    const actions = wrapActions({refreshPortals: refreshPortals})
+    const actions = wrapActions({refreshTable: refreshTable})
 
-    actions.refreshPortals();
+    actions.refreshTable();
 </script>

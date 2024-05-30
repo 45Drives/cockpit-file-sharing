@@ -3,18 +3,25 @@ import type { InitiatorGroup } from "./InitiatorGroup";
 import type { Portal } from "./Portal";
 import type { Session } from "./Session";
 
-export class Target {
+export interface Target {
     name: string;
     chapConfigurations: CHAPConfiguration[];
-    initiatorGroup: InitiatorGroup[];
+    initiatorGroups: InitiatorGroup[];
     portals: Portal[];
     sessions: Session[];
 
-    constructor(name: string) {
-        this.name = name;
-        this.chapConfigurations = [];
-        this.initiatorGroup = [];
-        this.portals = [];
-        this.sessions = [];
+    devicePath: string;
+}
+
+export namespace Target {
+    export function empty() : Target {
+        return {
+            name: "",
+            devicePath: "",
+            chapConfigurations: [],
+            portals: [],
+            sessions: [],
+            initiatorGroups: [],
+        }
     }
 }

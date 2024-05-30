@@ -1,22 +1,22 @@
 <template> 
     <CardContainer>
         <div
-            v-if="tempTarget"
+            v-if="tempInitiatorGroup"
             class="space-y-content"
         >
             <div class="space-y-content text-base">
                 <div
                     class="text-header"
-                >New Target</div>
+                >New Initiator Group</div>
             </div>
 
             <div>
                 <InputField
-                        :placeholder="'A unique name for your target'"
-                        :validator="targetNameValidator"
-                        v-model="tempTarget.name"
+                        :placeholder="'The name for your Initiator Group'"
+                        :validator="initiatorGroupNameValidator"
+                        v-model="tempInitiatorGroup.name"
                     >
-                    {{ ("Target Name") }}
+                    {{ ("Group Name") }}
                 </InputField>
             </div>
         </div>
@@ -29,7 +29,7 @@
                 >{{ ("Cancel") }}</button>
                 <button
                     class="btn btn-primary"
-                    @click="actions.createTarget"
+                    @click="actions.createInitiatorGroup"
                     :disabled="!modified"
                 >{{ ("Create") }}</button>
             </div>
@@ -41,17 +41,18 @@
 import { CardContainer, InputField, useTempObjectStaging, wrapActions, type InputValidator } from '@45drives/houston-common-ui';
 import type { ResultAsync } from 'neverthrow';
 import { inject, ref } from 'vue';
-import { Target } from '../../types/Target';
+import { type Target } from '../../types/Target';
 import { ProcessError } from '@45drives/houston-common-lib';
 import type { ISCSIDriver } from '../../types/ISCSIDriver';
+import { InitiatorGroup } from '../../types/InitiatorGroup';
 
-    const props = defineProps<{existingTargets: Target[]}>();
+    const props = defineProps<{target: Target}>();
 
     const emit = defineEmits(['closeEditor']);
 
-    const newTarget = ref<Target>(Target.empty());
+    const newInitiatorGroup = ref<InitiatorGroup>(InitiatorGroup.empty());
 
-    const { tempObject: tempTarget, modified, resetChanges } = useTempObjectStaging(newTarget);
+    const { tempObject: tempInitiatorGroup, modified, resetChanges } = useTempObjectStaging(newInitiatorGroup);
 
     const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
 
@@ -64,26 +65,19 @@ import type { ISCSIDriver } from '../../types/ISCSIDriver';
         resetChanges();
     }
 
-    const createTarget = () => {
-        return driver.andThen((driver) => driver.createTarget(tempTarget.value))
+    const createInitiatorGroup = () => {
+        return driver.andThen((driver) => driver.addInitiatorGroupToTarget(props.target, tempInitiatorGroup.value))
                         .map(() => handleClose())
-                        .mapErr((error) => new ProcessError(`Unable to create target ${tempTarget.value.name}: ${error.message}`))
+                        .mapErr((error) => new ProcessError(`Unable to create group ${tempInitiatorGroup.value.name}: ${error.message}`))
     }
 
-    const actions = wrapActions({createTarget});
+    const actions = wrapActions({createInitiatorGroup});
 
-    const targetNameValidator: InputValidator = (name: string) => {
-        if (!name) {
+    const initiatorGroupNameValidator: InputValidator = (address: string) => {
+        if (!address) {
             return {
                 type: "error",
-                message: ("A target name is required."),
-            }
-        }
-
-        if (props.existingTargets.find((target) => (target.name === name)) !== undefined) {
-            return {
-                type: "error",
-                message: ("A target with this name already exists."),
+                message: ("A group name is required."),
             }
         }
 
