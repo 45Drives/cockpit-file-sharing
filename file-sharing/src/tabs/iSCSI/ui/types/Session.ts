@@ -1,11 +1,8 @@
 import type { Connection } from "./Connection";
 
-export class Session {
+export interface Session {
     initiatorName: string;
     connections: Connection[];
 
-    constructor(initiatorName: string, connections: Connection[]) {
-        this.initiatorName = initiatorName;
-        this.connections = connections;
-    }
+    devicePath: string;
 }

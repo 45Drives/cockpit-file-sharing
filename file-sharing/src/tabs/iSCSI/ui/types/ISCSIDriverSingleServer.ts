@@ -6,7 +6,7 @@ import { Initiator } from "./Initiator";
 import { type InitiatorGroup } from "./InitiatorGroup";
 import { LogicalUnitNumber } from "./LogicalUnitNumber";
 import { Portal } from "./Portal";
-import { Session } from "./Session";
+import { type Session } from "./Session";
 import { type Target } from "./Target";
 import { ISCSIDriver } from "./ISCSIDriver";
 import { BashCommand, Command, ExitedProcess, ParsingError, ProcessError, Server, StringToIntCaster, getServer } from "@45drives/houston-common-lib";
@@ -133,7 +133,6 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         
         const targetDirectory = "/sys/kernel/scst_tgt/targets/iscsi";
 
-
         return this.server.execute(new Command(["find", targetDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
             (proc) => {
                 const targetNames = proc.getStdout().split("\0").slice(0, -1);
@@ -159,10 +158,8 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         });
     }
 
-    getPortalsOfTarget(target: Pick<Target, "name">): ResultAsync<Portal[], ProcessError> {
-        const targetFolder = this.targetManagementFolder + "/" + target.name;
-
-        return this.server.execute(new Command(["find", targetFolder, ..."-name allowed_portal* -printf %f\\0".split(" ")])).map(
+    getPortalsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<Portal[], ProcessError> {
+        return this.server.execute(new Command(["find", target.devicePath, ..."-name allowed_portal* -printf %f\\0".split(" ")])).map(
             (proc) => {
                 const portalAddressFileNames = proc.getStdout().split("\0").slice(0, -1);
                 return portalAddressFileNames;
@@ -170,7 +167,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         ).andThen((portalAddressFileNames) => {
             const addressResults = portalAddressFileNames.map((portalAddressFileName) => {
                 return getServer().andThen((server) => {
-                    const file = new File(server, targetFolder + "/" + portalAddressFileName)
+                    const file = new File(server, `${target.devicePath}/${portalAddressFileName}`)
                     return file.read().andThen((fileContent) => {
                         const address = fileContent.split('\n')[0]
 
@@ -186,10 +183,10 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         })
     }
 
-    getInitatorGroupsOfTarget(target: Pick<Target, "name"> ): ResultAsync<InitiatorGroup[], ProcessError> {
+    getInitatorGroupsOfTarget(target: Pick<Target, "name" | "devicePath"> ): ResultAsync<InitiatorGroup[], ProcessError> {
         const self = this;
 
-        const initiatorGroupFolder = `${this.targetManagementFolder}/${target.name}/ini_groups`;
+        const initiatorGroupFolder = `${target.devicePath}/ini_groups`;
 
         return this.server.execute(new Command(["find", initiatorGroupFolder, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
             (proc) => {
@@ -215,8 +212,32 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         });
     }
 
-    getSessionsOfTarget(target: Target): ResultAsync<Session[], ProcessError> {
-        throw new Error("Method not implemented.");
+    getSessionsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<Session[], ProcessError> {
+        const self = this;
+
+        const sessionsFolder = `${target.devicePath}/sessions`;
+
+        return this.server.execute(new Command(["find", sessionsFolder, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
+            (proc) => {
+                const initiatorNames = proc.getStdout().split("\0").slice(0, -1);
+                return initiatorNames;
+            }
+        ).andThen((initiatorNames) => {
+            return ResultAsync.combine(initiatorNames.map((initiatorName) => {
+                
+                return new ResultAsync(safeTry(async function * () {
+                    const partialSession = {
+                        initiatorName: initiatorName,
+                        devicePath: `${sessionsFolder}/${initiatorName}`,
+                    };
+
+                    return ok<Session>({
+                        ...partialSession,
+                        connections: [],//yield * self.getConnectionsOfSession(partialSession).safeUnwrap(),
+                    });
+                }))
+            }))
+        });
     }
 
     getCHAPConfigurationsOfTarget(target: Target): ResultAsync<CHAPConfiguration[], ProcessError> {

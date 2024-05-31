@@ -15,13 +15,20 @@
 	<tr></tr>
 	<tr>
 		<td colspan="3" class="!py-0">
-			<div
+			<Disclosure :show="showEditor" :transitionDuration=500 v-slot="{visible}" noButton>
+				<template v-if="visible">
+					<PortalTable :target="target"/>
+					<InitiatorGroupTable :target="target"/>
+					<SessionTable :target="target" :currentlyOpen="showEditor"/>
+				</template>
+			</Disclosure>
+			
+			<!-- <div
 				class="overflow-hidden"
 				:style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
 			>
-				<PortalTable :target="target"/>
-				<InitiatorGroupTable :target="target"/>
-			</div>
+				
+			</div> -->
 		</td>
 	</tr>
 </template>
@@ -34,8 +41,10 @@ import { ProcessError } from '@45drives/houston-common-lib';
 import type { ResultAsync } from 'neverthrow';
 import { inject, ref } from 'vue';
 import type { ISCSIDriver } from '../../types/ISCSIDriver';
+import { Disclosure } from '@45drives/houston-common-ui';
 import PortalTable from '../portal/PortalTable.vue';
 import InitiatorGroupTable from '../initiatorGroups/InitiatorGroupTable.vue';
+import SessionTable from '../sessions/SessionTable.vue';
 
 const props = defineProps<{target: Target}>();
 
