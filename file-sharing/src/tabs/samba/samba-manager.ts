@@ -18,6 +18,7 @@ import {
 } from "@/tabs/samba/data-types";
 import { SmbConfParser, SmbGlobalParser, SmbShareParser } from "@/tabs/samba/smb-conf-parser";
 import { Result, ok, err, ResultAsync, okAsync, errAsync } from "neverthrow";
+import { executeHookCallbacks, Hooks } from "@/common/hooks";
 
 export interface ISambaManager {
   getGlobalConfig(): ResultAsync<SambaGlobalConfig, ParsingError | ProcessError>;
@@ -135,17 +136,20 @@ export namespace SambaManagerImplementation {
     listShareNames(server).andThen((shareNames) =>
       ResultAsync.combine(shareNames.map((shareName) => getShare(server, shareName)))
     );
-  export const addShare = (server: Server, share: SambaShareConfig) =>
-    SmbShareParser(share.name)
-      .unapply(share)
-      .asyncAndThen((shareParams) => {
-        return server
+  export const addShare = (server: Server, share: SambaShareConfig) => {
+    return executeHookCallbacks(Hooks.BeforeAddShare)
+      .andThen(() => SmbShareParser(share.name).unapply(share))
+      .andThen((shareParams) =>
+        server
           .execute(addShareCommand(share.name, share.path), true)
-          .andThen(() => setSectionParams(server, share.name, shareParams));
-      });
+          .andThen(() => setSectionParams(server, share.name, shareParams))
+      )
+      .andThen(() => executeHookCallbacks(Hooks.AfterAddShare));
+  };
   export const editShare = (server: Server, share: SambaShareConfig) => {
     const shareParser = SmbShareParser("");
-    return getShare(server, share.name)
+    return executeHookCallbacks(Hooks.BeforeEditShare)
+      .andThen(() => getShare(server, share.name))
       .andThen(shareParser.unapply)
       .andThen((originalShareKV) =>
         shareParser.unapply(share).map((shareKV) => keyValueDiff(originalShareKV, shareKV))
@@ -154,11 +158,14 @@ export namespace SambaManagerImplementation {
         setSectionParams(server, share.name, { ...added, ...changed }).andThen(() =>
           delSectionParms(server, share.name, Object.keys(removed))
         )
-      );
+      )
+      .andThen(() => executeHookCallbacks(Hooks.AfterEditShare));
   };
   export const removeShare = (server: Server, share: SambaShareConfig | string) => {
     const shareName = typeof share === "string" ? share : share.name;
-    return server.execute(delShareCommand(shareName));
+    return executeHookCallbacks(Hooks.BeforeRemoveShare)
+      .andThen(() => server.execute(delShareCommand(shareName)))
+      .andThen(() => executeHookCallbacks(Hooks.AfterRemoveShare));
   };
 }
 
@@ -181,38 +188,40 @@ export function SambaManagerSingleServer(server: Server): ISambaManager {
   };
 }
 
-export function SambaManagerClustered(servers: [Server, ...Server[]]): ISambaManager {
-  const getterServer = servers[0];
-  return {
-    getGlobalConfig: () => SambaManagerImplementation.getGlobalConfig(getterServer),
-    editGlobal: (globalConfig: SambaGlobalConfig) =>
-      ResultAsync.combine(
-        servers.map((server) => SambaManagerImplementation.editGlobal(server, globalConfig))
-      ).map(() => null),
-    listShareNames: () => SambaManagerImplementation.listShareNames(getterServer),
-    getShareProperty: (shareName: string, property: string) =>
-      SambaManagerImplementation.getShareProperty(getterServer, shareName, property),
-    getShare: (shareName: string) => SambaManagerImplementation.getShare(getterServer, shareName),
-    getShares: () => SambaManagerImplementation.getShares(getterServer),
-    addShare: (share: SambaShareConfig) =>
-      ResultAsync.combine(
-        servers.map((server) => SambaManagerImplementation.addShare(server, share))
-      ).map(() => null),
-    editShare: (share: SambaShareConfig) =>
-      ResultAsync.combine(
-        servers.map((server) => SambaManagerImplementation.editShare(server, share))
-      ).map(() => null),
-    removeShare: (share: SambaShareConfig | string) =>
-      ResultAsync.combine(
-        servers.map((server) => SambaManagerImplementation.removeShare(server, share))
-      ).map(() => null),
-  };
-}
+// CTDB automatically manages config on all nodes
+// export function SambaManagerClustered(servers: [Server, ...Server[]]): ISambaManager {
+//   const getterServer = servers[0];
+//   return {
+//     getGlobalConfig: () => SambaManagerImplementation.getGlobalConfig(getterServer),
+//     editGlobal: (globalConfig: SambaGlobalConfig) =>
+//       ResultAsync.combine(
+//         servers.map((server) => SambaManagerImplementation.editGlobal(server, globalConfig))
+//       ).map(() => null),
+//     listShareNames: () => SambaManagerImplementation.listShareNames(getterServer),
+//     getShareProperty: (shareName: string, property: string) =>
+//       SambaManagerImplementation.getShareProperty(getterServer, shareName, property),
+//     getShare: (shareName: string) => SambaManagerImplementation.getShare(getterServer, shareName),
+//     getShares: () => SambaManagerImplementation.getShares(getterServer),
+//     addShare: (share: SambaShareConfig) =>
+//       ResultAsync.combine(
+//         servers.map((server) => SambaManagerImplementation.addShare(server, share))
+//       ).map(() => null),
+//     editShare: (share: SambaShareConfig) =>
+//       ResultAsync.combine(
+//         servers.map((server) => SambaManagerImplementation.editShare(server, share))
+//       ).map(() => null),
+//     removeShare: (share: SambaShareConfig | string) =>
+//       ResultAsync.combine(
+//         servers.map((server) => SambaManagerImplementation.removeShare(server, share))
+//       ).map(() => null),
+//   };
+// }
 
-export function getSambaManager(clusterScope: Server | [Server, ...Server[]]): ISambaManager {
-  clusterScope = [clusterScope].flat() as [Server, ...Server[]];
-  if (clusterScope.length === 1) {
-    return SambaManagerSingleServer(clusterScope[0]);
-  }
-  return SambaManagerClustered(clusterScope);
+export function getSambaManager(server: Server): ISambaManager {
+  return SambaManagerSingleServer(server);
+  // clusterScope = [clusterScope].flat() as [Server, ...Server[]];
+  // if (clusterScope.length === 1) {
+  //   return SambaManagerSingleServer(clusterScope[0]);
+  // }
+  // return SambaManagerClustered(clusterScope);
 }
