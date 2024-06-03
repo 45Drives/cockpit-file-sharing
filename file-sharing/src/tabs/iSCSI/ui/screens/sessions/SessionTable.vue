@@ -20,7 +20,7 @@
 
 <script setup lang="ts">
     import { CardContainer, wrapActions } from "@45drives/houston-common-ui";
-    import { inject, onDeactivated, onMounted, onUnmounted, ref } from "vue";
+    import { inject, onMounted, onUnmounted } from "vue";
     import Table from "../Table.vue";
     import type { ResultAsync } from "neverthrow";
     import type { ISCSIDriver } from "../../types/ISCSIDriver";
@@ -39,8 +39,6 @@
 	}
 
 	const refreshTable = () => {
-        console.log("Refreshing");
-
 		return driver.andThen((driver) => {
             return driver.getSessionsOfTarget(props.target).map((sessions) => {
 				props.target.sessions = sessions;
@@ -49,7 +47,6 @@
 	}
 
     onMounted(() => {
-        console.log("Created Timer")
         refreshTimer = window.setInterval(() => {
             if (props.currentlyOpen)
                 refreshTable();
@@ -57,7 +54,6 @@
     })
 
     onUnmounted(() => {
-        console.log("Gone");
         window.clearInterval(refreshTimer);
     })
 

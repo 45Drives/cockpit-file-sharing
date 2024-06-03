@@ -10,15 +10,17 @@
                 >New Initiator Group</div>
             </div>
 
-            <div>
+            <InputLabelWrapper>
+                <template #label>
+                    {{ _("Group Name") }}
+                </template>
+
                 <InputField
-                        :placeholder="'The name for your Initiator Group'"
-                        :validator="initiatorGroupNameValidator"
-                        v-model="tempInitiatorGroup.name"
-                    >
-                    {{ ("Group Name") }}
-                </InputField>
-            </div>
+                    :placeholder="'The name for your Initiator Group'"
+                    :validator="initiatorGroupNameValidator"
+                    v-model="tempInitiatorGroup.name"
+                />
+            </InputLabelWrapper>
         </div>
 
         <template v-slot:footer>
@@ -38,13 +40,15 @@
 </template>
 
 <script setup lang="ts">
-import { CardContainer, InputField, useTempObjectStaging, wrapActions, type InputValidator } from '@45drives/houston-common-ui';
-import type { ResultAsync } from 'neverthrow';
-import { inject, ref } from 'vue';
-import { type Target } from '../../types/Target';
-import { ProcessError } from '@45drives/houston-common-lib';
-import type { ISCSIDriver } from '../../types/ISCSIDriver';
-import { InitiatorGroup } from '../../types/InitiatorGroup';
+    import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, type InputValidator } from '@45drives/houston-common-ui';
+    import type { ResultAsync } from 'neverthrow';
+    import { inject, ref } from 'vue';
+    import { type Target } from '../../types/Target';
+    import { ProcessError } from '@45drives/houston-common-lib';
+    import type { ISCSIDriver } from '../../types/ISCSIDriver';
+    import { InitiatorGroup } from '../../types/InitiatorGroup';
+
+    const _ = cockpit.gettext;
 
     const props = defineProps<{target: Target}>();
 

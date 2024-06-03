@@ -1,16 +1,20 @@
-export class CHAPConfiguration {
+export interface CHAPConfiguration {
     username: string;
     password: string;
     chapType: CHAPType;
+}
 
-    constructor(username: string, password: string, chapType: CHAPType) {
-        this.username = username;
-        this.password = password;
-        this.chapType = chapType;
+export namespace CHAPConfiguration {
+    export function empty() : CHAPConfiguration {
+        return {
+            username: "",
+            password: "",
+            chapType: CHAPType.IncomingUser,
+        }
     }
 }
 
 export enum CHAPType {
-    IncomingUser,
-    OutgoingUser
+    IncomingUser = "IncomingUser",
+    OutgoingUser = "OutgoingUser"
 }

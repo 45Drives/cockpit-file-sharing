@@ -1,6 +1,6 @@
 import { File } from "@45drives/houston-common-lib";
 import { VirtualDevice, DeviceType } from "./VirtualDevice";
-import { CHAPConfiguration } from "./CHAPConfiguration";
+import { CHAPConfiguration, CHAPType } from "./CHAPConfiguration";
 import { Connection } from "./Connection";
 import { Initiator } from "./Initiator";
 import { type InitiatorGroup } from "./InitiatorGroup";
@@ -75,12 +75,12 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         throw new Error("Method not implemented.");
     }
 
-    addCHAPConfigurationToTarget(chapConfiguration: CHAPConfiguration, target: Target): ResultAsync<ExitedProcess, ProcessError> {
-        throw new Error("Method not implemented.");
+    addCHAPConfigurationToTarget(target: Target, chapConfiguration: CHAPConfiguration): ResultAsync<ExitedProcess, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username} ${chapConfiguration.password}`, `${target.devicePath}/../mgmt`]));
     }
 
-    removeCHAPConfigurationToTarget(chapConfiguration: CHAPConfiguration, target: Target): ResultAsync<ExitedProcess, ProcessError> {
-        throw new Error("Method not implemented.");
+    removeCHAPConfigurationFromTarget(target: Target, chapConfiguration: CHAPConfiguration): ResultAsync<ExitedProcess, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username}`, `${target.devicePath}/../mgmt`]));
     }
 
     getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
@@ -149,9 +149,9 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
                     return ok<Target>({
                         ...partialTarget,
                         portals: yield * self.getPortalsOfTarget(partialTarget).safeUnwrap(),
-                        chapConfigurations: [],//yield * self.getCHAPConfigurationsOfTarget(partialTarget).safeUnwrap(),
+                        chapConfigurations: yield * self.getCHAPConfigurationsOfTarget(partialTarget).safeUnwrap(),
                         initiatorGroups: yield * self.getInitatorGroupsOfTarget(partialTarget).safeUnwrap(),
-                        sessions: [],//yield * self.getSessionsOfTarget(partialTarget).safeUnwrap()
+                        sessions: yield * self.getSessionsOfTarget(partialTarget).safeUnwrap()
                     });
                 }))
             }))
@@ -240,8 +240,39 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         });
     }
 
-    getCHAPConfigurationsOfTarget(target: Target): ResultAsync<CHAPConfiguration[], ProcessError> {
-        throw new Error("Method not implemented.");
+    getCHAPConfigurationsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<CHAPConfiguration[], ProcessError> {
+        return this.server.execute(new Command(["find", target.devicePath, ..."-type f ( -name IncomingUser* -o -name OutgoingUser* ) -printf %f\\0".split(" ")])).map(
+            (proc) => {
+                const configurationFileNames = proc.getStdout().split("\0").slice(0, -1);
+                return configurationFileNames;
+            }
+        ).andThen((configurationFileNames) => {
+            return ResultAsync.combine(configurationFileNames.map((configurationFileName) => {
+                return getServer().andThen((server) => {
+                    const file = new File(server, `${target.devicePath}/${configurationFileName}`);
+                    
+                    return file.read().andThen((fileContent) => {
+                        const credentialLine = fileContent.split('\n')[0]
+
+                        if (credentialLine === undefined)
+                            return err(new ProcessError(`Could not parse credentials line from CHAP configuration file: ${file.basename}`));
+
+                        const chapType = configurationFileName.includes("IncomingUser") ? CHAPType.IncomingUser : CHAPType.OutgoingUser;
+                        const username = credentialLine.split(' ')[0];
+                        const password = credentialLine.split(' ')[1];
+
+                        if (username === undefined || password === undefined)
+                            return err(new ProcessError(`Could not parse credentials from configuration file: ${file.basename}`));
+
+                        return ok<CHAPConfiguration>({
+                            username: username,
+                            password: password,
+                            chapType: chapType,
+                        })
+                    });
+                })
+            }));
+        })
     }
 
     getConnectionsOfSession(session: Session): ResultAsync<Connection[], ProcessError> {

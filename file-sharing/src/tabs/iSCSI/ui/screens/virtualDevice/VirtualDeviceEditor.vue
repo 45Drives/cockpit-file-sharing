@@ -10,45 +10,53 @@
                 >New Device</div>
             </div>
 
-            <div>
-                <InputField
-                        :placeholder="'A unique name for your device'"
-                        :validator="deviceNameValidator"
-                        v-model="tempDevice.deviceName"
-                    >
-                    {{ ("Device Name") }}
-                </InputField>
-            </div>
+            <InputLabelWrapper>
+                <template #label>
+                    {{ _("Device Name") }}
+                </template>
 
-            <div>
+                <InputField
+                    :placeholder="'A unique name for your device'"
+                    :validator="deviceNameValidator"
+                    v-model="tempDevice.deviceName"
+                />
+            </InputLabelWrapper>
+
+            <InputLabelWrapper>
+                <template #label>
+                    {{ _("Device Type") }}
+                </template>
+
                 <SelectMenu
-                        v-model="tempDevice.deviceType"
-                        :options="deviceTypeOptions"
-                    >
-                    {{ ("Device Type") }}
-                </SelectMenu>
-            </div>
+                    v-model="tempDevice.deviceType"
+                    :options="deviceTypeOptions"
+                />
+            </InputLabelWrapper>
 
-            <div>
+            <InputLabelWrapper>
+                <template #label>
+                    {{ _("File Path") }}
+                </template>
+                
                 <InputField
-                        :placeholder="'File path to device'"
-                        :validator="devicePathValidator"
-                        v-model="tempDevice.filePath"
-                    >
-                    {{ ("File Path") }}
-                </InputField>
-            </div>
+                    :placeholder="'File path to device'"
+                    :validator="devicePathValidator"
+                    v-model="tempDevice.filePath"
+                />
+            </InputLabelWrapper>
 
-            <div>
+            <InputLabelWrapper>
+                <template #label>
+                    {{ _("Block Size") }}
+                </template>
+                
                 <InputField
-                        :placeholder="'Size'"
-                        :validator="deviceBlockSizeValidator"
-                        :disabled="tempDevice.deviceType === DeviceType.BlockIO"
-                        v-model="tempDevice.blockSize"
-                    >
-                    {{ ("Block Size") }}
-                </InputField>
-            </div>
+                    :placeholder="'Size'"
+                    :validator="deviceBlockSizeValidator"
+                    :disabled="tempDevice.deviceType === DeviceType.BlockIO"
+                    v-model="tempDevice.blockSize"
+                />
+            </InputLabelWrapper>
         </div>
 
         <template v-slot:footer>
@@ -68,12 +76,14 @@
 </template>
 
 <script setup lang="ts">
-import { CardContainer, InputField, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, type InputValidator } from '@45drives/houston-common-ui';
-import { err, ok, type ResultAsync } from 'neverthrow';
-import { inject, ref } from 'vue';
-import { DeviceType, VirtualDevice } from '../../types/VirtualDevice';
-import { Command, Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
-import type { ISCSIDriver } from '../../types/ISCSIDriver';
+    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, type InputValidator } from '@45drives/houston-common-ui';
+    import { err, ok, type ResultAsync } from 'neverthrow';
+    import { inject, ref } from 'vue';
+    import { DeviceType, VirtualDevice } from '../../types/VirtualDevice';
+    import { Command, Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
+    import type { ISCSIDriver } from '../../types/ISCSIDriver';
+
+    const _ = cockpit.gettext;
 
     const props = defineProps<{existingDevices: VirtualDevice[]}>();
 

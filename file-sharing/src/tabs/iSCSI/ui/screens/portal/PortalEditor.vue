@@ -10,15 +10,17 @@
                 >New Portal</div>
             </div>
 
-            <div>
+            <InputLabelWrapper>
+                <template #label>
+                    {{ _("Portal Address") }}
+                </template>
+
                 <InputField
-                        :placeholder="'The address for your portal'"
-                        :validator="portalAddressValidator"
-                        v-model="tempPortal.address"
-                    >
-                    {{ ("Portal Address") }}
-                </InputField>
-            </div>
+                    :placeholder="'The address for your portal'"
+                    :validator="portalAddressValidator"
+                    v-model="tempPortal.address"
+                />
+            </InputLabelWrapper>
         </div>
 
         <template v-slot:footer>
@@ -38,13 +40,15 @@
 </template>
 
 <script setup lang="ts">
-import { CardContainer, InputField, useTempObjectStaging, wrapActions, type InputValidator } from '@45drives/houston-common-ui';
-import type { ResultAsync } from 'neverthrow';
-import { inject, ref } from 'vue';
-import { type Target } from '../../types/Target';
-import { ProcessError } from '@45drives/houston-common-lib';
-import type { ISCSIDriver } from '../../types/ISCSIDriver';
-import { Portal } from '../../types/Portal';
+    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, wrapActions, type InputValidator } from '@45drives/houston-common-ui';
+    import type { ResultAsync } from 'neverthrow';
+    import { inject, ref } from 'vue';
+    import { type Target } from '../../types/Target';
+    import { ProcessError } from '@45drives/houston-common-lib';
+    import type { ISCSIDriver } from '../../types/ISCSIDriver';
+    import { Portal } from '../../types/Portal';
+
+    const _ = cockpit.gettext;
 
     const props = defineProps<{target: Target}>();
 

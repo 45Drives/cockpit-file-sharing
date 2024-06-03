@@ -19,16 +19,10 @@
 				<template v-if="visible">
 					<PortalTable :target="target"/>
 					<InitiatorGroupTable :target="target"/>
+					<ChapConfigurationTable :target="target"/>
 					<SessionTable :target="target" :currentlyOpen="showEditor"/>
 				</template>
 			</Disclosure>
-			
-			<!-- <div
-				class="overflow-hidden"
-				:style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }"
-			>
-				
-			</div> -->
 		</td>
 	</tr>
 </template>
@@ -45,6 +39,7 @@ import { Disclosure } from '@45drives/houston-common-ui';
 import PortalTable from '../portal/PortalTable.vue';
 import InitiatorGroupTable from '../initiatorGroups/InitiatorGroupTable.vue';
 import SessionTable from '../sessions/SessionTable.vue';
+import ChapConfigurationTable from '../chapConfigurations/ChapConfigurationTable.vue';
 
 const props = defineProps<{target: Target}>();
 
@@ -62,7 +57,6 @@ const deleteTarget = () => {
 	return driver.andThen((driver) => driver.removeTarget(props.target))
 			.map(() => emit("deleteTarget"))
 			.mapErr((error) => new ProcessError(`Unable to delete target ${props.target.name}: ${error.message}`));
-			
 }
 
 const actions = wrapActions({deleteTarget: deleteTarget});
