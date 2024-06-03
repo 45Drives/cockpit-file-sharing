@@ -38,7 +38,6 @@ export interface ISambaManager {
   editShare(share: SambaShareConfig): ResultAsync<null, ProcessError>;
 
   removeShare(share: SambaShareConfig): ResultAsync<null, ProcessError>;
-  removeShare(shareName: string): ResultAsync<null, ProcessError>;
 }
 
 export namespace SambaManagerImplementation {
@@ -161,7 +160,7 @@ export namespace SambaManagerImplementation {
       )
       .andThen(() => executeHookCallbacks(Hooks.AfterEditShare));
   };
-  export const removeShare = (server: Server, share: SambaShareConfig | string) => {
+  export const removeShare = (server: Server, share: SambaShareConfig) => {
     const shareName = typeof share === "string" ? share : share.name;
     return executeHookCallbacks(Hooks.BeforeRemoveShare)
       .andThen(() => server.execute(delShareCommand(shareName)))
@@ -183,7 +182,7 @@ export function SambaManagerSingleServer(server: Server): ISambaManager {
       SambaManagerImplementation.addShare(server, share).map(() => null),
     editShare: (share: SambaShareConfig) =>
       SambaManagerImplementation.editShare(server, share).map(() => null),
-    removeShare: (share: SambaShareConfig | string) =>
+    removeShare: (share: SambaShareConfig) =>
       SambaManagerImplementation.removeShare(server, share).map(() => null),
   };
 }
