@@ -9,9 +9,10 @@ import {
   useTempObjectStaging,
   wrapActions,
   reportSuccess,
-  confirm,
+  assertConfirm,
   type SelectMenuOption,
 } from "@45drives/houston-common-ui";
+import { getServer } from "@45drives/houston-common-lib";
 import { getSambaManager } from "@/tabs/samba/samba-manager";
 import Table from "@/tabs/samba/ui/Table.vue";
 import { PlusIcon } from "@heroicons/vue/20/solid";
@@ -22,13 +23,7 @@ import { PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
 
 const _ = cockpit.gettext;
 
-const clusterScope = inject(clusterScopeInjectionKey);
-
-if (clusterScope === undefined) {
-  throw new Error("clusterScope not provided!");
-}
-
-const sambaManager = clusterScope.map((scope) => getSambaManager(scope));
+const sambaManager = getServer().map((server) => getSambaManager(server));
 
 const showNewShareEditor = ref(false);
 
@@ -76,18 +71,15 @@ const editShare = (share: SambaShareConfig) =>
     .map(() => reportSuccess(`${_("Successfully updated share")} ${share.name}`));
 
 const removeShare = (share: SambaShareConfig) =>
-  confirm({
+  assertConfirm({
     header: _("Permanently delete") + ` ${share.name}?`,
     body: _("This cannot be undone."),
     dangerous: true,
-  }).andThen((confirmed) =>
-    confirmed
-      ? sambaManager
-          .andThen((sm) => sm.removeShare(share))
-          .map(() => (shares.value = shares.value.filter((s) => s.name !== share.name)))
-          .map(() => reportSuccess(`${_("Successfully removed share")} ${share.name}`))
-      : okAsync(null)
-  );
+  })
+    .andThen(() => sambaManager)
+    .andThen((sm) => sm.removeShare(share))
+    .map(() => (shares.value = shares.value.filter((s) => s.name !== share.name)))
+    .map(() => reportSuccess(`${_("Successfully removed share")} ${share.name}`));
 
 const actions = wrapActions({
   loadShares,

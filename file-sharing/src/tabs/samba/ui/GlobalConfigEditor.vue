@@ -15,7 +15,7 @@ import {
   reportSuccess,
   type SelectMenuOption,
 } from "@45drives/houston-common-ui";
-import { KeyValueSyntax } from "@45drives/houston-common-lib";
+import { KeyValueSyntax, getServer } from "@45drives/houston-common-lib";
 import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
 import { getSambaManager } from "@/tabs/samba/samba-manager";
 import { clusterScopeInjectionKey } from "@/common/injectionKeys";
@@ -52,13 +52,7 @@ const logLevelOptions: SelectMenuOption<number>[] = [5, 4, 3, 2, 1, 0].map((n) =
   value: n,
 }));
 
-const clusterScope = inject(clusterScopeInjectionKey);
-
-if (clusterScope === undefined) {
-  throw new Error("clusterScope not provided!");
-}
-
-const sambaManager = clusterScope.map((scope) => getSambaManager(scope));
+const sambaManager = getServer().map((server) => getSambaManager(server));
 
 const loadGlobalSettings = () =>
   sambaManager.andThen((sm) => sm.getGlobalConfig()).map((config) => (globalConf.value = config));

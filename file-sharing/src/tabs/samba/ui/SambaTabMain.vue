@@ -5,10 +5,12 @@ import GlobalConfigEditor from "./GlobalConfigEditor.vue";
 import ShareListView from "@/tabs/samba/ui/ShareListView.vue";
 import { getClusterScope } from "@/common/getClusterScope";
 
-import { provide } from 'vue';
-import { clusterScopeInjectionKey } from '@/common/injectionKeys';
+import { provide, ref } from 'vue';
+import { clusterScopeInjectionKey, cephClientNameInjectionKey } from '@/common/injectionKeys';
 
 provide(clusterScopeInjectionKey, getClusterScope("ctdb"));
+const cephClientName = ref("client.samba");
+provide(cephClientNameInjectionKey, cephClientName);
 
 </script>
 

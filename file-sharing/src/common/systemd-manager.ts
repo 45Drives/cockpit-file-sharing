@@ -1,6 +1,6 @@
 import {
   type IniConfigData,
-  type ProcessError,
+  ProcessError,
   ParsingError,
   type Server,
   Command,
@@ -8,6 +8,7 @@ import {
   IniSyntax,
   File,
   RegexSnippets,
+  FileSystemNode,
 } from "@45drives/houston-common-lib";
 import { ResultAsync, errAsync, okAsync, err, ok } from "neverthrow";
 
@@ -82,20 +83,25 @@ export interface ISystemdManager {
   listUnits<T extends SystemdUnitType>(
     type: T
   ): ResultAsync<SystemdUnit<T>[], ProcessError | ParsingError>;
+  createUnit<T extends SystemdUnitType>(
+    unit: SystemdUnit<T>,
+    settings: SystemdUnitSettings<T>
+  ): ResultAsync<typeof unit, ProcessError | ParsingError>;
+  removeUnit(unit: SystemdUnit): ResultAsync<typeof unit, ProcessError | ParsingError>;
   checkEnabled(unit: SystemdUnit): ResultAsync<boolean, ProcessError | ParsingError>;
-  enable(unit: SystemdUnit, now?: "now"): ResultAsync<null, ProcessError | ParsingError>;
-  disable(unit: SystemdUnit, now?: "now"): ResultAsync<null, ProcessError | ParsingError>;
+  enable(unit: SystemdUnit, now?: "now"): ResultAsync<typeof unit, ProcessError | ParsingError>;
+  disable(unit: SystemdUnit, now?: "now"): ResultAsync<typeof unit, ProcessError | ParsingError>;
   checkActive(unit: SystemdUnit): ResultAsync<boolean, ProcessError | ParsingError>;
-  start(unit: SystemdUnit): ResultAsync<null, ProcessError | ParsingError>;
-  restart(unit: SystemdUnit): ResultAsync<null, ProcessError | ParsingError>;
-  stop(unit: SystemdUnit): ResultAsync<null, ProcessError | ParsingError>;
+  start(unit: SystemdUnit): ResultAsync<typeof unit, ProcessError | ParsingError>;
+  restart(unit: SystemdUnit): ResultAsync<typeof unit, ProcessError | ParsingError>;
+  stop(unit: SystemdUnit): ResultAsync<typeof unit, ProcessError | ParsingError>;
   getSettings<T extends SystemdUnitType>(
     unit: SystemdUnit<T>
   ): ResultAsync<SystemdUnitSettings<T>, ProcessError | ParsingError>;
   setSettings<T extends SystemdUnitType>(
     unit: SystemdUnit<T>,
     settings: SystemdUnitSettings<T>
-  ): ResultAsync<null, ProcessError | ParsingError>;
+  ): ResultAsync<typeof unit, ProcessError | ParsingError>;
   escape(
     text: string,
     opts?: { path?: boolean; suffix?: SystemdUnitType }
@@ -106,6 +112,8 @@ export interface ISystemdManager {
 }
 
 const SystemdManagerImplementation = (serviceManager: "system" | "user" = "system") => {
+  const unitFileDirectory = `/etc/systemd/${serviceManager}`;
+
   const parser = IniSyntax({ duplicateKey: "append", paramIndent: "" });
 
   const systemctlCommand = (command: string, ...args: string[]) =>
@@ -119,7 +127,11 @@ const SystemdManagerImplementation = (serviceManager: "system" | "user" = "syste
       .map((proc) => proc.getStdout().trim());
 
   const getUnitFilePath = (server: Server, unit: SystemdUnit) =>
-    getUnitProperty(server, unit, "FragmentPath");
+    getUnitProperty(server, unit, "FragmentPath").andThen((filePath) =>
+      filePath === ""
+        ? err(new ParsingError(`Failed to get unit file path for ${unit.name}`))
+        : ok(filePath)
+    );
 
   const listUnits = <T extends SystemdUnitType>(
     server: Server,
@@ -146,6 +158,36 @@ const SystemdManagerImplementation = (serviceManager: "system" | "user" = "syste
         }))
       );
 
+  const createUnit = <T extends SystemdUnitType>(
+    server: Server,
+    unit: SystemdUnit<T>,
+    settings: SystemdUnitSettings<T>
+  ): ResultAsync<typeof unit, ProcessError | ParsingError> =>
+    new File(server, `${unitFileDirectory}/${unit.name}`)
+      .assertExists(false)
+      .andThen((unitFile) => unitFile.create(false, { superuser: "try" }))
+      .andThen(() => setSettings(server, unit, settings))
+      .map(() => unit);
+
+  const removeUnit = (
+    server: Server,
+    unit: SystemdUnit
+  ): ResultAsync<typeof unit, ProcessError | ParsingError> =>
+    checkActive(server, unit)
+      .andThen((isActive) =>
+        isActive ? err(new ProcessError(`Cannot remove active unit: ${unit.name}`)) : ok(unit)
+      )
+      .andThen((unit) =>
+        checkEnabled(server, unit).andThen((isEnabled) =>
+          isEnabled ? err(new ProcessError(`Cannot remove enabled unit: ${unit.name}`)) : ok(unit)
+        )
+      )
+      .andThen((unit) => getUnitFilePath(server, unit).map((path) => new File(server, path)))
+      .andThen((unitFile) => unitFile.assertIsFile())
+      .andThen((unitFile) => unitFile.remove({ superuser: "try" }))
+      .andThen(() => server.execute(systemctlCommand("daemon-reload")))
+      .map(() => unit);
+
   const checkEnabled = (
     server: Server,
     unit: SystemdUnit
@@ -158,19 +200,19 @@ const SystemdManagerImplementation = (serviceManager: "system" | "user" = "syste
     server: Server,
     unit: SystemdUnit,
     now?: "now"
-  ): ResultAsync<null, ProcessError | ParsingError> =>
+  ): ResultAsync<typeof unit, ProcessError | ParsingError> =>
     server
       .execute(systemctlCommand("enable", ...(now ? ["--now"] : []), unit.name), true)
-      .map(() => null);
+      .map(() => unit);
 
   const disable = (
     server: Server,
     unit: SystemdUnit,
     now?: "now"
-  ): ResultAsync<null, ProcessError | ParsingError> =>
+  ): ResultAsync<typeof unit, ProcessError | ParsingError> =>
     server
       .execute(systemctlCommand("disable", ...(now ? ["--now"] : []), unit.name), true)
-      .map(() => null);
+      .map(() => unit);
 
   const checkActive = (
     server: Server,
@@ -183,20 +225,20 @@ const SystemdManagerImplementation = (serviceManager: "system" | "user" = "syste
   const start = (
     server: Server,
     unit: SystemdUnit
-  ): ResultAsync<null, ProcessError | ParsingError> =>
-    server.execute(systemctlCommand("start", unit.name), true).map(() => null);
+  ): ResultAsync<typeof unit, ProcessError | ParsingError> =>
+    server.execute(systemctlCommand("start", unit.name), true).map(() => unit);
 
   const restart = (
     server: Server,
     unit: SystemdUnit
-  ): ResultAsync<null, ProcessError | ParsingError> =>
-    server.execute(systemctlCommand("restart", unit.name), true).map(() => null);
+  ): ResultAsync<typeof unit, ProcessError | ParsingError> =>
+    server.execute(systemctlCommand("restart", unit.name), true).map(() => unit);
 
   const stop = (
     server: Server,
     unit: SystemdUnit
-  ): ResultAsync<null, ProcessError | ParsingError> =>
-    server.execute(systemctlCommand("stop", unit.name), true).map(() => null);
+  ): ResultAsync<typeof unit, ProcessError | ParsingError> =>
+    server.execute(systemctlCommand("stop", unit.name), true).map(() => unit);
 
   const getSettings = <T extends SystemdUnitType>(
     server: Server,
@@ -219,20 +261,24 @@ const SystemdManagerImplementation = (serviceManager: "system" | "user" = "syste
     server: Server,
     unit: SystemdUnit<T>,
     settings: SystemdUnitSettings<T>
-  ): ResultAsync<null, ProcessError | ParsingError> =>
+  ): ResultAsync<typeof unit, ProcessError | ParsingError> =>
     isMount(unit) && !isMountSettings(settings)
       ? errAsync(new ParsingError("Systemd mount unit settings malformed"))
       : parser
           .unapply(settings)
           .asyncAndThen((settingsText) =>
-            getUnitFilePath(server, unit).andThen((filePath) => {
-              if (filePath === "") {
-                return errAsync(new ParsingError(`Failed to get unit file path for ${unit.name}`));
-              }
-              return new File(server, filePath).write(settingsText);
-            })
+            getUnitFilePath(server, unit)
+              .andThen((filePath) =>
+                filePath.startsWith("/run")
+                  ? err(new ProcessError(`Tried to set settings on volatile unit: ${filePath}`))
+                  : ok(filePath)
+              )
+              .andThen((filePath) =>
+                new File(server, filePath).write(settingsText, false, { superuser: "try" })
+              )
           )
-          .map(() => null);
+          .andThen(() => server.execute(systemctlCommand("daemon-reload")))
+          .map(() => unit);
 
   const escape = (
     server: Server,
@@ -276,6 +322,8 @@ const SystemdManagerImplementation = (serviceManager: "system" | "user" = "syste
 
   return {
     listUnits,
+    createUnit,
+    removeUnit,
     checkEnabled,
     enable,
     disable,
@@ -299,6 +347,12 @@ export function SystemdManagerSingleServer(
   const impl = SystemdManagerImplementation(serviceManager);
   return {
     listUnits: <T extends SystemdUnitType>(type?: T) => impl.listUnits(server, type),
+    createUnit: <T extends SystemdUnitType>(
+      unit: SystemdUnit<T>,
+      settings: SystemdUnitSettings<T>
+    ) => impl.createUnit(server, unit, settings),
+    removeUnit: (...args: Parameters<ISystemdManager["removeUnit"]>) =>
+      impl.removeUnit(server, ...args),
     checkEnabled: (...args: Parameters<ISystemdManager["checkEnabled"]>) =>
       impl.checkEnabled(server, ...args),
     enable: (...args: Parameters<ISystemdManager["enable"]>) => impl.enable(server, ...args),
@@ -331,24 +385,45 @@ export function SystemdManagerClustered(
   const impl = SystemdManagerImplementation(serviceManager);
   return {
     listUnits: <T extends SystemdUnitType>(type?: T) => impl.listUnits(getterServer, type),
+    createUnit: <T extends SystemdUnitType>(
+      unit: SystemdUnit<T>,
+      settings: SystemdUnitSettings<T>
+    ) =>
+      ResultAsync.combine(servers.map((server) => impl.createUnit(server, unit, settings))).map(
+        ([unit]) => unit!
+      ),
+    removeUnit: (...args: Parameters<ISystemdManager["removeUnit"]>) =>
+      ResultAsync.combine(servers.map((server) => impl.removeUnit(server, ...args))).map(
+        ([unit]) => unit!
+      ),
     checkEnabled: (...args: Parameters<ISystemdManager["checkEnabled"]>) =>
       ResultAsync.combine(servers.map((server) => impl.checkEnabled(server, ...args))).map(
         (results) => results.every((r) => r)
       ),
     enable: (...args: Parameters<ISystemdManager["enable"]>) =>
-      ResultAsync.combine(servers.map((server) => impl.enable(server, ...args))).map(() => null),
+      ResultAsync.combine(servers.map((server) => impl.enable(server, ...args))).map(
+        ([unit]) => unit!
+      ),
     disable: (...args: Parameters<ISystemdManager["disable"]>) =>
-      ResultAsync.combine(servers.map((server) => impl.disable(server, ...args))).map(() => null),
+      ResultAsync.combine(servers.map((server) => impl.disable(server, ...args))).map(
+        ([unit]) => unit!
+      ),
     checkActive: (...args: Parameters<ISystemdManager["checkActive"]>) =>
       ResultAsync.combine(servers.map((server) => impl.checkActive(server, ...args))).map(
         (results) => results.every((r) => r)
       ),
     start: (...args: Parameters<ISystemdManager["start"]>) =>
-      ResultAsync.combine(servers.map((server) => impl.start(server, ...args))).map(() => null),
+      ResultAsync.combine(servers.map((server) => impl.start(server, ...args))).map(
+        ([unit]) => unit!
+      ),
     restart: (...args: Parameters<ISystemdManager["restart"]>) =>
-      ResultAsync.combine(servers.map((server) => impl.restart(server, ...args))).map(() => null),
+      ResultAsync.combine(servers.map((server) => impl.restart(server, ...args))).map(
+        ([unit]) => unit!
+      ),
     stop: (...args: Parameters<ISystemdManager["stop"]>) =>
-      ResultAsync.combine(servers.map((server) => impl.stop(server, ...args))).map(() => null),
+      ResultAsync.combine(servers.map((server) => impl.stop(server, ...args))).map(
+        ([unit]) => unit!
+      ),
     getSettings: <T extends SystemdUnitType>(unit: SystemdUnit<T>) =>
       impl.getSettings(getterServer, unit),
     setSettings: <T extends SystemdUnitType>(
@@ -356,7 +431,7 @@ export function SystemdManagerClustered(
       settings: SystemdUnitSettings<T>
     ) =>
       ResultAsync.combine(servers.map((server) => impl.setSettings(server, unit, settings))).map(
-        () => null
+        ([unit]) => unit!
       ),
     escape: (...args: Parameters<ISystemdManager["escape"]>) => impl.escape(getterServer, ...args),
     unescape: (...args: Parameters<ISystemdManager["unescape"]>) =>

@@ -9,6 +9,7 @@ import {
   Disclosure,
   useTempObjectStaging,
   type InputValidator,
+  useGlobalProcessingState,
 } from "@45drives/houston-common-ui";
 import { type SambaShareConfig, defaultSambaShareConfig } from "@/tabs/samba/data-types";
 import { KeyValueSyntax } from "@45drives/houston-common-lib";
@@ -35,6 +36,8 @@ const emit = defineEmits<{
   (e: "cancel"): void;
   (e: "apply", value: SambaShareConfig): void;
 }>();
+
+const globalProcessingState = useGlobalProcessingState();
 
 const shareConf = computed<SambaShareConfig>(() =>
   props.newShare ? defaultSambaShareConfig() : props.share
@@ -249,7 +252,7 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
         <button
           class="btn btn-primary"
           @click="$emit('apply', tempShareConfig)"
-          :disabled="!inputsValid || !modified"
+          :disabled="!inputsValid || !modified || (globalProcessingState !== 0)"
         >
           {{ _("Apply") }}
         </button>
