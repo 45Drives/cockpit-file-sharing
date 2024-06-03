@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, watchEffect, inject } from "vue";
+import { ref, watchEffect, defineProps, computed, defineEmits } from "vue";
 import type { SambaGlobalConfig } from "@/tabs/samba/data-types";
 import {
   InputField,
@@ -11,20 +11,27 @@ import {
   Disclosure,
   SelectMenu,
   useTempObjectStaging,
-  wrapActions,
-  reportSuccess,
   type SelectMenuOption,
 } from "@45drives/houston-common-ui";
 import { KeyValueSyntax, getServer } from "@45drives/houston-common-lib";
 import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
 import { getSambaManager } from "@/tabs/samba/samba-manager";
-import { clusterScopeInjectionKey } from "@/common/injectionKeys";
 
 const _ = cockpit.gettext;
 
-const globalConf = ref<SambaGlobalConfig>();
+const props = defineProps<{
+  globalConf: SambaGlobalConfig;
+}>();
 
-const { tempObject: tempGlobalConfig, modified, resetChanges } = useTempObjectStaging(globalConf);
+const emit = defineEmits<{
+  (e: "apply", newGlobalConf: SambaGlobalConfig): void;
+}>();
+
+const {
+  tempObject: tempGlobalConfig,
+  modified,
+  resetChanges,
+} = useTempObjectStaging(computed(() => props.globalConf));
 
 const revealAdvancedTextarea = ref(false);
 watchEffect(() => {
@@ -53,22 +60,6 @@ const logLevelOptions: SelectMenuOption<number>[] = [5, 4, 3, 2, 1, 0].map((n) =
 }));
 
 const sambaManager = getServer().map((server) => getSambaManager(server));
-
-const loadGlobalSettings = () =>
-  sambaManager.andThen((sm) => sm.getGlobalConfig()).map((config) => (globalConf.value = config));
-
-const applyGlobalSettings = (newSettings: SambaGlobalConfig) =>
-  sambaManager
-    .andThen((sm) => sm.editGlobal(newSettings))
-    .andThen(() => loadGlobalSettings())
-    .map(() => reportSuccess(_("Updated global Samba configuration.")));
-
-const actions = wrapActions({
-  loadGlobalSettings,
-  applyGlobalSettings,
-});
-
-onMounted(actions.loadGlobalSettings);
 </script>
 
 <template>
@@ -133,7 +124,7 @@ onMounted(actions.loadGlobalSettings);
         </button>
         <button
           class="btn btn-primary"
-          @click="() => tempGlobalConfig && actions.applyGlobalSettings(tempGlobalConfig)"
+          @click="() => tempGlobalConfig && emit('apply', tempGlobalConfig)"
           :disabled="!modified"
         >
           {{ _("Apply") }}

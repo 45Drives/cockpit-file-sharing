@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SambaGlobalConfig } from "@/tabs/samba/data-types";
 import { getServer, Download } from "@45drives/houston-common-lib";
 import {
   CenteredCardColumn,
@@ -8,6 +9,7 @@ import {
   CardContainer,
   FileUploadButton,
   assertConfirm,
+  reportSuccess,
 } from "@45drives/houston-common-ui";
 
 import GlobalConfigEditor from "./GlobalConfigEditor.vue";
@@ -32,6 +34,16 @@ const server = getServer();
 const sambaManager = server.map((server) => getSambaManager(server));
 
 const defaultSmbConfPath = "/etc/samba/smb.conf";
+
+const globalConf = ref<SambaGlobalConfig>();
+const loadGlobalSettings = () =>
+  sambaManager.andThen((sm) => sm.getGlobalConfig()).map((config) => (globalConf.value = config));
+
+const applyGlobalSettings = (newSettings: SambaGlobalConfig) =>
+  sambaManager
+    .andThen((sm) => sm.editGlobal(newSettings))
+    .andThen(() => loadGlobalSettings())
+    .map(() => reportSuccess(_("Updated global Samba configuration.")));
 
 const checkSambaConf = () =>
   sambaManager
@@ -90,18 +102,25 @@ const exportConfig = () =>
     );
 
 const actions = wrapActions({
+  loadGlobalSettings,
+  applyGlobalSettings,
   checkSambaConf,
   fixSmbConfIncludeRegistry,
   importConfig,
   exportConfig,
 });
 
+onMounted(actions.loadGlobalSettings);
 onMounted(actions.checkSambaConf);
 </script>
 
 <template>
   <CenteredCardColumn>
-    <GlobalConfigEditor />
+    <GlobalConfigEditor
+      v-if="globalConf"
+      :globalConf="globalConf"
+      @apply="actions.applyGlobalSettings"
+    />
     <ShareListView />
     <CardContainer>
       <template #header>
