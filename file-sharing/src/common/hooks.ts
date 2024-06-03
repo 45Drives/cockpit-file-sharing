@@ -1,7 +1,7 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import { Result, ResultAsync, ok, err } from "neverthrow";
 
-export type HookCallback = () => ResultAsync<void, Error>;
+export type HookCallback = () => ResultAsync<void, Error> | void;
 
 export const Hooks = {
   BeforeAddShare: Symbol("BeforeAddShare"),
@@ -25,7 +25,11 @@ const getHookCallbacks = (hook: Hook) => {
 
 export const executeHookCallbacks = (hook: Hook) =>
   getHookCallbacks(hook).asyncAndThen((hooks) =>
-    ResultAsync.combine([...hooks.values()].map((callback) => callback()))
+    ResultAsync.combine(
+      [...hooks.values()]
+        .map((callback) => callback())
+        .filter((result): result is ResultAsync<void, Error> => result instanceof ResultAsync)
+    )
   );
 
 export const registerHookCallback = (hook: Hook, callback: HookCallback) =>
@@ -33,7 +37,10 @@ export const registerHookCallback = (hook: Hook, callback: HookCallback) =>
 export const unregisterHookCallback = (hook: Hook, callback: HookCallback) =>
   getHookCallbacks(hook).map((callbacks) => callbacks.delete(callback));
 
-export const useHookCallback = (hook: Hook, callback: HookCallback) => {
-  onMounted(() => registerHookCallback(hook, callback));
-  onUnmounted(() => unregisterHookCallback(hook, callback));
+export const useHookCallback = (hook: Hook | Hook[], callback: HookCallback) => {
+  const hooks = [hook].flat();
+  for (const hook of hooks) {
+    onMounted(() => registerHookCallback(hook, callback));
+    onUnmounted(() => unregisterHookCallback(hook, callback));
+  }
 };
