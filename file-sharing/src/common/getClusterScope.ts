@@ -23,7 +23,7 @@ export function getClusterScope(
         const ctdbNodesFile = new File(server, "/etc/ctdb/nodes");
         return ctdbNodesFile.exists().andThen((ctdbNodesFileExists) => {
           if (ctdbNodesFileExists) {
-            return ctdbNodesFile.read(false, { superuser: "try" }).andThen((nodesString) =>
+            return ctdbNodesFile.read({ superuser: "try" }).andThen((nodesString) =>
               ResultAsync.combine(
                 nodesString
                   .split(RegexSnippets.newlineSplitter)

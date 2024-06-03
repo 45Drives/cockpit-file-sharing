@@ -274,7 +274,7 @@ const SystemdManagerImplementation = (serviceManager: "system" | "user" = "syste
                   : ok(filePath)
               )
               .andThen((filePath) =>
-                new File(server, filePath).write(settingsText, false, { superuser: "try" })
+                new File(server, filePath).write(settingsText, { superuser: "try" })
               )
           )
           .andThen(() => server.execute(systemctlCommand("daemon-reload")))

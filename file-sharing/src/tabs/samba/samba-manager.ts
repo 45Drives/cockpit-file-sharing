@@ -38,6 +38,14 @@ export interface ISambaManager {
   editShare(share: SambaShareConfig): ResultAsync<null, ProcessError>;
 
   removeShare(share: SambaShareConfig): ResultAsync<null, ProcessError>;
+
+  exportConfig(): ResultAsync<string, ProcessError>;
+
+  importConfig(config: string): ResultAsync<null, ProcessError>;
+
+  checkIfSmbConfIncludesRegistry(smbConfPath: string): ResultAsync<boolean, ProcessError>;
+
+  patchSmbConfIncludeRegistry(smbConfPath: string): ResultAsync<null, ProcessError>;
 }
 
 export namespace SambaManagerImplementation {
@@ -48,22 +56,23 @@ export namespace SambaManagerImplementation {
   // const loadSettingsCommand = new Command(["net", "conf", "list"], netConfCommandOptions);
   // const loadSettingsParse = (commandOutput: string) => SmbConfParser().apply(commandOutput);
 
-  const listShareNamesCommand = new Command(["net", "conf", "listshares"], netConfCommandOptions);
+  const netConfCommand = (...args: string[]) =>
+    new Command(["net", "conf", ...args], netConfCommandOptions);
 
-  const addShareCommand = (name: string, path: string) =>
-    new Command(["net", "conf", "addshare", name, path], netConfCommandOptions);
+  const listShareNamesCommand = netConfCommand("listshares");
+
+  const addShareCommand = (name: string, path: string) => netConfCommand("addshare", name, path);
 
   const getParmCommand = (section: string, param: string) =>
-    new Command(["net", "conf", "getparm", section, param], netConfCommandOptions);
+    netConfCommand("getparm", section, param);
 
   const setParmCommand = (section: string, param: string, value: string) =>
-    new Command(["net", "conf", "setparm", section, param, value], netConfCommandOptions);
+    netConfCommand("setparm", section, param, value);
 
   const delParmCommand = (section: string, param: string) =>
-    new Command(["net", "conf", "delparm", section, param], netConfCommandOptions);
+    netConfCommand("delparm", section, param);
 
-  const showShareCommand = (section: string) =>
-    new Command(["net", "conf", "showshare", section], netConfCommandOptions);
+  const showShareCommand = (section: string) => netConfCommand("showshare", section);
   const showShareParse = (commandOutput: string): Result<SambaShareConfig, ParsingError> => {
     return IniSyntax()
       .apply(commandOutput)
@@ -79,8 +88,7 @@ export namespace SambaManagerImplementation {
       });
   };
 
-  const delShareCommand = (section: string) =>
-    new Command(["net", "conf", "delshare", section], netConfCommandOptions);
+  const delShareCommand = (section: string) => netConfCommand("delshare", section);
 
   const setSectionParams = (server: Server, section: string, params: KeyValueData) =>
     ResultAsync.combine(
@@ -166,6 +174,36 @@ export namespace SambaManagerImplementation {
       .andThen(() => server.execute(delShareCommand(shareName)))
       .andThen(() => executeHookCallbacks(Hooks.AfterRemoveShare));
   };
+  export const exportConfig = (server: Server) =>
+    server.execute(netConfCommand("list")).map((proc) => proc.getStdout());
+  export const importConfig = (server: Server, config: string) =>
+    File.makeTemp(server)
+      .andThen((confFile) =>
+        confFile.write(
+          // remove include = registry or config backend = registry
+          config.replace(/^[ \t]*(include|config backend)[ \t]*=[ \t]*registry.*$\n?/im, "")
+        )
+      )
+      .andThen((confFile) => server.execute(netConfCommand("import", confFile.path)));
+  export const checkIfSmbConfIncludesRegistry = (server: Server, smbConfPath: string) =>
+    new File(server, smbConfPath)
+      .assertExists()
+      .andThen((smbConf) => smbConf.read())
+      .andThen(IniSyntax({ duplicateKey: "ignore" }).apply)
+      .map((smbConf) => smbConf.global?.include === "registry");
+  export const patchSmbConfIncludeRegistry = (server: Server, smbConfPath: string) =>
+    new File(server, smbConfPath)
+      .assertExists()
+      .andThen((smbConf) =>
+        smbConf.replace(
+          (currentConfig) =>
+            currentConfig.replace(
+              /^\s*\[ ?global ?\]\s*$(?:\n^(?!;?\s*\[).*$)*/im,
+              "$&\n\t# inclusion of net registry, inserted by cockpit-file-sharing:\n\tinclude = registry\n"
+            ),
+          netConfCommandOptions
+        )
+      );
 }
 
 export function SambaManagerSingleServer(server: Server): ISambaManager {
@@ -184,6 +222,13 @@ export function SambaManagerSingleServer(server: Server): ISambaManager {
       SambaManagerImplementation.editShare(server, share).map(() => null),
     removeShare: (share: SambaShareConfig) =>
       SambaManagerImplementation.removeShare(server, share).map(() => null),
+    exportConfig: () => SambaManagerImplementation.exportConfig(server),
+    importConfig: (config) =>
+      SambaManagerImplementation.importConfig(server, config).map(() => null),
+    checkIfSmbConfIncludesRegistry: (smbConfPath) =>
+      SambaManagerImplementation.checkIfSmbConfIncludesRegistry(server, smbConfPath),
+    patchSmbConfIncludeRegistry: (smbConfPath) =>
+      SambaManagerImplementation.patchSmbConfIncludeRegistry(server, smbConfPath).map(() => null),
   };
 }
 
