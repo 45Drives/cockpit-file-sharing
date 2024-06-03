@@ -24,7 +24,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: "apply", newGlobalConf: SambaGlobalConfig): void;
+  (e: "apply", newGlobalConf: SambaGlobalConfig, callback?: () => void): void;
 }>();
 
 const {

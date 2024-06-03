@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SambaGlobalConfig } from "@/tabs/samba/data-types";
+import { type SambaShareConfig, type SambaGlobalConfig } from "@/tabs/samba/data-types";
 import { getServer, Download } from "@45drives/houston-common-lib";
 import {
   CenteredCardColumn,
@@ -10,6 +10,7 @@ import {
   FileUploadButton,
   assertConfirm,
   reportSuccess,
+  computedResult,
 } from "@45drives/houston-common-ui";
 
 import GlobalConfigEditor from "./GlobalConfigEditor.vue";
@@ -35,17 +36,64 @@ const sambaManager = server.map((server) => getSambaManager(server));
 
 const defaultSmbConfPath = "/etc/samba/smb.conf";
 
-const globalConf = ref<SambaGlobalConfig>();
-const loadGlobalSettings = () =>
-  sambaManager.andThen((sm) => sm.getGlobalConfig()).map((config) => (globalConf.value = config));
+const [globalConf, reloadGlobalConf] = computedResult(() =>
+  sambaManager.andThen((sm) => sm.getGlobalConfig())
+);
+
+const [shares, reloadShares] = computedResult(
+  () => sambaManager.andThen((sm) => sm.getShares()).map((s) => s.sort(shareSortPredicate)),
+  []
+);
 
 const applyGlobalSettings = (newSettings: SambaGlobalConfig) =>
   sambaManager
     .andThen((sm) => sm.editGlobal(newSettings))
-    .andThen(() => loadGlobalSettings())
+    .andThen(() => reloadGlobalConf())
     .map(() => reportSuccess(_("Updated global Samba configuration.")));
 
-const checkSambaConf = () =>
+const shareSortPredicate = (a: SambaShareConfig, b: SambaShareConfig) =>
+  a.name.localeCompare(b.name, undefined, { caseFirst: "false" });
+
+const reloadShare = (shareName: string) =>
+  sambaManager
+    .andThen((sm) => sm.getShare(shareName))
+    .map((newShare) => {
+      // if share is in array
+      if (shares.value.some((s) => s.name === newShare.name)) {
+        // patch new share config into array
+        shares.value = shares.value.map((oldShare) =>
+          oldShare.name === newShare.name ? newShare : oldShare
+        );
+      } else {
+        // append share to array
+        shares.value = [newShare, ...shares.value].sort(shareSortPredicate);
+      }
+    });
+
+const addShare = (share: SambaShareConfig) =>
+  sambaManager
+    .andThen((sm) => sm.addShare(share))
+    .andThen(() => reloadShare(share.name))
+    .map(() => reportSuccess(`${_("Successfully added share")} ${share.name}`));
+
+const editShare = (share: SambaShareConfig) =>
+  sambaManager
+    .andThen((sm) => sm.editShare(share))
+    .andThen(() => reloadShare(share.name))
+    .map(() => reportSuccess(`${_("Successfully updated share")} ${share.name}`));
+
+const removeShare = (share: SambaShareConfig) =>
+  assertConfirm({
+    header: _("Permanently delete") + ` ${share.name}?`,
+    body: _("This cannot be undone."),
+    dangerous: true,
+  })
+    .andThen(() => sambaManager)
+    .andThen((sm) => sm.removeShare(share))
+    .map(() => (shares.value = shares.value.filter((s) => s.name !== share.name)))
+    .map(() => reportSuccess(`${_("Successfully removed share")} ${share.name}`));
+
+const checkIfSmbConfIncludesRegistry = () =>
   sambaManager
     .andThen((sm) => sm.checkIfSmbConfIncludesRegistry(defaultSmbConfPath))
     .map((smbConfHasIncludeRegistry) => {
@@ -66,7 +114,9 @@ const checkSambaConf = () =>
     });
 
 const fixSmbConfIncludeRegistry = () =>
-  sambaManager.andThen((sm) => sm.patchSmbConfIncludeRegistry(defaultSmbConfPath));
+  sambaManager
+    .andThen((sm) => sm.patchSmbConfIncludeRegistry(defaultSmbConfPath))
+    .map(() => reportSuccess(_("Added `include = registry` to ") + defaultSmbConfPath));
 
 const uploadRef = ref<InstanceType<typeof FileUploadButton> | null>(null);
 
@@ -86,7 +136,10 @@ const importConfig = () =>
     .andThen((file) => ResultAsync.fromSafePromise(file.text()))
     .andThen((newConfigContents) =>
       sambaManager.andThen((sm) => sm.importConfig(newConfigContents))
-    );
+    )
+    .andThen(() => reloadGlobalConf())
+    .andThen(() => reloadShares())
+    .map(() => reportSuccess(_("Imported configuration")));
 
 const exportConfig = () =>
   sambaManager
@@ -102,16 +155,17 @@ const exportConfig = () =>
     );
 
 const actions = wrapActions({
-  loadGlobalSettings,
   applyGlobalSettings,
-  checkSambaConf,
+  addShare,
+  editShare,
+  removeShare,
+  checkIfSmbConfIncludesRegistry,
   fixSmbConfIncludeRegistry,
   importConfig,
   exportConfig,
 });
 
-onMounted(actions.loadGlobalSettings);
-onMounted(actions.checkSambaConf);
+onMounted(actions.checkIfSmbConfIncludesRegistry);
 </script>
 
 <template>
@@ -119,9 +173,17 @@ onMounted(actions.checkSambaConf);
     <GlobalConfigEditor
       v-if="globalConf"
       :globalConf="globalConf"
-      @apply="actions.applyGlobalSettings"
+      @apply="
+        (newGlobalConf, callback) =>
+          actions.applyGlobalSettings(newGlobalConf).map(() => callback?.())
+      "
     />
-    <ShareListView />
+    <ShareListView
+      :shares="shares"
+      @addShare="(newConf, callback) => actions.addShare(newConf).map(() => callback?.())"
+      @editShare="(newConf, callback) => actions.editShare(newConf).map(() => callback?.())"
+      @removeShare="(share, callback) => actions.removeShare(share).map(() => callback?.())"
+    />
     <CardContainer>
       <template #header>
         {{ _("Import/Export Config") }}

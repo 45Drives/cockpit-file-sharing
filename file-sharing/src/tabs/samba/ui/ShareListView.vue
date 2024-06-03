@@ -1,94 +1,27 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, defineProps, inject } from "vue";
+import { ref, computed, defineProps } from "vue";
 import type { SambaShareConfig } from "@/tabs/samba/data-types";
-import {
-  CardContainer,
-  Disclosure,
-  DisclosureController,
-  SelectMenu,
-  useTempObjectStaging,
-  wrapActions,
-  reportSuccess,
-  assertConfirm,
-  type SelectMenuOption,
-} from "@45drives/houston-common-ui";
-import { getServer } from "@45drives/houston-common-lib";
-import { getSambaManager } from "@/tabs/samba/samba-manager";
+import { CardContainer, Disclosure, DisclosureController } from "@45drives/houston-common-ui";
 import Table from "@/tabs/samba/ui/Table.vue";
 import { PlusIcon } from "@heroicons/vue/20/solid";
 import ShareEditor from "@/tabs/samba/ui/ShareEditor.vue";
-import { okAsync, errAsync } from "neverthrow";
-import { clusterScopeInjectionKey } from "@/common/injectionKeys";
 import { PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
 
 const _ = cockpit.gettext;
 
-const sambaManager = getServer().map((server) => getSambaManager(server));
+const props = defineProps<{
+  shares: SambaShareConfig[];
+}>();
+
+const emit = defineEmits<{
+  (e: "addShare", share: SambaShareConfig, callback?: () => void): void;
+  (e: "editShare", share: SambaShareConfig, callback?: () => void): void;
+  (e: "removeShare", share: SambaShareConfig, callback?: () => void): void;
+}>();
 
 const showNewShareEditor = ref(false);
 
-const shares = ref<SambaShareConfig[]>([]);
-
-const shareNames = computed(() => shares.value.map((s) => s.name));
-
-const shareSortPredicate = (a: SambaShareConfig, b: SambaShareConfig) =>
-  a.name.localeCompare(b.name, undefined, { caseFirst: "false" });
-
-const loadShares = () =>
-  sambaManager
-    .andThen((sm) => sm.getShares())
-    .map((s) => {
-      s.sort(shareSortPredicate);
-      shares.value = s;
-    });
-
-const reloadShare = (shareName: string) =>
-  sambaManager
-    .andThen((sm) => sm.getShare(shareName))
-    .map((newShare) => {
-      // if share is in array
-      if (shares.value.some((s) => s.name === newShare.name)) {
-        // patch new share config into array
-        shares.value = shares.value.map((oldShare) =>
-          oldShare.name === newShare.name ? newShare : oldShare
-        );
-      } else {
-        // append share to array
-        shares.value = [newShare, ...shares.value].sort(shareSortPredicate);
-      }
-    });
-
-const addShare = (share: SambaShareConfig) =>
-  sambaManager
-    .andThen((sm) => sm.addShare(share))
-    .andThen(() => reloadShare(share.name))
-    .map(() => reportSuccess(`${_("Successfully added share")} ${share.name}`));
-
-const editShare = (share: SambaShareConfig) =>
-  sambaManager
-    .andThen((sm) => sm.editShare(share))
-    .andThen(() => reloadShare(share.name))
-    .map(() => reportSuccess(`${_("Successfully updated share")} ${share.name}`));
-
-const removeShare = (share: SambaShareConfig) =>
-  assertConfirm({
-    header: _("Permanently delete") + ` ${share.name}?`,
-    body: _("This cannot be undone."),
-    dangerous: true,
-  })
-    .andThen(() => sambaManager)
-    .andThen((sm) => sm.removeShare(share))
-    .map(() => (shares.value = shares.value.filter((s) => s.name !== share.name)))
-    .map(() => reportSuccess(`${_("Successfully removed share")} ${share.name}`));
-
-const actions = wrapActions({
-  loadShares,
-  addShare,
-  editShare,
-  removeShare,
-});
-
-onMounted(actions.loadShares);
+const shareNames = computed(() => props.shares.map((s) => s.name));
 </script>
 
 <template>
@@ -103,12 +36,7 @@ onMounted(actions.loadShares);
         newShare
         :allShareNames="shareNames"
         @cancel="showNewShareEditor = false"
-        @apply="
-          (s) =>
-            actions.addShare(s).map(() => {
-              showNewShareEditor = false;
-            })
-        "
+        @apply="(s) => emit('addShare', s, () => (showNewShareEditor = false))"
         class="!shadow-none !divide-y-0 pb-5 pt-5 px-4 sm:!pt-0 sm:!px-0"
       />
     </Disclosure>
@@ -133,12 +61,6 @@ onMounted(actions.loadShares);
       </template>
       <template #tbody>
         <template v-for="share in shares" :key="share.name">
-          <!-- <ShareTableRow
-            :share="share"
-            :allShareNames="shareNames"
-            @editShare="(s, callback) => actions.editShare(s).map(() => callback())"
-            @removeShare="(s) => actions.removeShare(s)"
-          /> -->
           <DisclosureController v-slot="{ show: showEditor, setShow: setShowEditor }">
             <tr>
               <td>{{ share.name }}</td>
@@ -148,7 +70,7 @@ onMounted(actions.loadShares);
                   <span class="sr-only">Edit</span>
                   <PencilSquareIcon class="size-icon icon-default" />
                 </button>
-                <button @click="actions.removeShare(share)">
+                <button @click="emit('removeShare', share)">
                   <span class="sr-only">Delete</span>
                   <TrashIcon class="size-icon icon-danger" />
                 </button>
@@ -166,7 +88,7 @@ onMounted(actions.loadShares);
                       :allShareNames="shareNames"
                       class="!shadow-none px-4 sm:px-6 py-5"
                       @cancel="setShowEditor(false)"
-                      @apply="(share) => actions.editShare(share).map(() => setShowEditor(false))"
+                      @apply="(share) => emit('editShare', share, () => setShowEditor(false))"
                     />
                   </Disclosure>
                 </div>
