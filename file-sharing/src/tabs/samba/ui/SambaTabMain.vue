@@ -11,6 +11,7 @@ import {
   assertConfirm,
   reportSuccess,
   computedResult,
+  ToolTip,
 } from "@45drives/houston-common-ui";
 
 import GlobalConfigEditor from "./GlobalConfigEditor.vue";
@@ -123,7 +124,9 @@ const uploadRef = ref<InstanceType<typeof FileUploadButton> | null>(null);
 const importConfig = () =>
   assertConfirm({
     header: _("Overwrite current configuration?"),
-    body: _("Any sections in uploaded file will overwrite current configuration sections."),
+    body: _(
+      "Any sections in uploaded file will overwrite current configuration sections. You should export a copy of your config first."
+    ),
     dangerous: true,
   })
     .andThen(() => {
@@ -154,6 +157,18 @@ const exportConfig = () =>
       )
     );
 
+const importFromSmbConf = () =>
+  assertConfirm({
+    header: _("Overwrite current configuration?"),
+    body: _(
+      "Any sections in smb.conf will overwrite current configuration sections. You should export a copy of your config first."
+    ),
+    dangerous: true,
+  })
+    .andThen(() => sambaManager)
+    .andThen((sm) => sm.importFromSmbConf(defaultSmbConfPath))
+    .map(() => reportSuccess(_("Imported configuration")));
+
 const actions = wrapActions({
   applyGlobalSettings,
   addShare,
@@ -163,6 +178,7 @@ const actions = wrapActions({
   fixSmbConfIncludeRegistry,
   importConfig,
   exportConfig,
+  importFromSmbConf,
 });
 
 onMounted(actions.checkIfSmbConfIncludesRegistry);
@@ -195,6 +211,26 @@ onMounted(actions.checkIfSmbConfIncludesRegistry);
         <button class="btn btn-primary" @click="actions.exportConfig">
           {{ _("Export") }}
         </button>
+        <button
+          class="btn btn-secondary flex flex-row items-baseline gap-1"
+          @click="actions.importFromSmbConf"
+        >
+          <span>
+            {{ _("Import configuration from") }}
+          </span>
+          <span class="font-mono">
+            {{ defaultSmbConfPath }}
+          </span>
+          <ToolTip class="self-center" above>
+            {{
+              _(
+                "File Sharing uses Samba's net registry to configure shares. " +
+                  "Click this button to import configuration from /etc/samba/smb.conf into the net registry for management."
+              )
+            }}
+          </ToolTip>
+        </button>
+
         <FileUploadButton hidden accept=".conf" ref="uploadRef" @upload="" />
       </div>
     </CardContainer>
