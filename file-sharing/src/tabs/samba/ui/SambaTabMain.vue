@@ -13,12 +13,13 @@ import {
   computedResult,
   ToolTip,
 } from "@45drives/houston-common-ui";
+import { useUserSettings } from "@/common/user-settings";
 
 import GlobalConfigEditor from "./GlobalConfigEditor.vue";
 import ShareListView from "@/tabs/samba/ui/ShareListView.vue";
 import { getServerCluster } from "@/common/getServerCluster";
 
-import { onMounted, provide, ref } from "vue";
+import { onMounted, provide, ref, watch, watchEffect, computed } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
 
 import { SambaManager } from "@/tabs/samba/samba-manager";
@@ -27,6 +28,10 @@ import { ResultAsync, ok, err } from "neverthrow";
 
 const _ = cockpit.gettext;
 
+const userSettings = useUserSettings();
+
+const smbConfPath = computed(() => userSettings.value.samba.confPath);
+
 provide(serverClusterInjectionKey, getServerCluster("ctdb"));
 const cephClientName = ref<`client.${string}`>("client.samba");
 provide(cephClientNameInjectionKey, cephClientName);
@@ -34,8 +39,6 @@ provide(cephClientNameInjectionKey, cephClientName);
 const server = getServer();
 
 const sambaManager = server.map((server) => new SambaManager(server));
-
-const defaultSmbConfPath = "/etc/samba/smb.conf";
 
 const [globalConf, reloadGlobalConf] = computedResult(() =>
   sambaManager.andThen((sm) => sm.getGlobalConfig())
@@ -94,9 +97,9 @@ const removeShare = (share: SambaShareConfig) =>
     .map(() => (shares.value = shares.value.filter((s) => s.name !== share.name)))
     .map(() => reportSuccess(`${_("Successfully removed share")} ${share.name}`));
 
-const checkIfSmbConfIncludesRegistry = () =>
+const checkIfSmbConfIncludesRegistry = (smbConfPath: string) =>
   sambaManager
-    .andThen((sm) => sm.checkIfSmbConfIncludesRegistry(defaultSmbConfPath))
+    .andThen((sm) => sm.checkIfSmbConfIncludesRegistry(smbConfPath))
     .map((smbConfHasIncludeRegistry) => {
       if (!smbConfHasIncludeRegistry) {
         pushNotification(
@@ -108,16 +111,16 @@ const checkIfSmbConfIncludesRegistry = () =>
             "error",
             "never"
           ).addAction(_("Fix now"), async () => {
-            await actions.fixSmbConfIncludeRegistry();
+            await actions.fixSmbConfIncludeRegistry(smbConfPath);
           })
         );
       }
     });
 
-const fixSmbConfIncludeRegistry = () =>
+const fixSmbConfIncludeRegistry = (smbConfPath: string) =>
   sambaManager
-    .andThen((sm) => sm.patchSmbConfIncludeRegistry(defaultSmbConfPath))
-    .map(() => reportSuccess(_("Added `include = registry` to ") + defaultSmbConfPath));
+    .andThen((sm) => sm.patchSmbConfIncludeRegistry(smbConfPath))
+    .map(() => reportSuccess(_("Added `include = registry` to ") + smbConfPath));
 
 const uploadRef = ref<InstanceType<typeof FileUploadButton> | null>(null);
 
@@ -157,7 +160,7 @@ const exportConfig = () =>
       )
     );
 
-const importFromSmbConf = () =>
+const importFromSmbConf = (smbConfPath: string) =>
   assertConfirm({
     header: _("Overwrite current configuration?"),
     body: _(
@@ -166,7 +169,7 @@ const importFromSmbConf = () =>
     dangerous: true,
   })
     .andThen(() => sambaManager)
-    .andThen((sm) => sm.importFromSmbConf(defaultSmbConfPath))
+    .andThen((sm) => sm.importFromSmbConf(smbConfPath))
     .map(() => reportSuccess(_("Imported configuration")));
 
 const actions = wrapActions({
@@ -181,7 +184,9 @@ const actions = wrapActions({
   importFromSmbConf,
 });
 
-onMounted(actions.checkIfSmbConfIncludesRegistry);
+watch(smbConfPath, () => actions.checkIfSmbConfIncludesRegistry(smbConfPath.value), {
+  immediate: true,
+});
 </script>
 
 <template>
@@ -219,7 +224,7 @@ onMounted(actions.checkIfSmbConfIncludesRegistry);
             {{ _("Import configuration from") }}
           </span>
           <span class="font-mono">
-            {{ defaultSmbConfPath }}
+            {{ smbConfPath }}
           </span>
           <ToolTip class="self-center" above>
             {{
