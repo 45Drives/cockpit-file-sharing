@@ -1,5 +1,7 @@
 import { type InjectionKey, type Ref } from "vue";
-import { getClusterScope } from "@/common/getClusterScope";
+import { getServerCluster } from "@/common/getServerCluster";
 
-export const clusterScopeInjectionKey = Symbol() as InjectionKey<ReturnType<typeof getClusterScope>>;
-export const cephClientNameInjectionKey = Symbol() as InjectionKey<Ref<string>>;
+export const serverClusterInjectionKey = Symbol() as InjectionKey<
+  ReturnType<typeof getServerCluster>
+>;
+export const cephClientNameInjectionKey = Symbol() as InjectionKey<Ref<`client.${string}`>>;

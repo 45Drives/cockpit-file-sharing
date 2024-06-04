@@ -16,10 +16,10 @@ import {
 
 import GlobalConfigEditor from "./GlobalConfigEditor.vue";
 import ShareListView from "@/tabs/samba/ui/ShareListView.vue";
-import { getClusterScope } from "@/common/getClusterScope";
+import { getServerCluster } from "@/common/getServerCluster";
 
 import { onMounted, provide, ref } from "vue";
-import { clusterScopeInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
+import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
 
 import { SambaManager } from "@/tabs/samba/samba-manager";
 
@@ -27,8 +27,8 @@ import { ResultAsync, ok, err } from "neverthrow";
 
 const _ = cockpit.gettext;
 
-provide(clusterScopeInjectionKey, getClusterScope("ctdb"));
-const cephClientName = ref("client.samba");
+provide(serverClusterInjectionKey, getServerCluster("ctdb"));
+const cephClientName = ref<`client.${string}`>("client.samba");
 provide(cephClientNameInjectionKey, cephClientName);
 
 const server = getServer();

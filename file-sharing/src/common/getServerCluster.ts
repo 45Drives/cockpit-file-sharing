@@ -9,12 +9,11 @@ import {
 } from "@45drives/houston-common-lib";
 import { ResultAsync, okAsync, ok } from "neverthrow";
 
-export function getClusterScope(
+export function getServerCluster(
   scope: "local" | "ctdb" | "pcs",
   localServer?: Server
 ): ResultAsync<[Server, ...Server[]], ProcessError | ParsingError> {
   const localServerResult = localServer ? okAsync(localServer) : getServer();
-
   switch (scope) {
     case "local":
       return localServerResult.map((s) => [s]);
