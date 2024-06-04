@@ -3,7 +3,7 @@
         <div class="overflow-hidden"
             :style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }">
             <div class="card">
-                <ChapConfigurationEditor :target="target" @close-editor="() => {showEditor = false; actions.refreshTable()}"/>
+                <ChapConfigurationEditor :target="target" :outgoingUserPresent="outgoingUserPresent" @close-editor="() => {showEditor = false; actions.refreshTable()}"/>
             </div>
         </div>
         <div class="card">
@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
     import { CardContainer, wrapActions } from "@45drives/houston-common-ui";
-    import { inject, ref, type Ref } from "vue";
+    import { computed, inject, ref, type Ref } from "vue";
     import Table from "../Table.vue";
     import { PlusIcon } from "@heroicons/vue/24/solid";
     import type { ResultAsync } from "neverthrow";
@@ -41,13 +41,16 @@
     import type { ProcessError } from "@45drives/houston-common-lib";
     import type { Target } from "../../types/Target";
     import ChapConfigurationEntry from "./ChapConfigurationEntry.vue";
-import ChapConfigurationEditor from "./ChapConfigurationEditor.vue";
+    import ChapConfigurationEditor from "./ChapConfigurationEditor.vue";
+    import { CHAPType } from "../../types/CHAPConfiguration";
 
     const showEditor = ref(false);
 
     const props = defineProps<{target: Target}>();
 
     const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
+
+    const outgoingUserPresent = computed(() => (props.target.chapConfigurations.find((config) => config.chapType === CHAPType.OutgoingUser) !== undefined));
 
     if (driver === undefined) {
 		throw new Error("iSCSI Driver is null");

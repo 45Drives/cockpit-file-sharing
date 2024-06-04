@@ -63,7 +63,7 @@
 <script setup lang="ts">
     import { CardContainer, InputFeedback, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, wrapActions, type InputValidator, type SelectMenuOption } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
-    import { inject, ref } from 'vue';
+    import { computed, inject, ref } from 'vue';
     import { type Target } from '../../types/Target';
     import { ProcessError } from '@45drives/houston-common-lib';
     import type { ISCSIDriver } from '../../types/ISCSIDriver';
@@ -71,11 +71,22 @@
 
     const _ = cockpit.gettext;
 
-    const props = defineProps<{target: Target}>();
+    const props = defineProps<{target: Target, outgoingUserPresent: boolean}>();
 
     const emit = defineEmits(['closeEditor']);
 
-    const chapTypeOptions: SelectMenuOption<CHAPType>[] = Object.values(CHAPType).map(chapType => ({label: chapType.toString(), value: chapType}))
+    const chapTypeOptions = computed(() => {
+        let chapTypes;
+
+        if (props.outgoingUserPresent) {
+            chapTypes = [({label: CHAPType.IncomingUser.toString(), value: CHAPType.IncomingUser})]
+        }
+        else {
+            chapTypes = Object.values(CHAPType).map(chapType => ({label: chapType.toString(), value: chapType}));
+        }
+
+        return chapTypes;
+    })
 
     const newConfiguration = ref<CHAPConfiguration>(CHAPConfiguration.empty());
 
@@ -99,15 +110,6 @@
     }
 
     const actions = wrapActions({createConfiguration});
-
-    const getAvaliableChapTypes = () => {
-        const chapTypes = Object.values(CHAPType).map(chapType => ({label: chapType.toString(), value: chapType}));
-
-        if (props.target.chapConfigurations.some(config => config.chapType === CHAPType.OutgoingUser))
-            chapTypes.filter(chapType => chapType.value === CHAPType.OutgoingUser);
-
-        return chapTypes;
-    }
 
     const configurationUsernameValidator: InputValidator = (username: string) => {
         if (!username) {
