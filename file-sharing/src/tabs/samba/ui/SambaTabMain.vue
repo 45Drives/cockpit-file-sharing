@@ -21,7 +21,7 @@ import { getClusterScope } from "@/common/getClusterScope";
 import { onMounted, provide, ref } from "vue";
 import { clusterScopeInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
 
-import { getSambaManager } from "@/tabs/samba/samba-manager";
+import { SambaManager } from "@/tabs/samba/samba-manager";
 
 import { ResultAsync, ok, err } from "neverthrow";
 
@@ -33,7 +33,7 @@ provide(cephClientNameInjectionKey, cephClientName);
 
 const server = getServer();
 
-const sambaManager = server.map((server) => getSambaManager(server));
+const sambaManager = server.map((server) => new SambaManager(server));
 
 const defaultSmbConfPath = "/etc/samba/smb.conf";
 

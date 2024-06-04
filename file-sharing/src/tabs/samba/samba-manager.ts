@@ -23,7 +23,7 @@ import { executeHookCallbacks, Hooks } from "@/common/hooks";
 export interface ISambaManager {
   getGlobalConfig(): ResultAsync<SambaGlobalConfig, ParsingError | ProcessError>;
 
-  editGlobal(globalConfig: SambaGlobalConfig): ResultAsync<null, ProcessError>;
+  editGlobal(globalConfig: SambaGlobalConfig): ResultAsync<this, ProcessError>;
 
   listShareNames(): ResultAsync<string[], ProcessError>;
 
@@ -33,49 +33,61 @@ export interface ISambaManager {
 
   getShares(): ResultAsync<SambaShareConfig[], ParsingError | ProcessError>;
 
-  addShare(share: SambaShareConfig): ResultAsync<null, ProcessError>;
+  addShare(share: SambaShareConfig): ResultAsync<this, ProcessError>;
 
-  editShare(share: SambaShareConfig): ResultAsync<null, ProcessError>;
+  editShare(share: SambaShareConfig): ResultAsync<this, ProcessError>;
 
-  removeShare(share: SambaShareConfig): ResultAsync<null, ProcessError>;
+  removeShare(share: SambaShareConfig): ResultAsync<this, ProcessError>;
 
   exportConfig(): ResultAsync<string, ProcessError>;
 
-  importConfig(config: string): ResultAsync<null, ProcessError>;
+  importConfig(config: string): ResultAsync<this, ProcessError>;
 
   checkIfSmbConfIncludesRegistry(smbConfPath: string): ResultAsync<boolean, ProcessError>;
 
-  patchSmbConfIncludeRegistry(smbConfPath: string): ResultAsync<null, ProcessError>;
+  patchSmbConfIncludeRegistry(smbConfPath: string): ResultAsync<this, ProcessError>;
 
-  importFromSmbConf(smbConfPath: string): ResultAsync<null, ProcessError>;
+  importFromSmbConf(smbConfPath: string): ResultAsync<this, ProcessError>;
 }
 
-export namespace SambaManagerImplementation {
-  const netConfCommandOptions: CommandOptions = {
-    superuser: "try",
-  };
+export class SambaManager implements ISambaManager {
+  private commandOptions: CommandOptions;
 
-  // const loadSettingsCommand = new Command(["net", "conf", "list"], netConfCommandOptions);
-  // const loadSettingsParse = (commandOutput: string) => SmbConfParser().apply(commandOutput);
+  constructor(private server: Server) {
+    this.commandOptions = {
+      superuser: "try",
+    };
+  }
 
-  const netConfCommand = (...args: string[]) =>
-    new Command(["net", "conf", ...args], netConfCommandOptions);
+  private netConfCommand(...args: string[]) {
+    return new Command(["net", "conf", ...args], this.commandOptions);
+  }
 
-  const listShareNamesCommand = netConfCommand("listshares");
+  private listShareNamesCommand() {
+    return this.netConfCommand("listshares");
+  }
 
-  const addShareCommand = (name: string, path: string) => netConfCommand("addshare", name, path);
+  private addShareCommand(name: string, path: string) {
+    return this.netConfCommand("addshare", name, path);
+  }
 
-  const getParmCommand = (section: string, param: string) =>
-    netConfCommand("getparm", section, param);
+  private getParmCommand(section: string, param: string) {
+    return this.netConfCommand("getparm", section, param);
+  }
 
-  const setParmCommand = (section: string, param: string, value: string) =>
-    netConfCommand("setparm", section, param, value);
+  private setParmCommand(section: string, param: string, value: string) {
+    return this.netConfCommand("setparm", section, param, value);
+  }
 
-  const delParmCommand = (section: string, param: string) =>
-    netConfCommand("delparm", section, param);
+  private delParmCommand(section: string, param: string) {
+    return this.netConfCommand("delparm", section, param);
+  }
 
-  const showShareCommand = (section: string) => netConfCommand("showshare", section);
-  const showShareParse = (commandOutput: string): Result<SambaShareConfig, ParsingError> => {
+  private showShareCommand(section: string) {
+    return this.netConfCommand("showshare", section);
+  }
+
+  private showShareParse(commandOutput: string): Result<SambaShareConfig, ParsingError> {
     return IniSyntax()
       .apply(commandOutput)
       .andThen((shareIniData) => {
@@ -88,31 +100,37 @@ export namespace SambaManagerImplementation {
         }
         return SmbShareParser(shareName).apply(shareIniData[shareName]!);
       });
-  };
+  }
 
-  const delShareCommand = (section: string) => netConfCommand("delshare", section);
+  private delShareCommand(section: string) {
+    return this.netConfCommand("delshare", section);
+  }
 
-  const setSectionParams = (server: Server, section: string, params: KeyValueData) =>
-    ResultAsync.combine(
+  private setSectionParams(section: string, params: KeyValueData) {
+    return ResultAsync.combine(
       Object.entries(params).map(([key, value]) =>
-        server.execute(setParmCommand(section, key, value), true)
+        this.server.execute(this.setParmCommand(section, key, value), true)
       )
     );
+  }
 
-  const delSectionParms = (server: Server, section: string, params: string[]) =>
-    ResultAsync.combine(
-      params.map((param) => server.execute(delParmCommand(section, param), true))
+  private delSectionParms(section: string, params: string[]) {
+    return ResultAsync.combine(
+      params.map((param) => this.server.execute(this.delParmCommand(section, param), true))
     );
+  }
 
-  export const getGlobalConfig = (server: Server) =>
-    server
-      .execute(showShareCommand("global"))
+  getGlobalConfig() {
+    return this.server
+      .execute(this.showShareCommand("global"))
       .map((p) => p.getStdout())
       .andThen(SmbConfParser().apply)
       .map(({ global }) => global);
-  export const editGlobal = (server: Server, globalConfig: SambaGlobalConfig) => {
+  }
+
+  editGlobal(globalConfig: SambaGlobalConfig) {
     const globalParser = SmbGlobalParser();
-    return getGlobalConfig(server)
+    return this.getGlobalConfig()
       .andThen(globalParser.unapply)
       .andThen((originalGlobalKV) =>
         globalParser
@@ -120,172 +138,137 @@ export namespace SambaManagerImplementation {
           .map((globalKV) => keyValueDiff(originalGlobalKV, globalKV))
       )
       .andThen(({ added, removed, changed }) =>
-        setSectionParams(server, "global", { ...added, ...changed }).andThen(() =>
-          delSectionParms(server, "global", Object.keys(removed))
+        this.setSectionParams("global", { ...added, ...changed }).andThen(() =>
+          this.delSectionParms("global", Object.keys(removed))
         )
-      );
-  };
-  export const listShareNames = (server: Server) =>
-    server
-      .execute(listShareNamesCommand)
+      )
+      .map(() => this);
+  }
+
+  listShareNames() {
+    return this.server
+      .execute(this.listShareNamesCommand())
       .map((p) => p.getStdout().trim())
       .map((shareNames) =>
         shareNames
           .split(RegexSnippets.newlineSplitter)
           .filter((shareName) => shareName.toLowerCase() !== "global")
       );
-  export const getShareProperty = (server: Server, shareName: string, property: string) =>
-    server.execute(getParmCommand(shareName, property)).map((p) => p.getStdout().trim());
-  export const getShare = (server: Server, shareName: string) =>
-    server
-      .execute(showShareCommand(shareName))
+  }
+
+  getShareProperty(shareName: string, property: string) {
+    return this.server
+      .execute(this.getParmCommand(shareName, property))
+      .map((p) => p.getStdout().trim());
+  }
+
+  getShare(shareName: string) {
+    return this.server
+      .execute(this.showShareCommand(shareName))
       .map((p) => p.getStdout())
-      .andThen(showShareParse);
-  export const getShares = (server: Server) =>
-    listShareNames(server).andThen((shareNames) =>
-      ResultAsync.combine(shareNames.map((shareName) => getShare(server, shareName)))
+      .andThen(this.showShareParse);
+  }
+
+  getShares() {
+    return this.listShareNames().andThen((shareNames) =>
+      ResultAsync.combine(shareNames.map((shareName) => this.getShare(shareName)))
     );
-  export const addShare = (server: Server, share: SambaShareConfig) => {
+  }
+
+  addShare(share: SambaShareConfig) {
     return executeHookCallbacks(Hooks.BeforeAddShare)
       .andThen(() => SmbShareParser(share.name).unapply(share))
       .andThen((shareParams) =>
-        server
-          .execute(addShareCommand(share.name, share.path), true)
-          .andThen(() => setSectionParams(server, share.name, shareParams))
+        this.server
+          .execute(this.addShareCommand(share.name, share.path), true)
+          .andThen(() => this.setSectionParams(share.name, shareParams))
       )
-      .andThen(() => executeHookCallbacks(Hooks.AfterAddShare));
-  };
-  export const editShare = (server: Server, share: SambaShareConfig) => {
+      .andThen(() => executeHookCallbacks(Hooks.AfterAddShare))
+      .map(() => this);
+  }
+  editShare(share: SambaShareConfig) {
     const shareParser = SmbShareParser("");
     return executeHookCallbacks(Hooks.BeforeEditShare)
-      .andThen(() => getShare(server, share.name))
+      .andThen(() => this.getShare(share.name))
       .andThen(shareParser.unapply)
       .andThen((originalShareKV) =>
         shareParser.unapply(share).map((shareKV) => keyValueDiff(originalShareKV, shareKV))
       )
       .andThen(({ added, removed, changed }) =>
-        setSectionParams(server, share.name, { ...added, ...changed }).andThen(() =>
-          delSectionParms(server, share.name, Object.keys(removed))
+        this.setSectionParams(share.name, { ...added, ...changed }).andThen(() =>
+          this.delSectionParms(share.name, Object.keys(removed))
         )
       )
-      .andThen(() => executeHookCallbacks(Hooks.AfterEditShare));
-  };
-  export const removeShare = (server: Server, share: SambaShareConfig) => {
+      .andThen(() => executeHookCallbacks(Hooks.AfterEditShare))
+      .map(() => this);
+  }
+
+  removeShare(share: SambaShareConfig) {
     const shareName = typeof share === "string" ? share : share.name;
     return executeHookCallbacks(Hooks.BeforeRemoveShare)
-      .andThen(() => server.execute(delShareCommand(shareName)))
-      .andThen(() => executeHookCallbacks(Hooks.AfterRemoveShare));
-  };
-  export const exportConfig = (server: Server) =>
-    server.execute(netConfCommand("list")).map((proc) => proc.getStdout());
-  export const importConfig = (server: Server, config: string) =>
-    File.makeTemp(server)
+      .andThen(() => this.server.execute(this.delShareCommand(shareName)))
+      .andThen(() => executeHookCallbacks(Hooks.AfterRemoveShare))
+      .map(() => this);
+  }
+
+  exportConfig() {
+    return this.server.execute(this.netConfCommand("list")).map((proc) => proc.getStdout());
+  }
+
+  importConfig(config: string) {
+    return File.makeTemp(this.server)
       .andThen((confFile) =>
         confFile.write(
           // remove include = registry or config backend = registry
           config.replace(/^[ \t]*(include|config backend)[ \t]*=[ \t]*registry.*$\n?/im, "")
         )
       )
-      .andThen((confFile) => server.execute(netConfCommand("import", confFile.path)));
-  export const checkIfSmbConfIncludesRegistry = (server: Server, smbConfPath: string) =>
-    new File(server, smbConfPath)
+      .andThen((confFile) => this.server.execute(this.netConfCommand("import", confFile.path)))
+      .map(() => this);
+  }
+
+  checkIfSmbConfIncludesRegistry(smbConfPath: string) {
+    return new File(this.server, smbConfPath)
       .assertExists()
       .andThen((smbConf) => smbConf.read())
       .andThen(IniSyntax({ duplicateKey: "ignore" }).apply)
       .map((smbConf) => smbConf.global?.include === "registry");
-  export const patchSmbConfIncludeRegistry = (server: Server, smbConfPath: string) =>
-    new File(server, smbConfPath)
+  }
+
+  patchSmbConfIncludeRegistry(smbConfPath: string) {
+    return new File(this.server, smbConfPath)
       .assertExists()
       .andThen((smbConf) =>
         smbConf.replace(
           (currentConfig) =>
             currentConfig.replace(
+              // last line of [global] section
               /^\s*\[ ?global ?\]\s*$(?:\n^(?!;?\s*\[).*$)*/im,
               "$&\n\t# inclusion of net registry, inserted by cockpit-file-sharing:\n\tinclude = registry\n"
             ),
-          netConfCommandOptions
+          this.commandOptions
         )
-      );
+      )
+      .map(() => this);
+  }
 
-  export const importFromSmbConf = (server: Server, smbConfPath: string) =>
-    new File(server, smbConfPath).assertExists().andThen((smbConfFile) =>
-      smbConfFile
-        .read(netConfCommandOptions)
-        .andThen((smbConf) => importConfig(server, smbConf))
-        .andThen(() =>
-          smbConfFile.replace(
-            "# this config was generated by cockpit-file-sharing after importing smb.conf\n" +
-              `# original smb.conf location: ${smbConfPath}.~N~\n` +
-              "[global]\n" +
-              "	include = registry\n",
-            { ...netConfCommandOptions, backup: true }
+  importFromSmbConf(smbConfPath: string) {
+    return new File(this.server, smbConfPath)
+      .assertExists()
+      .andThen((smbConfFile) =>
+        smbConfFile
+          .read(this.commandOptions)
+          .andThen((smbConf) => this.importConfig(smbConf))
+          .andThen(() =>
+            smbConfFile.replace(
+              "# this config was generated by cockpit-file-sharing after importing smb.conf\n" +
+                `# original smb.conf location: ${smbConfPath}.~N~\n` +
+                "[global]\n" +
+                "	include = registry\n",
+              { ...this.commandOptions, backup: true }
+            )
           )
-        )
-    );
-}
-
-export function SambaManagerSingleServer(server: Server): ISambaManager {
-  return {
-    getGlobalConfig: () => SambaManagerImplementation.getGlobalConfig(server),
-    editGlobal: (globalConfig: SambaGlobalConfig) =>
-      SambaManagerImplementation.editGlobal(server, globalConfig).map(() => null),
-    listShareNames: () => SambaManagerImplementation.listShareNames(server),
-    getShareProperty: (shareName: string, property: string) =>
-      SambaManagerImplementation.getShareProperty(server, shareName, property),
-    getShare: (shareName: string) => SambaManagerImplementation.getShare(server, shareName),
-    getShares: () => SambaManagerImplementation.getShares(server),
-    addShare: (share: SambaShareConfig) =>
-      SambaManagerImplementation.addShare(server, share).map(() => null),
-    editShare: (share: SambaShareConfig) =>
-      SambaManagerImplementation.editShare(server, share).map(() => null),
-    removeShare: (share: SambaShareConfig) =>
-      SambaManagerImplementation.removeShare(server, share).map(() => null),
-    exportConfig: () => SambaManagerImplementation.exportConfig(server),
-    importConfig: (config) =>
-      SambaManagerImplementation.importConfig(server, config).map(() => null),
-    checkIfSmbConfIncludesRegistry: (smbConfPath) =>
-      SambaManagerImplementation.checkIfSmbConfIncludesRegistry(server, smbConfPath),
-    patchSmbConfIncludeRegistry: (smbConfPath) =>
-      SambaManagerImplementation.patchSmbConfIncludeRegistry(server, smbConfPath).map(() => null),
-    importFromSmbConf: (smbConfPath) =>
-      SambaManagerImplementation.importFromSmbConf(server, smbConfPath).map(() => null),
-  };
-}
-
-// CTDB automatically manages config on all nodes
-// export function SambaManagerClustered(servers: [Server, ...Server[]]): ISambaManager {
-//   const getterServer = servers[0];
-//   return {
-//     getGlobalConfig: () => SambaManagerImplementation.getGlobalConfig(getterServer),
-//     editGlobal: (globalConfig: SambaGlobalConfig) =>
-//       ResultAsync.combine(
-//         servers.map((server) => SambaManagerImplementation.editGlobal(server, globalConfig))
-//       ).map(() => null),
-//     listShareNames: () => SambaManagerImplementation.listShareNames(getterServer),
-//     getShareProperty: (shareName: string, property: string) =>
-//       SambaManagerImplementation.getShareProperty(getterServer, shareName, property),
-//     getShare: (shareName: string) => SambaManagerImplementation.getShare(getterServer, shareName),
-//     getShares: () => SambaManagerImplementation.getShares(getterServer),
-//     addShare: (share: SambaShareConfig) =>
-//       ResultAsync.combine(
-//         servers.map((server) => SambaManagerImplementation.addShare(server, share))
-//       ).map(() => null),
-//     editShare: (share: SambaShareConfig) =>
-//       ResultAsync.combine(
-//         servers.map((server) => SambaManagerImplementation.editShare(server, share))
-//       ).map(() => null),
-//     removeShare: (share: SambaShareConfig | string) =>
-//       ResultAsync.combine(
-//         servers.map((server) => SambaManagerImplementation.removeShare(server, share))
-//       ).map(() => null),
-//   };
-// }
-
-export function getSambaManager(server: Server): ISambaManager {
-  return SambaManagerSingleServer(server);
-  // clusterScope = [clusterScope].flat() as [Server, ...Server[]];
-  // if (clusterScope.length === 1) {
-  //   return SambaManagerSingleServer(clusterScope[0]);
-  // }
-  // return SambaManagerClustered(clusterScope);
+      )
+      .map(() => this);
+  }
 }

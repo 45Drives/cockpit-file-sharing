@@ -13,9 +13,8 @@ import {
   useTempObjectStaging,
   type SelectMenuOption,
 } from "@45drives/houston-common-ui";
-import { KeyValueSyntax, getServer } from "@45drives/houston-common-lib";
+import { KeyValueSyntax } from "@45drives/houston-common-lib";
 import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
-import { getSambaManager } from "@/tabs/samba/samba-manager";
 
 const _ = cockpit.gettext;
 
@@ -58,8 +57,6 @@ const logLevelOptions: SelectMenuOption<number>[] = [5, 4, 3, 2, 1, 0].map((n) =
   label: n.toString(),
   value: n,
 }));
-
-const sambaManager = getServer().map((server) => getSambaManager(server));
 </script>
 
 <template>
