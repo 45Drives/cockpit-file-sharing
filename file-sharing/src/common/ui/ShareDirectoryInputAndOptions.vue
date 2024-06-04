@@ -24,8 +24,11 @@ import {
 import { ResultAsync, ok, errAsync, err } from "neverthrow";
 import CephOptions from "@/common/ui/CephOptions.vue";
 import { useMountpointInfo } from "@/common/useMountpointInfo";
+import { useUserSettings } from "@/common/user-settings";
 
 const _ = cockpit.gettext;
+
+const userSettings = useUserSettings();
 
 const props = defineProps<{
   disabled?: boolean;
@@ -216,6 +219,8 @@ const actions = wrapActions({
       <ModeAndPermissionsEditor
         :path="path"
         :server="server"
+        :includeSystemUsers="userSettings.includeSystemAccounts"
+        :includeSystemGroups="userSettings.includeSystemAccounts"
         @apply="showPermissionsEditor = false"
         @cancel="showPermissionsEditor = false"
         ref="modeAndPermissionsEditorRef"
