@@ -8,8 +8,16 @@ import {
   type Action,
 } from "@45drives/houston-common-ui";
 
-import { ref, type Ref } from "vue";
+import { computed, ref, type Ref } from "vue";
 import { ResultAsync, okAsync, errAsync } from "neverthrow";
+
+import { useUserSettings } from "@/common/user-settings";
+
+const userSettings = useUserSettings();
+
+const exportsFilePath = computed(() => userSettings.value.nfs.confPath);
+
+
 </script>
 
 <template>
