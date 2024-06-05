@@ -6,7 +6,7 @@
         <div class="overflow-hidden"
             :style="{ 'max-height': showAddDevice ? '1500px' : '0', transition: showAddDevice ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }">
             <div class="card">
-                <VirtualDeviceEditor :existing-devices="virtualDevices" @close-editor="() => {showAddDevice = false; actions.refreshDevices()}"/>
+                <VirtualDeviceEditor @close-editor="() => {showAddDevice = false; actions.refreshDevices()}"/>
             </div>
         </div>
         <div class="card">
@@ -38,7 +38,7 @@
 
 <script setup lang="ts">
     import { CardContainer, wrapActions } from "@45drives/houston-common-ui";
-    import { inject, ref } from "vue";
+    import { inject, ref, type Ref } from "vue";
     import { VirtualDevice } from "../../types/VirtualDevice";
     import Table from "../Table.vue";
     import { PlusIcon } from "@heroicons/vue/24/solid";
@@ -48,7 +48,6 @@
     import type { ISCSIDriver } from "../../types/ISCSIDriver";
     import type { ProcessError } from "@45drives/houston-common-lib";
 
-	const virtualDevices = ref<VirtualDevice[]>([]);
     const showAddDevice = ref(false);
 
     const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
@@ -56,6 +55,12 @@
     if (driver === undefined) {
 		throw new Error("iSCSI Driver is null");
 	}
+
+    const virtualDevices = inject<Ref<VirtualDevice[]>>('virtualDevices');
+
+    if (virtualDevices === undefined) {
+        throw new Error("Virtual Device list is null");
+    }
 
 	const refreshDevices = () => {
 		return driver.andThen((driver) => {

@@ -7,6 +7,7 @@
                     <template #thead>
                         <tr>
                             <th scope="col">Initiator Name</th>
+                            <th scope="col" class="justify-end"></th>
                         </tr>
                     </template>
                     <template #tbody>
@@ -27,6 +28,7 @@
     import type { ProcessError } from "@45drives/houston-common-lib";
     import type { Target } from "../../types/Target";
     import SessionEntry from "./SessionEntry.vue";
+    import { PlusIcon } from "@heroicons/vue/24/solid";
 
     const props = defineProps<{target: Target, currentlyOpen: boolean}>();
 

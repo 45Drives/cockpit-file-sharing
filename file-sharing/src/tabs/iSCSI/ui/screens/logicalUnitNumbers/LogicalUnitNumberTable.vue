@@ -3,16 +3,17 @@
         <div class="overflow-hidden"
             :style="{ 'max-height': showEditor ? '1500px' : '0', transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out' }">
             <div class="card">
-                <InitiatorGroupEditor :target="target" @close-editor="() => {showEditor = false; actions.refreshTable()}"/>
+                <LogicalUnitNumberEditor :initiatorGroup="initiatorGroup" @close-editor="() => {showEditor = false; actions.refreshTable()}"/>
             </div>
         </div>
         <div class="card">
             <div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
-                <Table headerText="Initiator Groups" emptyText="No initiator groups. Click '+' to add one." noScroll shrink-height="h-160"
+                <Table headerText="LUNs" emptyText="No LUNs. Click '+' to add one." noScroll
                     class="!border-none !shadow-none">
                     <template #thead>
                         <tr>
-                            <th scope="col">Group Name</th>
+                            <th scope="col">Device</th>
+                            <th scope="col">Number</th>
                             <th scope="col" class="flex flex-row justify-end">
                                 <span class="sr-only">Delete</span>
                                 <button @click="showEditor = !showEditor">
@@ -22,7 +23,7 @@
                         </tr>
                     </template>
                     <template #tbody>
-                        <InitiatorGroupEntry v-for="(group, index) in target.initiatorGroups" :key="index" :initiatorGroup="group" @deleteEntry="actions.refreshTable"/>
+                        <LogicalUnitNumberEntry v-for="(lun, index) in initiatorGroup.logicalUnitNumbers" :key="index" :logicalUnitNumber="lun" :initiatorGroup="initiatorGroup" @deleteEntry="actions.refreshTable"/>
                     </template>
                 </Table>
             </div>
@@ -32,19 +33,20 @@
 
 <script setup lang="ts">
     import { CardContainer, wrapActions } from "@45drives/houston-common-ui";
-    import { inject, ref, type Ref } from "vue";
+    import { inject, ref, watch, type Ref } from "vue";
     import Table from "../Table.vue";
     import { PlusIcon } from "@heroicons/vue/24/solid";
     import type { ResultAsync } from "neverthrow";
     import type { ISCSIDriver } from "../../types/ISCSIDriver";
     import type { ProcessError } from "@45drives/houston-common-lib";
-    import type { Target } from "../../types/Target";
-    import InitiatorGroupEntry from "./InitiatorGroupEntry.vue"
-    import InitiatorGroupEditor from "./InitiatorGroupEditor.vue";
+    import type { InitiatorGroup } from "../../types/InitiatorGroup";
+    import LogicalUnitNumberEntry from "./LogicalUnitNumberEntry.vue";
+    import LogicalUnitNumberEditor from "./LogicalUnitNumberEditor.vue";
+    import type { VirtualDevice } from "../../types/VirtualDevice";
 
     const showEditor = ref(false);
 
-    const props = defineProps<{target: Target}>();
+    const props = defineProps<{initiatorGroup: InitiatorGroup}>();
 
     const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
 
@@ -52,10 +54,20 @@
 		throw new Error("iSCSI Driver is null");
 	}
 
+    const devices = inject<Ref<VirtualDevice[]>>('virtualDevices');
+
+    if (devices === undefined) {
+        throw new Error("Virtual Device list is null");
+    }
+
+    watch(devices, () => {
+        refreshTable();
+    })
+
 	const refreshTable = () => {
 		return driver.andThen((driver) => {
-            return driver.getInitatorGroupsOfTarget(props.target).map((groups) => {
-				props.target.initiatorGroups = groups;
+            return driver.getLogicalUnitNumbersOfInitiatorGroup(props.initiatorGroup).map((luns) => {
+				props.initiatorGroup.logicalUnitNumbers = luns;
 			});
 		});
 	}

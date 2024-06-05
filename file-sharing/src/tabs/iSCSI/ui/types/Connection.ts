@@ -1,9 +1,6 @@
-export class Connection {
+export interface Connection {
     connectionID: string;
     ipAddress: string;
 
-    constructor(connectionID: string, ipAddress: string) {
-        this.connectionID = connectionID;
-        this.ipAddress = ipAddress;
-    }
+    devicePath: string;
 }

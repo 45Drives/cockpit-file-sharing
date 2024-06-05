@@ -1,13 +1,18 @@
+import { None } from 'monet';
 import type { VirtualDevice } from "./VirtualDevice";
 
-export class LogicalUnitNumber {
+export interface LogicalUnitNumber {
     name: string;
-    unitNumber: number;
-    blockDevice: VirtualDevice;
+    unitNumber: string;
+    blockDevice?: VirtualDevice | undefined;
+}
 
-    constructor(name: string, unitNumber: number, blockDevice: VirtualDevice) {
-        this.name = name;
-        this.unitNumber = unitNumber;
-        this.blockDevice = blockDevice;
+export namespace LogicalUnitNumber {
+    export function empty() : LogicalUnitNumber {
+        return {
+            name: "",
+            unitNumber: "",
+            blockDevice: undefined,
+        }
     }
 }

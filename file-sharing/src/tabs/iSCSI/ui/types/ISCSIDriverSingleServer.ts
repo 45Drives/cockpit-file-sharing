@@ -1,8 +1,8 @@
 import { File } from "@45drives/houston-common-lib";
 import { VirtualDevice, DeviceType } from "./VirtualDevice";
 import { CHAPConfiguration, CHAPType } from "./CHAPConfiguration";
-import { Connection } from "./Connection";
-import { Initiator } from "./Initiator";
+import { type Connection } from "./Connection";
+import { type Initiator } from "./Initiator";
 import { type InitiatorGroup } from "./InitiatorGroup";
 import { LogicalUnitNumber } from "./LogicalUnitNumber";
 import { Portal } from "./Portal";
@@ -16,31 +16,31 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
 
     server: Server;
 
-    deviceTypeToHandlerFolder = {
+    deviceTypeToHandlerDirectory = {
         [DeviceType.BlockIO]: "/sys/kernel/scst_tgt/handlers/vdisk_blockio",
         [DeviceType.FileIO]: "/sys/kernel/scst_tgt/handlers/vdisk_fileio"
     };
 
-    targetManagementFolder = "/sys/kernel/scst_tgt/targets/iscsi";
+    targetManagementDirectory = "/sys/kernel/scst_tgt/targets/iscsi";
 
     constructor(server: Server) {
         this.server = server;
     }
 
     addVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "add_device $1 $2" > $3`, [virtualDevice.deviceName, "filename=" + virtualDevice.filePath + ";blocksize=" + virtualDevice.blockSize, this.deviceTypeToHandlerFolder[virtualDevice.deviceType] + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "add_device $1 $2" > $3`, [virtualDevice.deviceName, "filename=" + virtualDevice.filePath + ";blocksize=" + virtualDevice.blockSize, this.deviceTypeToHandlerDirectory[virtualDevice.deviceType] + "/mgmt"]));
     }
 
     removeVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "del_device $1" > $2`, [virtualDevice.deviceName, this.deviceTypeToHandlerFolder[virtualDevice.deviceType] + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "del_device $1" > $2`, [virtualDevice.deviceName, this.deviceTypeToHandlerDirectory[virtualDevice.deviceType] + "/mgmt"]));
     }
 
     createTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "add_target $1" > $2`, [target.name, this.targetManagementFolder + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "add_target $1" > $2`, [target.name, this.targetManagementDirectory + "/mgmt"]));
     }
 
     removeTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "del_target $1" > $2`, [target.name, this.targetManagementFolder + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "del_target $1" > $2`, [target.name, this.targetManagementDirectory + "/mgmt"]));
     }
 
     addPortalToTarget(target: Target, portal: Portal): ResultAsync<ExitedProcess, ProcessError> {
@@ -60,19 +60,19 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     addInitiatorToGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<ExitedProcess, ProcessError> {
-        throw new Error("Method not implemented.");
+        return this.server.execute(new BashCommand(`echo "add $1" > $2`, [initiator.name, `${initiatorGroup.devicePath}/initiators/mgmt`]));
     }
 
     removeInitiatorFromGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<ExitedProcess, ProcessError> {
-        throw new Error("Method not implemented.");
+        return this.server.execute(new BashCommand(`echo "del $1" > $2`, [initiator.name, `${initiatorGroup.devicePath}/initiators/mgmt`]));
     }
 
-    addLogicalUnitNumberToGroup(logicalUnitNumber: LogicalUnitNumber, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {
-        throw new Error("Method not implemented.");
+    addLogicalUnitNumberToGroup(initiatorGroup: InitiatorGroup, logicalUnitNumber: LogicalUnitNumber): ResultAsync<ExitedProcess, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "add $1 $2" > $3`, [logicalUnitNumber.name, logicalUnitNumber.unitNumber, `${initiatorGroup.devicePath}/luns/mgmt`]));
     }
 
-    removeLogicalUnitNumberFromGroup(logicalUnitNumber: LogicalUnitNumber, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {
-        throw new Error("Method not implemented.");
+    removeLogicalUnitNumberFromGroup(initiatorGroup: InitiatorGroup, logicalUnitNumber: LogicalUnitNumber): ResultAsync<ExitedProcess, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "del $1" > $2`, [logicalUnitNumber.unitNumber, `${initiatorGroup.devicePath}/luns/mgmt`]));
     }
 
     addCHAPConfigurationToTarget(target: Target, chapConfiguration: CHAPConfiguration): ResultAsync<ExitedProcess, ProcessError> {
@@ -93,14 +93,14 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     getVirtualDevicesOfDeviceType(deviceType: DeviceType): ResultAsync<VirtualDevice[], ProcessError> { 
-        return this.server.execute(new Command(["find", this.deviceTypeToHandlerFolder[deviceType], ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
+        return this.server.execute(new Command(["find", this.deviceTypeToHandlerDirectory[deviceType], ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
             (proc) => {
                 const virtualDeviceNames = proc.getStdout().split("\0").slice(0, -1);
                 return virtualDeviceNames;
             }
         ).andThen((virtualDeviceNames) => {
             return ResultAsync.combine(virtualDeviceNames.map((virtualDeviceName) => {
-                const virtualDevicePath = this.deviceTypeToHandlerFolder[deviceType] + "/" + virtualDeviceName;
+                const virtualDevicePath = this.deviceTypeToHandlerDirectory[deviceType] + "/" + virtualDeviceName;
 
                 const blockSizeResult =  this.server.execute(new Command(["cat", virtualDevicePath + "/blocksize"])).andThen((proc) => {
                     const blockSizeString = proc.getStdout().trim();
@@ -186,9 +186,9 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     getInitatorGroupsOfTarget(target: Pick<Target, "name" | "devicePath"> ): ResultAsync<InitiatorGroup[], ProcessError> {
         const self = this;
 
-        const initiatorGroupFolder = `${target.devicePath}/ini_groups`;
+        const initiatorGroupDirectory = `${target.devicePath}/ini_groups`;
 
-        return this.server.execute(new Command(["find", initiatorGroupFolder, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
+        return this.server.execute(new Command(["find", initiatorGroupDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
             (proc) => {
                 const groupNames = proc.getStdout().split("\0").slice(0, -1);
                 return groupNames;
@@ -199,13 +199,13 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
                 return new ResultAsync(safeTry(async function * () {
                     const partialInitiatorGroup = {
                         name: groupName,
-                        devicePath: `${initiatorGroupFolder}/${groupName}`,
+                        devicePath: `${initiatorGroupDirectory}/${groupName}`,
                     };
 
                     return ok<InitiatorGroup>({
                         ...partialInitiatorGroup,
-                        initiators: [],//yield * self.getInitiatorsOfInitiatorGroup(partialInitiatorGroup).safeUnwrap(),
-                        logicalUnitNumbers: [],//yield * self.getLogicalUnitNumbersOfInitiatorGroup(partialInitiatorGroup).safeUnwrap(),
+                        initiators: yield * self.getInitiatorsOfInitiatorGroup(partialInitiatorGroup).safeUnwrap(),
+                        logicalUnitNumbers: yield * self.getLogicalUnitNumbersOfInitiatorGroup(partialInitiatorGroup).safeUnwrap(),
                     });
                 }))
             }))
@@ -215,9 +215,9 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     getSessionsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<Session[], ProcessError> {
         const self = this;
 
-        const sessionsFolder = `${target.devicePath}/sessions`;
+        const sessionsDirectory = `${target.devicePath}/sessions`;
 
-        return this.server.execute(new Command(["find", sessionsFolder, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
+        return this.server.execute(new Command(["find", sessionsDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
             (proc) => {
                 const initiatorNames = proc.getStdout().split("\0").slice(0, -1);
                 return initiatorNames;
@@ -228,12 +228,12 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
                 return new ResultAsync(safeTry(async function * () {
                     const partialSession = {
                         initiatorName: initiatorName,
-                        devicePath: `${sessionsFolder}/${initiatorName}`,
+                        devicePath: `${sessionsDirectory}/${initiatorName}`,
                     };
 
                     return ok<Session>({
                         ...partialSession,
-                        connections: [],//yield * self.getConnectionsOfSession(partialSession).safeUnwrap(),
+                        connections: yield * self.getConnectionsOfSession(partialSession).safeUnwrap(),
                     });
                 }))
             }))
@@ -275,15 +275,90 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         })
     }
 
-    getConnectionsOfSession(session: Session): ResultAsync<Connection[], ProcessError> {
-        throw new Error("Method not implemented.");
+    getConnectionsOfSession(session: Pick<Session, "devicePath">): ResultAsync<Connection[], ProcessError> {
+        const self = this;
+
+        const ignoredNames = ["latency", "lun", "."];
+
+        return this.server.execute(new Command(["find", `${session.devicePath}/`, ..."-type d -mindepth 1 -maxdepth 1 -printf %f\\0".split(" ")])).map(
+            (proc) => {
+                const connectionFileNames = proc.getStdout().split("\0").slice(0, -1);
+                return connectionFileNames.filter(directoryName => 
+                    !ignoredNames.some(ignoredName => directoryName.startsWith(ignoredName))
+                );
+            }
+        ).andThen((connectionFileNames) => {
+            return ResultAsync.combine(connectionFileNames.map((connectionFileName) => {
+                
+                return new ResultAsync(safeTry(async function * () {
+                    const partialConnection = {
+                        devicePath: `${session.devicePath}/${connectionFileName}`
+                    };
+
+                    const connectionIDFile = new File(self.server, `${partialConnection.devicePath}/cid`);
+                    const ipFile = new File(self.server, `${partialConnection.devicePath}/ip`);
+
+                    return ok<Connection>({
+                        ...partialConnection,
+                        connectionID: yield * connectionIDFile.read().safeUnwrap(),
+                        ipAddress: yield * ipFile.read().safeUnwrap(),
+                    });
+                }))
+            }))
+        });
     }
     
-    getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "name">): ResultAsync<LogicalUnitNumber[], ProcessError> {
-        throw new Error("Method not implemented.");
+    getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "devicePath">): ResultAsync<LogicalUnitNumber[], ProcessError> {
+        const self = this;
+
+        const lunsDirectory = `${initiatorGroup.devicePath}/luns`;
+
+        return this.server.execute(new Command(["find", lunsDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
+            (proc) => {
+                return proc.getStdout().split("\0").slice(0, -1);
+            }
+        ).andThen((numbers) => {
+            return ResultAsync.combine(numbers.map((number) => {
+                return new ResultAsync(safeTry(async function * () {
+                    const partialLogicalUnitNumber = {
+                        unitNumber: number,
+                    };
+
+                    const lunDeviceName = (yield * self.server.execute(new Command(["cat", `${lunsDirectory}/${partialLogicalUnitNumber.unitNumber}/device/prod_id`])).safeUnwrap()).getStdout();
+                    const device = (yield * self.getVirtualDevices().safeUnwrap()).find((device) => device.deviceName === lunDeviceName);
+
+                    return ok<LogicalUnitNumber>({
+                        ...partialLogicalUnitNumber,
+                        name: lunDeviceName,
+                        blockDevice: device,
+                    });
+                }))
+            }))
+        });
     }
 
-    getInitiatorsOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "name">): ResultAsync<Initiator[], ProcessError> {
-        throw new Error("Method not implemented.");
+    getInitiatorsOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "devicePath">): ResultAsync<Initiator[], ProcessError> {
+        const ignoredNames = ["mgmt"];
+
+        const initiatorDirectory = `${initiatorGroup.devicePath}/initiators`;
+
+        return this.server.execute(new Command(["find", initiatorDirectory, ..."-mindepth 1 -maxdepth 1 -printf %f\\0".split(" ")])).map(
+            (proc) => {
+                const initiatorNames = proc.getStdout().split("\0").slice(0, -1);
+                return initiatorNames.filter(name => !ignoredNames.includes(name));
+            }
+        ).andThen((initiatorNames) => {
+            return ResultAsync.combine(initiatorNames.map((initiatorName) => {
+                return new ResultAsync(safeTry(async function * () {
+                    const partialInitiator = {
+                        name: initiatorName,
+                    };
+
+                    return ok<Initiator>({
+                        ...partialInitiator,
+                    });
+                }))
+            }))
+        });
     }
 }

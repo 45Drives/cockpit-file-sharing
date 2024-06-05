@@ -78,15 +78,13 @@
 <script setup lang="ts">
     import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, type InputValidator } from '@45drives/houston-common-ui';
     import { err, ok, type ResultAsync } from 'neverthrow';
-    import { inject, ref } from 'vue';
+    import { inject, ref, type Ref } from 'vue';
     import { DeviceType, VirtualDevice } from '../../types/VirtualDevice';
     import { Command, Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
     import type { ISCSIDriver } from '../../types/ISCSIDriver';
 
     const _ = cockpit.gettext;
-
-    const props = defineProps<{existingDevices: VirtualDevice[]}>();
-
+    
     const emit = defineEmits(['closeEditor']);
 
     const deviceTypeOptions: SelectMenuOption<DeviceType>[] = Object.values(DeviceType).map(deviceType => ({label: deviceType.toString(), value: deviceType}));
@@ -100,6 +98,12 @@
     if (driver === undefined) {
 		throw new Error("iSCSI Driver is null");
 	}
+
+    const virtualDevices = inject<Ref<VirtualDevice[]>>('virtualDevices');
+
+    if (virtualDevices === undefined) {
+        throw new Error("Virtual Device list is null");
+    }
 
     const handleClose = () => {
         emit("closeEditor");
@@ -133,7 +137,7 @@
             }
         }
 
-        if (props.existingDevices.find((device) => (device.deviceName === name)) !== undefined) {
+        if (virtualDevices.value.find((device) => (device.deviceName === name)) !== undefined) {
             return {
                 type: "error",
                 message: ("A device with this name already exists."),
