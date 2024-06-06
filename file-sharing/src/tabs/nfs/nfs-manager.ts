@@ -9,6 +9,7 @@ import {
 } from "@45drives/houston-common-lib";
 import { ResultAsync } from "neverthrow";
 import { NFSExportsParser } from "@/tabs/nfs/exports-parser";
+import { Hooks, executeHookCallbacks } from "@/common/hooks";
 
 export interface INFSManager {
   getExports(): ResultAsync<NFSExport[], ProcessError | ParsingError>;
@@ -20,7 +21,7 @@ export interface INFSManager {
 export class NFSManagerSingleServer implements INFSManager {
   private exportsFile: File;
   private commandOptions: CommandOptions = { superuser: "try" };
-  private nfsExportsParser = NFSExportsParser();
+  private nfsExportsParser = new NFSExportsParser();
   constructor(
     private server: Server,
     exportsFilePath: string
@@ -36,7 +37,7 @@ export class NFSManagerSingleServer implements INFSManager {
           .assertIsFile(this.commandOptions)
           .andThen((exportsFile) => exportsFile.replace(newExportsContent))
       )
-      .andThen(() => this.server.execute(new Command([], this.commandOptions)))
+      .andThen(() => this.server.execute(new Command(["exportfs", "-ra"], this.commandOptions)))
       .map(() => this);
   }
 
@@ -48,23 +49,31 @@ export class NFSManagerSingleServer implements INFSManager {
   }
 
   addExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return this.getExports()
+    return executeHookCallbacks(Hooks.BeforeAddShare, this.server, nfsExport)
+      .andThen(() => this.getExports())
       .map((exports) => [...exports, nfsExport])
       .andThen((exports) => this.setExports(exports))
+      .andThen(() => executeHookCallbacks(Hooks.AfterAddShare, this.server, nfsExport))
       .map(() => nfsExport);
   }
 
   editExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return this.getExports()
+    return executeHookCallbacks(Hooks.BeforeEditShare, this.server, nfsExport)
+      .andThen(() => this.getExports())
       .map((exports) => exports.map((e) => (e.path === nfsExport.path ? nfsExport : e)))
       .andThen((exports) => this.setExports(exports))
+      .andThen(() => executeHookCallbacks(Hooks.AfterEditShare, this.server, nfsExport))
       .map(() => nfsExport);
   }
 
   removeExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return this.getExports()
+    return executeHookCallbacks(Hooks.BeforeRemoveShare, this.server, nfsExport)
+      .andThen(() => this.getExports())
       .map((exports) => exports.filter((e) => e.path !== nfsExport.path))
       .andThen((exports) => this.setExports(exports))
+      .andThen(() => executeHookCallbacks(Hooks.AfterRemoveShare, this.server, nfsExport))
       .map(() => nfsExport);
   }
 }
+
+// export class 

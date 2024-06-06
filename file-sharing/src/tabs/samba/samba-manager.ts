@@ -176,19 +176,20 @@ export class SambaManager implements ISambaManager {
   }
 
   addShare(share: SambaShareConfig) {
-    return executeHookCallbacks(Hooks.BeforeAddShare)
+    return executeHookCallbacks(Hooks.BeforeAddShare, this.server, share)
       .andThen(() => SmbShareParser(share.name).unapply(share))
       .andThen((shareParams) =>
         this.server
           .execute(this.addShareCommand(share.name, share.path), true)
           .andThen(() => this.setSectionParams(share.name, shareParams))
       )
-      .andThen(() => executeHookCallbacks(Hooks.AfterAddShare))
+      .andThen(() => executeHookCallbacks(Hooks.AfterAddShare, this.server, share))
       .map(() => this);
   }
+
   editShare(share: SambaShareConfig) {
     const shareParser = SmbShareParser("");
-    return executeHookCallbacks(Hooks.BeforeEditShare)
+    return executeHookCallbacks(Hooks.BeforeEditShare, this.server, share)
       .andThen(() => this.getShare(share.name))
       .andThen(shareParser.unapply)
       .andThen((originalShareKV) =>
@@ -199,15 +200,15 @@ export class SambaManager implements ISambaManager {
           this.delSectionParms(share.name, Object.keys(removed))
         )
       )
-      .andThen(() => executeHookCallbacks(Hooks.AfterEditShare))
+      .andThen(() => executeHookCallbacks(Hooks.AfterEditShare, this.server, share))
       .map(() => this);
   }
 
   removeShare(share: SambaShareConfig) {
     const shareName = typeof share === "string" ? share : share.name;
-    return executeHookCallbacks(Hooks.BeforeRemoveShare)
+    return executeHookCallbacks(Hooks.BeforeRemoveShare, this.server, share)
       .andThen(() => this.server.execute(this.delShareCommand(shareName)))
-      .andThen(() => executeHookCallbacks(Hooks.AfterRemoveShare))
+      .andThen(() => executeHookCallbacks(Hooks.AfterRemoveShare, this.server, share))
       .map(() => this);
   }
 
