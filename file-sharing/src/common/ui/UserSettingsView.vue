@@ -62,7 +62,7 @@ const applyChanges = () => (userSettings.value = tempUserSettings.value);
       </InputLabelWrapper>
     </div>
     <template #footer>
-      <div class="button-group-row items-end">
+      <div class="button-group-row justify-end">
         <button
           @click="
             () => {

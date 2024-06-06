@@ -78,6 +78,9 @@ houston-common/Makefile:
 houston-common: houston-common/Makefile bootstrap-yarn
 	$(MAKE) -C houston-common
 
+houston-common-%:
+	$(MAKE) -C houston-common $*
+
 # build outputs
 .SECONDEXPANSION:
 $(OUTPUTS): %/dist/index.html: bootstrap-yarn houston-common $$(shell find '$$*' -type d \( -name node_modules -o -path '$$*/dist' -o -path '*node_modules*'  \) -prune -o -type f -not \( -name .gitignore \) -print)
@@ -166,5 +169,10 @@ help:
 	@echo
 	@echo 'build cleanup:'
 	@echo '    make clean'
+
+test-%:
+	yarn --cwd $* run test
+
+test: houston-common-test $(addprefix test-, $(PLUGIN_SRCS))
 
 FORCE:
