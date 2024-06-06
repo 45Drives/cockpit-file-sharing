@@ -1,10 +1,12 @@
 <template>
     <tr>
         <td>{{ session.initiatorName }}</td>
+        <td>{{ session.readAmountKB }} KB</td>
+        <td>{{ session.writeAmountKB }} KB</td>
 		<td class="button-group-row justify-end">
 			<button @click="showEditor = !showEditor">
 				<span class="sr-only">Edit</span>
-				<WrenchIcon class="size-icon icon-default" />
+				<ChevronDownIcon class="size-icon icon-default" />
 			</button>
 		</td>
     </tr>
@@ -22,7 +24,7 @@
 
 <script setup lang="ts">
 	import { inject, ref } from "vue";
-	import { WrenchIcon } from "@heroicons/vue/20/solid";
+	import { ChevronDownIcon } from "@heroicons/vue/20/solid";
 	import type { ISCSIDriver } from "../../types/ISCSIDriver";
 	import { ResultAsync } from "neverthrow";
 	import { ProcessError } from "@45drives/houston-common-lib";

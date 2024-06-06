@@ -7,7 +7,7 @@
             <div class="space-y-content text-base">
                 <div
                     class="text-header"
-                >New Device</div>
+                >{{ _("New Device") }}</div>
             </div>
 
             <InputLabelWrapper>

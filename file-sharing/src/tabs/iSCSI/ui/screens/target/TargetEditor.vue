@@ -7,7 +7,7 @@
             <div class="space-y-content text-base">
                 <div
                     class="text-header"
-                >New Target</div>
+                >{{ _("New Target") }}</div>
             </div>
 
             <InputLabelWrapper>

@@ -7,7 +7,7 @@
             <div class="space-y-content text-base">
                 <div
                     class="text-header"
-                >New Portal</div>
+                >{{ _("New Portal") }}</div>
             </div>
 
             <InputLabelWrapper>

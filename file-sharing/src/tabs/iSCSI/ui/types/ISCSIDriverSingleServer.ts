@@ -36,7 +36,11 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     createTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "add_target $1" > $2`, [target.name, this.targetManagementDirectory + "/mgmt"]));
+        return this.server.execute(new BashCommand(`echo "add_target $1" > $2`, [target.name, this.targetManagementDirectory + "/mgmt"])).andThen(() => 
+            this.server.execute(new BashCommand(`echo 1 > $1`, [this.targetManagementDirectory + "/enabled"])).andThen(() => 
+                this.server.execute(new BashCommand(`echo 1 > $1`, [`${this.targetManagementDirectory}/${target.name}/enabled`]))
+            )
+        )
     }
 
     removeTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
@@ -233,6 +237,8 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
 
                     return ok<Session>({
                         ...partialSession,
+                        readAmountKB:  StringToIntCaster()((yield * self.server.execute(new Command(["cat", `${partialSession.devicePath}/read_io_count_kb`])).safeUnwrap()).getStdout()).some(),
+                        writeAmountKB: StringToIntCaster()((yield * self.server.execute(new Command(["cat", `${partialSession.devicePath}/write_io_count_kb`])).safeUnwrap()).getStdout()).some(),
                         connections: yield * self.getConnectionsOfSession(partialSession).safeUnwrap(),
                     });
                 }))

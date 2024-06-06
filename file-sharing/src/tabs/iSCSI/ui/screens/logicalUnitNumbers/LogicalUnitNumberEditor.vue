@@ -7,7 +7,7 @@
             <div class="space-y-content text-base">
                 <div
                     class="text-header"
-                >Add LUN</div>
+                >{{ _("New LUN") }}</div>
             </div>
 
             <InputLabelWrapper>

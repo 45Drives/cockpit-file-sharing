@@ -7,7 +7,7 @@
             <div class="space-y-content text-base">
                 <div
                     class="text-header"
-                >New CHAP Configuration</div>
+                >{{ _("New CHAP Configuration") }}</div>
             </div>
 
             <InputLabelWrapper>

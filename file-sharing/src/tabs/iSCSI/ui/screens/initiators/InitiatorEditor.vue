@@ -7,7 +7,7 @@
             <div class="space-y-content text-base">
                 <div
                     class="text-header"
-                >New Initiator</div>
+                >{{ _("New Initiator") }}</div>
             </div>
 
             <InputLabelWrapper>

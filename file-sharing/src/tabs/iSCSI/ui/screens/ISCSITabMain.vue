@@ -15,6 +15,8 @@
 	import TargetTable from "./target/TargetTable.vue";
 	import type { VirtualDevice } from "../types/VirtualDevice";
 
+	const _ = cockpit.gettext;
+
 	const iSCSIDriver = createISCSIDriver();
 
 	provide('iSCSIDriver', iSCSIDriver);

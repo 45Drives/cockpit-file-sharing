@@ -7,6 +7,8 @@
                     <template #thead>
                         <tr>
                             <th scope="col">Initiator Name</th>
+                            <th scope="col">Read Count</th>
+                            <th scope="col">Write Count</th>
                             <th scope="col" class="justify-end"></th>
                         </tr>
                     </template>
