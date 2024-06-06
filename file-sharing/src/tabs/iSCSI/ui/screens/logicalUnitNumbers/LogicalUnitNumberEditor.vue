@@ -81,8 +81,7 @@
         throw new Error("Virtual Device list is null");
     }
 
-    //const deviceOptions: ComputedRef<SelectMenuOption<string>[]> = computed(() => devices.value.map(device => ({label: device.deviceName, value: device.deviceName})))
-    const deviceOptions: SelectMenuOption<string>[] = devices.value.map(device => ({label: device.deviceName, value: device.deviceName}));
+    const deviceOptions: ComputedRef<SelectMenuOption<string>[]> = computed(() => devices.value.map(device => ({label: device.deviceName, value: device.deviceName})))
 
     const handleClose = () => {
         emit("closeEditor");

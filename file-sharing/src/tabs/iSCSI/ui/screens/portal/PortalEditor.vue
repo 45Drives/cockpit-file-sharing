@@ -81,7 +81,7 @@
         if (!address) {
             return {
                 type: "error",
-                message: ("A target name is required."),
+                message: ("A portal address is required."),
             }
         }
 
