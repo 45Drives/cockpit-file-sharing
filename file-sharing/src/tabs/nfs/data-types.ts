@@ -120,14 +120,24 @@ export const NFSClientOptionsCtors = {
   anongid: NFSOptionWithArgument("anongid"),
 };
 
-export type NFSClientOptions = {
-  [Prop in keyof typeof NFSClientOptionsCtors]: InstanceType<(typeof NFSClientOptionsCtors)[Prop]>;
-};
+// export type NFSClientOptions = {
+//   [Prop in keyof typeof NFSClientOptionsCtors]: InstanceType<(typeof NFSClientOptionsCtors)[Prop]>;
+// };
+export type NFSClientOptions = string;
 
 export function defaultNFSClientOptions(): NFSClientOptions {
-  return Object.fromEntries(
-    Object.entries(NFSClientOptionsCtors).map(([key, ctor]) => [key, new ctor()])
-  ) as NFSClientOptions;
+  // return Object.fromEntries(
+  //   Object.entries(NFSClientOptionsCtors).map(([key, ctor]) => [key, new ctor()])
+  // ) as NFSClientOptions;
+  return "";
+}
+
+export function newNFSClientOptions(): NFSClientOptions {
+  return "rw,sync,no_subtree_check";
+}
+
+export function defaultNFSDefaultClientOptions(): NFSClientOptions {
+  return "";
 }
 
 export type NFSExportClient = {
@@ -145,8 +155,23 @@ export type NFSExport = {
 export function defaultNFSExport(): NFSExport {
   return {
     path: "",
-    defaultClientSettings: defaultNFSClientOptions(),
+    defaultClientSettings: defaultNFSDefaultClientOptions(),
     clients: [],
     comment: "",
   };
+}
+
+export function newNfsExport(): NFSExport {
+  return {
+    path: "",
+    defaultClientSettings: defaultNFSDefaultClientOptions(),
+    clients: [
+      {
+        host: "*",
+        settings: newNFSClientOptions(),
+      }
+    ],
+    comment: "",
+  };
+
 }

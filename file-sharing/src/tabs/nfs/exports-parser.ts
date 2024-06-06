@@ -9,45 +9,58 @@ import type {
 import {
   defaultNFSExport,
   defaultNFSClientOptions,
+  defaultNFSDefaultClientOptions,
   NFSClientOptionsCtors,
 } from "@/tabs/nfs/data-types";
 import { Result, ok, err, safeTry } from "neverthrow";
 import { Maybe, Some, None } from "monet";
 
+// export class NFSClientOptionsParser implements SyntaxParser<NFSClientOptions> {
+//   private static ctors = Object.entries(NFSClientOptionsCtors);
+//   private hideAllDefaults: boolean;
+
+//   constructor(hideAllDefaults: boolean = false) {
+//     this.hideAllDefaults = hideAllDefaults;
+//   }
+
+//   apply(optionsString: string) {
+//     return optionsString.split(",").reduce<Result<NFSClientOptions, ParsingError>>(
+//       (options, token) =>
+//         options.andThen((options) => {
+//           for (const [key, Option] of NFSClientOptionsParser.ctors) {
+//             const nextOptions = Option.fromString(token).map((option) => ({
+//               ...options,
+//               [key]: option,
+//             }));
+//             if (nextOptions.isSome()) {
+//               return ok(nextOptions.some());
+//             }
+//           }
+//           return err(new ParsingError(`NFSClientOptionsParser: No match for token: ${token}`));
+//         }),
+//       ok(defaultNFSClientOptions())
+//     );
+//   }
+//   unapply(options: NFSClientOptions) {
+//     const hideAllDefaults = this.hideAllDefaults;
+//     return ok(
+//       Object.values(options)
+//         .map((option) => option.configValue(hideAllDefaults).orNull())
+//         .filter((o): o is string => o !== null)
+//         .join(",")
+//     );
+//   }
+// }
+
 export class NFSClientOptionsParser implements SyntaxParser<NFSClientOptions> {
-  private static ctors = Object.entries(NFSClientOptionsCtors);
-  private hideAllDefaults: boolean;
+  constructor(_?: boolean) {}
 
-  constructor(hideAllDefaults: boolean = false) {
-    this.hideAllDefaults = hideAllDefaults;
+  apply(unparsed: string): Result<NFSClientOptions, ParsingError> {
+    return ok(unparsed);
   }
 
-  apply(optionsString: string) {
-    return optionsString.split(",").reduce<Result<NFSClientOptions, ParsingError>>(
-      (options, token) =>
-        options.andThen((options) => {
-          for (const [key, Option] of NFSClientOptionsParser.ctors) {
-            const nextOptions = Option.fromString(token).map((option) => ({
-              ...options,
-              [key]: option,
-            }));
-            if (nextOptions.isSome()) {
-              return ok(nextOptions.some());
-            }
-          }
-          return err(new ParsingError(`NFSClientOptionsParser: No match for token: ${token}`));
-        }),
-      ok(defaultNFSClientOptions())
-    );
-  }
-  unapply(options: NFSClientOptions) {
-    const hideAllDefaults = this.hideAllDefaults;
-    return ok(
-      Object.values(options)
-        .map((option) => option.configValue(hideAllDefaults).orNull())
-        .filter((o): o is string => o !== null)
-        .join(",")
-    );
+  unapply(parsed: NFSClientOptions): Result<string, ParsingError> {
+    return ok(parsed);
   }
 }
 
@@ -75,9 +88,11 @@ export class NFSClientsParser implements SyntaxParser<NFSExportClient[]> {
   unapply(clients: NFSExportClient[]) {
     return Result.combine(
       clients.map((client) =>
-        this.clientOptionsParser
-          .unapply(client.settings)
-          .map((settings) => `${client.host}(${settings})`)
+        this.clientOptionsParser.unapply(client.settings).map((settings) =>
+          Maybe.fromEmpty(settings)
+            .map((settings) => `${client.host}(${settings})`)
+            .orSome(client.host)
+        )
       )
     ).map((clients) => clients.join(" "));
   }
@@ -103,7 +118,7 @@ export class NFSExportParser implements SyntaxParser<NFSExport> {
           ([maybeDefaultOptions, clientsAndComment]) => {
             return {
               path,
-              defaultClientSettings: maybeDefaultOptions.orSome(defaultNFSClientOptions()),
+              defaultClientSettings: maybeDefaultOptions.orSome(defaultNFSDefaultClientOptions()),
               clientsAndComment,
             };
           }
@@ -158,7 +173,7 @@ export class NFSExportParser implements SyntaxParser<NFSExport> {
   ): Result<[rawPath: string, optionsAndClients: string], ParsingError> {
     if (pathOptionsAndClients.startsWith('"')) {
       // quoted path
-      const closingQuoteIndex = pathOptionsAndClients.indexOf(pathOptionsAndClients, 1);
+      const closingQuoteIndex = pathOptionsAndClients.indexOf('"', 1);
       if (closingQuoteIndex === -1) {
         return err(new ParsingError(`Failed to find closing quote: ${pathOptionsAndClients}`));
       }
