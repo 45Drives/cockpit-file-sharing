@@ -9,6 +9,7 @@
     "build": "run-p build:app",
     "preview": "vite preview",
     "test:app": "vitest run",
+    "test": "vitest run",
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",

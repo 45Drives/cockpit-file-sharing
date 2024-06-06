@@ -15,7 +15,13 @@ import {
   type IniConfigData,
   ParsingError,
 } from "@45drives/houston-common-lib";
-import { defaultSambaGlobalConfig, defaultSambaShareConfig, type SambaConfig, type SambaGlobalConfig, type SambaShareConfig } from "./data-types";
+import {
+  defaultSambaGlobalConfig,
+  defaultSambaShareConfig,
+  type SambaConfig,
+  type SambaGlobalConfig,
+  type SambaShareConfig,
+} from "./data-types";
 import { Result, ok, err } from "neverthrow";
 import { Some } from "monet";
 
@@ -67,7 +73,12 @@ export function SmbShareParser(name: string): Transformer<SambaShareConfig, KeyV
           sambaStringToBooleanCaster(s).map((b) => !b)
         ),
         KVGrabber(config, "browseable", ["browseable", "browsable"], sambaStringToBooleanCaster),
-        KVGrabber(config, "inheritPermissions", ["inherit permissions"], sambaStringToBooleanCaster),
+        KVGrabber(
+          config,
+          "inheritPermissions",
+          ["inherit permissions"],
+          sambaStringToBooleanCaster
+        ),
         KVRemainderGrabber(config, "advancedOptions"),
       ]);
       if (
@@ -87,7 +98,12 @@ export function SmbShareParser(name: string): Transformer<SambaShareConfig, KeyV
         KVGrabber(config, "guest ok", ["guestOk"], sambaBooleanToStringCaster),
         KVGrabber(config, "read only", ["readOnly"], sambaBooleanToStringCaster),
         KVGrabber(config, "browseable", ["browseable"], sambaBooleanToStringCaster),
-        KVGrabber(config, "inherit permissions", ["inheritPermissions"], sambaBooleanToStringCaster),
+        KVGrabber(
+          config,
+          "inherit permissions",
+          ["inheritPermissions"],
+          sambaBooleanToStringCaster
+        ),
       ]);
       if (
         !Object.entries(parsed)

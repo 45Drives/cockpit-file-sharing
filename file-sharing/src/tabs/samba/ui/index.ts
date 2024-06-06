@@ -1,1 +1,1 @@
-export { default as SambaTabMain } from './SambaTabMain.vue'
+export { default as SambaTabMain } from "./SambaTabMain.vue";

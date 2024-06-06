@@ -1,98 +1,102 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import type { SambaShareConfig } from '@/tabs/samba/data-types';
-import {
-    CardContainer,
-    Disclosure,
-    SelectMenu,
-    useTempObjectStaging,
-    wrapActions,
-    reportSuccess,
-    type SelectMenuOption,
-} from "@45drives/houston-common-ui";
-import { getServer, KeyValueSyntax } from '@45drives/houston-common-lib';
-import { BooleanKeyValueSuite } from '@/tabs/samba/ui/BooleanKeyValueSuite'; // TODO: move to common-ui
-import { getSambaManager } from '@/tabs/samba/samba-manager';
-import Table from '@/tabs/samba/ui/Table.vue';
+import { ref, computed, defineProps } from "vue";
+import type { SambaShareConfig } from "@/tabs/samba/data-types";
+import { CardContainer, Disclosure, DisclosureController } from "@45drives/houston-common-ui";
+import Table from "@/tabs/samba/ui/Table.vue";
 import { PlusIcon } from "@heroicons/vue/20/solid";
-import ShareTableRow from '@/tabs/samba/ui/ShareTableRow.vue';
-import ShareConfigView from '@/tabs/samba/ui/ShareConfigView.vue';
+import ShareEditor from "@/tabs/samba/ui/ShareEditor.vue";
+import { PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
 
 const _ = cockpit.gettext;
 
+const props = defineProps<{
+  shares: SambaShareConfig[];
+}>();
+
+const emit = defineEmits<{
+  (e: "addShare", share: SambaShareConfig, callback?: () => void): void;
+  (e: "editShare", share: SambaShareConfig, callback?: () => void): void;
+  (e: "removeShare", share: SambaShareConfig, callback?: () => void): void;
+}>();
+
 const showNewShareEditor = ref(false);
 
-const shareNames = ref<string[]>([]);
-
-const sambaManager = getSambaManager();
-
-const loadShareNames = () =>
-    sambaManager
-        .andThen(sm => sm.listShareNames())
-        .map(loadedShareNames => shareNames.value = loadedShareNames);
-
-const actions = wrapActions({
-    loadShareNames
-});
-
-onMounted(actions.loadShareNames);
-
+const shareNames = computed(() => props.shares.map((s) => s.name));
 </script>
 
 <template>
-    <CardContainer noBodyPaddingOnMobile>
-        <template v-slot:header>
-            {{ _("Share Configuration") }}
-        </template>
+  <CardContainer noBodyPaddingOnMobile>
+    <template v-slot:header>
+      {{ _("Share Configuration") }}
+    </template>
 
-        <Disclosure
-            noButton
-            v-model:show="showNewShareEditor"
-            v-slot="{ visible }"
-        >
-            <ShareConfigView
-                v-if="visible"
-                newShare
-                :allShareNames="shareNames"
-                @cancel="showNewShareEditor = false"
-                @addedShare="() => { showNewShareEditor = false; actions.loadShareNames(); }"
-                class="!shadow-none !divide-y-0 pb-5 pt-5 px-4 sm:!pt-0 sm:!px-0"
-            />
-        </Disclosure>
+    <Disclosure noButton v-model:show="showNewShareEditor" v-slot="{ visible }">
+      <ShareEditor
+        v-if="visible"
+        newShare
+        :allShareNames="shareNames"
+        @cancel="showNewShareEditor = false"
+        @apply="(s) => emit('addShare', s, () => (showNewShareEditor = false))"
+        class="!shadow-none !divide-y-0 pb-5 pt-5 px-4 sm:!pt-0 sm:!px-0"
+      />
+    </Disclosure>
 
-        <Table
-            :emptyText="_('No shares. Click \'+\' to add one.')"
-            noScroll
-            class="sm:rounded-lg sm:shadow sm:border sm:border-default"
-        >
-            <template #thead>
-                <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Path</th>
-                    <th
-                        scope="col"
-                        class="flex flex-row justify-end"
-                    >
-                        <span class="sr-only">Edit/Delete</span>
-                        <button @click="showNewShareEditor = !showNewShareEditor">
-                            <PlusIcon class="size-icon icon-default" />
-                        </button>
-                    </th>
-                </tr>
-            </template>
-            <template #tbody>
-                <template
-                    v-for="shareName in shareNames"
-                    :key="shareName"
-                >
-                    <ShareTableRow
-                        :shareName="shareName"
-                        :allShareNames="shareNames"
-                        @editedShare="actions.loadShareNames"
-                        @removedShare="actions.loadShareNames"
+    <Table
+      :emptyText="_('No shares. Click \'+\' to add one.')"
+      noScroll
+      class="sm:rounded-lg sm:shadow sm:border sm:border-default"
+    >
+      <template #thead>
+        <tr>
+          <th scope="col">{{ _("Name") }}</th>
+          <th scope="col">{{ _("Path") }}</th>
+          <th scope="col" class="flex flex-row justify-end">
+            <span class="sr-only">{{ _("Edit/Delete") }}</span>
+            <button @click="showNewShareEditor = !showNewShareEditor">
+              <span class="sr-only">{{ _("Add new share") }}</span>
+              <PlusIcon class="size-icon icon-default" />
+            </button>
+          </th>
+        </tr>
+      </template>
+      <template #tbody>
+        <template v-for="share in shares" :key="share.name">
+          <DisclosureController v-slot="{ show: showEditor, setShow: setShowEditor }">
+            <tr>
+              <td>{{ share.name }}</td>
+              <td class="text-muted">{{ share.path }}</td>
+              <td class="button-group-row justify-end">
+                <button @click="setShowEditor(!showEditor)">
+                  <span class="sr-only">Edit</span>
+                  <PencilSquareIcon class="size-icon icon-default" />
+                </button>
+                <button @click="emit('removeShare', share)">
+                  <span class="sr-only">Delete</span>
+                  <TrashIcon class="size-icon icon-danger" />
+                </button>
+              </td>
+            </tr>
+            <tr></tr>
+            <!-- needed to match bg color -->
+            <tr>
+              <td colspan="100%" class="!p-0">
+                <div class="whitespace-normal">
+                  <Disclosure noButton :show="showEditor" v-slot="{ visible }">
+                    <ShareEditor
+                      v-if="visible"
+                      :share="share"
+                      :allShareNames="shareNames"
+                      class="!shadow-none px-4 sm:px-6 py-5"
+                      @cancel="setShowEditor(false)"
+                      @apply="(share) => emit('editShare', share, () => setShowEditor(false))"
                     />
-                </template>
-            </template>
-        </Table>
-    </CardContainer>
+                  </Disclosure>
+                </div>
+              </td>
+            </tr>
+          </DisclosureController>
+        </template>
+      </template>
+    </Table>
+  </CardContainer>
 </template>

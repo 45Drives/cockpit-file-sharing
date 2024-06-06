@@ -1,1 +1,1 @@
-export { default as DirectoryCheckerAndPermissions } from "./DirectoryCheckerAndPermissions.vue";
+export { default as ShareDirectoryInputAndOptions } from "./ShareDirectoryInputAndOptions.vue";
