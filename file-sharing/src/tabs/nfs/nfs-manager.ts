@@ -35,7 +35,7 @@ export class NFSManagerSingleServer implements INFSManager {
       .asyncAndThen((newExportsContent) =>
         this.exportsFile
           .assertIsFile(this.commandOptions)
-          .andThen((exportsFile) => exportsFile.replace(newExportsContent))
+          .andThen((exportsFile) => exportsFile.replace(newExportsContent, this.commandOptions))
       )
       .andThen(() => this.server.execute(new Command(["exportfs", "-ra"], this.commandOptions)))
       .map(() => this);
@@ -45,7 +45,7 @@ export class NFSManagerSingleServer implements INFSManager {
     return this.exportsFile
       .assertIsFile(this.commandOptions)
       .andThen((exportsFile) => exportsFile.read(this.commandOptions))
-      .andThen(this.nfsExportsParser.apply);
+      .andThen((exportsFileContents) => this.nfsExportsParser.apply(exportsFileContents));
   }
 
   addExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
@@ -76,4 +76,48 @@ export class NFSManagerSingleServer implements INFSManager {
   }
 }
 
-// export class 
+export class NFSManagerClustered implements INFSManager {
+  private managers: [NFSManagerSingleServer, ...NFSManagerSingleServer[]];
+  private getterManager: NFSManagerSingleServer;
+
+  constructor(servers: [Server, ...Server[]], exportsFilePath: string) {
+    this.managers = servers.map(
+      (server) => new NFSManagerSingleServer(server, exportsFilePath)
+    ) as [NFSManagerSingleServer, ...NFSManagerSingleServer[]];
+    this.getterManager = this.managers[0];
+  }
+
+  getExports(...args: Parameters<NFSManagerSingleServer["getExports"]>) {
+    return this.getterManager.getExports(...args);
+  }
+
+  addExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
+    return ResultAsync.combine(this.managers.map((m) => m.addExport(nfsExport))).map(
+      () => nfsExport
+    );
+  }
+
+  editExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
+    return ResultAsync.combine(this.managers.map((m) => m.editExport(nfsExport))).map(
+      () => nfsExport
+    );
+  }
+
+  removeExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
+    return ResultAsync.combine(this.managers.map((m) => m.removeExport(nfsExport))).map(
+      () => nfsExport
+    );
+  }
+}
+
+export function getNFSManager(
+  servers: Server | [Server, ...Server[]],
+  exportsFilePath: string
+): INFSManager {
+  if (Array.isArray(servers)) {
+    return servers.length === 1
+      ? new NFSManagerSingleServer(servers[0], exportsFilePath)
+      : new NFSManagerClustered(servers, exportsFilePath);
+  }
+  return new NFSManagerSingleServer(servers, exportsFilePath);
+}

@@ -73,6 +73,8 @@ __metadata:
     vitest: "npm:^1.6.0"
     vue: "npm:^3.4.27"
     vue-tsc: "npm:^2.0.19"
+    zod: "npm:^3.23.8"
+    zod-validation-error: "npm:^3.3.0"
   languageName: unknown
   linkType: soft
 
@@ -3205,6 +3207,7 @@ __metadata:
     vue: "npm:^3.4.27"
     vue-router: "npm:^4.3.2"
     vue-tsc: "npm:^2.0.19"
+    zod: "npm:^3.23.8"
   languageName: unknown
   linkType: soft
 
@@ -6914,5 +6917,21 @@ __metadata:
   bin:
     z-schema: bin/z-schema
   checksum: 10c0/e4c812cfe6468c19b2a21d07d4ff8fb70359062d33400b45f89017eaa3efe9d51e85963f2b115eaaa99a16b451782249bf9b1fa8b31d35cc473e7becb3e44264
+  languageName: node
+  linkType: hard
+
+"zod-validation-error@npm:^3.3.0":
+  version: 3.3.0
+  resolution: "zod-validation-error@npm:3.3.0"
+  peerDependencies:
+    zod: ^3.18.0
+  checksum: 10c0/a233dca6dc9a2237aa7b677cc8ce022c2b6f90894fd4d1e2c7b239d2aad38f36f3b84bf7f7cfaff5bf97fce31e1010d2736ca1ec539e0e8cb8bb9d05977911a2
+  languageName: node
+  linkType: hard
+
+"zod@npm:^3.23.8":
+  version: 3.23.8
+  resolution: "zod@npm:3.23.8"
+  checksum: 10c0/8f14c87d6b1b53c944c25ce7a28616896319d95bc46a9660fe441adc0ed0a81253b02b5abdaeffedbeb23bdd25a0bf1c29d2c12dd919aef6447652dd295e3e69
   languageName: node
   linkType: hard

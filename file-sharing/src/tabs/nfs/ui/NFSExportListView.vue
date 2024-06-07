@@ -1,27 +1,26 @@
 <script setup lang="ts">
 import { ref, computed, defineProps } from "vue";
-import type { SambaShareConfig } from "@/tabs/samba/data-types";
+import type { NFSExport } from "@/tabs/nfs/data-types";
 import { CardContainer, Disclosure, DisclosureController } from "@45drives/houston-common-ui";
 import Table from "@/common/ui/Table.vue";
-import { PlusIcon } from "@heroicons/vue/20/solid";
-import ShareEditor from "@/tabs/samba/ui/ShareEditor.vue";
-import { PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
+import NFSExportEditor from "@/tabs/nfs/ui/NFSExportEditor.vue";
+import { PencilSquareIcon, TrashIcon, PlusIcon } from "@heroicons/vue/20/solid";
 
 const _ = cockpit.gettext;
 
 const props = defineProps<{
-  shares: SambaShareConfig[];
+  nfsExports: NFSExport[];
 }>();
 
 const emit = defineEmits<{
-  (e: "addShare", share: SambaShareConfig, callback?: () => void): void;
-  (e: "editShare", share: SambaShareConfig, callback?: () => void): void;
-  (e: "removeShare", share: SambaShareConfig, callback?: () => void): void;
+  (e: "addExport", nfsExport: NFSExport, callback?: () => void): void;
+  (e: "editExport", nfsExport: NFSExport, callback?: () => void): void;
+  (e: "removeExport", nfsExport: NFSExport, callback?: () => void): void;
 }>();
 
-const showNewShareEditor = ref(false);
+const showNewExportEditor = ref(false);
 
-const shareNames = computed(() => props.shares.map((s) => s.name));
+const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path));
 </script>
 
 <template>
@@ -30,13 +29,13 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
       {{ _("Share Configuration") }}
     </template>
 
-    <Disclosure noButton v-model:show="showNewShareEditor" v-slot="{ visible }">
-      <ShareEditor
+    <Disclosure noButton v-model:show="showNewExportEditor" v-slot="{ visible }">
+      <NFSExportEditor
         v-if="visible"
-        newShare
-        :allShareNames="shareNames"
-        @cancel="showNewShareEditor = false"
-        @apply="(s) => emit('addShare', s, () => (showNewShareEditor = false))"
+        newExport
+        :allExportedPaths="allExportedPaths"
+        @cancel="showNewExportEditor = false"
+        @apply="(s) => emit('addExport', s, () => (showNewExportEditor = false))"
         class="!shadow-none !divide-y-0 pb-5 pt-5 px-4 sm:!pt-0 sm:!px-0"
       />
     </Disclosure>
@@ -48,12 +47,11 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
     >
       <template #thead>
         <tr>
-          <th scope="col">{{ _("Name") }}</th>
           <th scope="col">{{ _("Path") }}</th>
-          <th scope="col">{{ _("Description") }}</th>
+          <th scope="col">{{ _("Comment") }}</th>
           <th scope="col" class="flex flex-row justify-end">
             <span class="sr-only">{{ _("Edit/Delete") }}</span>
-            <button @click="showNewShareEditor = !showNewShareEditor">
+            <button @click="showNewExportEditor = !showNewExportEditor">
               <span class="sr-only">{{ _("Add new share") }}</span>
               <PlusIcon class="size-icon icon-default" />
             </button>
@@ -61,18 +59,17 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
         </tr>
       </template>
       <template #tbody>
-        <template v-for="share in shares" :key="share.name">
+        <template v-for="nfsExport in nfsExports" :key="nfsExport.path">
           <DisclosureController v-slot="{ show: showEditor, setShow: setShowEditor }">
             <tr>
-              <td>{{ share.name }}</td>
-              <td class="text-muted">{{ share.path }}</td>
-              <td class="text-muted">{{ share.description }}</td>
+              <td>{{ nfsExport.path }}</td>
+              <td class="text-muted">{{ nfsExport.comment }}</td>
               <td class="button-group-row justify-end">
                 <button @click="setShowEditor(!showEditor)">
                   <span class="sr-only">Edit</span>
                   <PencilSquareIcon class="size-icon icon-default" />
                 </button>
-                <button @click="emit('removeShare', share)">
+                <button @click="emit('removeExport', nfsExport)">
                   <span class="sr-only">Delete</span>
                   <TrashIcon class="size-icon icon-danger" />
                 </button>
@@ -84,13 +81,15 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
               <td colspan="100%" class="!p-0">
                 <div class="whitespace-normal">
                   <Disclosure noButton :show="showEditor" v-slot="{ visible }">
-                    <ShareEditor
+                    <NFSExportEditor
                       v-if="visible"
-                      :share="share"
-                      :allShareNames="shareNames"
+                      :nfsExport="nfsExport"
+                      :allExportedPaths="allExportedPaths"
                       class="!shadow-none px-4 sm:px-6 py-5"
                       @cancel="setShowEditor(false)"
-                      @apply="(share) => emit('editShare', share, () => setShowEditor(false))"
+                      @apply="
+                        (nfsExport) => emit('editExport', nfsExport, () => setShowEditor(false))
+                      "
                     />
                   </Disclosure>
                 </div>

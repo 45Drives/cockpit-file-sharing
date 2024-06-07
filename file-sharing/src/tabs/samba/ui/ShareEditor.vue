@@ -8,8 +8,12 @@ import {
   ParsedTextArea,
   Disclosure,
   useTempObjectStaging,
-  type InputValidator,
   useGlobalProcessingState,
+  useValidationScope,
+  useValidator,
+  validationSuccess,
+  validationError,
+  ValidationResultView,
 } from "@45drives/houston-common-ui";
 import { type SambaShareConfig, defaultSambaShareConfig } from "@/tabs/samba/data-types";
 import { KeyValueSyntax } from "@45drives/houston-common-lib";
@@ -17,6 +21,7 @@ import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // 
 import { ShareDirectoryInputAndOptions } from "@/common/ui";
 
 const _ = cockpit.gettext;
+const _N = cockpit.ngettext;
 
 const props = defineProps<
   (
@@ -45,46 +50,34 @@ const shareConf = computed<SambaShareConfig>(() =>
 
 const { tempObject: tempShareConfig, modified, resetChanges } = useTempObjectStaging(shareConf);
 
-const shareNameValidator: InputValidator = (name: string) => {
+const { scopeValid } = useValidationScope();
+
+const { validationResult: shareNameValidationResult } = useValidator(() => {
   if (!props.newShare) {
-    return;
+    return validationSuccess();
   }
+  const name = tempShareConfig.value.name;
   if (!name) {
-    return {
-      type: "error",
-      message: _("Share name is required."),
-    };
+    return validationError(_("Share name is required."));
   }
   const invalidChars = name.match(/[%<>*?|/\\+=;:",]/g);
   if (invalidChars) {
-    return {
-      type: "error",
-      message: `Invalid character${invalidChars.length > 1 ? "s" : ""}: ${invalidChars
-        // unique
-        .filter((c, i, a) => a.indexOf(c) === i)
-        // wrap in quotes
-        .map((c) => `'${c}'`)
-        // join with commas
-        .join(", ")}`,
-    };
+    return validationError(
+      _N("Invalid character", "Invalid characters", invalidChars.length) +
+        `: ${invalidChars
+          // unique
+          .filter((c, i, a) => a.indexOf(c) === i)
+          // wrap in quotes
+          .map((c) => `'${c}'`)
+          // join with commas
+          .join(", ")}`
+    );
   }
   if (props.allShareNames.map((n) => n.toLowerCase()).includes(name.toLowerCase())) {
-    return {
-      type: "error",
-      message: _("Share already exists."),
-    };
+    return validationError(_("Share already exists."));
   }
-  return;
-};
-
-const pathChecker = ref<InstanceType<typeof ShareDirectoryInputAndOptions> | null>(null);
-
-const inputsValid = computed<boolean>(
-  () =>
-    tempShareConfig.value !== undefined &&
-    shareNameValidator(tempShareConfig.value.name) === undefined &&
-    pathChecker.value?.isValid === true
-);
+  return validationSuccess();
+});
 
 const revealAdvancedTextarea = ref(false);
 watchEffect(() => {
@@ -93,20 +86,17 @@ watchEffect(() => {
   }
 });
 
-const windowsACLsOptions = BooleanKeyValueSuite(
-  () => tempShareConfig.value?.advancedOptions ?? {},
-  {
-    include: {
-      "map acl inherit": "yes",
-      "acl_xattr:ignore system acls": "yes",
-      "vfs objects": "acl_xattr",
-    },
-    exclude: {},
-  }
-);
+const windowsACLsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
+  include: {
+    "map acl inherit": "yes",
+    "acl_xattr:ignore system acls": "yes",
+    "vfs objects": "acl_xattr",
+  },
+  exclude: {},
+});
 
 const windowsACLsWithLinuxOptions = BooleanKeyValueSuite(
-  () => tempShareConfig.value?.advancedOptions ?? {},
+  () => tempShareConfig.value.advancedOptions,
   {
     include: {
       "map acl inherit": "yes",
@@ -118,7 +108,7 @@ const windowsACLsWithLinuxOptions = BooleanKeyValueSuite(
   }
 );
 
-const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advancedOptions ?? {}, {
+const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
     "shadow:snapdir": ".zfs/snapshot",
     "shadow:sort": "desc",
@@ -128,21 +118,18 @@ const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.adva
   exclude: {},
 });
 
-const macOSSharesOptions = BooleanKeyValueSuite(
-  () => tempShareConfig.value?.advancedOptions ?? {},
-  {
-    include: {
-      "fruit:encoding": "native",
-      "fruit:metadata": "stream",
-      "fruit:zero_file_id": "yes",
-      "fruit:nfs_aces": "no",
-      "vfs objects": "catia fruit streams_xattr",
-    },
-    exclude: {},
-  }
-);
+const macOSSharesOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
+  include: {
+    "fruit:encoding": "native",
+    "fruit:metadata": "stream",
+    "fruit:zero_file_id": "yes",
+    "fruit:nfs_aces": "no",
+    "vfs objects": "catia fruit streams_xattr",
+  },
+  exclude: {},
+});
 
-const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advancedOptions ?? {}, {
+const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
     "vfs objects": "full_audit",
     "full_audit:priority": "notice",
@@ -158,7 +145,7 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
 <template>
   <div class="space-y-content">
     <div v-if="newShare" class="text-header">{{ _("New Share") }}</div>
-    <div v-if="tempShareConfig" class="space-y-content">
+    <div class="space-y-content">
       <InputLabelWrapper>
         <template #label>
           {{ _("Share Name") }}
@@ -166,9 +153,9 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
         <InputField
           v-model="tempShareConfig.name"
           :placeholder="_('A unique name for your share')"
-          :validator="shareNameValidator"
           :disabled="!newShare"
         />
+        <ValidationResultView v-bind="shareNameValidationResult" />
       </InputLabelWrapper>
 
       <InputLabelWrapper>
@@ -176,13 +163,11 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
         <InputField v-model="tempShareConfig.description" :placeholder="_('Describe your share')" />
       </InputLabelWrapper>
 
-      <div>
-        <ShareDirectoryInputAndOptions
-          v-model:path="tempShareConfig.path"
-          :disabled="!newShare"
-          ref="pathChecker"
-        />
-      </div>
+      <ShareDirectoryInputAndOptions
+        v-model:path="tempShareConfig.path"
+        :disabled="!newShare"
+        allowNonExisting
+      />
 
       <ToggleSwitchGroup>
         <ToggleSwitch v-model="tempShareConfig.guestOk">
@@ -252,7 +237,7 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advan
         <button
           class="btn btn-primary"
           @click="$emit('apply', tempShareConfig)"
-          :disabled="!inputsValid || !modified || (globalProcessingState !== 0)"
+          :disabled="!scopeValid || !modified || globalProcessingState !== 0"
         >
           {{ _("Apply") }}
         </button>

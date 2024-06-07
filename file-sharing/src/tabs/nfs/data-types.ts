@@ -161,17 +161,18 @@ export function defaultNFSExport(): NFSExport {
   };
 }
 
-export function newNfsExport(): NFSExport {
+export function newNFSExport(): NFSExport {
   return {
     path: "",
     defaultClientSettings: defaultNFSDefaultClientOptions(),
-    clients: [
-      {
-        host: "*",
-        settings: newNFSClientOptions(),
-      }
-    ],
+    clients: [newNFSExportClient()],
     comment: "",
   };
+}
 
+export function newNFSExportClient(): NFSExportClient {
+  return {
+    host: "*",
+    settings: newNFSClientOptions(),
+  };
 }
