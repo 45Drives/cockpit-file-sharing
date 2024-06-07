@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, defineModel, watchEffect, type Ref, computed, defineExpose } from "vue";
 import {
-  InputFeedback,
   InputLabelWrapper,
   wrapActions,
   InputField,
@@ -9,6 +8,12 @@ import {
   Modal,
   CardContainer,
   ModeAndPermissionsEditor,
+  ValidationResultView,
+  useValidator,
+  validationSuccess,
+  validationWarning,
+  validationError,
+  type ValidationResultAction,
 } from "@45drives/houston-common-ui";
 import {
   getServer,
@@ -32,6 +37,7 @@ const userSettings = useUserSettings();
 
 const props = defineProps<{
   disabled?: boolean;
+  allowNonExisting?: boolean;
 }>();
 
 const usePathInfo = (
@@ -121,15 +127,70 @@ const path = defineModel<string>("path", { required: true });
 const { exists, isDirectory, isAbsolute, mountpointInfo, subdirSuggestions, forceUpdatePathInfo } =
   usePathInfo(path, server);
 
-const isValid = computed<boolean>(() => isAbsolute.value && (isDirectory.value || !exists.value));
+const { validationResult: pathValidationResult } = useValidator(() => {
+  if (!path.value) {
+    return validationError(_("Share path is required."));
+  }
+
+  const fsNode = ((path: string) => server.map((server) => new FileSystemNode(server, path)))(
+    path.value
+  );
+
+  const commandOptions: CommandOptions = { superuser: "try" };
+
+  const filesystem = mountpointInfo.value?.filesystem.type;
+
+  const isAbsolute = fsNode.map((node) => node.isAbsolute());
+  const exists = fsNode.andThen((node) => node.exists());
+  const isDirectory = fsNode.andThen((node) => node.isDirectory(commandOptions));
+
+  return ResultAsync.combine([isAbsolute, exists, isDirectory])
+    .map(([isAbsolute, exists, isDirectory]) => {
+      if (!isAbsolute) {
+        return validationError(_("Path not absolute") + `: ${path.value}`);
+      }
+      if (!exists) {
+        const buttonActions: ValidationResultAction[] =
+          filesystem === "zfs"
+            ? [
+                {
+                  label: _("Create directory"),
+                  callback: async () => {
+                    await actions.createDirectory();
+                  },
+                },
+                {
+                  label: _("Create ZFS dataset"),
+                  callback: async () => {
+                    await actions.createZfsDataset();
+                  },
+                },
+              ]
+            : [
+                {
+                  label: _("Create now"),
+                  callback: async () => {
+                    await actions.createDirectory();
+                  },
+                },
+              ];
+        return (props.allowNonExisting ? validationWarning : validationError)(
+          _("Path does not exist."),
+          buttonActions
+        );
+      }
+      if (!isDirectory) {
+        return validationError(_("Path exists but is not a directory."));
+      }
+      return validationSuccess();
+    })
+    .orElse((e) => ok(validationError(_("Failed to validate path") + `: ${e.message}`)))
+    .unwrapOr(validationError(_("Unknown error while validating path")));
+});
 
 const showPermissionsEditor = ref(false);
 
 const modeAndPermissionsEditorRef = ref<InstanceType<typeof ModeAndPermissionsEditor> | null>(null);
-
-defineExpose({
-  isValid,
-});
 
 const createDirectory = () =>
   server
@@ -182,9 +243,17 @@ const actions = wrapActions({
       :disabled="disabled"
       :suggestions="subdirSuggestions"
     />
+    <ValidationResultView v-bind="pathValidationResult" />
+    <button
+      v-if="pathValidationResult.type === 'success'"
+      @click="showPermissionsEditor = true"
+      class="text-feedback text-primary"
+    >
+      {{ _("Edit permissions") }}
+    </button>
   </InputLabelWrapper>
 
-  <InputFeedback v-if="!path" type="error">
+  <!-- <InputFeedback v-if="!path" type="error">
     {{ _("Share path is required.") }}
   </InputFeedback>
   <InputFeedback v-else-if="!isAbsolute" type="error">
@@ -210,9 +279,7 @@ const actions = wrapActions({
   <InputFeedback v-else-if="!isDirectory" type="error">
     {{ _("Path exists but is not a directory.") }}
   </InputFeedback>
-  <button v-else @click="showPermissionsEditor = true" class="text-feedback text-primary">
-    {{ _("Edit permissions") }}
-  </button>
+   -->
   <Modal :show="showPermissionsEditor">
     <CardContainer>
       <template #header> {{ _("Share Directory Permissions") }} </template>
@@ -238,7 +305,10 @@ const actions = wrapActions({
     </CardContainer>
   </Modal>
   <!-- Filesystem-specific checks/fixes -->
-  <CephOptions v-if="mountpointInfo?.filesystem.type === 'ceph' && isDirectory" :path="path" />
+  <CephOptions
+    v-if="mountpointInfo?.filesystem.type === 'ceph' && pathValidationResult.type === 'success'"
+    :path="path"
+  />
   <template v-else-if="mountpointInfo?.filesystem.type === 'cifs'">
     <InputFeedback type="warning">
       {{ path + _(" is already shared through Samba/CIFS") }}

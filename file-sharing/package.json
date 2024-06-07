@@ -23,7 +23,8 @@
     "monet": "^0.9.3",
     "neverthrow": "^6.2.1",
     "vue": "^3.4.27",
-    "vue-router": "^4.3.2"
+    "vue-router": "^4.3.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@fontsource/red-hat-text": "^5.0.18",

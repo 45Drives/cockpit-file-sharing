@@ -67,7 +67,7 @@ const [pathIsMountpoint, refetchPathIsMountpoint] = computedResult<boolean>(() =
 const [pathRemountedByFileSharing, refetchPathRemountedByFileSharing] = computedResult(() => {
   const currentPath = path.value;
   if (pathIsMountpoint.value === false) {
-    return ok(false);
+    return okAsync(false);
   }
   return cephOptionManager.andThen((m) => m.pathMountpointManagedByFileSharing(currentPath));
 }, false);
