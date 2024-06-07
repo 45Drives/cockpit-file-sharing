@@ -44,6 +44,9 @@ const [globalConf, reloadGlobalConf] = computedResult(() =>
   sambaManager.andThen((sm) => sm.getGlobalConfig())
 );
 
+const shareSortPredicate = (a: SambaShareConfig, b: SambaShareConfig) =>
+  a.name.localeCompare(b.name, undefined, { caseFirst: "false" });
+
 const [shares, reloadShares] = computedResult(
   () => sambaManager.andThen((sm) => sm.getShares()).map((s) => s.sort(shareSortPredicate)),
   []
@@ -54,9 +57,6 @@ const applyGlobalSettings = (newSettings: SambaGlobalConfig) =>
     .andThen((sm) => sm.editGlobal(newSettings))
     .andThen(() => reloadGlobalConf())
     .map(() => reportSuccess(_("Updated global Samba configuration.")));
-
-const shareSortPredicate = (a: SambaShareConfig, b: SambaShareConfig) =>
-  a.name.localeCompare(b.name, undefined, { caseFirst: "false" });
 
 const reloadShare = (shareName: string) =>
   sambaManager
