@@ -2,7 +2,7 @@
 import { ref, computed, defineProps } from "vue";
 import type { SambaShareConfig } from "@/tabs/samba/data-types";
 import { CardContainer, Disclosure, DisclosureController } from "@45drives/houston-common-ui";
-import Table from "@/tabs/samba/ui/Table.vue";
+import Table from "@/common/ui/Table.vue";
 import { PlusIcon } from "@heroicons/vue/20/solid";
 import ShareEditor from "@/tabs/samba/ui/ShareEditor.vue";
 import { PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
@@ -50,6 +50,7 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
         <tr>
           <th scope="col">{{ _("Name") }}</th>
           <th scope="col">{{ _("Path") }}</th>
+          <th scope="col">{{ _("Description") }}</th>
           <th scope="col" class="flex flex-row justify-end">
             <span class="sr-only">{{ _("Edit/Delete") }}</span>
             <button @click="showNewShareEditor = !showNewShareEditor">
@@ -65,6 +66,7 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
             <tr>
               <td>{{ share.name }}</td>
               <td class="text-muted">{{ share.path }}</td>
+              <td class="text-muted">{{ share.description }}</td>
               <td class="button-group-row justify-end">
                 <button @click="setShowEditor(!showEditor)">
                   <span class="sr-only">Edit</span>
