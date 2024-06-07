@@ -69,8 +69,8 @@ const exportConfig = () =>
   nfsManager.value
     .andThen((m) => m.exportConfig())
     .map((config) =>
-      Download.content(
-        [config],
+      Download.text(
+        config,
         `cockpit-file-sharing_nfs_exported_${new Date()
           .toISOString()
           .replace(/:/g, "-")

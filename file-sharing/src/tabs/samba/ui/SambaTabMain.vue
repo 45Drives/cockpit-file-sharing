@@ -138,8 +138,8 @@ const exportConfig = () =>
   sambaManager
     .andThen((sm) => sm.exportConfig())
     .map((config) =>
-      Download.content(
-        [config],
+      Download.text(
+        config,
         `cockpit-file-sharing_samba_exported_${new Date()
           .toISOString()
           .replace(/:/g, "-")
