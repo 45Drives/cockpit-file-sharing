@@ -35,7 +35,7 @@
 
 <script setup lang="ts">
 	import { CardContainer, wrapActions } from "@45drives/houston-common-ui";
-    import { inject, ref } from "vue";
+    import { inject, ref, watch } from "vue";
     import Table from "../Table.vue";
     import { PlusIcon } from "@heroicons/vue/24/solid";
     import TargetEntry from "../target/TargetEntry.vue";
@@ -49,13 +49,19 @@
 
 	const showAddTarget = ref(false);
 
-    const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
+    const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
-    if (driver === undefined) {
-		throw new Error("iSCSI Driver is null");
-	}
+    const forceRefreshRecords = inject<Record<string, boolean>>("forceRefreshRecords")!;
+
+    watch(forceRefreshRecords, () => {
+        if (forceRefreshRecords["targets"]) {
+            refreshTargets();
+            forceRefreshRecords["targets"] = false;
+        }
+    })
 
 	const refreshTargets = () => {
+        console.log("refreshing")
 		return driver.andThen((driver) => {
 			return driver.getTargets().map((targetList) => {
 				targets.value = targetList;

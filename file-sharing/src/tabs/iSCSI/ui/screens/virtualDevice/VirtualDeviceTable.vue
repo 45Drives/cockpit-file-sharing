@@ -38,7 +38,7 @@
 
 <script setup lang="ts">
     import { CardContainer, wrapActions } from "@45drives/houston-common-ui";
-    import { inject, ref, type Ref } from "vue";
+    import { inject, ref, watch, type Ref } from "vue";
     import { VirtualDevice } from "../../types/VirtualDevice";
     import Table from "../Table.vue";
     import { PlusIcon } from "@heroicons/vue/24/solid";
@@ -50,17 +50,18 @@
 
     const showAddDevice = ref(false);
 
-    const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
+    const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
-    if (driver === undefined) {
-		throw new Error("iSCSI Driver is null");
-	}
+    const virtualDevices = inject<Ref<VirtualDevice[]>>('virtualDevices')!;
 
-    const virtualDevices = inject<Ref<VirtualDevice[]>>('virtualDevices');
+    const forceRefreshRecords = inject<Record<string, boolean>>("forceRefreshRecords")!;
 
-    if (virtualDevices === undefined) {
-        throw new Error("Virtual Device list is null");
-    }
+    watch(forceRefreshRecords, () => {
+        if (forceRefreshRecords["devices"]) {
+            refreshDevices();
+            forceRefreshRecords["devices"] = false;
+        }
+    })
 
 	const refreshDevices = () => {
 		return driver.andThen((driver) => {

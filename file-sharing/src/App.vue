@@ -2,6 +2,7 @@
 import { HoustonAppContainer, Modal } from "@45drives/houston-common-ui";
 import { SambaTabMain } from "@/tabs/samba/ui";
 import { NfsTabMain } from "@/tabs/nfs/ui";
+import { ISCSITabMain } from "@/tabs/iSCSI/ui";
 import UserSettingsView from "@/common/ui/UserSettingsView.vue";
 import { ref } from "vue";
 import { Cog8ToothIcon } from "@heroicons/vue/20/solid";
@@ -25,6 +26,10 @@ const showUserSettings = ref(false);
       {
         label: 'NFS',
         component: NfsTabMain,
+      },
+      {
+        label: 'iSCSI',
+        component: ISCSITabMain,
       },
     ]"
   >
