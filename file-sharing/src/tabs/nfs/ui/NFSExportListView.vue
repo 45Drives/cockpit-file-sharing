@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, defineProps } from "vue";
 import type { NFSExport } from "@/tabs/nfs/data-types";
-import { CardContainer, Disclosure, DisclosureController } from "@45drives/houston-common-ui";
-import Table from "@/common/ui/Table.vue";
+import {
+  CardContainer,
+  Disclosure,
+  DisclosureController,
+  Table,
+} from "@45drives/houston-common-ui";
 import NFSExportEditor from "@/tabs/nfs/ui/NFSExportEditor.vue";
 import { PencilSquareIcon, TrashIcon, PlusIcon } from "@heroicons/vue/20/solid";
 

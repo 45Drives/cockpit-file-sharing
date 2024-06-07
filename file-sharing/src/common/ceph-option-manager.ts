@@ -1,7 +1,4 @@
-import {
-  SystemdManagerSingleServer,
-  type SystemdMountSettings,
-} from "@/common/systemd-manager";
+import { SystemdManagerSingleServer, type SystemdMountSettings } from "@/common/systemd-manager";
 import {
   Command,
   FileSystemNode,
