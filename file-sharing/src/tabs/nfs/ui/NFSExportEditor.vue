@@ -4,12 +4,7 @@ import {
   useGlobalProcessingState,
   useTempObjectStaging,
   InputField,
-  ToggleSwitch,
-  ToggleSwitchGroup,
   InputLabelWrapper,
-  ParsedTextArea,
-  Disclosure,
-  DisclosureController,
   computedResult,
   useValidationScope,
   useValidator,
@@ -23,8 +18,6 @@ import Table from "@/common/ui/Table.vue";
 import { PlusIcon } from "@heroicons/vue/20/solid";
 
 import { NFSExportParser } from "@/tabs/nfs/exports-parser";
-
-import { z } from "zod";
 
 const _ = cockpit.gettext;
 

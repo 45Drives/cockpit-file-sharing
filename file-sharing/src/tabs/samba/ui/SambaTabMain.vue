@@ -17,12 +17,10 @@ import { useUserSettings } from "@/common/user-settings";
 import GlobalConfigEditor from "./GlobalConfigEditor.vue";
 import ShareListView from "@/tabs/samba/ui/ShareListView.vue";
 
-import { onMounted, provide, ref, watch, watchEffect, computed } from "vue";
+import { provide, ref, watch, computed } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
 
 import { SambaManager } from "@/tabs/samba/samba-manager";
-
-import { ResultAsync, ok, err } from "neverthrow";
 
 const _ = cockpit.gettext;
 

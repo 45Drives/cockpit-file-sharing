@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineModel, watchEffect, type Ref, computed, defineExpose } from "vue";
+import { ref, defineModel, watchEffect, type Ref, computed } from "vue";
 import {
   InputLabelWrapper,
   wrapActions,
@@ -23,7 +23,6 @@ import {
   FileSystemNode,
   type CommandOptions,
   Path,
-  type FilesystemMount,
   Command,
 } from "@45drives/houston-common-lib";
 import { ResultAsync, ok, errAsync, err } from "neverthrow";

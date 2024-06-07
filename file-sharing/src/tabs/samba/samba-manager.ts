@@ -7,12 +7,10 @@ import {
   type KeyValueData,
   IniSyntax,
   keyValueDiff,
-  getServer,
   File,
   RegexSnippets,
 } from "@45drives/houston-common-lib";
 import {
-  type SambaConfig,
   type SambaGlobalConfig,
   type SambaShareConfig,
 } from "@/tabs/samba/data-types";

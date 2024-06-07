@@ -1,40 +1,21 @@
 <script setup lang="ts">
-import {
-  getSystemdManager,
-  type SystemdMountSettings,
-  type SystemdUnit,
-} from "@/common/systemd-manager";
-import { inject, defineProps, computed, ref, watchEffect, type Ref, type ComputedRef } from "vue";
+import { inject, defineProps, computed, ref, watchEffect } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
-import { useMountpointInfo } from "@/common/useMountpointInfo";
-import { ResultAsync, okAsync, safeTry, ok, err, Result } from "neverthrow";
-import {
-  Command,
-  ExitedProcess,
-  FileSystemNode,
-  ParsingError,
-  ProcessError,
-  Server,
-  StringToIntCaster,
-  getServer,
-  safeJsonParse,
-  type CommandOptions,
-} from "@45drives/houston-common-lib";
+import { okAsync } from "neverthrow";
+import { StringToIntCaster } from "@45drives/houston-common-lib";
 import {
   wrapActions,
   ToggleSwitch,
-  reportError,
   InputLabelWrapper,
   InputField,
 } from "@45drives/houston-common-ui";
 import {
   reportSuccess,
-  assertConfirm,
   computedResult,
   SelectMenu,
   type SelectMenuOption,
 } from "@45drives/houston-common-ui";
-import { Maybe, Some, None } from "monet";
+import { Maybe } from "monet";
 import { getCephOptionManager } from "@/common/ceph-option-manager";
 
 const _ = cockpit.gettext;
