@@ -18,7 +18,7 @@ import {
   ValidationResultView,
 } from "@45drives/houston-common-ui";
 import { defineProps, defineEmits, computed, ref } from "vue";
-import { ShareDirectoryInputAndOptions } from "@/common/ui";
+import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
 import Table from "@/common/ui/Table.vue";
 import { PlusIcon } from "@heroicons/vue/20/solid";
 

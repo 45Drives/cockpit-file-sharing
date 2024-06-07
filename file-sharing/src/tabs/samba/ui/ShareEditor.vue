@@ -18,7 +18,7 @@ import {
 import { type SambaShareConfig, defaultSambaShareConfig } from "@/tabs/samba/data-types";
 import { KeyValueSyntax } from "@45drives/houston-common-lib";
 import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
-import { ShareDirectoryInputAndOptions } from "@/common/ui";
+import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
 
 const _ = cockpit.gettext;
 const _N = cockpit.ngettext;

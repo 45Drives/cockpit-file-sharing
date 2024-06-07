@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { type SambaShareConfig, type SambaGlobalConfig } from "@/tabs/samba/data-types";
-import { getServer, Download } from "@45drives/houston-common-lib";
+import { getServer, Download, Upload, getServerCluster } from "@45drives/houston-common-lib";
 import {
   CenteredCardColumn,
   Notification,
   pushNotification,
   wrapActions,
   CardContainer,
-  FileUploadButton,
   assertConfirm,
   reportSuccess,
   computedResult,
@@ -17,7 +16,6 @@ import { useUserSettings } from "@/common/user-settings";
 
 import GlobalConfigEditor from "./GlobalConfigEditor.vue";
 import ShareListView from "@/tabs/samba/ui/ShareListView.vue";
-import { getServerCluster } from "@/common/getServerCluster";
 
 import { onMounted, provide, ref, watch, watchEffect, computed } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
@@ -122,8 +120,6 @@ const fixSmbConfIncludeRegistry = (smbConfPath: string) =>
     .andThen((sm) => sm.patchSmbConfIncludeRegistry(smbConfPath))
     .map(() => reportSuccess(_("Added `include = registry` to ") + smbConfPath));
 
-const uploadRef = ref<InstanceType<typeof FileUploadButton> | null>(null);
-
 const importConfig = () =>
   assertConfirm({
     header: _("Overwrite current configuration?"),
@@ -132,14 +128,7 @@ const importConfig = () =>
     ),
     dangerous: true,
   })
-    .andThen(() => {
-      if (uploadRef.value === null) {
-        return err(new Error("uploadRef was null!"));
-      }
-      return uploadRef.value.getUpload();
-    })
-    .andThen(([file]) => (file === undefined ? err(new Error("No file given")) : ok(file)))
-    .andThen((file) => ResultAsync.fromSafePromise(file.text()))
+    .andThen(() => Upload.text(".conf"))
     .andThen((newConfigContents) =>
       sambaManager.andThen((sm) => sm.importConfig(newConfigContents))
     )
@@ -235,8 +224,6 @@ watch(smbConfPath, () => actions.checkIfSmbConfIncludesRegistry(smbConfPath.valu
             }}
           </ToolTip>
         </button>
-
-        <FileUploadButton hidden accept=".conf" ref="uploadRef" @upload="" />
       </div>
     </CardContainer>
   </CenteredCardColumn>

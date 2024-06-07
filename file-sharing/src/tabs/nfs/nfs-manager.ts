@@ -16,8 +16,8 @@ export interface INFSManager {
   addExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
   editExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
   removeExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
-  // exportConfig(): ResultAsync<string, ProcessError>;
-  // importConfig(config: string): ResultAsync<this, ProcessError>;
+  exportConfig(): ResultAsync<string, ProcessError>;
+  importConfig(config: string): ResultAsync<this, ProcessError>;
 }
 
 export class NFSManagerSingleServer implements INFSManager {
@@ -82,6 +82,18 @@ export class NFSManagerSingleServer implements INFSManager {
       .andThen(() => executeHookCallbacks(Hooks.AfterRemoveShare, this.server, nfsExport))
       .map(() => nfsExport);
   }
+
+  exportConfig(): ResultAsync<string, ProcessError> {
+    return this.ensureExportsFile().andThen((exportsFile) => exportsFile.read(this.commandOptions));
+  }
+
+  importConfig(config: string): ResultAsync<this, ProcessError> {
+    return this.ensureExportsFile()
+      .andThen((exportsFile) =>
+        exportsFile.replace(config, { ...this.commandOptions, backup: true })
+      )
+      .map(() => this);
+  }
 }
 
 export class NFSManagerClustered implements INFSManager {
@@ -115,6 +127,14 @@ export class NFSManagerClustered implements INFSManager {
     return ResultAsync.combine(this.managers.map((m) => m.removeExport(nfsExport))).map(
       () => nfsExport
     );
+  }
+
+  exportConfig(): ResultAsync<string, ProcessError> {
+    return this.getterManager.exportConfig();
+  }
+
+  importConfig(config: string): ResultAsync<this, ProcessError> {
+    return ResultAsync.combine(this.managers.map((m) => m.importConfig(config))).map(() => this);
   }
 }
 
