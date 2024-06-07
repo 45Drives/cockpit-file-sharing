@@ -16,6 +16,8 @@ export interface INFSManager {
   addExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
   editExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
   removeExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
+  // exportConfig(): ResultAsync<string, ProcessError>;
+  // importConfig(config: string): ResultAsync<this, ProcessError>;
 }
 
 export class NFSManagerSingleServer implements INFSManager {
@@ -29,21 +31,27 @@ export class NFSManagerSingleServer implements INFSManager {
     this.exportsFile = new File(this.server, exportsFilePath);
   }
 
+  private ensureExportsFile(): ResultAsync<File, ProcessError> {
+    return this.exportsFile
+      .assertExists(true)
+      .orElse(() => this.exportsFile.create(true, this.commandOptions))
+      .andThen((file) => file.assertIsFile());
+  }
+
   private setExports(exports: NFSExport[]): ResultAsync<this, ProcessError | ParsingError> {
     return this.nfsExportsParser
       .unapply(exports)
       .asyncAndThen((newExportsContent) =>
-        this.exportsFile
-          .assertIsFile(this.commandOptions)
-          .andThen((exportsFile) => exportsFile.replace(newExportsContent, this.commandOptions))
+        this.ensureExportsFile().andThen((exportsFile) =>
+          exportsFile.replace(newExportsContent, this.commandOptions)
+        )
       )
       .andThen(() => this.server.execute(new Command(["exportfs", "-ra"], this.commandOptions)))
       .map(() => this);
   }
 
   getExports(): ResultAsync<NFSExport[], ProcessError | ParsingError> {
-    return this.exportsFile
-      .assertIsFile(this.commandOptions)
+    return this.ensureExportsFile()
       .andThen((exportsFile) => exportsFile.read(this.commandOptions))
       .andThen((exportsFileContents) => this.nfsExportsParser.apply(exportsFileContents));
   }

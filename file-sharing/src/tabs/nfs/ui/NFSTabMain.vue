@@ -26,15 +26,13 @@ const _ = cockpit.gettext;
 
 const userSettings = useUserSettings();
 
-const exportsFilePath = computed(() => userSettings.value.nfs.confPath);
-
 const cluster = getServerCluster("pcs");
 provide(serverClusterInjectionKey, cluster);
 const cephClientName = ref<`client.${string}`>("client.nfs");
 provide(cephClientNameInjectionKey, cephClientName);
 
 const nfsManager = computed(() => {
-  const exportsPath = exportsFilePath.value;
+  const exportsPath = userSettings.value.nfs.confPath;
   return cluster.map((cluster) => getNFSManager(cluster, exportsPath));
 });
 
