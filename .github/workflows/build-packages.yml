@@ -15,6 +15,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          submodules: true
+          fetch-depth: 1
       - name: Package Binaries
         run: build-packages ${{github.repository}} ${{github.workspace}} --env NPM_AUTH_TOKEN ${{secrets.NPM_AUTH_PAT}} --env YARN_IGNORE_NODE 1
       - name: Set Variables
