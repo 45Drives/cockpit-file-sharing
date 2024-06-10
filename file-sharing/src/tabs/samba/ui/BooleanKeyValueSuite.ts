@@ -1,4 +1,4 @@
-import { computed, type WritableComputedRef } from "vue";
+import { computed } from "vue";
 
 export const BooleanKeyValueSuite = (
   objGetter: () => Record<string, string>,

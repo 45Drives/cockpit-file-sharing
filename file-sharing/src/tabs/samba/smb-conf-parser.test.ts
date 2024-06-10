@@ -1,5 +1,5 @@
 import { SmbGlobalParser, SmbShareParser, SmbConfParser } from "@/tabs/samba/smb-conf-parser";
-import { Path, type KeyValueData } from "@45drives/houston-common-lib";
+import { type KeyValueData } from "@45drives/houston-common-lib";
 import type { SambaConfig, SambaGlobalConfig, SambaShareConfig } from "@/tabs/samba/data-types";
 import { ok } from "neverthrow";
 import { suite, test, expect } from "vitest";

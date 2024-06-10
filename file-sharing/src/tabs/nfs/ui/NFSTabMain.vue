@@ -3,30 +3,23 @@ import {
   CenteredCardColumn,
   CardContainer,
   wrapActions,
-  pushNotification,
-  Notification,
-  type Action,
   computedResult,
   reportSuccess,
   assertConfirm,
 } from "@45drives/houston-common-ui";
-import { getServerCluster } from "@/common/getServerCluster";
-import { computed, provide, ref, type Ref } from "vue";
-import { ResultAsync, okAsync, errAsync, Result, ok, err } from "neverthrow";
+import { Upload, Download, getServerCluster } from "@45drives/houston-common-lib";
+import { computed, provide, ref } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
 
 import { useUserSettings } from "@/common/user-settings";
-import { getNFSManager, type INFSManager } from "@/tabs/nfs/nfs-manager";
+import { getNFSManager } from "@/tabs/nfs/nfs-manager";
 import type { NFSExport } from "@/tabs/nfs/data-types";
 
-import NFSExportEditor from "@/tabs/nfs/ui/NFSExportEditor.vue";
 import NFSExportListView from "@/tabs/nfs/ui/NFSExportListView.vue";
 
 const _ = cockpit.gettext;
 
 const userSettings = useUserSettings();
-
-const exportsFilePath = computed(() => userSettings.value.nfs.confPath);
 
 const cluster = getServerCluster("pcs");
 provide(serverClusterInjectionKey, cluster);
@@ -34,7 +27,7 @@ const cephClientName = ref<`client.${string}`>("client.nfs");
 provide(cephClientNameInjectionKey, cephClientName);
 
 const nfsManager = computed(() => {
-  const exportsPath = exportsFilePath.value;
+  const exportsPath = userSettings.value.nfs.confPath;
   return cluster.map((cluster) => getNFSManager(cluster, exportsPath));
 });
 
@@ -72,11 +65,39 @@ const removeExport = (nfsExport: NFSExport) =>
     .andThen(() => refetchNFSExports())
     .map(() => reportSuccess(_("Successfully removed export for") + ` ${nfsExport.path}`));
 
+const exportConfig = () =>
+  nfsManager.value
+    .andThen((m) => m.exportConfig())
+    .map((config) =>
+      Download.text(
+        config,
+        `cockpit-file-sharing_nfs_exported_${new Date()
+          .toISOString()
+          .replace(/:/g, "-")
+          .replace(/T/, "_")}.exports`
+      )
+    );
+
+const importConfig = () =>
+  assertConfirm({
+    header: _("Overwrite current configuration?"),
+    body: _("This cannot be undone. You should export a copy of your config first."),
+    dangerous: true,
+  })
+    .andThen(() => Upload.text(".exports"))
+    .andThen((newConfigContents) =>
+      nfsManager.value.andThen((m) => m.importConfig(newConfigContents))
+    )
+    .andThen(() => refetchNFSExports())
+    .map(() => reportSuccess(_("Imported configuration")));
+
 const actions = wrapActions({
   refetchNFSExports,
   addExport,
   editExport,
   removeExport,
+  exportConfig,
+  importConfig,
 });
 </script>
 
@@ -90,5 +111,18 @@ const actions = wrapActions({
         (nfsExport, callback) => actions.removeExport(nfsExport).map(() => callback?.())
       "
     />
+    <CardContainer>
+      <template #header>
+        {{ _("Import/Export Config") }}
+      </template>
+      <div class="button-group-row">
+        <button class="btn btn-primary" @click="actions.importConfig">
+          {{ _("Import") }}
+        </button>
+        <button class="btn btn-primary" @click="actions.exportConfig">
+          {{ _("Export") }}
+        </button>
+      </div>
+    </CardContainer>
   </CenteredCardColumn>
 </template>

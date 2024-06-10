@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useUserSettings, type UserSettings } from "@/common/user-settings";
+import { useUserSettings } from "@/common/user-settings";
 import {
   InputLabelWrapper,
   InputField,

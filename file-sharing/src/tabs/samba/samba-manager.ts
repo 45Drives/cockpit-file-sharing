@@ -7,15 +7,10 @@ import {
   type KeyValueData,
   IniSyntax,
   keyValueDiff,
-  getServer,
   File,
   RegexSnippets,
 } from "@45drives/houston-common-lib";
-import {
-  type SambaConfig,
-  type SambaGlobalConfig,
-  type SambaShareConfig,
-} from "@/tabs/samba/data-types";
+import { type SambaGlobalConfig, type SambaShareConfig } from "@/tabs/samba/data-types";
 import { SmbConfParser, SmbGlobalParser, SmbShareParser } from "@/tabs/samba/smb-conf-parser";
 import { Result, ok, err, ResultAsync, okAsync, errAsync } from "neverthrow";
 import { executeHookCallbacks, Hooks } from "@/common/hooks";
