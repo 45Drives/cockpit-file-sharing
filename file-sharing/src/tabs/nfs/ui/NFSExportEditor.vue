@@ -115,7 +115,7 @@ const { validationResult: commentValidationResult } = validationScope.useValidat
         <ValidationResultView v-bind="commentValidationResult" />
       </InputLabelWrapper>
 
-      <InputLabelWrapper>
+      <InputLabelWrapper tooltipAbove>
         <template #label>
           {{ _("Default Client Settings") }}
         </template>
@@ -125,7 +125,7 @@ const { validationResult: commentValidationResult } = validationScope.useValidat
         <InputField v-model="tempExportConfig.defaultClientSettings" />
       </InputLabelWrapper>
 
-      <InputLabelWrapper>
+      <InputLabelWrapper tooltipAbove>
         <template #label>
           {{ _("Clients") }}
         </template>
