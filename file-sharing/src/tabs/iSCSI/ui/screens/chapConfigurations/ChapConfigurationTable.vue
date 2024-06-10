@@ -8,7 +8,7 @@
         </div>
         <div class="card">
             <div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
-                <Table headerText="CHAP Configurations" emptyText="No CHAP configurations. Click '+' to add one." noScroll
+                <Table headerText="CHAP Configurations" emptyText="No CHAP configurations. Click '+' to add one." noScroll 
                     class="!border-none !shadow-none">
                     <template #thead>
                         <tr>

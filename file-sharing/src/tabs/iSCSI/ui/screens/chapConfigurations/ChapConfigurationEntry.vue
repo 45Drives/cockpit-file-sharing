@@ -1,7 +1,12 @@
 <template>
     <tr>
         <td>{{ config.username }}</td>
-        <td>{{ config.password }}</td>
+        <td>
+			{{ displayedPassword }}
+			<button style="display: inline-block;" @click="showPassword = !showPassword">
+      			<EyeIcon class="size-icon icon-default"/>
+    		</button>
+		</td>
         <td>{{ config.chapType }}</td>
 		<td class="button-group-row justify-end">
 			<button @click="promptDeletion">
@@ -13,9 +18,9 @@
 </template>
 
 <script setup lang="ts">
-	import { TrashIcon } from "@heroicons/vue/20/solid";
+	import { TrashIcon, EyeIcon } from "@heroicons/vue/20/solid";
 	import { wrapActions, confirmBeforeAction } from "@45drives/houston-common-ui";
-	import { inject } from "vue";
+	import { computed, inject, ref } from "vue";
 	import type { ISCSIDriver } from "../../types/ISCSIDriver";
 	import { ResultAsync } from "neverthrow";
 	import { ProcessError } from "@45drives/houston-common-lib";
@@ -31,6 +36,12 @@
 	if (driver === undefined) {
 		throw new Error("iSCSI Driver is null");
 	}
+
+	const showPassword = ref(false);
+
+	const displayedPassword = computed(() => {
+		return showPassword.value ? props.config.password : "****************"
+	});
 
 	const deleteEntry = () => {
 		return driver.andThen((driver) => driver.removeCHAPConfigurationFromTarget(props.target, props.config))

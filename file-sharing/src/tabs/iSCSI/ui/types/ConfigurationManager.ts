@@ -5,28 +5,33 @@ import type { ResultAsync } from "neverthrow";
 export class ConfigurationManager {
     server: Server;
     
-    backupConfigurationFilePath: string;
-
     constructor(server: Server) {
         this.server = server;
-        this.backupConfigurationFilePath = useUserSettings().value.iscsi.confPath;
     }
 
     exportConfiguration(): ResultAsync<string, ProcessError> {
-        return this.server.execute(new BashCommand(`scstadmin -write_config ${this.backupConfigurationFilePath}`)).andThen(() =>
-            this.server.execute(new BashCommand(`cat ${this.backupConfigurationFilePath}`)).map((proc) => 
+        return this.server.execute(new BashCommand(`scstadmin -write_config ${useUserSettings().value.iscsi.confPath}`)).andThen(() =>
+            this.server.execute(new BashCommand(`cat ${useUserSettings().value.iscsi.confPath}`)).map((proc) => 
                 proc.getStdout()
             )
         )
     }
 
     importConfiguration(newConfig: string) {
-        return new File(this.server, this.backupConfigurationFilePath)
+        return new File(this.server, useUserSettings().value.iscsi.confPath)
                 .create()
                 .andThen((file) => file.write(newConfig))
-                .andThen(() => this.server.execute(new BashCommand(`scstadmin -check_config ${this.backupConfigurationFilePath}`)))
-                .map(() => this.server.execute(new BashCommand(`scstadmin -config ${this.backupConfigurationFilePath} -force -noprompt`)))
+                .andThen(() => this.server.execute(new BashCommand(`scstadmin -check_config ${useUserSettings().value.iscsi.confPath}`)))
+                .map(() => this.server.execute(new BashCommand(`scstadmin -config ${useUserSettings().value.iscsi.confPath} -force -noprompt`)))
                 .mapErr(() => new ProcessError("Config file syntax validation failed."))
                 
+    }
+
+    saveCurrentConfiguration(): ResultAsync<File, ProcessError> {
+        return this.exportConfiguration().andThen((config) => {
+            return new File(this.server, useUserSettings().value.iscsi.confPath)
+            .create()
+            .andThen((file) => file.write(config))
+        })
     }
 }
