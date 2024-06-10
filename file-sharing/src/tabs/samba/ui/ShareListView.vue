@@ -69,8 +69,18 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
           <DisclosureController v-slot="{ show: showEditor, setShow: setShowEditor }">
             <tr>
               <td>{{ share.name }}</td>
-              <td class="text-muted">{{ share.path }}</td>
-              <td class="text-muted">{{ share.description }}</td>
+              <td
+                class="text-muted text-ellipsis overflow-hidden w-1/4 max-w-0"
+                :title="share.path"
+              >
+                {{ share.path }}
+              </td>
+              <td
+                class="text-muted text-ellipsis overflow-hidden w-3/4 max-w-0"
+                :title="share.description"
+              >
+                {{ share.description }}
+              </td>
               <td class="button-group-row justify-end">
                 <button @click="setShowEditor(!showEditor)">
                   <span class="sr-only">Edit</span>

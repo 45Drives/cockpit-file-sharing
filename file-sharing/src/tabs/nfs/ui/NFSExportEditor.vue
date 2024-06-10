@@ -14,7 +14,7 @@ import {
 } from "@45drives/houston-common-ui";
 import { defineProps, defineEmits, computed, ref } from "vue";
 import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
-import { PlusIcon } from "@heroicons/vue/20/solid";
+import { PlusIcon, TrashIcon } from "@heroicons/vue/20/solid";
 
 import { NFSExportParser } from "@/tabs/nfs/exports-parser";
 
@@ -82,6 +82,13 @@ const { validationResult: pathValidationResult } = validationScope.useValidator(
   }
   return validationSuccess();
 });
+
+const { validationResult: commentValidationResult } = validationScope.useValidator(() => {
+  if (tempExportConfig.value.comment.endsWith("\\")) {
+    return validationError(_("Comment cannot end with '\\'."));
+  }
+  return validationSuccess();
+});
 </script>
 
 <template>
@@ -105,6 +112,7 @@ const { validationResult: pathValidationResult } = validationScope.useValidator(
           v-model="tempExportConfig.comment"
           :placeholder="_('A description for your share')"
         />
+        <ValidationResultView v-bind="commentValidationResult" />
       </InputLabelWrapper>
 
       <InputLabelWrapper>
@@ -127,7 +135,7 @@ const { validationResult: pathValidationResult } = validationScope.useValidator(
         <Table
           :emptyText="_('No shares. Click \'+\' to add one.')"
           noScroll
-          class="sm:rounded-lg sm:shadow sm:border sm:border-default"
+          class="rounded-lg shadow border border-default"
         >
           <template #thead>
             <tr>
@@ -145,23 +153,26 @@ const { validationResult: pathValidationResult } = validationScope.useValidator(
           <template #tbody>
             <template v-for="(client, index) in tempExportConfig.clients" :key="index">
               <tr>
-                <td>
+                <td class="overflow-hidden w-1/4 max-w-0">
                   <InputField :placeholder="_('Default: *')" v-model="client.host" />
                 </td>
-                <td>
+                <td class="overflow-hidden w-3/4 max-w-0">
                   <InputField
                     :placeholder="_('Default: rw,sync,no_subtree_check')"
                     v-model="client.settings"
                   />
                 </td>
-                <td class="button-group-row justify-end">
-                  <button
-                    :disabled="tempExportConfig.clients.length <= 1"
-                    @click="() => removeClient(index)"
-                  >
-                    <span class="sr-only">Delete</span>
-                    <TrashIcon class="size-icon icon-danger" />
-                  </button>
+                <td>
+                  <div class="button-group-row justify-end">
+                    <button
+                      :disabled="tempExportConfig.clients.length <= 1"
+                      :title="_('Remove client')"
+                      @click="() => removeClient(index)"
+                    >
+                      <span class="sr-only">Delete</span>
+                      <TrashIcon class="size-icon icon-danger" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             </template>
@@ -173,7 +184,7 @@ const { validationResult: pathValidationResult } = validationScope.useValidator(
         <template #label>
           {{ _("Export Preview") }}
         </template>
-        <div class="font-mono whitespace-pre">
+        <div class="font-mono whitespace-pre-wrap">
           {{ validationScope.isValid() ? exportPreview : "" }}
         </div>
       </InputLabelWrapper>

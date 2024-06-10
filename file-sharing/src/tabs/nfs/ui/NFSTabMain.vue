@@ -115,7 +115,7 @@ const actions = wrapActions({
       <template #header>
         {{ _("Import/Export Config") }}
       </template>
-      <div class="button-group-row">
+      <div class="button-group-row flex-wrap">
         <button class="btn btn-primary" @click="actions.importConfig">
           {{ _("Import") }}
         </button>

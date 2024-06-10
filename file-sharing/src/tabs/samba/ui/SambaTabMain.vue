@@ -196,7 +196,7 @@ watch(smbConfPath, () => actions.checkIfSmbConfIncludesRegistry(smbConfPath.valu
       <template #header>
         {{ _("Import/Export Config") }}
       </template>
-      <div class="button-group-row">
+      <div class="button-group-row flex-wrap">
         <button class="btn btn-primary" @click="actions.importConfig">
           {{ _("Import") }}
         </button>
@@ -204,16 +204,18 @@ watch(smbConfPath, () => actions.checkIfSmbConfIncludesRegistry(smbConfPath.valu
           {{ _("Export") }}
         </button>
         <button
-          class="btn btn-secondary flex flex-row items-baseline gap-1"
+          class="btn btn-secondary inline-flex flex-row items-center gap-1"
           @click="actions.importFromSmbConf"
         >
-          <span>
-            {{ _("Import configuration from") }}
+          <span class="space-x-1">
+            <span>
+              {{ _("Import configuration from") }}
+            </span>
+            <span class="font-mono">
+              {{ smbConfPath }}
+            </span>
           </span>
-          <span class="font-mono">
-            {{ smbConfPath }}
-          </span>
-          <ToolTip class="self-center" above>
+          <ToolTip above>
             {{
               _(
                 "File Sharing uses Samba's net registry to configure shares. " +
