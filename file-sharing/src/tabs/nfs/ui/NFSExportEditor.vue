@@ -6,8 +6,7 @@ import {
   InputField,
   InputLabelWrapper,
   computedResult,
-  useValidationScope,
-  useValidator,
+  ValidationScope,
   validationSuccess,
   validationError,
   ValidationResultView,
@@ -73,8 +72,8 @@ const parser = new NFSExportParser();
 
 const [exportPreview] = computedResult(() => parser.unapply(tempExportConfig.value), "");
 
-const { scopeValid } = useValidationScope();
-const { validationResult: pathValidationResult } = useValidator(() => {
+const validationScope = new ValidationScope();
+const { validationResult: pathValidationResult } = validationScope.useValidator(() => {
   if (!props.newExport) {
     return validationSuccess();
   }
@@ -93,7 +92,7 @@ const { validationResult: pathValidationResult } = useValidator(() => {
         <ShareDirectoryInputAndOptions
           v-model:path="tempExportConfig.path"
           :disabled="!newExport"
-          ref="pathChecker"
+          :validationScope
         />
         <ValidationResultView v-bind="pathValidationResult" />
       </div>
@@ -175,7 +174,7 @@ const { validationResult: pathValidationResult } = useValidator(() => {
           {{ _("Export Preview") }}
         </template>
         <div class="font-mono whitespace-pre">
-          {{ scopeValid ? exportPreview : "" }}
+          {{ validationScope.isValid() ? exportPreview : "" }}
         </div>
       </InputLabelWrapper>
 
@@ -194,7 +193,7 @@ const { validationResult: pathValidationResult } = useValidator(() => {
         <button
           class="btn btn-primary"
           @click="$emit('apply', tempExportConfig)"
-          :disabled="!scopeValid || !modified || globalProcessingState !== 0"
+          :disabled="!validationScope.isValid() || !modified || globalProcessingState !== 0"
         >
           {{ _("Apply") }}
         </button>

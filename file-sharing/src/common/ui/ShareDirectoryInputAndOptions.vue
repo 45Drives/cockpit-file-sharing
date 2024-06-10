@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineModel, watchEffect, type Ref, computed } from "vue";
+import { ref, defineModel, watchEffect, type Ref, computed, type InjectionKey } from "vue";
 import {
   InputLabelWrapper,
   wrapActions,
@@ -9,7 +9,7 @@ import {
   CardContainer,
   ModeAndPermissionsEditor,
   ValidationResultView,
-  useValidator,
+  ValidationScope,
   validationSuccess,
   validationWarning,
   validationError,
@@ -34,10 +34,14 @@ const _ = cockpit.gettext;
 
 const userSettings = useUserSettings();
 
-const props = defineProps<{
-  disabled?: boolean;
-  allowNonExisting?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    disabled?: boolean;
+    allowNonExisting?: boolean;
+    validationScope: ValidationScope;
+  }>(),
+  {}
+);
 
 const usePathInfo = (
   path: Ref<string>,
@@ -126,7 +130,7 @@ const path = defineModel<string>("path", { required: true });
 const { exists, isDirectory, isAbsolute, mountpointInfo, subdirSuggestions, forceUpdatePathInfo } =
   usePathInfo(path, server);
 
-const { validationResult: pathValidationResult } = useValidator(() => {
+const { validationResult: pathValidationResult } = props.validationScope.useValidator(() => {
   if (!path.value) {
     return validationError(_("Share path is required."));
   }
