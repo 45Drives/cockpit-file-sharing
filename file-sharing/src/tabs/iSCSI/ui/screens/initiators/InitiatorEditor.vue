@@ -31,7 +31,7 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createConfiguration"
-                    :disabled="!scopeValid || !modified"
+                    :disabled="!validationScope.isValid() || !modified"
                 >{{ ("Create") }}</button>
             </div>
         </template>
@@ -39,13 +39,13 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, useValidationScope, useValidator, validationError, validationSuccess, ValidationResultView, wrapActions } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, validationError, validationSuccess, ValidationResultView, wrapActions, ValidationScope } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { inject, ref } from 'vue';
     import { ProcessError } from '@45drives/houston-common-lib';
     import type { ISCSIDriver } from '../../types/ISCSIDriver';
     import type { InitiatorGroup } from '../../types/InitiatorGroup';
-    import { Initiator } from '../../types/Initiator';
+    import { Initiator } from '../../types/Initiator';  
 
     const _ = cockpit.gettext;
 
@@ -76,9 +76,9 @@
 
     const actions = wrapActions({createConfiguration});
     
-    const { scopeValid } = useValidationScope();
+    const validationScope = new ValidationScope();
 
-    const { validationResult: initiatorNameValidationResult } = useValidator(() => {
+    const { validationResult: initiatorNameValidationResult } = validationScope.useValidator(() => {
         if (!tempInitiator.value.name) {
             return validationError("A name is required.");
         }

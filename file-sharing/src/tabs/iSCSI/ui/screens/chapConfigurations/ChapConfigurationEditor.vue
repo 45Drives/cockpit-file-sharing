@@ -53,7 +53,7 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createConfiguration"
-                    :disabled="!scopeValid || !modified"
+                    :disabled="!validationScope.isValid() || !modified"
                 >{{ ("Create") }} </button>
             </div>
         </template>
@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, useValidationScope, useValidator, validationError, validationSuccess, wrapActions } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, validationError, validationSuccess, ValidationResultView, wrapActions, ValidationScope } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { computed, inject, ref } from 'vue';
     import { type Target } from '../../types/Target';
@@ -111,9 +111,9 @@
 
     const actions = wrapActions({createConfiguration});
 
-    const { scopeValid } = useValidationScope();
+    const validationScope = new ValidationScope();
 
-    const { validationResult: configurationUsernameValidationResult } = useValidator(() => {
+    const { validationResult: configurationUsernameValidationResult } = validationScope.useValidator(() => {
         if (!tempConfiguration.value.username) {
             return validationError("A username is required.");
         }
@@ -121,7 +121,7 @@
         return validationSuccess();
     });
 
-    const { validationResult: configurationPasswordValidationResult } = useValidator(() => {
+    const { validationResult: configurationPasswordValidationResult } = validationScope.useValidator(() => {
         if (!tempConfiguration.value.password) {
             return validationError("A password is required.");
         }

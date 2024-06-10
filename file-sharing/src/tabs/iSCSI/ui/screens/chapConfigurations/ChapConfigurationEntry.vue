@@ -1,6 +1,7 @@
 <template>
     <tr>
         <td>{{ config.username }}</td>
+        <td>{{ config.password }}</td>
         <td>{{ config.chapType }}</td>
 		<td class="button-group-row justify-end">
 			<button @click="promptDeletion">

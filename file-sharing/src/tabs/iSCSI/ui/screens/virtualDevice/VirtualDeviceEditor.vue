@@ -53,6 +53,7 @@
                 <InputField
                     :placeholder="'Size'"
                     :disabled="tempDevice.deviceType === DeviceType.BlockIO"
+                    type="number"
                     v-model="tempDevice.blockSize"
                 />
                 <ValidationResultView v-bind="blockSizeValidationResult"/>
@@ -68,15 +69,15 @@
                 <button
                     class="btn btn-primary"
                     @click="finalizeDevice"
-                    :disabled="!scopeValid || !modified"
-                >{{ ("Create") }}  {{scopeValid}}</button>
+                    :disabled="!validationScope.isValid() || !modified"
+                >{{ ("Create") }}</button>
             </div>
         </template>
     </CardContainer>
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, ValidationResultView, useValidationScope, useValidator, validationSuccess, validationError } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, ValidationResultView, validationSuccess, validationError, ValidationScope } from '@45drives/houston-common-ui';
     import { err, ok, type ResultAsync } from 'neverthrow';
     import { inject, ref, type Ref } from 'vue';
     import { DeviceType, VirtualDevice } from '../../types/VirtualDevice';
@@ -129,9 +130,9 @@
 
     const actions = wrapActions({createDevice});
 
-    const { scopeValid } = useValidationScope();
+    const validationScope = new ValidationScope();
 
-    const { validationResult: deviceNameValidationResult } = useValidator(() => {
+    const { validationResult: deviceNameValidationResult } = validationScope.useValidator(() => {
         if (!tempDevice.value.deviceName) {
             return validationError("Device name is required.");
         }
@@ -143,7 +144,7 @@
         return validationSuccess();
     });
 
-    const { validationResult: filePathValidationResult } = useValidator(async () => {
+    const { validationResult: filePathValidationResult } = validationScope.useValidator(async () => {
         if (!tempDevice.value.filePath) {
             return validationError("Device path is required.");
         }
@@ -161,16 +162,14 @@
         return validationSuccess();
     });
 
-    const { validationResult: blockSizeValidationResult } = useValidator(() => {
+    const { validationResult: blockSizeValidationResult } = validationScope.useValidator(() => {
         if (!tempDevice.value.blockSize) {
             return validationError("Device Block Size is required.");
         }
 
-        // const number = StringToIntCaster()(tempDevice.value.blockSize);
-
-        // if (number.isNone() || number.some() < 0) {
-        //     return validationError("Device Block Size needs to be a positive number.");
-        // }
+        if (tempDevice.value.blockSize < 0) {
+            return validationError("Device Block Size needs to be a positive number.");
+        }
 
         return validationSuccess();
     });

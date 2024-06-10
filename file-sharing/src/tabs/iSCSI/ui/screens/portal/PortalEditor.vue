@@ -33,7 +33,7 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createPortal"
-                    :disabled="!scopeValid || !modified"
+                    :disabled="!validationScope.isValid() || !modified"
                 >{{ ("Create") }}</button>
             </div>
         </template>
@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, wrapActions, ValidationResultView, validationError, validationSuccess, useValidator, useValidationScope } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, wrapActions, ValidationResultView, validationError, validationSuccess, ValidationScope } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { inject, ref } from 'vue';
     import { type Target } from '../../types/Target';
@@ -78,10 +78,10 @@
 
     const actions = wrapActions({createPortal});
 
-    const { scopeValid } = useValidationScope();
+    const validationScope = new ValidationScope();
 
-    const { validationResult: portalAddressValidationResult } = useValidator(() => {
-        if (!newPortal.value.address) {
+    const { validationResult: portalAddressValidationResult } = validationScope.useValidator(() => {
+        if (!tempPortal.value.address) {
             return validationError("A portal address is required.");
         }
 

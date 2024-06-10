@@ -13,6 +13,7 @@
                     <template #thead>
                         <tr>
                             <th scope="col">Username</th>
+                            <th scope="col">Password</th>
                             <th scope="col">Type</th>
                             <th scope="col" class="flex flex-row justify-end">
                                 <span class="sr-only">Delete</span>

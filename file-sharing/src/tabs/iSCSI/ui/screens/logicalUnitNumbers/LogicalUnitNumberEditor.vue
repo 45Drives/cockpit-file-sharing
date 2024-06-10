@@ -42,7 +42,7 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createLun"
-                    :disabled="!scopeValid || !modified"
+                    :disabled="!validationScope.isValid() || !modified"
                 >{{ ("Create") }}</button>
             </div>
         </template>
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, useValidationScope, useValidator, validationError, validationSuccess, ValidationResultView, wrapActions, type SelectMenuOption } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, validationError, validationSuccess, ValidationResultView, wrapActions, type SelectMenuOption, ValidationScope } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { computed, inject, ref, type ComputedRef, type Ref } from 'vue';
     import { ProcessError, StringToIntCaster } from '@45drives/houston-common-lib';
@@ -94,9 +94,9 @@
                         .mapErr((error) => new ProcessError(`Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`))
     }
 
-    const { scopeValid } = useValidationScope();
+    const validationScope = new ValidationScope();
 
-    const { validationResult: numberValidationResult } = useValidator(() => {
+    const { validationResult: numberValidationResult } = validationScope.useValidator(() => {
         if (!tempLun.value.unitNumber) {
             return validationError("A number is required.");
         }

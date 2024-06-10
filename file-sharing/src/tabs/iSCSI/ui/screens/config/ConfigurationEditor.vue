@@ -10,49 +10,19 @@
         <button class="btn btn-primary" @click="actions.exportConfig">
           {{ _("Export") }}
         </button>
-        <!-- <button
-          class="btn btn-secondary flex flex-row items-baseline gap-1"
-          @click="actions.importFromSmbConf"
-        >
-          <span>
-            {{ _("Import configuration from") }}
-          </span>
-          <span class="font-mono">
-            {{ smbConfPath }}
-          </span>
-          <ToolTip class="self-center" above>
-            {{
-              _(
-                "File Sharing uses Samba's net registry to configure shares. " +
-                  "Click this button to import configuration from /etc/samba/smb.conf into the net registry for management."
-              )
-            }}
-          </ToolTip>
-        </button> -->
-
-        <FileUploadButton hidden accept=".conf" ref="uploadRef" @upload="" />
       </div>
     </CardContainer>
 </template>
 
 <script setup lang="ts">
     import {
-        CenteredCardColumn,
-        Notification,
-        pushNotification,
         wrapActions,
         CardContainer,
-        FileUploadButton,
         assertConfirm,
-        reportSuccess,
-        computedResult,
-        ToolTip,
-        wrapAction,
+        reportSuccess
     } from "@45drives/houston-common-ui";
     import { ConfigurationManager } from "../../types/ConfigurationManager";
-    import { Download, getServer } from "@45drives/houston-common-lib";
-    import { ref } from "vue";
-    import { ResultAsync, err, ok } from "neverthrow";
+    import { Download, Upload, getServer } from "@45drives/houston-common-lib";
 
     const _ = cockpit.gettext;
 
@@ -70,8 +40,8 @@
         configurationManager
         .andThen((manager) => manager.exportConfiguration())
         .map((configString) => 
-            Download.content(
-            [configString],
+            Download.text(
+            configString,
                 `cockpit-file-sharing_iSCSI_exported_${new Date()
                     .toISOString()
                     .replace(/:/g, "-")
@@ -79,8 +49,6 @@
                 )
             );
 
-
-    const uploadRef = ref<InstanceType<typeof FileUploadButton> | null>(null);
     
     const importConfig = () =>
         assertConfirm({
@@ -90,14 +58,7 @@
             ),
             dangerous: true,
         })
-            .andThen(() => {
-            if (uploadRef.value === null) {
-                return err(new Error("uploadRef was null!"));
-            }
-            return uploadRef.value.getUpload();
-            })
-            .andThen(([file]) => (file === undefined ? err(new Error("No file given")) : ok(file)))
-            .andThen((file) => ResultAsync.fromSafePromise(file.text()))
+            .andThen(() => Upload.text(".conf"))
             .andThen((newConfigContents) => configurationManager.andThen((manager) => manager.importConfiguration(newConfigContents)))
             .map(() => {
                     emit('configUpdated');

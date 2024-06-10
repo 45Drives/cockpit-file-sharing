@@ -32,7 +32,7 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createInitiatorGroup"
-                    :disabled="!scopeValid || !modified"
+                    :disabled="!validationScope.isValid() || !modified"
                 >{{ ("Create") }}</button>
             </div>
         </template>
@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, useValidator, validationSuccess, validationError, ValidationResultView, useValidationScope } from '@45drives/houston-common-ui';
+    import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, validationSuccess, validationError, ValidationResultView, ValidationScope } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { inject, ref } from 'vue';
     import { type Target } from '../../types/Target';
@@ -77,9 +77,9 @@
 
     const actions = wrapActions({createInitiatorGroup});
 
-    const { scopeValid } = useValidationScope();
+    const validationScope = new ValidationScope();
 
-    const { validationResult: initiatorGroupNameValidationResult } = useValidator(() => {
+    const { validationResult: initiatorGroupNameValidationResult } = validationScope.useValidator(() => {
         if (!tempInitiatorGroup.value.name) {
             return validationError("A group name is required.");
         }

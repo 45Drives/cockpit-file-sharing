@@ -20,6 +20,15 @@ export type UserSettings = {
     confPath: string;
   };
   /**
+   * iSCSI-specific settings
+   */
+  iscsi: {
+    /**
+     * Path to iSCSI configuration path.
+     */
+    confPath: string;
+  };
+  /**
    * Include users and groups with uid and gid from 1 to 999
    */
   includeSystemAccounts: boolean;
@@ -31,6 +40,9 @@ const defaultSettings = (): UserSettings => ({
   },
   nfs: {
     confPath: "/etc/exports.d/cockpit-file-sharing.exports",
+  },
+  iscsi: {
+    confPath: "/tmp/iSCSI.conf",
   },
   includeSystemAccounts: false,
 });
@@ -55,6 +67,9 @@ configFile.watch(
       },
       nfs: {
         confPath: contents.nfs?.confPath || defaultSettings().nfs.confPath,
+      },
+      iscsi: {
+        confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
       },
       includeSystemAccounts:
         contents.includeSystemAccounts ?? defaultSettings().includeSystemAccounts,

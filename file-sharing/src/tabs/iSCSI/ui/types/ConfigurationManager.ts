@@ -1,13 +1,15 @@
+import { useUserSettings } from "@/common/user-settings";
 import { BashCommand, ProcessError, type Server, File } from "@45drives/houston-common-lib";
 import type { ResultAsync } from "neverthrow";
 
 export class ConfigurationManager {
     server: Server;
     
-    backupConfigurationFilePath: string = "/tmp/iSCSI.conf";
+    backupConfigurationFilePath: string;
 
     constructor(server: Server) {
         this.server = server;
+        this.backupConfigurationFilePath = useUserSettings().value.iscsi.confPath;
     }
 
     exportConfiguration(): ResultAsync<string, ProcessError> {

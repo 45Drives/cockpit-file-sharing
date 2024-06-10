@@ -60,6 +60,17 @@ const applyChanges = () => (userSettings.value = tempUserSettings.value);
           placeholder="default: /etc/exports.d/cockpit-file-sharing.exports"
         />
       </InputLabelWrapper>
+      <div class="text-header">iSCSI</div>
+      <InputLabelWrapper>
+        <template #label>
+          {{ _("Configuration Path") }}
+        </template>
+        <InputField
+          v-model="tempUserSettings.iscsi.confPath"
+          class="w-full"
+          placeholder="default: /tmp/iSCSI.conf"
+        />
+      </InputLabelWrapper>
     </div>
     <template #footer>
       <div class="button-group-row justify-end">

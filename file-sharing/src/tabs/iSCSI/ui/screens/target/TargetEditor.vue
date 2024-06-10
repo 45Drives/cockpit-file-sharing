@@ -32,7 +32,7 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createTarget"
-                    :disabled="!scopeValid || !modified"
+                    :disabled="!validationScope.isValid() || !modified"
                 >{{ ("Create") }}</button>
             </div>
         </template>
@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, useValidator, validationError, validationSuccess, ValidationResultView, wrapActions, useValidationScope } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, validationError, validationSuccess, ValidationResultView, wrapActions, ValidationScope } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { inject, ref } from 'vue';
     import { Target } from '../../types/Target';
@@ -76,9 +76,9 @@
 
     const actions = wrapActions({createTarget});
 
-    const { scopeValid } = useValidationScope();
+    const validationScope = new ValidationScope();
 
-    const { validationResult: targetNameValidationResult } = useValidator(() => {
+    const { validationResult: targetNameValidationResult } = validationScope.useValidator(() => {
         if (!tempTarget.value.name) {
             return validationError("A target name is required.");
         }
