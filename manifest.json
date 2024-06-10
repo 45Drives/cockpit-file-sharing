@@ -1,8 +1,8 @@
 {
-    "__version": "45D-R1",
+    "__version": "45D-R2",
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
-    "prerelease": false,
+    "prerelease": true,
     "version": "3.3.7",
     "buildVersion": "1",
     "author": "Josh Boudreau <jboudreau@45drives.com>",
@@ -22,29 +22,34 @@
         "urgency": "medium"
     },
     "dependencies": {
-        "deb": [
-            "cockpit",
-            "attr",
-            "coreutils",
-            "libc-bin",
-            "nfs-kernel-server",
-            "samba",
-            "samba-common-bin",
-            "systemd",
-            "winbind",
-            "gawk"
-        ],
-        "el": [
-            "cockpit",
-            "attr",
-            "coreutils",
-            "glibc-common",
-            "nfs-utils",
-            "samba-common-tools",
-            "samba-winbind-clients",
-            "systemd",
-            "gawk"
-        ]
+        "deb": {
+            "focal": [
+                "cockpit-bridge",
+                "coreutils",
+                "attr",
+                "findutils",
+                "hostname",
+                "iproute2",
+                "libc-bin",
+                "systemd",
+                "nfs-kernel-server",
+                "samba-common-bin"
+            ]
+        },
+        "el": {
+            "el8": [
+                "cockpit-bridge",
+                "coreutils",
+                "attr",
+                "findutils",
+                "hostname",
+                "iproute",
+                "glibc-common",
+                "systemd",
+                "nfs-utils",
+                "samba-common-tools"
+            ]
+        }
     },
     "releases": [
         {

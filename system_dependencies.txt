@@ -1,0 +1,16 @@
+all of houston-common/system_dependencies.txt, plus:
+
+commands:
+systemctl
+exportfs
+net
+
+RHEL 8:
+systemd - systemctl
+nfs-utils - exportfs
+samba-common-tools - net
+
+Ubuntu Focal:
+systemd - systemctl
+nfs-kernel-server - exportfs
+samba-common-bin - net

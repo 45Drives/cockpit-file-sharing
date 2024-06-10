@@ -6,7 +6,7 @@ License: ::package_licence::
 URL: ::package_url::
 Source0: %{name}-%{version}.tar.gz
 BuildArch: ::package_architecture_el::
-Requires: ::package_dependencies_el::
+Requires: ::package_dependencies_el_el8::
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
