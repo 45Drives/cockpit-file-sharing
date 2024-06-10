@@ -9,6 +9,7 @@ import {
   keyValueDiff,
   File,
   RegexSnippets,
+  StringUtils,
 } from "@45drives/houston-common-lib";
 import { type SambaGlobalConfig, type SambaShareConfig } from "@/tabs/samba/data-types";
 import { SmbConfParser, SmbGlobalParser, SmbShareParser } from "@/tabs/samba/smb-conf-parser";
@@ -143,18 +144,20 @@ export class SambaManager implements ISambaManager {
   listShareNames() {
     return this.server
       .execute(this.listShareNamesCommand())
-      .map((p) => p.getStdout().trim())
-      .map((shareNames) =>
-        shareNames
-          .split(RegexSnippets.newlineSplitter)
-          .filter((shareName) => shareName.toLowerCase() !== "global")
+      .map((p) => p.getStdout())
+      .map(StringUtils.splitBy(RegexSnippets.newlineSplitter))
+      .map(
+        StringUtils.filter(
+          StringUtils.nonEmptyFilter(),
+          (shareName) => shareName.toLowerCase() !== "global"
+        )
       );
   }
 
   getShareProperty(shareName: string, property: string) {
     return this.server
       .execute(this.getParmCommand(shareName, property))
-      .map((p) => p.getStdout().trim());
+      .map((p) => p.getStdout().replace(/[\r\n]+$/, ""));
   }
 
   getShare(shareName: string) {
