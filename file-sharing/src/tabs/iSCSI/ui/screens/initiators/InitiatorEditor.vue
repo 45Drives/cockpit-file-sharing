@@ -16,9 +16,9 @@
                 </template>
 
                 <InputField
-                    :validator="initiatorNameValidator"
                     v-model="tempInitiator.name"
                 />
+                <ValidationResultView v-bind="initiatorNameValidationResult" />
             </InputLabelWrapper>
         </div>
 
@@ -31,7 +31,7 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createConfiguration"
-                    :disabled="!modified"
+                    :disabled="!scopeValid || !modified"
                 >{{ ("Create") }}</button>
             </div>
         </template>
@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, wrapActions, type InputValidator } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, useValidationScope, useValidator, validationError, validationSuccess, ValidationResultView, wrapActions } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { inject, ref } from 'vue';
     import { ProcessError } from '@45drives/houston-common-lib';
@@ -75,16 +75,15 @@
     }
 
     const actions = wrapActions({createConfiguration});
+    
+    const { scopeValid } = useValidationScope();
 
-    const initiatorNameValidator: InputValidator = (name: string) => {
-        if (!name) {
-            return {
-                type: "error",
-                message: ("A name is required."),
-            }
+    const { validationResult: initiatorNameValidationResult } = useValidator(() => {
+        if (!tempInitiator.value.name) {
+            return validationError("A name is required.");
         }
 
-        return;
-    }
+        return validationSuccess();
+    });
     
 </script>

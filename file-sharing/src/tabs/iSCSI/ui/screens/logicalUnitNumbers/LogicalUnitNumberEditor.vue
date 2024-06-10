@@ -16,9 +16,9 @@
                 </template>
 
                 <InputField
-                    :validator="lunNumberValidator"
                     v-model="tempLun.unitNumber"
                 />
+                <ValidationResultView v-bind="numberValidationResult" />
             </InputLabelWrapper>
 
             <InputLabelWrapper>
@@ -42,7 +42,7 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createLun"
-                    :disabled="!modified"
+                    :disabled="!scopeValid || !modified"
                 >{{ ("Create") }}</button>
             </div>
         </template>
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, wrapActions, type InputValidator, type SelectMenuOption } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, useValidationScope, useValidator, validationError, validationSuccess, ValidationResultView, wrapActions, type SelectMenuOption } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { computed, inject, ref, type ComputedRef, type Ref } from 'vue';
     import { ProcessError, StringToIntCaster } from '@45drives/houston-common-lib';
@@ -94,23 +94,19 @@
                         .mapErr((error) => new ProcessError(`Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`))
     }
 
-    const lunNumberValidator: InputValidator = (number: string) => {
-        if (!number) {
-            return {
-                type: "error",
-                message: ("A number is required."),
-            }
+    const { scopeValid } = useValidationScope();
+
+    const { validationResult: numberValidationResult } = useValidator(() => {
+        if (!tempLun.value.unitNumber) {
+            return validationError("A number is required.");
         }
 
-        if (StringToIntCaster()(number).isNone()) {
-            return {
-                type: "error",
-                message: ("A number is required"),
-            }
+        if (StringToIntCaster()(tempLun.value.unitNumber).isNone()) {
+            return validationError("A number is required");
         }
 
-        return;
-    }
+        return validationSuccess();
+    });
 
     const actions = wrapActions({createLun});
 

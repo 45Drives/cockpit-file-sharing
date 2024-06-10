@@ -17,9 +17,9 @@
 
                 <InputField
                     :placeholder="'The name for your Initiator Group'"
-                    :validator="initiatorGroupNameValidator"
                     v-model="tempInitiatorGroup.name"
                 />
+                <ValidationResultView v-bind="initiatorGroupNameValidationResult" />
             </InputLabelWrapper>
         </div>
 
@@ -32,7 +32,7 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createInitiatorGroup"
-                    :disabled="!modified"
+                    :disabled="!scopeValid || !modified"
                 >{{ ("Create") }}</button>
             </div>
         </template>
@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, type InputValidator } from '@45drives/houston-common-ui';
+    import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, useValidator, validationSuccess, validationError, ValidationResultView, useValidationScope } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { inject, ref } from 'vue';
     import { type Target } from '../../types/Target';
@@ -77,15 +77,14 @@
 
     const actions = wrapActions({createInitiatorGroup});
 
-    const initiatorGroupNameValidator: InputValidator = (address: string) => {
-        if (!address) {
-            return {
-                type: "error",
-                message: ("A group name is required."),
-            }
+    const { scopeValid } = useValidationScope();
+
+    const { validationResult: initiatorGroupNameValidationResult } = useValidator(() => {
+        if (!tempInitiatorGroup.value.name) {
+            return validationError("A group name is required.");
         }
 
-        return;
-    }
+        return validationSuccess();
+    });
     
 </script>

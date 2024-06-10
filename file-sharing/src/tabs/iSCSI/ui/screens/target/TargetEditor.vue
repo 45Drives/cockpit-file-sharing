@@ -17,9 +17,9 @@
 
                 <InputField
                     :placeholder="'A unique name for your target'"
-                    :validator="targetNameValidator"
                     v-model="tempTarget.name"
                 />
+                <ValidationResultView v-bind="targetNameValidationResult" />
             </InputLabelWrapper>
         </div>
 
@@ -32,7 +32,7 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createTarget"
-                    :disabled="!modified"
+                    :disabled="!scopeValid || !modified"
                 >{{ ("Create") }}</button>
             </div>
         </template>
@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, wrapActions, type InputValidator } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, useValidator, validationError, validationSuccess, ValidationResultView, wrapActions, useValidationScope } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { inject, ref } from 'vue';
     import { Target } from '../../types/Target';
@@ -76,22 +76,18 @@
 
     const actions = wrapActions({createTarget});
 
-    const targetNameValidator: InputValidator = (name: string) => {
-        if (!name) {
-            return {
-                type: "error",
-                message: ("A target name is required."),
-            }
+    const { scopeValid } = useValidationScope();
+
+    const { validationResult: targetNameValidationResult } = useValidator(() => {
+        if (!tempTarget.value.name) {
+            return validationError("A target name is required.");
         }
 
-        if (props.existingTargets.find((target) => (target.name === name)) !== undefined) {
-            return {
-                type: "error",
-                message: ("A target with this name already exists."),
-            }
+        if (props.existingTargets.find((target) => (target.name === tempTarget.value.name)) !== undefined) {
+            return validationError("A target with this name already exists.")
         }
 
-        return;
-    }
+        return validationSuccess();
+    })
     
 </script>

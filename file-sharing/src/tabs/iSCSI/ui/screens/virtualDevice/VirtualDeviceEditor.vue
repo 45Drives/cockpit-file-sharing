@@ -17,9 +17,9 @@
 
                 <InputField
                     :placeholder="'A unique name for your device'"
-                    :validator="deviceNameValidator"
                     v-model="tempDevice.deviceName"
                 />
+                <ValidationResultView v-bind="deviceNameValidationResult"/>
             </InputLabelWrapper>
 
             <InputLabelWrapper>
@@ -40,9 +40,9 @@
                 
                 <InputField
                     :placeholder="'File path to device'"
-                    :validator="devicePathValidator"
                     v-model="tempDevice.filePath"
                 />
+                <ValidationResultView v-bind="filePathValidationResult"/>
             </InputLabelWrapper>
 
             <InputLabelWrapper>
@@ -52,10 +52,10 @@
                 
                 <InputField
                     :placeholder="'Size'"
-                    :validator="deviceBlockSizeValidator"
                     :disabled="tempDevice.deviceType === DeviceType.BlockIO"
                     v-model="tempDevice.blockSize"
                 />
+                <ValidationResultView v-bind="blockSizeValidationResult"/>
             </InputLabelWrapper>
         </div>
 
@@ -68,15 +68,15 @@
                 <button
                     class="btn btn-primary"
                     @click="finalizeDevice"
-                    :disabled="!modified"
-                >{{ ("Create") }}</button>
+                    :disabled="!scopeValid || !modified"
+                >{{ ("Create") }}  {{scopeValid}}</button>
             </div>
         </template>
     </CardContainer>
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, type InputValidator } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, ValidationResultView, useValidationScope, useValidator, validationSuccess, validationError } from '@45drives/houston-common-ui';
     import { err, ok, type ResultAsync } from 'neverthrow';
     import { inject, ref, type Ref } from 'vue';
     import { DeviceType, VirtualDevice } from '../../types/VirtualDevice';
@@ -129,66 +129,51 @@
 
     const actions = wrapActions({createDevice});
 
-    const deviceNameValidator: InputValidator = (name: string) => {
-        if (!name) {
-            return {
-                type: "error",
-                message: ("Device name is required."),
-            }
+    const { scopeValid } = useValidationScope();
+
+    const { validationResult: deviceNameValidationResult } = useValidator(() => {
+        if (!tempDevice.value.deviceName) {
+            return validationError("Device name is required.");
         }
 
-        if (virtualDevices.value.find((device) => (device.deviceName === name)) !== undefined) {
-            return {
-                type: "error",
-                message: ("A device with this name already exists."),
-            }
+        if (virtualDevices.value.find((device) => (device.deviceName === tempDevice.value.deviceName)) !== undefined) {
+            return validationError("A device with this name already exists.");
         }
 
-        return;
-    }
+        return validationSuccess();
+    });
 
-    const devicePathValidator: InputValidator = async (pathString: string) => {
-        if (!pathString) {
-            return {
-                type: "error",
-                message: ("Device path is required."),
-            }
+    const { validationResult: filePathValidationResult } = useValidator(async () => {
+        if (!tempDevice.value.filePath) {
+            return validationError("Device path is required.");
         }
 
-        const path = new Path(pathString);
+        const path = new Path(tempDevice.value.filePath);
 
         const fileExists = await getServer()
                             .andThen((server) => path.existsOn(server))
                             .unwrapOr(false);
-
+        
         if (!fileExists) {
-            return {
-                type: "error",
-                message: ("Device path does not exist."),
-            }
-        }
-        
-        return;
-    }
-
-    const deviceBlockSizeValidator: InputValidator = (size: string) => {
-        if (!size) {
-            return {
-                type: "error",
-                message: ("Device Block Size is required."),
-            }
+            return validationError("Device path does not exist.");
         }
 
-        const number = StringToIntCaster()(size);
-        if (number.isNone() || number.some() < 0) {
-            return {
-                type: "error",
-                message: ("Device Block Size needs to be a positive number."),
-            }
+        return validationSuccess();
+    });
+
+    const { validationResult: blockSizeValidationResult } = useValidator(() => {
+        if (!tempDevice.value.blockSize) {
+            return validationError("Device Block Size is required.");
         }
-        
-        return;
-    }
+
+        // const number = StringToIntCaster()(tempDevice.value.blockSize);
+
+        // if (number.isNone() || number.some() < 0) {
+        //     return validationError("Device Block Size needs to be a positive number.");
+        // }
+
+        return validationSuccess();
+    });
 
     function fetchBlockSize(filePath: string): ResultAsync<number, ProcessError> {
 		return getServer().andThen((server) => {

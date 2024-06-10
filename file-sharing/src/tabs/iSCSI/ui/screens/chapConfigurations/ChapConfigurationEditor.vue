@@ -16,9 +16,9 @@
                 </template>
 
                 <InputField
-                    :validator="configurationUsernameValidator"
                     v-model="tempConfiguration.username"
                 />
+                <ValidationResultView v-bind="configurationUsernameValidationResult" />
             </InputLabelWrapper>
 
             <InputLabelWrapper>
@@ -27,9 +27,9 @@
                 </template>
 
                 <InputField
-                    :validator="configurationPasswordValidator"
                     v-model="tempConfiguration.password"
                 />
+                <ValidationResultView v-bind="configurationPasswordValidationResult" />
             </InputLabelWrapper>
 
             <InputLabelWrapper>
@@ -53,15 +53,15 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createConfiguration"
-                    :disabled="!modified"
-                >{{ ("Create") }}</button>
+                    :disabled="!scopeValid || !modified"
+                >{{ ("Create") }} </button>
             </div>
         </template>
     </CardContainer>
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputFeedback, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, wrapActions, type InputValidator, type SelectMenuOption } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, useValidationScope, useValidator, validationError, validationSuccess, wrapActions } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { computed, inject, ref } from 'vue';
     import { type Target } from '../../types/Target';
@@ -111,33 +111,26 @@
 
     const actions = wrapActions({createConfiguration});
 
-    const configurationUsernameValidator: InputValidator = (username: string) => {
-        if (!username) {
-            return {
-                type: "error",
-                message: ("A username is required."),
-            }
+    const { scopeValid } = useValidationScope();
+
+    const { validationResult: configurationUsernameValidationResult } = useValidator(() => {
+        if (!tempConfiguration.value.username) {
+            return validationError("A username is required.");
         }
 
-        return;
-    }
+        return validationSuccess();
+    });
 
-    const configurationPasswordValidator: InputValidator = (password: string) => {
-        if (!password) {
-            return {
-                type: "error",
-                message: ("A password is required."),
-            }
+    const { validationResult: configurationPasswordValidationResult } = useValidator(() => {
+        if (!tempConfiguration.value.password) {
+            return validationError("A password is required.");
         }
 
-        if (password.length < 12) {
-            return {
-                type: "error",
-                message: ("The password must be at least 12 characters."),
-            }
+        if (tempConfiguration.value.password.length < 12) {
+            return validationError("The password must be at least 12 characters.");
         }
 
-        return;
-    }
+        return validationSuccess();
+    });
     
 </script>

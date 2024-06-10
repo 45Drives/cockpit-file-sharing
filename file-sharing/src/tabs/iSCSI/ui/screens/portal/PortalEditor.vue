@@ -17,9 +17,10 @@
 
                 <InputField
                     :placeholder="'The address for your portal'"
-                    :validator="portalAddressValidator"
                     v-model="tempPortal.address"
                 />
+
+                <ValidationResultView v-bind="portalAddressValidationResult" />
             </InputLabelWrapper>
         </div>
 
@@ -32,7 +33,7 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createPortal"
-                    :disabled="!modified"
+                    :disabled="!scopeValid || !modified"
                 >{{ ("Create") }}</button>
             </div>
         </template>
@@ -40,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, wrapActions, type InputValidator } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, useTempObjectStaging, wrapActions, ValidationResultView, validationError, validationSuccess, useValidator, useValidationScope } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { inject, ref } from 'vue';
     import { type Target } from '../../types/Target';
@@ -77,15 +78,14 @@
 
     const actions = wrapActions({createPortal});
 
-    const portalAddressValidator: InputValidator = (address: string) => {
-        if (!address) {
-            return {
-                type: "error",
-                message: ("A portal address is required."),
-            }
+    const { scopeValid } = useValidationScope();
+
+    const { validationResult: portalAddressValidationResult } = useValidator(() => {
+        if (!newPortal.value.address) {
+            return validationError("A portal address is required.");
         }
 
-        return;
-    }
+        return validationSuccess();
+    });
     
 </script>
