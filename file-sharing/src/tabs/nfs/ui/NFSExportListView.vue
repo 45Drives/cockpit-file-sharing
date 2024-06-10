@@ -47,7 +47,7 @@ const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path)
     <Table
       :emptyText="_('No shares. Click \'+\' to add one.')"
       noScroll
-      class="sm:rounded-lg sm:shadow sm:border sm:border-default"
+      class="sm:rounded-lg sm:shadow sm:border sm:border-default sm:overflow-hidden"
     >
       <template #thead>
         <tr>

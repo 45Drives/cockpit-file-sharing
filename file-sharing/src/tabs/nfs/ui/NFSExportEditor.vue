@@ -135,7 +135,7 @@ const { validationResult: commentValidationResult } = validationScope.useValidat
         <Table
           :emptyText="_('No shares. Click \'+\' to add one.')"
           noScroll
-          class="rounded-lg shadow border border-default"
+          class="rounded-lg shadow border border-default overflow-hidden"
         >
           <template #thead>
             <tr>
