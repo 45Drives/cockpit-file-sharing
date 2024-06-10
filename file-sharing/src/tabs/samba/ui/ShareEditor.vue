@@ -9,8 +9,7 @@ import {
   Disclosure,
   useTempObjectStaging,
   useGlobalProcessingState,
-  useValidationScope,
-  useValidator,
+  ValidationScope,
   validationSuccess,
   validationError,
   ValidationResultView,
@@ -50,9 +49,9 @@ const shareConf = computed<SambaShareConfig>(() =>
 
 const { tempObject: tempShareConfig, modified, resetChanges } = useTempObjectStaging(shareConf);
 
-const { scopeValid } = useValidationScope();
+const validationScope = new ValidationScope();
 
-const { validationResult: shareNameValidationResult } = useValidator(() => {
+const { validationResult: shareNameValidationResult } = validationScope.useValidator(() => {
   if (!props.newShare) {
     return validationSuccess();
   }
@@ -167,6 +166,7 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
         v-model:path="tempShareConfig.path"
         :disabled="!newShare"
         allowNonExisting
+        :validationScope
       />
 
       <ToggleSwitchGroup>
@@ -237,7 +237,7 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
         <button
           class="btn btn-primary"
           @click="$emit('apply', tempShareConfig)"
-          :disabled="!scopeValid || !modified || globalProcessingState !== 0"
+          :disabled="!validationScope.isValid() || !modified || globalProcessingState !== 0"
         >
           {{ _("Apply") }}
         </button>
