@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.0.0-1focal) focal; urgency=medium
+
+  * Complete rewrite for better maintainability and expansion
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 10 Jun 2024 15:19:05 -0300
+
 cockpit-file-sharing (3.3.7-1focal) focal; urgency=medium
 
   * Samba - fix saving global advanced settings with '=' in their value
