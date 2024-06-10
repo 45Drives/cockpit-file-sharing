@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.0.0-2focal) focal; urgency=medium
+
+  * fix table corners
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 10 Jun 2024 16:09:01 -0300
+
 cockpit-file-sharing (4.0.0-1focal) focal; urgency=medium
 
   * Complete rewrite for better maintainability and expansion

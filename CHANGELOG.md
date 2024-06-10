@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.0.0-1
+## Cockpit File Sharing 4.0.0-2
 
-* Complete rewrite for better maintainability and expansion
+* fix table corners

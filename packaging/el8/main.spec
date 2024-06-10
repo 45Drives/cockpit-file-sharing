@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Jun 10 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.0-2
+- fix table corners
 * Mon Jun 10 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.0-1
 - Complete rewrite for better maintainability and expansion
 * Tue Apr 23 2024 Joshua Boudreau <jboudreau@45drives.com> 3.3.7-1
