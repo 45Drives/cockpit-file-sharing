@@ -38,8 +38,8 @@ sudo apt install cockpit-file-sharing
 ### Direct from .deb
 Installing this way may work for other versions of Ubuntu and Debian, but it is unsupported. You won't get automatic updates this way.
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.3.7/cockpit-file-sharing_3.3.7-1focal_all.deb
-sudo apt install ./cockpit-file-sharing_3.3.7-1focal_all.deb
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.0.0/cockpit-file-sharing_4.0.0-1focal_all.deb
+sudo apt install ./cockpit-file-sharing_4.0.0-1focal_all.deb
 ```
 ## Rocky 8
 ### From 45Drives Repo (Recommended, Rocky 8 only)
@@ -51,38 +51,39 @@ sudo dnf install cockpit-file-sharing
 Installing this way may work for other versions of Rocky/Centos/RHEL/Fedora/etc, but it is unsupported. You won't get automatic updates this way.
 ```bash
 # dnf or yum
-sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.3.7/cockpit-file-sharing-3.3.7-1.el8.noarch.rpm
+sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.0.0/cockpit-file-sharing-4.0.0-1.el8.noarch.rpm
 ```
 ## Generic Installation
 1. Install Dependencies
 ```bash
 # debian-like
-cockpit
-attr
+cockpit-bridge
 coreutils
+attr
+findutils
+hostname
+iproute2
 libc-bin
-nfs-kernel-server
-samba
-samba-common-bin
 systemd
-winbind
-gawk
+nfs-kernel-server
+samba-common-bin
 # RHEL-like
-cockpit
-attr
+cockpit-bridge
 coreutils
+attr
+findutils
+hostname
+iproute
 glibc-common
+systemd
 nfs-utils
 samba-common-tools
-samba-winbind-clients
-system
-gawk
 ```
 2. Download pre-built archive and install
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.3.7/cockpit-file-sharing_3.3.7_generic.zip
-unzip cockpit-file-sharing_3.3.7_generic.zip
-cd cockpit-file-sharing_3.3.7_generic
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.0.0/cockpit-file-sharing_4.0.0_generic.zip
+unzip cockpit-file-sharing_4.0.0_generic.zip
+cd cockpit-file-sharing_4.0.0_generic
 # no need to run `make` first, the plugin is pre-built
 sudo make install
 ```
@@ -95,12 +96,13 @@ Simply click the `+` in the top right of the shares list, fill out the required 
 * Share Name - Unique name for the share
 * Share Description - Optional description for the share
 * Path - The path to share out from the server
-* Valid Users/Groups
-    * Allow-lists for users and groups
-    * By default, any user or group is allowed
+* ~~Valid Users/Groups~~ removed in v4 - valid users property still available through advanced settings.
+    * ~~Allow-lists for users and groups~~
+    * ~~By default, any user or group is allowed~~
 * Guest Ok - Allow accessing share with no password, privileges mapped to `guest account` (default=`nobody`)
 * Read Only - Disallow creation/modification of files/directories
 * Browsable - Controls whether this share is seen in the list of available shares in a net view and in the browse list
+* Inherit Permissions - New directories inherit the mode of the parent directory, including bits such as setgid. New files inherit their read/write bits from the parent directory.
 * Windows ACLs - Administer share permissions from Windows, sets the following advanced settings
     ```ini
     map acl inherit = yes
