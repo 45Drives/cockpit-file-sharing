@@ -105,14 +105,14 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     addLogicalUnitNumberToGroup(initiatorGroup: InitiatorGroup, logicalUnitNumber: LogicalUnitNumber): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "add $1 $2" > $3`, [logicalUnitNumber.name, logicalUnitNumber.unitNumber, `${initiatorGroup.devicePath}/luns/mgmt`]));
+        const result =  this.server.execute(new BashCommand(`echo "add $1 $2" > $3`, [logicalUnitNumber.name, logicalUnitNumber.unitNumber.toString(), `${initiatorGroup.devicePath}/luns/mgmt`]));
 
         this.configurationManager.saveCurrentConfiguration();
         return result;
     }
 
     removeLogicalUnitNumberFromGroup(initiatorGroup: InitiatorGroup, logicalUnitNumber: LogicalUnitNumber): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "del $1" > $2`, [logicalUnitNumber.unitNumber, `${initiatorGroup.devicePath}/luns/mgmt`]));
+        const result =  this.server.execute(new BashCommand(`echo "del $1" > $2`, [logicalUnitNumber.unitNumber.toString(), `${initiatorGroup.devicePath}/luns/mgmt`]));
 
         this.configurationManager.saveCurrentConfiguration();
         return result;
@@ -372,7 +372,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
             return ResultAsync.combine(numbers.map((number) => {
                 return new ResultAsync(safeTry(async function * () {
                     const partialLogicalUnitNumber = {
-                        unitNumber: number,
+                        unitNumber: StringToIntCaster()(number).some(),
                     };
 
                     const lunDeviceName = (yield * self.server.execute(new Command(["cat", `${lunsDirectory}/${partialLogicalUnitNumber.unitNumber}/device/prod_id`])).safeUnwrap()).getStdout();

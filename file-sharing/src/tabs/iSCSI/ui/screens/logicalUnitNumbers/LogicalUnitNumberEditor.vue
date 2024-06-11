@@ -12,10 +12,12 @@
 
             <InputLabelWrapper>
                 <template #label>
-                    {{ _("LUN Number") }}
+                    {{ _("Unit Number") }}
                 </template>
 
                 <InputField
+                    :placeholder="'0'"
+                    type="number"
                     v-model="tempLun.unitNumber"
                 />
                 <ValidationResultView v-bind="numberValidationResult" />
@@ -30,6 +32,7 @@
                     v-model="tempLun.name"
                     :options="deviceOptions"
                 />
+                <ValidationResultView v-bind="deviceValidationResult" />
             </InputLabelWrapper>
         </div>
 
@@ -42,8 +45,8 @@
                 <button
                     class="btn btn-primary"
                     @click="actions.createLun"
-                    :disabled="!validationScope.isValid() || !modified"
-                >{{ ("Create") }}</button>
+                    :disabled="!validationScope.isValid()"
+                >{{ ("Create") }} {{ tempLun.blockDevice?.deviceName }}</button>
             </div>
         </template>
     </CardContainer>
@@ -98,11 +101,19 @@
 
     const { validationResult: numberValidationResult } = validationScope.useValidator(() => {
         if (!tempLun.value.unitNumber) {
-            return validationError("A number is required.");
+            return validationError("A Logical Unit Number is required.");
         }
 
-        if (StringToIntCaster()(tempLun.value.unitNumber).isNone()) {
-            return validationError("A number is required");
+        if (tempLun.value.unitNumber < 0) {
+            return validationError("The Logical Unit Number to be a positive number.");
+        }
+
+        return validationSuccess();
+    });
+
+    const { validationResult: deviceValidationResult } = validationScope.useValidator(() => {
+        if (!tempLun.value.blockDevice === undefined) {
+            return validationError("A device is required.");
         }
 
         return validationSuccess();
