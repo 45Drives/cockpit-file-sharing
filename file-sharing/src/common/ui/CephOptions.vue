@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { inject, defineProps, computed, ref, watchEffect } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
-import { okAsync } from "neverthrow";
+import { okAsync, ok } from "neverthrow";
 import { StringToIntCaster } from "@45drives/houston-common-lib";
 import {
   wrapActions,
   ToggleSwitch,
   InputLabelWrapper,
   InputField,
-} from "@45drives/houston-common-ui";
-import {
   reportSuccess,
   computedResult,
   SelectMenu,
@@ -42,7 +40,9 @@ const cephOptionManager = serverCluster.map((serverCluster) =>
 
 const [pathIsMountpoint, refetchPathIsMountpoint] = computedResult<boolean>(() => {
   const currentPath = path.value;
-  return cephOptionManager.andThen((m) => m.pathIsMountpoint(currentPath));
+  return cephOptionManager
+    .andThen((m) => m.pathIsMountpoint(currentPath))
+    .orElse(() => okAsync(false));
 }, false);
 
 const [pathRemountedByFileSharing, refetchPathRemountedByFileSharing] = computedResult(() => {
@@ -50,18 +50,21 @@ const [pathRemountedByFileSharing, refetchPathRemountedByFileSharing] = computed
   if (pathIsMountpoint.value === false) {
     return okAsync(false);
   }
-  return cephOptionManager.andThen((m) => m.pathMountpointManagedByFileSharing(currentPath));
+  return cephOptionManager
+    .andThen((m) => m.pathMountpointManagedByFileSharing(currentPath))
+    .orElse(() => ok(false));
 }, false);
 
 const [currentQuota, refetchQuota] = computedResult(() => {
   const currentPath = path.value;
   return cephOptionManager
     .andThen((m) => m.getQuotaMaxBytes(currentPath))
-    .map((maybeQuota) => maybeQuota.orUndefined());
+    .map((maybeQuota) => maybeQuota.orUndefined())
+    .orElse(() => ok(undefined));
 });
 
 const [layoutPools] = computedResult(
-  () => cephOptionManager.andThen((m) => m.getLayoutPools()),
+  () => cephOptionManager.andThen((m) => m.getLayoutPools()).orElse(() => ok([])),
   []
 );
 
@@ -69,7 +72,8 @@ const [currentLayoutPool, refetchCurrentLayoutPool] = computedResult(() => {
   const currentPath = path.value;
   return cephOptionManager
     .andThen((m) => m.getLayoutPool(currentPath))
-    .map((maybeLayoutPool) => maybeLayoutPool.orUndefined());
+    .map((maybeLayoutPool) => maybeLayoutPool.orUndefined())
+    .orElse(() => ok(undefined));
 });
 
 // ACTIONS SETUP
