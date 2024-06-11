@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Jun 11 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.2-1
+- Fixed error spamming when path does not exist for Ceph path settings
 * Tue Jun 11 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.1-1
 - Assign UUID FSID option for new NFS exports
 - Add input validation for NFS exports
