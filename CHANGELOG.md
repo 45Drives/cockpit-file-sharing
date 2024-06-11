@@ -1,3 +1,4 @@
-## Cockpit File Sharing 4.0.0-2
+## Cockpit File Sharing 4.0.1-1
 
-* fix table corners
+* Assign UUID FSID option for new NFS exports
+* Add input validation for NFS exports
