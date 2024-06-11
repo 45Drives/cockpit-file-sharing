@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineModel, watchEffect, type Ref, computed, type InjectionKey } from "vue";
+import { ref, defineModel, watchEffect, type Ref, computed, defineEmits } from "vue";
 import {
   InputLabelWrapper,
   wrapActions,
@@ -42,6 +42,11 @@ const props = withDefaults(
   }>(),
   {}
 );
+
+const emit = defineEmits<{
+  (e: "input", path: string): void;
+  (e: "change", path: string): void;
+}>();
 
 const usePathInfo = (
   path: Ref<string>,
@@ -245,6 +250,8 @@ const actions = wrapActions({
       :placeholder="_('Share path/directory')"
       :disabled="disabled"
       :suggestions="subdirSuggestions"
+      @input="emit('input', path)"
+      @change="emit('change', path)"
     />
     <ValidationResultView v-bind="pathValidationResult" />
     <button

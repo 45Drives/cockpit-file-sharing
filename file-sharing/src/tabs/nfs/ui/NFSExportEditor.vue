@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { newNFSExport, type NFSExport, newNFSExportClient } from "@/tabs/nfs/data-types";
+import {
+  newNFSExport,
+  type NFSExport,
+  newNFSExportClient,
+  type NFSExportClient,
+} from "@/tabs/nfs/data-types";
 import {
   useGlobalProcessingState,
   useTempObjectStaging,
@@ -11,10 +16,12 @@ import {
   validationError,
   ValidationResultView,
   Table,
+  type ValidationResult,
 } from "@45drives/houston-common-ui";
 import { defineProps, defineEmits, computed, ref } from "vue";
 import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
 import { PlusIcon, TrashIcon } from "@heroicons/vue/20/solid";
+import { getServer, FileSystemNode } from "@45drives/houston-common-lib";
 
 import { NFSExportParser } from "@/tabs/nfs/exports-parser";
 
@@ -72,6 +79,14 @@ const parser = new NFSExportParser();
 
 const [exportPreview] = computedResult(() => parser.unapply(tempExportConfig.value), "");
 
+const resolvePath = () => {
+  const path = tempExportConfig.value.path;
+  getServer()
+    .map((s) => new FileSystemNode(s, path))
+    .andThen((node) => node.resolve(false, { superuser: "try" }))
+    .map((node) => (tempExportConfig.value.path = node.path));
+};
+
 const validationScope = new ValidationScope();
 const { validationResult: pathValidationResult } = validationScope.useValidator(() => {
   if (!props.newExport) {
@@ -89,6 +104,98 @@ const { validationResult: commentValidationResult } = validationScope.useValidat
   }
   return validationSuccess();
 });
+
+const allowedClientSettings = {
+  boolOpts: [
+    "secure",
+    "insecure",
+    "rw",
+    "ro",
+    "async",
+    "sync",
+    "no_wdelay",
+    "wdelay",
+    "nohide",
+    "hide",
+    "crossmnt",
+    "no_subtree_check",
+    "subtree_check",
+    "insecure_locks",
+    "no_auth_nlm",
+    "auth_nlm",
+    "secure_locks",
+    "no_acl",
+    "mountpoint",
+    "mp",
+    "root_squash",
+    "no_root_squash",
+    "all_squash",
+    "no_all_squash",
+  ],
+  argumentOpts: ["mountpoint", "mp", "fsid", "refer", "replicas", "anonuid", "anongid"],
+};
+
+const clientOptionsValidator = (optionList: string): ValidationResult => {
+  if (!optionList) {
+    return validationSuccess();
+  }
+  if (/\s/.test(optionList)) {
+    return validationError(_("Whitespace not permitted."));
+  }
+  const badOpts = optionList.split(",").filter((opt) => {
+    if (allowedClientSettings.boolOpts.includes(opt)) {
+      return false;
+    }
+    for (const allowedArgumentOpt of allowedClientSettings.argumentOpts) {
+      if (opt.startsWith(`${allowedArgumentOpt}=`)) {
+        return false;
+      }
+    }
+    return true;
+  });
+  if (badOpts.length) {
+    return validationError(_("Bad options") + ": " + badOpts.map((opt) => `"${opt}"`).join(", "));
+  }
+  return validationSuccess();
+};
+
+const { validationResult: defaultClientSettingsValidationResult } = validationScope.useValidator(
+  () => clientOptionsValidator(tempExportConfig.value.defaultClientSettings)
+);
+
+const clientValidator = (client: NFSExportClient): ValidationResult => {
+  if (!client.host) {
+    return validationError(_("Host required."));
+  }
+  if (/\s/.test(client.host)) {
+    return validationError(_("Whitespace not permitted."));
+  }
+  return clientOptionsValidator(client.settings);
+};
+
+const { validationResult: clientSettingsValidationResult } = validationScope.useValidator(() => {
+  const clients = tempExportConfig.value.clients;
+  for (const [index, client] of clients.entries()) {
+    if (clients.findIndex(({ host }) => host === client.host) !== index) {
+      return validationError(_("Duplicate client") + `: ${client.host}`);
+    }
+  }
+  const badClientResults = clients
+    .map((client, index) => ({
+      index,
+      client,
+      result: clientValidator(client),
+    }))
+    .filter(({ result }) => result.type === "error");
+  if (badClientResults.length) {
+    return validationError(
+      badClientResults
+        .map(({ index, client, result }) => `${client.host || index}: ${result.message}`)
+        .join("\n")
+    );
+  }
+  return validationSuccess();
+});
 </script>
 
 <template>
@@ -100,6 +207,7 @@ const { validationResult: commentValidationResult } = validationScope.useValidat
           v-model:path="tempExportConfig.path"
           :disabled="!newExport"
           :validationScope
+          @change="() => resolvePath()"
         />
         <ValidationResultView v-bind="pathValidationResult" />
       </div>
@@ -123,6 +231,7 @@ const { validationResult: commentValidationResult } = validationScope.useValidat
           {{ _("Settings to apply to all clients") }}
         </template>
         <InputField v-model="tempExportConfig.defaultClientSettings" />
+        <ValidationResultView v-bind="defaultClientSettingsValidationResult" />
       </InputLabelWrapper>
 
       <InputLabelWrapper tooltipAbove>
@@ -178,6 +287,7 @@ const { validationResult: commentValidationResult } = validationScope.useValidat
             </template>
           </template>
         </Table>
+        <ValidationResultView v-bind="clientSettingsValidationResult" />
       </InputLabelWrapper>
 
       <InputLabelWrapper>
