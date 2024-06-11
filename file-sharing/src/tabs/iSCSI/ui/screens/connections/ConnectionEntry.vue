@@ -6,7 +6,7 @@
 </template>
 
 <script setup lang="ts">
-	import type { Connection } from "../../types/Connection";
+	import type { Connection } from "../../../types/Connection";
 
 	const props = defineProps<{connection: Connection}>();
 </script>

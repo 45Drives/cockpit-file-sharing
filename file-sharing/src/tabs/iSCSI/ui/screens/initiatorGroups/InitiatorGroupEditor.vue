@@ -43,10 +43,10 @@
     import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, validationSuccess, validationError, ValidationResultView, ValidationScope } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { inject, ref } from 'vue';
-    import { type Target } from '../../types/Target';
     import { ProcessError } from '@45drives/houston-common-lib';
-    import type { ISCSIDriver } from '../../types/ISCSIDriver';
-    import { InitiatorGroup } from '../../types/InitiatorGroup';
+    import type { Target } from '@/tabs/iSCSI/types/Target';
+    import { InitiatorGroup } from '@/tabs/iSCSI/types/InitiatorGroup';
+    import type { ISCSIDriver } from '@/tabs/iSCSI/types/drivers/ISCSIDriver';
 
     const _ = cockpit.gettext;
 

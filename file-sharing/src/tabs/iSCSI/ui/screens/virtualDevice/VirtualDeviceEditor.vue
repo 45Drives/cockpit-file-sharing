@@ -80,9 +80,9 @@
     import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, ValidationResultView, validationSuccess, validationError, ValidationScope } from '@45drives/houston-common-ui';
     import { err, ok, type ResultAsync } from 'neverthrow';
     import { inject, ref, type Ref } from 'vue';
-    import { DeviceType, VirtualDevice } from '../../types/VirtualDevice';
+    import { DeviceType, VirtualDevice } from '../../../types/VirtualDevice';
     import { Command, Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
-    import type { ISCSIDriver } from '../../types/ISCSIDriver';
+    import type { ISCSIDriver } from '../../../types/drivers/ISCSIDriver';
 
     const _ = cockpit.gettext;
     

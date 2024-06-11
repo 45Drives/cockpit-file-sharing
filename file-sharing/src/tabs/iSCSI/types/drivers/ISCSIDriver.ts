@@ -1,13 +1,13 @@
 import type { ResultAsync } from "neverthrow";
-import type { VirtualDevice } from "./VirtualDevice";
-import type { CHAPConfiguration } from "./CHAPConfiguration";
-import type { Connection } from "./Connection";
-import type { Initiator } from "./Initiator";
-import type { InitiatorGroup } from "./InitiatorGroup";
-import type { LogicalUnitNumber } from "./LogicalUnitNumber";
-import type { Portal } from "./Portal";
-import type { Session } from "./Session";
-import type { Target } from "./Target";
+import type { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
+import type { CHAPConfiguration } from "@/tabs/iSCSI/types/CHAPConfiguration";
+import type { Connection } from "@/tabs/iSCSI/types/Connection";
+import type { Initiator } from "@/tabs/iSCSI/types/Initiator";
+import type { InitiatorGroup } from "@/tabs/iSCSI/types/InitiatorGroup";
+import type { LogicalUnitNumber } from "@/tabs/iSCSI/types/LogicalUnitNumber";
+import type { Portal } from "@/tabs/iSCSI/types/Portal";
+import type { Session } from "@/tabs/iSCSI/types/Session";
+import type { Target } from "@/tabs/iSCSI/types/Target";
 import type { ExitedProcess, ProcessError } from "@45drives/houston-common-lib";
 
 export abstract class ISCSIDriver {

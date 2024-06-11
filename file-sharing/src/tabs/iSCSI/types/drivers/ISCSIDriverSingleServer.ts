@@ -1,15 +1,15 @@
-import { ConfigurationManager } from './ConfigurationManager';
+import { ConfigurationManager } from '@/tabs/iSCSI/types/ConfigurationManager';
 import { File } from "@45drives/houston-common-lib";
-import { VirtualDevice, DeviceType } from "./VirtualDevice";
-import { CHAPConfiguration, CHAPType } from "./CHAPConfiguration";
-import { type Connection } from "./Connection";
-import { type Initiator } from "./Initiator";
-import { type InitiatorGroup } from "./InitiatorGroup";
-import { LogicalUnitNumber } from "./LogicalUnitNumber";
-import { Portal } from "./Portal";
-import { type Session } from "./Session";
-import { type Target } from "./Target";
-import { ISCSIDriver } from "./ISCSIDriver";
+import { VirtualDevice, DeviceType } from "@/tabs/iSCSI/types/VirtualDevice";
+import { CHAPConfiguration, CHAPType } from "@/tabs/iSCSI/types/CHAPConfiguration";
+import { type Connection } from "@/tabs/iSCSI/types/Connection";
+import { type Initiator } from "@/tabs/iSCSI/types/Initiator";
+import { type InitiatorGroup } from "@/tabs/iSCSI/types/InitiatorGroup";
+import { LogicalUnitNumber } from "@/tabs/iSCSI/types/LogicalUnitNumber";
+import { Portal } from "@/tabs/iSCSI/types/Portal";
+import { type Session } from "@/tabs/iSCSI/types/Session";
+import { type Target } from "@/tabs/iSCSI/types/Target";
+import { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import { BashCommand, Command, ExitedProcess, ParsingError, ProcessError, Server, StringToIntCaster, getServer } from "@45drives/houston-common-lib";
 import { ResultAsync, err, ok, safeTry } from "neverthrow";
 

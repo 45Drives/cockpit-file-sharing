@@ -21,7 +21,7 @@
         assertConfirm,
         reportSuccess
     } from "@45drives/houston-common-ui";
-    import { ConfigurationManager } from "../../types/ConfigurationManager";
+    import { ConfigurationManager } from "../../../types/ConfigurationManager";
     import { Download, Upload, getServer } from "@45drives/houston-common-lib";
 
     const _ = cockpit.gettext;

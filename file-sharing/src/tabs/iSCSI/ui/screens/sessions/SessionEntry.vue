@@ -1,49 +1,48 @@
 <template>
-    <tr>
-        <td>{{ session.initiatorName }}</td>
-        <td>{{ session.readAmountKB }} KB</td>
-        <td>{{ session.writeAmountKB }} KB</td>
-		<td class="button-group-row justify-end">
-			<button @click="showEditor = !showEditor">
-				<span class="sr-only">Edit</span>
-				<ChevronDownIcon class="size-icon icon-default" />
-			</button>
-		</td>
-    </tr>
-	<tr></tr>
-	<tr>
-		<td colspan="3" class="!py-0">
-			<Disclosure :show="showEditor" :transitionDuration=500 v-slot="{visible}" noButton>
-				<template v-if="visible">
-					<ConnectionTable :session="session"/>
-				</template>
-			</Disclosure>
-		</td>
-	</tr>
+  <tr>
+    <td>{{ session.initiatorName }}</td>
+    <td>{{ session.readAmountKB }} KB</td>
+    <td>{{ session.writeAmountKB }} KB</td>
+    <td class="button-group-row justify-end">
+      <button @click="showEditor = !showEditor">
+        <span class="sr-only">Edit</span>
+        <ChevronDownIcon class="size-icon icon-default" />
+      </button>
+    </td>
+  </tr>
+  <tr></tr>
+  <tr>
+    <td colspan="3" class="!py-0">
+      <Disclosure :show="showEditor" :transitionDuration="500" v-slot="{ visible }" noButton>
+        <template v-if="visible">
+          <ConnectionTable :session="session" />
+        </template>
+      </Disclosure>
+    </td>
+  </tr>
 </template>
 
 <script setup lang="ts">
-	import { inject, ref } from "vue";
-	import { ChevronDownIcon } from "@heroicons/vue/20/solid";
-	import type { ISCSIDriver } from "../../types/ISCSIDriver";
-	import { ResultAsync } from "neverthrow";
-	import { ProcessError } from "@45drives/houston-common-lib";
-    import type { Session } from "../../types/Session";
-	import { Disclosure } from '@45drives/houston-common-ui';
-	import ConnectionTable from "../connections/ConnectionTable.vue";
+import { inject, ref } from "vue";
+import { ChevronDownIcon } from "@heroicons/vue/20/solid";
+import { ResultAsync } from "neverthrow";
+import { ProcessError } from "@45drives/houston-common-lib";
+import { Disclosure } from "@45drives/houston-common-ui";
+import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
+import type { Session } from "@/tabs/iSCSI/types/Session";
+import ConnectionTable from "@/tabs/iSCSI/ui/screens/connections/ConnectionTable.vue";
 
-	const props = defineProps<{session: Session}>();
+const props = defineProps<{ session: Session }>();
 
-	console.log(props.session)
+console.log(props.session);
 
-	const emit = defineEmits(['deleteEntry']);
+const emit = defineEmits(["deleteEntry"]);
 
-	const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
-	
-	const showEditor = ref(false);
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
 
-	if (driver === undefined) {
-		throw new Error("iSCSI Driver is null");
-	}
+const showEditor = ref(false);
 
+if (driver === undefined) {
+  throw new Error("iSCSI Driver is null");
+}
 </script>

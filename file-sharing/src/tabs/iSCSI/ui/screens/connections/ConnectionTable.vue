@@ -22,7 +22,7 @@
 <script setup lang="ts">
     import { CardContainer } from "@45drives/houston-common-ui";
     import Table from "../Table.vue";
-    import type { Session } from "../../types/Session";
+    import type { Session } from "../../../types/Session";
     import ConnectionEntry from "./ConnectionEntry.vue";
 
     const props = defineProps<{session: Session}>();
