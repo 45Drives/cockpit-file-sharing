@@ -1,5 +1,6 @@
 import { Maybe, Some, None } from "monet";
 import { RegexSnippets } from "@45drives/houston-common-lib";
+import { v4 as uuidv4 } from "uuid";
 
 export interface INFSClientOption<T> {
   value: T;
@@ -140,6 +141,10 @@ export function defaultNFSDefaultClientOptions(): NFSClientOptions {
   return "";
 }
 
+export function newNFSDefaultClientOptions(): NFSClientOptions {
+  return `fsid=${uuidv4()}`;
+}
+
 export type NFSExportClient = {
   host: string;
   settings: NFSClientOptions;
@@ -164,7 +169,7 @@ export function defaultNFSExport(): NFSExport {
 export function newNFSExport(): NFSExport {
   return {
     path: "",
-    defaultClientSettings: defaultNFSDefaultClientOptions(),
+    defaultClientSettings: newNFSDefaultClientOptions(),
     clients: [newNFSExportClient()],
     comment: "",
   };

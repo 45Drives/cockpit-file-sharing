@@ -1,4 +1,4 @@
-import { computed, ref } from "vue";
+import { computed, ref, type Ref, type WritableComputedRef } from "vue";
 
 export type UserSettings = {
   /**
@@ -62,34 +62,44 @@ const configFile = cockpit.file(configPath, {
 
 const config = ref(defaultSettings());
 
-configFile.watch(
-  (contents: Partial<UserSettings> | null) => {
-    if (contents === null) {
-      return;
-    }
-    config.value = {
-      samba: {
-        confPath: contents.samba?.confPath || defaultSettings().samba.confPath,
-      },
-      nfs: {
-        confPath: contents.nfs?.confPath || defaultSettings().nfs.confPath,
-      },
-      iscsi: {
-        confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
-        clusteredServer: contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
-        clusteredServerChecked: contents.iscsi?.clusteredServerChecked ?? defaultSettings().iscsi.clusteredServerChecked,
-        subnetMask: contents.iscsi?.subnetMask || defaultSettings().iscsi.subnetMask,
-      },
-      includeSystemAccounts:
-        contents.includeSystemAccounts ?? defaultSettings().includeSystemAccounts,
-    };
-  },
-  { read: true }
-);
+const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
+  configFile.watch(
+    (contents: Partial<UserSettings> | null) => {
+      if (contents !== null) {
+        config.value = {
+          samba: {
+            confPath: contents.samba?.confPath || defaultSettings().samba.confPath,
+          },
+          nfs: {
+            confPath: contents.nfs?.confPath || defaultSettings().nfs.confPath,
+          },
+          iscsi: {
+            confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
+            clusteredServer: contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
+            clusteredServerChecked: contents.iscsi?.clusteredServerChecked ?? defaultSettings().iscsi.clusteredServerChecked,
+            subnetMask: contents.iscsi?.subnetMask || defaultSettings().iscsi.subnetMask,
+          },
+          includeSystemAccounts:
+            contents.includeSystemAccounts ?? defaultSettings().includeSystemAccounts,
+        };
+      }
+      resolve(config);
+    },
+    { read: true }
+  );
+});
 
 const computedSettingsRef = computed({
   get: () => config.value,
   set: (newConfig) => configFile.replace(newConfig),
 });
 
-export const useUserSettings = () => computedSettingsRef;
+export function useUserSettings(waitUntilRead?: false): WritableComputedRef<UserSettings>;
+export function useUserSettings(
+  waitUntilRead: true
+): Promise<WritableComputedRef<UserSettings>>;
+export function useUserSettings(waitUntilRead: boolean = false) {
+  return waitUntilRead
+    ? configFileReadPromise.then(() => computedSettingsRef)
+    : computedSettingsRef;
+}

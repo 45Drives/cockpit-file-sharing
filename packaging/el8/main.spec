@@ -6,7 +6,7 @@ License: ::package_licence::
 URL: ::package_url::
 Source0: %{name}-%{version}.tar.gz
 BuildArch: ::package_architecture_el::
-Requires: ::package_dependencies_el::
+Requires: ::package_dependencies_el_el8::
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
@@ -27,6 +27,15 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Jun 11 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.2-1
+- Fixed error spamming when path does not exist for Ceph path settings
+* Tue Jun 11 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.1-1
+- Assign UUID FSID option for new NFS exports
+- Add input validation for NFS exports
+* Mon Jun 10 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.0-2
+- fix table corners
+* Mon Jun 10 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.0-1
+- Complete rewrite for better maintainability and expansion
 * Tue Apr 23 2024 Joshua Boudreau <jboudreau@45drives.com> 3.3.7-1
 - Samba - fix saving global advanced settings with '=' in their value
 - NFS - better whitespace handling while parsing exports file

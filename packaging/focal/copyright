@@ -4,14 +4,6 @@ Upstream-Contact: ::package_author::
 Source: ::package_url::
 
 Files: *
-Copyright: 2021 Sam Silver <ssilver@45drives.com>
-License: GPL-3.0+
-
-Files: file-sharing/branding/*
-Copyright: 2021 Josh Boudreau <jboudreau@45drives.com>
-License: GPL-3.0+
-
-Files: file-sharing/samba-manager/*
 Copyright: 2021 Josh Boudreau <jboudreau@45drives.com>
 License: GPL-3.0+
 

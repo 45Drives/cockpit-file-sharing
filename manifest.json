@@ -1,9 +1,9 @@
 {
-    "__version": "45D-R1",
+    "__version": "45D-R2",
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
-    "prerelease": false,
-    "version": "3.3.7",
+    "prerelease": true,
+    "version": "4.0.2",
     "buildVersion": "1",
     "author": "Josh Boudreau <jboudreau@45drives.com>",
     "url": "https://github.com/45Drives/cockpit-file-sharing",
@@ -22,29 +22,34 @@
         "urgency": "medium"
     },
     "dependencies": {
-        "deb": [
-            "cockpit",
-            "attr",
-            "coreutils",
-            "libc-bin",
-            "nfs-kernel-server",
-            "samba",
-            "samba-common-bin",
-            "systemd",
-            "winbind",
-            "gawk"
-        ],
-        "el": [
-            "cockpit",
-            "attr",
-            "coreutils",
-            "glibc-common",
-            "nfs-utils",
-            "samba-common-tools",
-            "samba-winbind-clients",
-            "systemd",
-            "gawk"
-        ]
+        "deb": {
+            "focal": [
+                "cockpit-bridge",
+                "coreutils",
+                "attr",
+                "findutils",
+                "hostname",
+                "iproute2",
+                "libc-bin",
+                "systemd",
+                "nfs-kernel-server",
+                "samba-common-bin"
+            ]
+        },
+        "el": {
+            "el8": [
+                "cockpit-bridge",
+                "coreutils",
+                "attr",
+                "findutils",
+                "hostname",
+                "iproute",
+                "glibc-common",
+                "systemd",
+                "nfs-utils",
+                "samba-common-tools"
+            ]
+        }
     },
     "releases": [
         {
@@ -60,7 +65,7 @@
     ],
     "changelog": {
         "urgency": "medium",
-        "version": "3.3.7",
+        "version": "4.0.2",
         "buildVersion": "1",
         "ignore": [],
         "date": null,

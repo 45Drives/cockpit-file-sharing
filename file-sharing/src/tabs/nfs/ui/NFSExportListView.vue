@@ -47,7 +47,7 @@ const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path)
     <Table
       :emptyText="_('No shares. Click \'+\' to add one.')"
       noScroll
-      class="sm:rounded-lg sm:shadow sm:border sm:border-default"
+      class="sm:rounded-lg sm:shadow sm:border sm:border-default sm:overflow-hidden"
     >
       <template #thead>
         <tr>
@@ -66,8 +66,15 @@ const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path)
         <template v-for="nfsExport in nfsExports" :key="nfsExport.path">
           <DisclosureController v-slot="{ show: showEditor, setShow: setShowEditor }">
             <tr>
-              <td>{{ nfsExport.path }}</td>
-              <td class="text-muted">{{ nfsExport.comment }}</td>
+              <td class="text-ellipsis overflow-hidden w-1/4 max-w-0" :title="nfsExport.path">
+                {{ nfsExport.path }}
+              </td>
+              <td
+                class="text-muted text-ellipsis overflow-hidden w-3/4 max-w-0"
+                :title="nfsExport.comment"
+              >
+                {{ nfsExport.comment }}
+              </td>
               <td class="button-group-row justify-end">
                 <button @click="setShowEditor(!showEditor)">
                   <span class="sr-only">Edit</span>
