@@ -27,6 +27,9 @@ export type UserSettings = {
      * Path to iSCSI configuration path.
      */
     confPath: string;
+    clusteredServerChecked: boolean;
+    clusteredServer: boolean;
+    subnetMask: number;
   };
   /**
    * Include users and groups with uid and gid from 1 to 999
@@ -43,6 +46,9 @@ const defaultSettings = (): UserSettings => ({
   },
   iscsi: {
     confPath: "/tmp/iSCSI.conf",
+    clusteredServerChecked: false,
+    clusteredServer: false,
+    subnetMask: 16,
   },
   includeSystemAccounts: false,
 });
@@ -70,6 +76,9 @@ configFile.watch(
       },
       iscsi: {
         confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
+        clusteredServer: contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
+        clusteredServerChecked: contents.iscsi?.clusteredServerChecked ?? defaultSettings().iscsi.clusteredServerChecked,
+        subnetMask: contents.iscsi?.subnetMask || defaultSettings().iscsi.subnetMask,
       },
       includeSystemAccounts:
         contents.includeSystemAccounts ?? defaultSettings().includeSystemAccounts,

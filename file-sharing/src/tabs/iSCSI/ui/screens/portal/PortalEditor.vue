@@ -72,6 +72,8 @@ const handleClose = () => {
 };
 
 const createPortal = () => {
+  tempPortal.value.address += ":3260";
+
   return driver
     .andThen((driver) => driver.addPortalToTarget(props.target, tempPortal.value))
     .map(() => handleClose())
@@ -88,6 +90,10 @@ const validationScope = new ValidationScope();
 const { validationResult: portalAddressValidationResult } = validationScope.useValidator(() => {
   if (!tempPortal.value.address) {
     return validationError("A portal address is required.");
+  }
+
+  if (tempPortal.value.address.includes(":")) {
+    return validationError("The port defaults to 3260.");
   }
 
   return validationSuccess();

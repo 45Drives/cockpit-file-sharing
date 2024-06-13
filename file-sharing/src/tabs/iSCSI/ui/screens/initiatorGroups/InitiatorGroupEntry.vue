@@ -36,8 +36,9 @@ import type { InitiatorGroup } from "@/tabs/iSCSI/types/InitiatorGroup";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import InitiatorTable from "@/tabs/iSCSI/ui/screens/initiators/InitiatorTable.vue";
 import LogicalUnitNumberTable from "@/tabs/iSCSI/ui/screens/logicalUnitNumbers/LogicalUnitNumberTable.vue";
+import type { Target } from "@/tabs/iSCSI/types/Target";
 
-const props = defineProps<{ initiatorGroup: InitiatorGroup }>();
+const props = defineProps<{ target: Target; initiatorGroup: InitiatorGroup }>();
 
 const emit = defineEmits(["deleteEntry"]);
 
@@ -51,7 +52,7 @@ if (driver === undefined) {
 
 const deleteEntry = () => {
   return driver
-    .andThen((driver) => driver.deleteInitiatorGroupFromTarget(props.initiatorGroup))
+    .andThen((driver) => driver.deleteInitiatorGroupFromTarget(props.target, props.initiatorGroup))
     .map(() => emit("deleteEntry"))
     .mapErr(
       (error) =>

@@ -10,8 +10,8 @@ import { Portal } from "@/tabs/iSCSI/types/Portal";
 import { type Session } from "@/tabs/iSCSI/types/Session";
 import { type Target } from "@/tabs/iSCSI/types/Target";
 import { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
-import { BashCommand, Command, ExitedProcess, ParsingError, ProcessError, Server, StringToIntCaster, getServer } from "@45drives/houston-common-lib";
-import { ResultAsync, err, ok, safeTry } from "neverthrow";
+import { BashCommand, Command, ParsingError, ProcessError, Server, StringToIntCaster, getServer } from "@45drives/houston-common-lib";
+import { ResultAsync, err, ok, okAsync, safeTry } from "neverthrow";
 
 export class ISCSIDriverSingleServer implements ISCSIDriver {
 
@@ -30,106 +30,94 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         this.configurationManager = new ConfigurationManager(server);
     }
 
-    addVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<ExitedProcess, ProcessError> {
-        const result = this.server.execute(new BashCommand(`echo "add_device $1 $2" > $3`, [virtualDevice.deviceName, "filename=" + virtualDevice.filePath + ";blocksize=" + virtualDevice.blockSize, this.deviceTypeToHandlerDirectory[virtualDevice.deviceType] + "/mgmt"]));
-        this.configurationManager.saveCurrentConfiguration();
-
-        return result;
+    initialize() {
+        return okAsync(this);
     }
 
-    removeVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "del_device $1" > $2`, [virtualDevice.deviceName, this.deviceTypeToHandlerDirectory[virtualDevice.deviceType] + "/mgmt"]));
-        this.configurationManager.saveCurrentConfiguration();
-        
-        return result;
+    addVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "add_device $1 $2" > $3`, [virtualDevice.deviceName, "filename=" + virtualDevice.filePath + ";blocksize=" + virtualDevice.blockSize, this.deviceTypeToHandlerDirectory[virtualDevice.deviceType] + "/mgmt"]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    createTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "add_target $1" > $2`, [target.name, this.targetManagementDirectory + "/mgmt"])).andThen(() => 
-            this.server.execute(new BashCommand(`echo 1 > $1`, [this.targetManagementDirectory + "/enabled"])).andThen(() => 
-                this.server.execute(new BashCommand(`echo 1 > $1`, [`${this.targetManagementDirectory}/${target.name}/enabled`]))
-            )
-        )
-
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    removeVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "del_device $1" > $2`, [virtualDevice.deviceName, this.deviceTypeToHandlerDirectory[virtualDevice.deviceType] + "/mgmt"]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    removeTarget(target: Target): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "del_target $1" > $2`, [target.name, this.targetManagementDirectory + "/mgmt"]));
-
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    createTarget(target: Target): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "add_target $1" > $2`, [target.name, this.targetManagementDirectory + "/mgmt"]))
+        .andThen(() => this.server.execute(new BashCommand(`echo 1 > $1`, [this.targetManagementDirectory + "/enabled"])))
+        .andThen(() => this.server.execute(new BashCommand(`echo 1 > $1`, [`${this.targetManagementDirectory}/${target.name}/enabled`])))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    addPortalToTarget(target: Target, portal: Portal): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, `${target.devicePath}/../mgmt`]));
-
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    removeTarget(target: Target): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "del_target $1" > $2`, [target.name, this.targetManagementDirectory + "/mgmt"]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, `${target.devicePath}/../mgmt`]));
-
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    addPortalToTarget(target: Target, portal: Portal): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, `${target.devicePath}/../mgmt`]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    addInitiatorGroupToTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "create $1" > $2`, [initiatorGroup.name, `${target.devicePath}/ini_groups/mgmt`]));
-
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, `${target.devicePath}/../mgmt`]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    deleteInitiatorGroupFromTarget(initiatorGroup: InitiatorGroup): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "del $1" > $2`, [initiatorGroup.name, `${initiatorGroup.devicePath}/../mgmt`]));
-
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    addInitiatorGroupToTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "create $1" > $2`, [initiatorGroup.name, `${target.devicePath}/ini_groups/mgmt`]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    addInitiatorToGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "add $1" > $2`, [initiator.name, `${initiatorGroup.devicePath}/initiators/mgmt`]));
-
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    deleteInitiatorGroupFromTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "del $1" > $2`, [initiatorGroup.name, `${target.devicePath}/ini_groups/mgmt`]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    removeInitiatorFromGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "del $1" > $2`, [initiator.name, `${initiatorGroup.devicePath}/initiators/mgmt`]));
-
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    addInitiatorToGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "add $1" > $2`, [initiator.name, `${initiatorGroup.devicePath}/initiators/mgmt`]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    addLogicalUnitNumberToGroup(initiatorGroup: InitiatorGroup, logicalUnitNumber: LogicalUnitNumber): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "add $1 $2" > $3`, [logicalUnitNumber.name, logicalUnitNumber.unitNumber.toString(), `${initiatorGroup.devicePath}/luns/mgmt`]));
-
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    removeInitiatorFromGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "del $1" > $2`, [initiator.name, `${initiatorGroup.devicePath}/initiators/mgmt`]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    removeLogicalUnitNumberFromGroup(initiatorGroup: InitiatorGroup, logicalUnitNumber: LogicalUnitNumber): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "del $1" > $2`, [logicalUnitNumber.unitNumber.toString(), `${initiatorGroup.devicePath}/luns/mgmt`]));
-
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    addLogicalUnitNumberToGroup(initiatorGroup: InitiatorGroup, logicalUnitNumber: LogicalUnitNumber): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "add $1 $2" > $3`, [logicalUnitNumber.name, logicalUnitNumber.unitNumber.toString(), `${initiatorGroup.devicePath}/luns/mgmt`]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    addCHAPConfigurationToTarget(target: Target, chapConfiguration: CHAPConfiguration): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username} ${chapConfiguration.password}`, `${target.devicePath}/../mgmt`]));
-    
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    removeLogicalUnitNumberFromGroup(initiatorGroup: InitiatorGroup, logicalUnitNumber: LogicalUnitNumber): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "del $1" > $2`, [logicalUnitNumber.unitNumber.toString(), `${initiatorGroup.devicePath}/luns/mgmt`]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
-    removeCHAPConfigurationFromTarget(target: Target, chapConfiguration: CHAPConfiguration): ResultAsync<ExitedProcess, ProcessError> {
-        const result =  this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username}`, `${target.devicePath}/../mgmt`]));
+    addCHAPConfigurationToTarget(target: Target, chapConfiguration: CHAPConfiguration): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username} ${chapConfiguration.password}`, `${target.devicePath}/../mgmt`]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
+    }
 
-        this.configurationManager.saveCurrentConfiguration();
-        return result;
+    removeCHAPConfigurationFromTarget(target: Target, chapConfiguration: CHAPConfiguration): ResultAsync<void, ProcessError> {
+        return this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username}`, `${target.devicePath}/../mgmt`]))
+        .andThen(() => this.configurationManager.saveCurrentConfiguration())
+        .map(() => undefined);
     }
 
     getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {

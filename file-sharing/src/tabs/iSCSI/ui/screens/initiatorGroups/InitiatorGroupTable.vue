@@ -43,6 +43,7 @@
             <InitiatorGroupEntry
               v-for="(group, index) in target.initiatorGroups"
               :key="index"
+              :target="target"
               :initiatorGroup="group"
               @deleteEntry="actions.refreshTable"
             />
