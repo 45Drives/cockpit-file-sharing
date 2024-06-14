@@ -1,4 +1,5 @@
 import { type KeyValueData } from "@45drives/houston-common-lib";
+import { readonly } from 'vue';
 
 export type SambaGlobalConfig = {
   logLevel: number;
@@ -23,7 +24,7 @@ export type SambaConfig = {
   shares: SambaShareConfig[];
 };
 
-export const defaultSambaShareConfig = (name: string = "") => ({
+export const defaultSambaShareConfig = (name: string = ""): SambaShareConfig => ({
   name,
   description: "",
   path: "",
@@ -33,6 +34,11 @@ export const defaultSambaShareConfig = (name: string = "") => ({
   inheritPermissions: false,
   advancedOptions: {},
 });
+
+export const newSambaShareConfig = (): SambaShareConfig => ({
+  ...defaultSambaShareConfig(""),
+  readOnly: false,
+})
 
 export const defaultSambaGlobalConfig = () => ({
   serverString: "Samba %v",
