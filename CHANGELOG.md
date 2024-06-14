@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.0.2-1
+## Cockpit File Sharing 4.0.3-1
 
-* Fixed error spamming when path does not exist for Ceph path settings
+* New Samba shares now default to read only = no

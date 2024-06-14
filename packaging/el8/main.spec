@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri Jun 14 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.3-1
+- New Samba shares now default to read only = no
 * Tue Jun 11 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.2-1
 - Fixed error spamming when path does not exist for Ceph path settings
 * Tue Jun 11 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.1-1
