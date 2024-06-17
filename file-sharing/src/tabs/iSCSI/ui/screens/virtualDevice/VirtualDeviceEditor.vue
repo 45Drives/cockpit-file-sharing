@@ -45,14 +45,22 @@
                 <ValidationResultView v-bind="filePathValidationResult"/>
             </InputLabelWrapper>
 
-            <InputLabelWrapper>
+            <ToggleSwitchGroup v-if="clusteredServerDriver">
+                <ToggleSwitch v-model="clusterOptions.isLV">
+                {{ _("Is LV") }}
+                <template #description>
+                    {{ _("Creates an LVM resource for the device.") }}
+                </template>
+                </ToggleSwitch>
+            </ToggleSwitchGroup>
+
+            <InputLabelWrapper v-if="tempDevice.deviceType !== DeviceType.BlockIO">
                 <template #label>
                     {{ _("Block Size") }}
                 </template>
                 
                 <InputField
                     :placeholder="'Size'"
-                    :disabled="tempDevice.deviceType === DeviceType.BlockIO"
                     type="number"
                     v-model="tempDevice.blockSize"
                 />
@@ -77,28 +85,37 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, ValidationResultView, validationSuccess, validationError, ValidationScope } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, ToggleSwitchGroup, ToggleSwitch, useTempObjectStaging, wrapActions, type SelectMenuOption, ValidationResultView, validationSuccess, validationError, ValidationScope } from '@45drives/houston-common-ui';
     import { err, ok, type ResultAsync } from 'neverthrow';
     import { inject, ref, type Ref } from 'vue';
-    import { DeviceType, VirtualDevice } from '../../../types/VirtualDevice';
+    import { DeviceType, VirtualDevice } from '@/tabs/iSCSI/types/VirtualDevice';
     import { Command, Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
-    import type { ISCSIDriver } from '../../../types/drivers/ISCSIDriver';
+    import type { ISCSIDriver } from '@/tabs/iSCSI/types/drivers/ISCSIDriver';
+    import { ISCSIDriverClusteredServer } from '@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer';
 
     const _ = cockpit.gettext;
     
     const emit = defineEmits(['closeEditor']);
 
-    const deviceTypeOptions: SelectMenuOption<DeviceType>[] = Object.values(DeviceType).map(deviceType => ({label: deviceType.toString(), value: deviceType}));
+    const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
-    const newDevice = ref<VirtualDevice>(new VirtualDevice("", "", 512, DeviceType.FileIO));
+    const clusteredServerDriver = ref(false);
+
+    driver.map((driver) => clusteredServerDriver.value = driver instanceof ISCSIDriverClusteredServer);
+
+    const deviceTypeOptions: Ref<SelectMenuOption<DeviceType>[]> = ref([]);
+
+    driver.map((driver) => driver.getHandledDeviceTypes()
+        .map((deviceType) => ({label: deviceType.toString(), value: deviceType})))
+        .map((options) => deviceTypeOptions.value = options);
+                  
+    const newDevice = ref<VirtualDevice>(new VirtualDevice("", "", 512, DeviceType.BlockIO));
+
+    const clusterOptions = ref({ 
+        isLV: false
+    });
 
     const { tempObject: tempDevice, modified, resetChanges } = useTempObjectStaging(newDevice);
-
-    const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
-
-    if (driver === undefined) {
-		throw new Error("iSCSI Driver is null");
-	}
 
     const virtualDevices = inject<Ref<VirtualDevice[]>>('virtualDevices');
 
@@ -114,7 +131,6 @@
     const finalizeDevice = async () => {
         if (tempDevice.value.deviceType === DeviceType.BlockIO) {
             await fetchBlockSize(tempDevice.value.filePath).map((blockSize) => {
-                console.log(blockSize);
                 tempDevice.value.blockSize = blockSize
             })
         }
@@ -123,6 +139,10 @@
     }
 
     const createDevice = () => {
+        if (clusteredServerDriver && clusterOptions.value.isLV) {
+            return driver.map((driver) => (driver as ISCSIDriverClusteredServer).addLVMResource(tempDevice.value))
+        }
+
         return driver.andThen((driver) => driver.addVirtualDevice(tempDevice.value))
                         .map(() => handleClose())
                         .mapErr((error) => new ProcessError(`Unable to create device ${tempDevice.value.deviceName}: ${error.message}`))

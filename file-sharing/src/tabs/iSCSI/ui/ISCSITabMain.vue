@@ -17,19 +17,18 @@ import type { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 import ConfigurationEditor from "@/tabs/iSCSI/ui/screens/config/ConfigurationEditor.vue";
 import { ISCSIDriverClusteredServer } from "../types/drivers/ISCSIDriverClusteredServer";
 import { useUserSettings } from "@/common/user-settings";
-import type { ResultAsync } from "neverthrow";
+import { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 
 const _ = cockpit.gettext;
 
-const userSettings = useUserSettings();
-
-checkForClusteredServer();
-
 const createISCSIDriver = (): ResultAsync<ISCSIDriver, ProcessError> => {
-  return getServer().andThen((server) => {
-    const driver = userSettings.value.iscsi.clusteredServer ? new ISCSIDriverClusteredServer(server) : new ISCSIDriverSingleServer(server);
-    return driver.initialize();
+  return getServer()
+  .andThen((server) => {
+    return checkForClusteredServer().andThen((clusteredServer) => {
+      const driver = clusteredServer ? new ISCSIDriverClusteredServer(server) : new ISCSIDriverSingleServer(server);
+      return driver.initialize();
+    });
   })
 }
 
@@ -53,35 +52,34 @@ function refreshTables() {
 }
 
 function checkForClusteredServer() {
-  const doClusterCheck = computed(() => !userSettings.value.iscsi.clusteredServerChecked);
+  return ResultAsync.fromSafePromise(useUserSettings(true)).map((userSettings) => {
+    if (!userSettings.value.iscsi.clusteredServerChecked) {
+      console.log("Cluster Check")
+      const {
+        tempObject: tempConfig
+      } = useTempObjectStaging(userSettings);
 
-  console.log(userSettings.value)
+      tempConfig.value.iscsi.clusteredServerChecked = true;
 
-  if (doClusterCheck.value) {
-    console.log("Cluster check")
-
-    const {
-      tempObject: tempConfig
-    } = useTempObjectStaging(userSettings);
-
-    tempConfig.value.iscsi.clusteredServerChecked = true;
-
-    getServer().andThen((server) => {
-    return server
-      .execute(new BashCommand("command -v pcs"), false)
-      .map((proc) => {
-          if (proc.succeeded()) {
-            new Directory(server, "/etc/ceph").getChildren({}).map((files) => {
-              if (files.find((file) => file.basename() === "ceph.conf") === undefined || files.find((file) => file.basename() === "*.conf") === undefined) {
-                tempConfig.value.iscsi.clusteredServer = true;
-              }
-            })
+      getServer().andThen((server) => {
+        return server
+        .execute(new BashCommand("command -v pcs"), false)
+        .map((proc) => {
+            if (proc.succeeded()) {
+              new Directory(server, "/etc/ceph").getChildren({}).map((files) => {
+                if (files.find((file) => file.basename() === "ceph.conf") === undefined || files.find((file) => file.basename() === "*.conf") === undefined) {
+                  tempConfig.value.iscsi.clusteredServer = true;
+                }
+              })
+            }
+            
+            userSettings.value = tempConfig.value;
           }
-        }
-      );
-    });
+        );
+      });
+    }
 
-    userSettings.value = tempConfig.value;
-  }
+    return userSettings.value.iscsi.clusteredServer;
+  })
 }
 </script>

@@ -1,5 +1,5 @@
 import type { ResultAsync } from "neverthrow";
-import type { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
+import type { DeviceType, VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 import type { CHAPConfiguration } from "@/tabs/iSCSI/types/CHAPConfiguration";
 import type { Connection } from "@/tabs/iSCSI/types/Connection";
 import type { Initiator } from "@/tabs/iSCSI/types/Initiator";
@@ -12,6 +12,8 @@ import type { ProcessError } from "@45drives/houston-common-lib";
 
 export abstract class ISCSIDriver {
     abstract initialize(): ResultAsync<this, ProcessError>;
+
+    abstract getHandledDeviceTypes(): DeviceType[];
 
     abstract addVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError>;
     abstract removeVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError>;

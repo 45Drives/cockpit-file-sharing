@@ -59,11 +59,7 @@ const newInitiator = ref<Initiator>(Initiator.empty());
 
 const { tempObject: tempInitiator, modified, resetChanges } = useTempObjectStaging(newInitiator);
 
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
-
-if (driver === undefined) {
-  throw new Error("iSCSI Driver is null");
-}
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const handleClose = () => {
   emit("closeEditor");

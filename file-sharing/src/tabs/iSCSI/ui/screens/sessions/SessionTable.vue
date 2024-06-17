@@ -11,8 +11,8 @@
           <template #thead>
             <tr>
               <th scope="col">Initiator Name</th>
-              <th scope="col">Read Count</th>
-              <th scope="col">Write Count</th>
+              <th scope="col">Session Read Count</th>
+              <th scope="col">Session Write Count</th>
               <th scope="col" class="justify-end"></th>
             </tr>
           </template>
@@ -41,13 +41,9 @@ import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 
 const props = defineProps<{ target: Target; currentlyOpen: boolean }>();
 
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 let refreshTimer: number;
-
-if (driver === undefined) {
-  throw new Error("iSCSI Driver is null");
-}
 
 const refreshTable = () => {
   return driver.andThen((driver) => {

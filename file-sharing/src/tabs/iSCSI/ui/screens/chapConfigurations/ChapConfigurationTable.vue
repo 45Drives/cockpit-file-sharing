@@ -73,17 +73,13 @@ const showEditor = ref(false);
 
 const props = defineProps<{ target: Target }>();
 
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const outgoingUserPresent = computed(
   () =>
     props.target.chapConfigurations.find((config) => config.chapType === CHAPType.OutgoingUser) !==
     undefined
 );
-
-if (driver === undefined) {
-  throw new Error("iSCSI Driver is null");
-}
 
 const refreshTable = () => {
   return driver.andThen((driver) => {

@@ -69,11 +69,7 @@ const showEditor = ref(false);
 
 const props = defineProps<{ initiatorGroup: InitiatorGroup }>();
 
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
-
-if (driver === undefined) {
-  throw new Error("iSCSI Driver is null");
-}
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const refreshTable = () => {
   return driver.andThen((driver) => {

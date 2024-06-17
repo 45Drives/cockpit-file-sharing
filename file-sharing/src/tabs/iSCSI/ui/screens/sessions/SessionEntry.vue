@@ -1,8 +1,8 @@
 <template>
   <tr>
     <td>{{ session.initiatorName }}</td>
-    <td>{{ session.readAmountKB }} KB</td>
-    <td>{{ session.writeAmountKB }} KB</td>
+    <td>{{ _cockpit.format_bytes(session.readAmountKB * 1024) }}</td>
+    <td>{{ _cockpit.format_bytes(session.writeAmountKB * 1024) }}</td>
     <td class="button-group-row justify-end">
       <button @click="showEditor = !showEditor">
         <span class="sr-only">Edit</span>
@@ -34,15 +34,12 @@ import ConnectionTable from "@/tabs/iSCSI/ui/screens/connections/ConnectionTable
 
 const props = defineProps<{ session: Session }>();
 
-console.log(props.session);
+const _cockpit = cockpit;
 
 const emit = defineEmits(["deleteEntry"]);
 
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const showEditor = ref(false);
 
-if (driver === undefined) {
-  throw new Error("iSCSI Driver is null");
-}
 </script>

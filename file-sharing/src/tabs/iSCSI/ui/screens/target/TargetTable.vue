@@ -52,6 +52,17 @@
         </Table>
       </div>
     </div>
+    <template v-slot:footer>
+      <div class="button-group-row justify-end grow">
+        <button
+          v-if="clusteredServerDriver"
+          class="btn btn-primary"
+          @click="actions.applyClusterChanges"
+        >
+          {{ "Apply Changes to Cluster" }}
+        </button>
+      </div>
+    </template>
   </CardContainer>
 </template>
 
@@ -66,12 +77,17 @@ import type { Target } from "@/tabs/iSCSI/types/Target";
 import TargetEditor from "../target/TargetEditor.vue";
 import type { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
+import { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 
 const targets = ref<Target[]>([]);
 
 const showAddTarget = ref(false);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
+
+const clusteredServerDriver = ref(false);
+
+driver.map((driver) => clusteredServerDriver.value = driver instanceof ISCSIDriverClusteredServer);
 
 const forceRefreshRecords = inject<Record<string, boolean>>("forceRefreshRecords")!;
 
@@ -90,7 +106,11 @@ const refreshTargets = () => {
   });
 };
 
-const actions = wrapActions({ refreshTargets: refreshTargets });
+const applyClusterChanges = () => {
+  return driver.andThen((driver) => (driver as ISCSIDriverClusteredServer).applyChanges());
+}
+
+const actions = wrapActions({ refreshTargets: refreshTargets, applyClusterChanges: applyClusterChanges });
 
 actions.refreshTargets();
 </script>

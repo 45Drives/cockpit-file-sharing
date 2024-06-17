@@ -24,11 +24,7 @@ const props = defineProps<{ target: Target; portal: Portal }>();
 
 const emit = defineEmits(["deletePortal"]);
 
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
-
-if (driver === undefined) {
-  throw new Error("iSCSI Driver is null");
-}
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const deletePortal = () => {
   return driver

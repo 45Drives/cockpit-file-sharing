@@ -28,11 +28,7 @@ const props = defineProps<{
 
 const emit = defineEmits(["deleteEntry"]);
 
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
-
-if (driver === undefined) {
-  throw new Error("iSCSI Driver is null");
-}
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const deleteEntry = () => {
   return driver

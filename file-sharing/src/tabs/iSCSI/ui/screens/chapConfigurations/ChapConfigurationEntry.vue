@@ -31,12 +31,7 @@ const props = defineProps<{ target: Target; config: CHAPConfiguration }>();
 
 const emit = defineEmits(["deleteEntry"]);
 
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
-
-if (driver === undefined) {
-  throw new Error("iSCSI Driver is null");
-}
-
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 const showPassword = ref(false);
 
 const displayedPassword = computed(() => {

@@ -26,11 +26,7 @@ const props = defineProps<{ device: VirtualDevice }>();
 
 const emit = defineEmits(["deleteDevice"]);
 
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
-
-if (driver === undefined) {
-  throw new Error("iSCSI Driver is null");
-}
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!
 
 const deleteDevice = () => {
   return driver

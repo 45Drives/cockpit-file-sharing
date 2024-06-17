@@ -21,13 +21,13 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     activeNode: Server | undefined;
     configurationManager: ConfigurationManager;
 
+    singleServerDriver: ISCSIDriverSingleServer | undefined;
     commandQueue: Command[];
     virtualDevices: VirtualDevice[];
     targets: Target[];
 
     deviceTypeToHandlerDirectory = {
-        [DeviceType.BlockIO]: "/sys/kernel/scst_tgt/handlers/vdisk_blockio",
-        [DeviceType.FileIO]: "/sys/kernel/scst_tgt/handlers/vdisk_fileio"
+        [DeviceType.BlockIO]: "/sys/kernel/scst_tgt/handlers/vdisk_blockio"
     };
 
     targetManagementDirectory = "/sys/kernel/scst_tgt/targets/iscsi";
@@ -38,15 +38,23 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         this.commandQueue = [];
         this.virtualDevices = [];
         this.targets = [];
-        this.activeNode = undefined;
     }
 
     initialize() {
-        return this.getActiveNode().map((server) => this.activeNode = server)
-                .map((server) => new ISCSIDriverSingleServer(server))
+        return this.getActiveNode()
+                .map((server) => this.activeNode = server)
+                .map((server) => {
+                    const singleServerDriver = new ISCSIDriverSingleServer(server)
+                    this.singleServerDriver = singleServerDriver;
+                    return singleServerDriver
+                })
                 .andThen((driver) => driver.getVirtualDevices().map((devices) => this.virtualDevices = devices).map(() => driver))
                 .andThen((driver) => driver.getTargets().map((targets) => this.targets = targets))
                 .map(() => this);
+    }
+
+    getHandledDeviceTypes(): DeviceType[] {
+        return Object.keys(this.deviceTypeToHandlerDirectory) as DeviceType[];
     }
 
     getActiveNode(): ResultAsync<Server, ProcessError> {
@@ -61,14 +69,22 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             .map((nodeIP) => new Server(nodeIP));
     }
 
+    addLVMResource(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
+        return okAsync(undefined);
+    }
+
+    removeLVMResource(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
+        return okAsync(undefined);
+    }
+
     addVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
         this.virtualDevices.push(virtualDevice);
 
         return okAsync(undefined);
     }
 
-    removeVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
-        this.virtualDevices = this.virtualDevices.filter((existingDevice) => existingDevice == virtualDevice);
+    removeVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {        
+        this.virtualDevices = this.virtualDevices.filter((existingDevice) => existingDevice.deviceName !== virtualDevice.deviceName);
 
         return okAsync(undefined);
     }
@@ -80,7 +96,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     }
 
     removeTarget(target: Target): ResultAsync<void, ProcessError> {
-        this.targets = this.targets.filter((existingTarget) => existingTarget === target);
+        this.targets = this.targets.filter((existingTarget) => existingTarget.name !== target.name);
 
         return okAsync(undefined);
     }
@@ -92,7 +108,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     }
 
     deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<void, ProcessError> {
-        target.portals = target.portals.filter((existingPortal) => existingPortal === portal);
+        target.portals = target.portals.filter((existingPortal) => existingPortal !== portal);
 
         return okAsync(undefined);
     }
@@ -104,7 +120,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     }
 
     deleteInitiatorGroupFromTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<void, ProcessError> {
-        target.initiatorGroups = target.initiatorGroups.filter((existingGroup) => existingGroup === initiatorGroup);
+        target.initiatorGroups = target.initiatorGroups.filter((existingGroup) => existingGroup !== initiatorGroup);
 
         return okAsync(undefined);
     }
@@ -116,7 +132,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     }
 
     removeInitiatorFromGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<void, ProcessError> {
-        initiatorGroup.initiators = initiatorGroup.initiators.filter((existingInitiator) => existingInitiator === initiator);
+        initiatorGroup.initiators = initiatorGroup.initiators.filter((existingInitiator) => existingInitiator !== initiator);
 
         return okAsync(undefined);
     }
@@ -128,7 +144,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     }
 
     removeLogicalUnitNumberFromGroup(initiatorGroup: InitiatorGroup, logicalUnitNumber: LogicalUnitNumber): ResultAsync<void, ProcessError> {
-        initiatorGroup.logicalUnitNumbers = initiatorGroup.logicalUnitNumbers.filter((existingLogicalUnitNumber) => existingLogicalUnitNumber === logicalUnitNumber);
+        initiatorGroup.logicalUnitNumbers = initiatorGroup.logicalUnitNumbers.filter((existingLogicalUnitNumber) => existingLogicalUnitNumber !== logicalUnitNumber);
 
         return okAsync(undefined);
     }
@@ -140,18 +156,21 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     }
 
     removeCHAPConfigurationFromTarget(target: Target, chapConfiguration: CHAPConfiguration): ResultAsync<void, ProcessError> {
-        target.chapConfigurations = target.chapConfigurations.filter((existingCHAP => existingCHAP === chapConfiguration));
+        target.chapConfigurations = target.chapConfigurations.filter((existingCHAP => existingCHAP !== chapConfiguration));
 
         return okAsync(undefined);
     }
 
-    addLVMResource(virtualDevice: VirtualDevice, vgName: string, lvName: string): ResultAsync<void, ProcessError> {
+    createLVMResource(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
+        const vgName = "";
+        const lvName = "";
+
         return this.server.execute(new BashCommand(`pcs resource create $1 ocf:heartbeat:LVM-activate lvname=$2 vgname=$3 activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, 
                     [virtualDevice.deviceName, lvName, vgName]))
                     .andThen(() => okAsync(undefined));
     }
 
-    removeLVMResource(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
+    deleteLVMResource(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
         return this.server.execute(new BashCommand(`pcs resource delete $1`, 
             [virtualDevice.deviceName]))
             .andThen(() => okAsync(undefined));
@@ -189,7 +208,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         .andThen(() => okAsync(undefined));
     }
 
-    commitChanges(): ResultAsync<void, ProcessError> {
+    applyChanges(): ResultAsync<void, ProcessError> {
         return okAsync(undefined);
     }
 
@@ -202,31 +221,30 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     }
 
     getPortalsOfTarget(target: Target): ResultAsync<Portal[], ProcessError> {
-        throw new Error('Method not implemented.');
+        return okAsync(target.portals);
     }
 
     getInitatorGroupsOfTarget(target: Target): ResultAsync<InitiatorGroup[], ProcessError> {
-        throw new Error('Method not implemented.');
+        return okAsync(target.initiatorGroups);
     }
 
     getSessionsOfTarget(target: Target): ResultAsync<Session[], ProcessError> {
-        throw new Error('Method not implemented.');
+        return this.singleServerDriver!.getSessionsOfTarget(target).map((sessions) => target.sessions = sessions);
     }
 
     getCHAPConfigurationsOfTarget(target: Target): ResultAsync<CHAPConfiguration[], ProcessError> {
-        throw new Error('Method not implemented.');
+        return okAsync(target.chapConfigurations);
     }
 
     getConnectionsOfSession(session: Session): ResultAsync<Connection[], ProcessError> {
-        throw new Error('Method not implemented.');
+        return this.singleServerDriver!.getConnectionsOfSession(session).map((connections) => session.connections = connections);
     }
 
     getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<LogicalUnitNumber[], ProcessError> {
-        throw new Error('Method not implemented.');
+        return okAsync(initiatorGroup.logicalUnitNumbers);
     }
 
     getInitiatorsOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<Initiator[], ProcessError> {
-        throw new Error('Method not implemented.');
+        return okAsync(initiatorGroup.initiators);
     }
-
 }

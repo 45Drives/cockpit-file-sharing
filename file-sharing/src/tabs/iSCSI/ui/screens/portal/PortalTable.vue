@@ -69,11 +69,7 @@ const showAddPortal = ref(false);
 
 const props = defineProps<{ target: Target }>();
 
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
-
-if (driver === undefined) {
-  throw new Error("iSCSI Driver is null");
-}
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const refreshPortals = () => {
   return driver.andThen((driver) => {

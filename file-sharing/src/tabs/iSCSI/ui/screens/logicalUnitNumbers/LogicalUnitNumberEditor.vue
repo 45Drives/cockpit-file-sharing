@@ -71,11 +71,7 @@ const newLun = ref<LogicalUnitNumber>(LogicalUnitNumber.empty());
 
 const { tempObject: tempLun, modified, resetChanges } = useTempObjectStaging(newLun);
 
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver");
-
-if (driver === undefined) {
-  throw new Error("iSCSI Driver is null");
-}
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const devices = inject<Ref<VirtualDevice[]>>("virtualDevices");
 

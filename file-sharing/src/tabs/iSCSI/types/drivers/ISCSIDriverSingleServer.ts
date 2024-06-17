@@ -10,7 +10,7 @@ import { Portal } from "@/tabs/iSCSI/types/Portal";
 import { type Session } from "@/tabs/iSCSI/types/Session";
 import { type Target } from "@/tabs/iSCSI/types/Target";
 import { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
-import { BashCommand, Command, ParsingError, ProcessError, Server, StringToIntCaster, getServer } from "@45drives/houston-common-lib";
+import { BashCommand, Command, ParsingError, ProcessError, Server, StringToIntCaster } from "@45drives/houston-common-lib";
 import { ResultAsync, err, ok, okAsync, safeTry } from "neverthrow";
 
 export class ISCSIDriverSingleServer implements ISCSIDriver {
@@ -32,6 +32,10 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
 
     initialize() {
         return okAsync(this);
+    }
+
+    getHandledDeviceTypes(): DeviceType[] {
+        return Object.keys(this.deviceTypeToHandlerDirectory) as DeviceType[];
     }
 
     addVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
@@ -203,16 +207,14 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
             }
         ).andThen((portalAddressFileNames) => {
             const addressResults = portalAddressFileNames.map((portalAddressFileName) => {
-                return getServer().andThen((server) => {
-                    const file = new File(server, `${target.devicePath}/${portalAddressFileName}`)
-                    return file.read().andThen((fileContent) => {
-                        const address = fileContent.split('\n')[0]
+                const file = new File(this.server, `${target.devicePath}/${portalAddressFileName}`)
+                return file.read().andThen((fileContent) => {
+                    const address = fileContent.split('\n')[0]
 
-                        if (address === undefined)
-                            return err(new ProcessError(`Could not parse address from allowed_portal file: ${file.basename}`));
+                    if (address === undefined)
+                        return err(new ProcessError(`Could not parse address from allowed_portal file: ${file.basename}`));
 
-                        return ok(address);
-                    });
+                    return ok(address);
                 });
             })
 
@@ -287,29 +289,27 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
             }
         ).andThen((configurationFileNames) => {
             return ResultAsync.combine(configurationFileNames.map((configurationFileName) => {
-                return getServer().andThen((server) => {
-                    const file = new File(server, `${target.devicePath}/${configurationFileName}`);
-                    
-                    return file.read().andThen((fileContent) => {
-                        const credentialLine = fileContent.split('\n')[0]
+                const file = new File(this.server, `${target.devicePath}/${configurationFileName}`);
+                
+                return file.read().andThen((fileContent) => {
+                    const credentialLine = fileContent.split('\n')[0]
 
-                        if (credentialLine === undefined)
-                            return err(new ProcessError(`Could not parse credentials line from CHAP configuration file: ${file.basename}`));
+                    if (credentialLine === undefined)
+                        return err(new ProcessError(`Could not parse credentials line from CHAP configuration file: ${file.basename}`));
 
-                        const chapType = configurationFileName.includes("IncomingUser") ? CHAPType.IncomingUser : CHAPType.OutgoingUser;
-                        const username = credentialLine.split(' ')[0];
-                        const password = credentialLine.split(' ')[1];
+                    const chapType = configurationFileName.includes("IncomingUser") ? CHAPType.IncomingUser : CHAPType.OutgoingUser;
+                    const username = credentialLine.split(' ')[0];
+                    const password = credentialLine.split(' ')[1];
 
-                        if (username === undefined || password === undefined)
-                            return err(new ProcessError(`Could not parse credentials from configuration file: ${file.basename}`));
+                    if (username === undefined || password === undefined)
+                        return err(new ProcessError(`Could not parse credentials from configuration file: ${file.basename}`));
 
-                        return ok<CHAPConfiguration>({
-                            username: username,
-                            password: password,
-                            chapType: chapType,
-                        })
-                    });
-                })
+                    return ok<CHAPConfiguration>({
+                        username: username,
+                        password: password,
+                        chapType: chapType,
+                    })
+                });
             }));
         })
     }
