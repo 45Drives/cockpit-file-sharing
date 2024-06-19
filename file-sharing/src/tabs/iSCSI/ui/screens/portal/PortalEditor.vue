@@ -68,8 +68,6 @@ const handleClose = () => {
 };
 
 const createPortal = () => {
-  tempPortal.value.address += ":3260";
-
   return driver
     .andThen((driver) => driver.addPortalToTarget(props.target, tempPortal.value))
     .map(() => handleClose())

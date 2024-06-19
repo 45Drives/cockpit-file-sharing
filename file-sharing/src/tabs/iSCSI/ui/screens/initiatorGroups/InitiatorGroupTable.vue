@@ -31,9 +31,9 @@
           <template #thead>
             <tr>
               <th scope="col">Group Name</th>
-              <th scope="col" :class="{'flex flex-row': !clusteredServerDriver, 'justify-end': true} ">
+              <th scope="col" :class="{'flex flex-row': !useUserSettings().value.iscsi.clusteredServer, 'justify-end': true} ">
                 <span class="sr-only">Delete</span>
-                <button @click="showEditor = !showEditor" v-if="!clusteredServerDriver">
+                <button @click="showEditor = !showEditor" v-if="!useUserSettings().value.iscsi.clusteredServer">
                   <PlusIcon class="size-icon icon-default" />
                 </button>
               </th>
@@ -59,23 +59,19 @@ import { CardContainer, wrapActions } from "@45drives/houston-common-ui";
 import { inject, ref, type Ref } from "vue";
 import Table from "../Table.vue";
 import { PlusIcon } from "@heroicons/vue/24/solid";
+import { useUserSettings } from "@/common/user-settings";
 import type { ResultAsync } from "neverthrow";
 import type { ProcessError } from "@45drives/houston-common-lib";
 import type { Target } from "@/tabs/iSCSI/types/Target";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import InitiatorGroupEntry from "@/tabs/iSCSI/ui/screens/initiatorGroups/InitiatorGroupEntry.vue";
 import InitiatorGroupEditor from "@/tabs/iSCSI/ui/screens/initiatorGroups/InitiatorGroupEditor.vue";
-import { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 
 const showEditor = ref(false);
 
 const props = defineProps<{ target: Target }>();
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
-
-const clusteredServerDriver = ref(false);
-
-driver.map((driver) => clusteredServerDriver.value = driver instanceof ISCSIDriverClusteredServer);
 
 if (driver === undefined) {
   throw new Error("iSCSI Driver is null");

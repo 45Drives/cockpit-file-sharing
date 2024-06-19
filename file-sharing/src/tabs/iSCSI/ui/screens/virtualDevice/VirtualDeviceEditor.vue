@@ -45,7 +45,7 @@
                 <ValidationResultView v-bind="filePathValidationResult"/>
             </InputLabelWrapper>
 
-            <ToggleSwitchGroup v-if="clusteredServerDriver">
+            <ToggleSwitchGroup v-if="useUserSettings().value.iscsi.clusteredServer">
                 <ToggleSwitch v-model="clusterOptions.isLV">
                 {{ _("Is LV") }}
                 <template #description>
@@ -91,17 +91,13 @@
     import { DeviceType, VirtualDevice } from '@/tabs/iSCSI/types/VirtualDevice';
     import { Command, Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
     import type { ISCSIDriver } from '@/tabs/iSCSI/types/drivers/ISCSIDriver';
-    import { ISCSIDriverClusteredServer } from '@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer';
+    import { useUserSettings } from '@/common/user-settings';
 
     const _ = cockpit.gettext;
     
     const emit = defineEmits(['closeEditor']);
 
     const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
-
-    const clusteredServerDriver = ref(false);
-
-    driver.map((driver) => clusteredServerDriver.value = driver instanceof ISCSIDriverClusteredServer);
 
     const deviceTypeOptions: Ref<SelectMenuOption<DeviceType>[]> = ref([]);
 
@@ -139,8 +135,8 @@
     }
 
     const createDevice = () => {
-        if (clusteredServerDriver && clusterOptions.value.isLV) {
-            return driver.map((driver) => (driver as ISCSIDriverClusteredServer).addLVMResource(tempDevice.value))
+        if (useUserSettings().value.iscsi.clusteredServer && clusterOptions.value.isLV) {
+            //return driver.map((driver) => (driver as ISCSIDriverClusteredServer).addLVMResource(tempDevice.value))
         }
 
         return driver.andThen((driver) => driver.addVirtualDevice(tempDevice.value))

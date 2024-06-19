@@ -2,7 +2,7 @@
   <tr>
     <td>{{ portal.address }}</td>
     <td class="button-group-row justify-end">
-      <button @click="promptDeletion">
+      <button v-if="target.portals.length > 1" @click="promptDeletion">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>

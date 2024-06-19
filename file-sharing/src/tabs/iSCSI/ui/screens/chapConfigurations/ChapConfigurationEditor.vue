@@ -30,6 +30,8 @@
 
         <SelectMenu v-model="tempConfiguration.chapType" :options="chapTypeOptions" />
       </InputLabelWrapper>
+
+      <ValidationResultView v-bind="configurationClusterOverwriteIncomingValidationResult" />
     </div>
 
     <template v-slot:footer>
@@ -59,6 +61,7 @@ import {
   ValidationResultView,
   wrapActions,
   ValidationScope,
+  validationWarning,
 } from "@45drives/houston-common-ui";
 import type { ResultAsync } from "neverthrow";
 import { computed, inject, ref } from "vue";
@@ -66,6 +69,7 @@ import { type Target } from "../../../types/Target";
 import { ProcessError } from "@45drives/houston-common-lib";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import { CHAPConfiguration, CHAPType } from "../../../types/CHAPConfiguration";
+import { useUserSettings } from "@/common/user-settings";
 
 const _ = cockpit.gettext;
 
@@ -137,6 +141,17 @@ const { validationResult: configurationPasswordValidationResult } = validationSc
 
     if (tempConfiguration.value.password.length < 12) {
       return validationError("The password must be at least 12 characters.");
+    }
+
+    return validationSuccess();
+  }
+);
+
+const { validationResult: configurationClusterOverwriteIncomingValidationResult } = validationScope.useValidator(
+  () => {
+    console.log((useUserSettings().value.iscsi.clusteredServer && tempConfiguration.value.chapType === CHAPType.IncomingUser && props.target.chapConfigurations.length > 0))
+    if (useUserSettings().value.iscsi.clusteredServer && tempConfiguration.value.chapType === CHAPType.IncomingUser && props.target.chapConfigurations.length > 0) {
+      return validationWarning("Only one IncomingUser can be assigned to a Target in a cluster. The existing user will be overwritten.");
     }
 
     return validationSuccess();

@@ -2,7 +2,7 @@
   <CenteredCardColumn v-if="iSCSIDriver">
     <VirtualDeviceTable />
     <TargetTable />
-    <ConfigurationEditor @config-updated="refreshTables()" />
+    <ConfigurationEditor v-if="!useUserSettings().value.iscsi.clusteredServer" @config-updated="refreshTables()" />
   </CenteredCardColumn>
 </template>
 

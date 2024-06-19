@@ -13,6 +13,16 @@
         <InputField :placeholder="'A unique name for your target'" v-model="tempTarget.name" />
         <ValidationResultView v-bind="targetNameValidationResult" />
       </InputLabelWrapper>
+
+      <InputLabelWrapper v-if= "useUserSettings().value.iscsi.clusteredServer">
+        <template #label>
+          {{ _("Portal Address") }}
+        </template>
+
+        <InputField :placeholder="'The address for the portal'" v-model="tempPortal.address" />
+
+        <ValidationResultView v-bind="portalAddressValidationResult" />
+      </InputLabelWrapper>
     </div>
 
     <template v-slot:footer>
@@ -21,7 +31,7 @@
         <button
           class="btn btn-primary"
           @click="actions.createTarget"
-          :disabled="!validationScope.isValid() || !modified"
+          :disabled="!validationScope.isValid() || !targetModified || !portalModified"
         >
           {{ "Create" }}
         </button>
@@ -47,6 +57,8 @@ import { inject, ref } from "vue";
 import { ProcessError } from "@45drives/houston-common-lib";
 import { Target } from "@/tabs/iSCSI/types/Target";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
+import { Portal } from "@/tabs/iSCSI/types/Portal";
+import { useUserSettings } from "@/common/user-settings";
 
 const _ = cockpit.gettext;
 
@@ -56,23 +68,42 @@ const emit = defineEmits(["closeEditor"]);
 
 const newTarget = ref<Target>(Target.empty());
 
-const { tempObject: tempTarget, modified, resetChanges } = useTempObjectStaging(newTarget);
+const newPortal = ref<Portal>(new Portal(""));
+
+const { tempObject: tempTarget, modified: targetModified, resetChanges: resetChangesTarget } = useTempObjectStaging(newTarget);
+
+const { tempObject: tempPortal, modified: portalModified, resetChanges: resetChangesPortal } = useTempObjectStaging(newPortal);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const handleClose = () => {
   emit("closeEditor");
-  resetChanges();
+  resetChangesTarget();
+  resetChangesPortal();
 };
 
 const createTarget = () => {
-  return driver
+  if (useUserSettings().value.iscsi.clusteredServer) {
+    return driver
+    .andThen((driver) => {
+      return driver.createTarget(tempTarget.value)
+      .andThen(() => driver.addPortalToTarget(tempTarget.value, tempPortal.value))
+    })
+    .map(() => handleClose())
+    .mapErr(
+      (error) =>
+        new ProcessError(`Unable to create target ${tempTarget.value.name}: ${error.message}`)
+    );
+  }
+  else {
+    return driver
     .andThen((driver) => driver.createTarget(tempTarget.value))
     .map(() => handleClose())
     .mapErr(
       (error) =>
         new ProcessError(`Unable to create target ${tempTarget.value.name}: ${error.message}`)
     );
+  }
 };
 
 const actions = wrapActions({ createTarget });
@@ -86,6 +117,20 @@ const { validationResult: targetNameValidationResult } = validationScope.useVali
 
   if (props.existingTargets.find((target) => target.name === tempTarget.value.name) !== undefined) {
     return validationError("A target with this name already exists.");
+  }
+
+  return validationSuccess();
+});
+
+const { validationResult: portalAddressValidationResult } = validationScope.useValidator(() => {
+  if (useUserSettings().value.iscsi.clusteredServer) {
+    if (!tempPortal.value.address) {
+      return validationError("A portal address is required.");
+    }
+
+    if (tempPortal.value.address.includes(":")) {
+      return validationError("The port defaults to 3260.");
+    }
   }
 
   return validationSuccess();
