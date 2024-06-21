@@ -19,6 +19,7 @@ import { ISCSIDriverClusteredServer } from "../types/drivers/ISCSIDriverClustere
 import { useUserSettings } from "@/common/user-settings";
 import { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
+import type { Target } from "@/tabs/iSCSI/types/Target";
 
 const _ = cockpit.gettext;
 
@@ -42,6 +43,7 @@ if (!iSCSIDriver) {
 
 provide("iSCSIDriver", iSCSIDriver);
 provide("virtualDevices", ref<VirtualDevice[]>());
+provide("targets", ref<Target[]>());
 
 let forceRefreshRecords = reactive<Record<string, boolean>>({});
 provide("forceRefreshRecords", forceRefreshRecords);

@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { CardContainer, wrapActions } from "@45drives/houston-common-ui";
+import { CardContainer, pushNotification, wrapActions } from "@45drives/houston-common-ui";
 import { inject, onMounted, onUnmounted } from "vue";
 import Table from "../Table.vue";
 import type { ResultAsync } from "neverthrow";
@@ -49,7 +49,7 @@ const refreshTable = () => {
   return driver.andThen((driver) => {
     return driver.getSessionsOfTarget(props.target).map((sessions) => {
       props.target.sessions = sessions;
-    });
+    })
   });
 };
 

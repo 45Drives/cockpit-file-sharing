@@ -6,7 +6,7 @@
         <span class="sr-only">Edit</span>
         <WrenchIcon class="size-icon icon-default" />
       </button>
-      <button @click="promptDeletion">
+      <button v-if="!useUserSettings().value.iscsi.clusteredServer" @click="promptDeletion">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
@@ -37,6 +37,7 @@ import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import InitiatorTable from "@/tabs/iSCSI/ui/screens/initiators/InitiatorTable.vue";
 import LogicalUnitNumberTable from "@/tabs/iSCSI/ui/screens/logicalUnitNumbers/LogicalUnitNumberTable.vue";
 import type { Target } from "@/tabs/iSCSI/types/Target";
+import { useUserSettings } from "@/common/user-settings";
 
 const props = defineProps<{ target: Target; initiatorGroup: InitiatorGroup }>();
 

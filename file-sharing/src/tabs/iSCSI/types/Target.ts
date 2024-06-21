@@ -9,15 +9,12 @@ export interface Target {
     initiatorGroups: InitiatorGroup[];
     portals: Portal[];
     sessions: Session[];
-
-    devicePath: string;
 }
 
 export namespace Target {
     export function empty() : Target {
         return {
             name: "",
-            devicePath: "",
             chapConfigurations: [],
             portals: [],
             sessions: [],

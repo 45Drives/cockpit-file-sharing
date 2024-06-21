@@ -57,7 +57,7 @@
 
 <script setup lang="ts">
 import { CardContainer, wrapActions } from "@45drives/houston-common-ui";
-import { inject, ref, watch } from "vue";
+import { inject, ref, watch, type Ref } from "vue";
 import Table from "../Table.vue";
 import { PlusIcon } from "@heroicons/vue/24/solid";
 import TargetEntry from "../target/TargetEntry.vue";
@@ -67,11 +67,11 @@ import TargetEditor from "../target/TargetEditor.vue";
 import type { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 
-const targets = ref<Target[]>([]);
-
 const showAddTarget = ref(false);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
+
+const targets = inject<Ref<Target[]>>("targets")!;
 
 const forceRefreshRecords = inject<Record<string, boolean>>("forceRefreshRecords")!;
 

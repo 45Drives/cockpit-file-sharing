@@ -1,5 +1,5 @@
 import { ConfigurationManager } from '@/tabs/iSCSI/types/ConfigurationManager';
-import { File } from "@45drives/houston-common-lib";
+import { Directory, File } from "@45drives/houston-common-lib";
 import { VirtualDevice, DeviceType } from "@/tabs/iSCSI/types/VirtualDevice";
 import { CHAPConfiguration, CHAPType } from "@/tabs/iSCSI/types/CHAPConfiguration";
 import { type Connection } from "@/tabs/iSCSI/types/Connection";
@@ -65,25 +65,25 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     addPortalToTarget(target: Target, portal: Portal): ResultAsync<void, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, `${target.devicePath}/../mgmt`]))
+        return this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, `${this.getTargetPath(target)}/../mgmt`]))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
     }
 
     deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<void, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, `${target.devicePath}/../mgmt`]))
+        return this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `allowed_portal=${portal.address}`, `${this.getTargetPath(target)}/../mgmt`]))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
     }
 
     addInitiatorGroupToTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<void, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "create $1" > $2`, [initiatorGroup.name, `${target.devicePath}/ini_groups/mgmt`]))
+        return this.server.execute(new BashCommand(`echo "create $1" > $2`, [initiatorGroup.name, `${this.getTargetPath(target)}/ini_groups/mgmt`]))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
     }
 
     deleteInitiatorGroupFromTarget(target: Target, initiatorGroup: InitiatorGroup): ResultAsync<void, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "del $1" > $2`, [initiatorGroup.name, `${target.devicePath}/ini_groups/mgmt`]))
+        return this.server.execute(new BashCommand(`echo "del $1" > $2`, [initiatorGroup.name, `${this.getTargetPath(target)}/ini_groups/mgmt`]))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
     }
@@ -113,19 +113,18 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     addCHAPConfigurationToTarget(target: Target, chapConfiguration: CHAPConfiguration): ResultAsync<void, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username} ${chapConfiguration.password}`, `${target.devicePath}/../mgmt`]))
+        return this.server.execute(new BashCommand(`echo "add_target_attribute $1 $2" > $3`, [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username} ${chapConfiguration.password}`, `${this.getTargetPath(target)}/../mgmt`]))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
     }
 
     removeCHAPConfigurationFromTarget(target: Target, chapConfiguration: CHAPConfiguration): ResultAsync<void, ProcessError> {
-        return this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username}`, `${target.devicePath}/../mgmt`]))
+        return this.server.execute(new BashCommand(`echo "del_target_attribute $1 $2" > $3`, [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username}`, `${this.getTargetPath(target)}/../mgmt`]))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
     }
 
     getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
-
         const deviceTypesToCheck = [DeviceType.BlockIO, DeviceType.FileIO];
 
         const results = deviceTypesToCheck.map((deviceType) => this.getVirtualDevicesOfDeviceType(deviceType));
@@ -199,15 +198,15 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         });
     }
 
-    getPortalsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<Portal[], ProcessError> {
-        return this.server.execute(new Command(["find", target.devicePath, ..."-name allowed_portal* -printf %f\\0".split(" ")])).map(
+    getPortalsOfTarget(target: Pick<Target, "name">): ResultAsync<Portal[], ProcessError> {
+        return this.server.execute(new Command(["find", this.getTargetPath(target), ..."-name allowed_portal* -printf %f\\0".split(" ")])).map(
             (proc) => {
                 const portalAddressFileNames = proc.getStdout().split("\0").slice(0, -1);
                 return portalAddressFileNames;
             }
         ).andThen((portalAddressFileNames) => {
             const addressResults = portalAddressFileNames.map((portalAddressFileName) => {
-                const file = new File(this.server, `${target.devicePath}/${portalAddressFileName}`)
+                const file = new File(this.server, `${this.getTargetPath(target)}/${portalAddressFileName}`)
                 return file.read().andThen((fileContent) => {
                     const address = fileContent.split('\n')[0]
 
@@ -222,10 +221,9 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         })
     }
 
-    getInitatorGroupsOfTarget(target: Pick<Target, "name" | "devicePath"> ): ResultAsync<InitiatorGroup[], ProcessError> {
+    getInitatorGroupsOfTarget(target: Pick<Target, "name">): ResultAsync<InitiatorGroup[], ProcessError> {
         const self = this;
-
-        const initiatorGroupDirectory = `${target.devicePath}/ini_groups`;
+        const initiatorGroupDirectory = `${this.getTargetPath(target)}/ini_groups`;
 
         return this.server.execute(new Command(["find", initiatorGroupDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
             (proc) => {
@@ -251,45 +249,47 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         });
     }
 
-    getSessionsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<Session[], ProcessError> {
+    getSessionsOfTarget(target: Pick<Target, "name">): ResultAsync<Session[], ProcessError> {
         const self = this;
 
-        const sessionsDirectory = `${target.devicePath}/sessions`;
+        const sessionsDirectory = `${this.getTargetPath(target)}/sessions`;
 
-        return this.server.execute(new Command(["find", sessionsDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
-            (proc) => {
-                const initiatorNames = proc.getStdout().split("\0").slice(0, -1);
-                return initiatorNames;
+        return new Directory(this.server, sessionsDirectory).exists()
+        .andThen((exists) => {
+            if (exists)
+            {
+                return this.server.execute(new Command(["find", sessionsDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")]))
+                .map((proc) => proc.getStdout().split("\0").slice(0, -1))
+                .andThen((initiatorNames) => {
+                    return ResultAsync.combine(initiatorNames.map((initiatorName) => {
+                        return new ResultAsync(safeTry(async function * () {
+                            const partialSession = {
+                                initiatorName: initiatorName,
+                                devicePath: `${sessionsDirectory}/${initiatorName}`,
+                            };
+        
+                            return ok<Session>({
+                                ...partialSession,
+                                readAmountKB:  StringToIntCaster()((yield * self.server.execute(new Command(["cat", `${partialSession.devicePath}/read_io_count_kb`])).safeUnwrap()).getStdout()).some(),
+                                writeAmountKB: StringToIntCaster()((yield * self.server.execute(new Command(["cat", `${partialSession.devicePath}/write_io_count_kb`])).safeUnwrap()).getStdout()).some(),
+                                connections: yield * self.getConnectionsOfSession(partialSession).safeUnwrap(),
+                            });
+                        }))
+                    }))
+                })
             }
-        ).andThen((initiatorNames) => {
-            return ResultAsync.combine(initiatorNames.map((initiatorName) => {
-                
-                return new ResultAsync(safeTry(async function * () {
-                    const partialSession = {
-                        initiatorName: initiatorName,
-                        devicePath: `${sessionsDirectory}/${initiatorName}`,
-                    };
-
-                    return ok<Session>({
-                        ...partialSession,
-                        readAmountKB:  StringToIntCaster()((yield * self.server.execute(new Command(["cat", `${partialSession.devicePath}/read_io_count_kb`])).safeUnwrap()).getStdout()).some(),
-                        writeAmountKB: StringToIntCaster()((yield * self.server.execute(new Command(["cat", `${partialSession.devicePath}/write_io_count_kb`])).safeUnwrap()).getStdout()).some(),
-                        connections: yield * self.getConnectionsOfSession(partialSession).safeUnwrap(),
-                    });
-                }))
-            }))
-        });
+            else {
+                return ok([]);
+            }
+        })
     }
 
-    getCHAPConfigurationsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<CHAPConfiguration[], ProcessError> {
-        return this.server.execute(new Command(["find", target.devicePath, ..."-type f ( -name IncomingUser* -o -name OutgoingUser* ) -printf %f\\0".split(" ")])).map(
-            (proc) => {
-                const configurationFileNames = proc.getStdout().split("\0").slice(0, -1);
-                return configurationFileNames;
-            }
+    getCHAPConfigurationsOfTarget(target: Pick<Target, "name">): ResultAsync<CHAPConfiguration[], ProcessError> {
+        return this.server.execute(new Command(["find", this.getTargetPath(target), ..."-type f ( -name IncomingUser* -o -name OutgoingUser* ) -printf %f\\0".split(" ")])).map(
+            (proc) => proc.getStdout().split("\0").slice(0, -1)
         ).andThen((configurationFileNames) => {
             return ResultAsync.combine(configurationFileNames.map((configurationFileName) => {
-                const file = new File(this.server, `${target.devicePath}/${configurationFileName}`);
+                const file = new File(this.server, `${this.getTargetPath(target)}/${configurationFileName}`);
                 
                 return file.read().andThen((fileContent) => {
                     const credentialLine = fileContent.split('\n')[0]
@@ -399,5 +399,9 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
                 }))
             }))
         });
+    }
+
+    getTargetPath(target: Pick<Target, "name">) {
+        return `${this.targetManagementDirectory}/${target.name}`
     }
 }

@@ -3,7 +3,7 @@ import type { VirtualDevice } from "./VirtualDevice";
 export interface LogicalUnitNumber {
     name: string;
     unitNumber: number;
-    blockDevice?: VirtualDevice | undefined;
+    blockDevice?: VirtualDevice;
 }
 
 export namespace LogicalUnitNumber {

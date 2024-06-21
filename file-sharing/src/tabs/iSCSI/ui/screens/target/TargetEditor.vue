@@ -31,7 +31,7 @@
         <button
           class="btn btn-primary"
           @click="actions.createTarget"
-          :disabled="!validationScope.isValid() || !targetModified || !portalModified"
+          :disabled="!validationScope.isValid()"
         >
           {{ "Create" }}
         </button>

@@ -5,7 +5,7 @@
     <td>{{ device.blockSize }}</td>
     <td>{{ device.deviceType }}</td>
     <td class="button-group-row justify-end">
-      <button @click="promptDeletion">
+      <button v-if="!useUserSettings().value.iscsi.clusteredServer" @click="promptDeletion">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
@@ -21,6 +21,7 @@ import { inject } from "vue";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import { ResultAsync } from "neverthrow";
 import { ProcessError } from "@45drives/houston-common-lib";
+import { useUserSettings } from "@/common/user-settings";
 
 const props = defineProps<{ device: VirtualDevice }>();
 

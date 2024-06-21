@@ -2,7 +2,7 @@
   <tr>
     <td>{{ portal.address }}</td>
     <td class="button-group-row justify-end">
-      <button v-if="target.portals.length > 1" @click="promptDeletion">
+      <button v-if="!(useUserSettings().value.iscsi.clusteredServer && target.portals.length <= 1)" @click="promptDeletion">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
@@ -19,6 +19,7 @@ import { ProcessError } from "@45drives/houston-common-lib";
 import type { Target } from "@/tabs/iSCSI/types/Target";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import type { Portal } from "@/tabs/iSCSI/types/Portal";
+import { useUserSettings } from "@/common/user-settings";
 
 const props = defineProps<{ target: Target; portal: Portal }>();
 

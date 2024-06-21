@@ -22,6 +22,15 @@
         <SelectMenu v-model="tempLun.name" :options="deviceOptions" />
         <ValidationResultView v-bind="deviceValidationResult" />
       </InputLabelWrapper>
+
+      <ToggleSwitchGroup v-if="useUserSettings().value.iscsi.clusteredServer">
+          <ToggleSwitch v-model="tempClusterOptions.createLVM">
+          {{ _("Create LVM?") }}
+          <template #description>
+              {{ _("Creates an LVM resource for the device.") }}
+          </template>
+          </ToggleSwitch>
+      </ToggleSwitchGroup>
     </div>
 
     <template v-slot:footer>
@@ -52,6 +61,8 @@ import {
   wrapActions,
   type SelectMenuOption,
   ValidationScope,
+  ToggleSwitchGroup,
+  ToggleSwitch,
 } from "@45drives/houston-common-ui";
 import type { ResultAsync } from "neverthrow";
 import { computed, inject, ref, type ComputedRef, type Ref } from "vue";
@@ -60,6 +71,8 @@ import type { ISCSIDriver } from "../../../types/drivers/ISCSIDriver";
 import type { InitiatorGroup } from "../../../types/InitiatorGroup";
 import { LogicalUnitNumber } from "../../../types/LogicalUnitNumber";
 import { VirtualDevice } from "../../../types/VirtualDevice";
+import { useUserSettings } from '@/common/user-settings';
+import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 
 const _ = cockpit.gettext;
 
@@ -67,30 +80,40 @@ const props = defineProps<{ initiatorGroup: InitiatorGroup }>();
 
 const emit = defineEmits(["closeEditor"]);
 
-const newLun = ref<LogicalUnitNumber>(LogicalUnitNumber.empty());
-
-const { tempObject: tempLun, modified, resetChanges } = useTempObjectStaging(newLun);
-
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
-const devices = inject<Ref<VirtualDevice[]>>("virtualDevices");
-
-if (devices === undefined) {
-  throw new Error("Virtual Device list is null");
-}
+const devices = inject<Ref<VirtualDevice[]>>("virtualDevices")!;
 
 const deviceOptions: ComputedRef<SelectMenuOption<string>[]> = computed(() =>
   devices.value.map((device) => ({ label: device.deviceName, value: device.deviceName }))
 );
 
+const newLun = ref<LogicalUnitNumber>(LogicalUnitNumber.empty());
+
+const { tempObject: tempLun, modified: lunModified, resetChanges: resetChangesLun } = useTempObjectStaging(newLun);
+
+const clusterOptions = ref({ 
+    createLVM: false,
+});
+
+const { tempObject: tempClusterOptions, modified: clusterOptionsModified, resetChanges: resetChangesClusterOptions } = useTempObjectStaging(clusterOptions);
+
 const handleClose = () => {
   emit("closeEditor");
-  resetChanges();
+  resetChangesLun();
+  resetChangesClusterOptions();
 };
 
 const createLun = () => {
-  return driver
-    .andThen((driver) => driver.addLogicalUnitNumberToGroup(props.initiatorGroup, tempLun.value))
+  tempLun.value.blockDevice = devices.value.find((device) => device.deviceName === tempLun.value.name);
+
+  if (tempClusterOptions.value.createLVM) {
+    return driver
+    .andThen((driver) => {
+      const targetName = (driver as ISCSIDriverClusteredServer).getTargetNameOfInitiatorGroup(props.initiatorGroup);
+      return (driver as ISCSIDriverClusteredServer).addLVMResource({name: targetName}, tempLun.value.blockDevice!)
+                                                    .andThen(() => driver.addLogicalUnitNumberToGroup(props.initiatorGroup, tempLun.value))
+    })
     .map(() => handleClose())
     .mapErr(
       (error) =>
@@ -98,6 +121,18 @@ const createLun = () => {
           `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
         )
     );
+  }
+  else {
+    return driver
+      .andThen((driver) => driver.addLogicalUnitNumberToGroup(props.initiatorGroup, tempLun.value))
+      .map(() => handleClose())
+      .mapErr(
+        (error) =>
+          new ProcessError(
+            `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
+          )
+      );
+  }
 };
 
 const validationScope = new ValidationScope();

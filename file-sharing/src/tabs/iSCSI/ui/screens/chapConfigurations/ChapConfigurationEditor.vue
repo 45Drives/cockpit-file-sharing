@@ -80,7 +80,7 @@ const emit = defineEmits(["closeEditor"]);
 const chapTypeOptions = computed(() => {
   let chapTypes;
 
-  if (props.outgoingUserPresent) {
+  if (props.outgoingUserPresent || useUserSettings().value.iscsi.clusteredServer) {
     chapTypes = [{ label: CHAPType.IncomingUser.toString(), value: CHAPType.IncomingUser }];
   } else {
     chapTypes = Object.values(CHAPType).map((chapType) => ({
@@ -149,7 +149,6 @@ const { validationResult: configurationPasswordValidationResult } = validationSc
 
 const { validationResult: configurationClusterOverwriteIncomingValidationResult } = validationScope.useValidator(
   () => {
-    console.log((useUserSettings().value.iscsi.clusteredServer && tempConfiguration.value.chapType === CHAPType.IncomingUser && props.target.chapConfigurations.length > 0))
     if (useUserSettings().value.iscsi.clusteredServer && tempConfiguration.value.chapType === CHAPType.IncomingUser && props.target.chapConfigurations.length > 0) {
       return validationWarning("Only one IncomingUser can be assigned to a Target in a cluster. The existing user will be overwritten.");
     }
