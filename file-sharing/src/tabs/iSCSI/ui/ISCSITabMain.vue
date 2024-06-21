@@ -8,7 +8,7 @@
 
 <script setup lang="ts">
 import { CenteredCardColumn, pushNotification, Notification, useTempObjectStaging } from "@45drives/houston-common-ui";
-import { computed, provide, reactive, ref } from "vue";
+import { provide, reactive, ref } from "vue";
 import { ISCSIDriverSingleServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverSingleServer";
 import { BashCommand, Directory, ProcessError, getServer } from "@45drives/houston-common-lib";
 import VirtualDeviceTable from "@/tabs/iSCSI/ui/screens/virtualDevice/VirtualDeviceTable.vue";
@@ -26,8 +26,8 @@ const _ = cockpit.gettext;
 const createISCSIDriver = (): ResultAsync<ISCSIDriver, ProcessError> => {
   return getServer()
   .andThen((server) => {
-    return checkForClusteredServer().andThen((clusteredServer) => {
-      const driver = clusteredServer ? new ISCSIDriverClusteredServer(server) : new ISCSIDriverSingleServer(server);
+    return checkForClusteredServer().andThen(() => {
+      const driver = useUserSettings().value.iscsi.clusteredServer ? new ISCSIDriverClusteredServer(server) : new ISCSIDriverSingleServer(server);
       return driver.initialize();
     });
   })
@@ -69,19 +69,16 @@ function checkForClusteredServer() {
         .map((proc) => {
             if (proc.succeeded()) {
               new Directory(server, "/etc/ceph").getChildren({}).map((files) => {
-                if (files.find((file) => file.basename() === "ceph.conf") === undefined || files.find((file) => file.basename() === "*.conf") === undefined) {
-                  tempConfig.value.iscsi.clusteredServer = true;
-                }
+                tempConfig.value.iscsi.clusteredServer = (files.find((file) => file.basename() === "ceph.conf") === undefined || files.find((file) => file.basename() === "*.conf") === undefined)
+                userSettings.value = tempConfig.value;
               })
             }
-            
+
             userSettings.value = tempConfig.value;
           }
         );
       });
     }
-
-    return userSettings.value.iscsi.clusteredServer;
   })
 }
 </script>
