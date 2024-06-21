@@ -1,5 +1,4 @@
 import { type KeyValueData } from "@45drives/houston-common-lib";
-import { readonly } from 'vue';
 
 export type SambaGlobalConfig = {
   logLevel: number;
