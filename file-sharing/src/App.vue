@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { HoustonAppContainer, Modal } from "@45drives/houston-common-ui";
 import { SambaTabMain } from "@/tabs/samba/ui";
+import ISCSITabMain from "@/tabs/iSCSI/ui/ISCSITabMain.vue";
 import { NFSTabMain } from "@/tabs/nfs/ui";
 import UserSettingsView from "@/common/ui/UserSettingsView.vue";
 import { ref } from "vue";
@@ -25,6 +26,10 @@ const showUserSettings = ref(false);
       {
         label: 'NFS',
         component: NFSTabMain,
+      },
+      {
+        label: 'iSCSI',
+        component: ISCSITabMain,
       },
     ]"
   >
