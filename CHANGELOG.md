@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.0.3-1
+## Cockpit File Sharing 4.1.0-1
 
-* New Samba shares now default to read only = no
+* Add iSCSI tab

@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.1.0-1focal) focal; urgency=medium
+
+  * Add iSCSI tab
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 24 Jun 2024 08:36:58 -0300
+
 cockpit-file-sharing (4.0.3-1focal) focal; urgency=medium
 
   * New Samba shares now default to read only = no
