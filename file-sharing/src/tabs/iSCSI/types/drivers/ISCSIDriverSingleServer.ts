@@ -30,8 +30,11 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         this.configurationManager = new ConfigurationManager(server);
     }
 
-    initialize() {
-        return okAsync(this);
+    initialize(): ResultAsync<ISCSIDriver, ProcessError> {
+        return new Directory(this.server, "/sys/kernel/scst_tgt").exists()
+        .andThen((exists) => {
+            return exists ? ok(this) : err(new ProcessError("/sys/kernel/scst_tgt was not found. Is SCST installed?"));
+        })
     }
 
     getHandledDeviceTypes(): DeviceType[] {
