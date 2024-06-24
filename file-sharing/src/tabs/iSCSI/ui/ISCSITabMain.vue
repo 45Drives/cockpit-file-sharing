@@ -1,5 +1,5 @@
 <template>
-  <CenteredCardColumn v-if="iSCSIDriver">
+  <CenteredCardColumn v-if="driverInitalized">
     <VirtualDeviceTable />
     <TargetTable />
     <ConfigurationEditor v-if="!useUserSettings().value.iscsi.clusteredServer" @config-updated="refreshTables()" />
@@ -23,23 +23,28 @@ import type { Target } from "@/tabs/iSCSI/types/Target";
 
 const _ = cockpit.gettext;
 
+const driverInitalized = ref(false);
+
 const createISCSIDriver = (): ResultAsync<ISCSIDriver, ProcessError> => {
   return getServer()
   .andThen((server) => {
     return checkForClusteredServer().andThen(() => {
       const driver = useUserSettings().value.iscsi.clusteredServer ? new ISCSIDriverClusteredServer(server) : new ISCSIDriverSingleServer(server);
-      return driver.initialize();
+      return driver.initialize()
+        .map((driver) => {
+          driverInitalized.value = true;
+          return driver;
+        })
+        .mapErr((error) => {
+          pushNotification(new Notification("Failed to initialize iSCSI Driver", `${error.message}`, "error"))
+          return error;
+        }
+      );
     });
   })
 }
 
 const iSCSIDriver = createISCSIDriver();
-
-if (!iSCSIDriver) {
-  pushNotification(
-    new Notification("Failed to initialize iSCSI Driver", "Unable to create iSCSI Driver.", "error")
-  );
-}
 
 provide("iSCSIDriver", iSCSIDriver);
 provide("virtualDevices", ref<VirtualDevice[]>());

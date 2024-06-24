@@ -11,7 +11,7 @@ import type { Target } from "@/tabs/iSCSI/types/Target";
 import type { ProcessError } from "@45drives/houston-common-lib";
 
 export abstract class ISCSIDriver {
-    abstract initialize(): ResultAsync<this, ProcessError>;
+    abstract initialize(): ResultAsync<ISCSIDriver, ProcessError>;
 
     abstract getHandledDeviceTypes(): DeviceType[];
 

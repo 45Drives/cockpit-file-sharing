@@ -1,5 +1,5 @@
 import { ConfigurationManager } from "@/tabs/iSCSI/types/ConfigurationManager";
-import { safeJsonParse } from "@45drives/houston-common-lib";
+import { Directory, safeJsonParse } from "@45drives/houston-common-lib";
 import { VirtualDevice, DeviceType } from "@/tabs/iSCSI/types/VirtualDevice";
 import { CHAPConfiguration, CHAPType } from "@/tabs/iSCSI/types/CHAPConfiguration";
 import { type Connection } from "@/tabs/iSCSI/types/Connection";
@@ -74,25 +74,33 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
   }
 
   initialize() {
-    return this.getActiveNode()
-      .map((server) => (this.activeNode = server))
-      .map((server) => {
-        this.singleServerDriver = new ISCSIDriverSingleServer(server);
-        return this.singleServerDriver;
-      })
-      .andThen((driver) =>
-        driver
-          .getVirtualDevices()
-          .map((devices) => (this.virtualDevices = devices))
-          .map(() => driver)
-      )
-      .andThen((driver) =>
-        driver
-          .getTargets()
-          .map((targets) => (this.targets = targets))
-          .map(() => driver)
-      )
-      .map(() => this);
+    return new Directory(this.server, "/sys/kernel/scst_tgt").exists()
+    .andThen((exists) => {
+        if (exists) {
+            return this.getActiveNode()
+            .map((server) => (this.activeNode = server))
+            .map((server) => {
+              this.singleServerDriver = new ISCSIDriverSingleServer(server);
+              return this.singleServerDriver;
+            })
+            .andThen((driver) =>
+              driver
+                .getVirtualDevices()
+                .map((devices) => (this.virtualDevices = devices))
+                .map(() => driver)
+            )
+            .andThen((driver) =>
+              driver
+                .getTargets()
+                .map((targets) => (this.targets = targets))
+                .map(() => driver)
+            )
+            .map(() => this);
+        }
+        else {
+            return err(new ProcessError("/sys/kernel/scst_tgt was not found. Is SCST installed?"))
+        }
+    })
   }
 
   getHandledDeviceTypes(): DeviceType[] {
