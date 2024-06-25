@@ -49,6 +49,7 @@ import { ProcessError } from "@45drives/houston-common-lib";
 import type { Target } from "@/tabs/iSCSI/types/Target";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import { Portal } from "@/tabs/iSCSI/types/Portal";
+import { useUserSettings } from "@/common/user-settings";
 
 const _ = cockpit.gettext;
 
@@ -88,6 +89,12 @@ const { validationResult: portalAddressValidationResult } = validationScope.useV
 
   if (tempPortal.value.address.includes(":")) {
     return validationError("The port defaults to 3260.");
+  }
+
+  if (useUserSettings().value.iscsi.clusteredServer) {
+    if (tempPortal.value.address === "0.0.0.0") {
+      return validationError("A specific address needs to be specified for clusters.");
+    }
   }
 
   return validationSuccess();
