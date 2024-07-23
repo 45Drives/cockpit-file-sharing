@@ -17,7 +17,7 @@ import {
   Server,
   StringToIntCaster,
 } from "@45drives/houston-common-lib";
-import { Result, ResultAsync, err, ok, okAsync, safeTry } from "neverthrow";
+import { ResultAsync, err, ok, okAsync, safeTry } from "neverthrow";
 import { useUserSettings } from "@/common/user-settings";
 import { ISCSIDriverSingleServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverSingleServer";
 
@@ -164,7 +164,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
   }
 
   removeTarget(target: Target): ResultAsync<void, ProcessError> {
-    return this.deleteResource({ resourceName: `${this.resourceGroupPrefix}_${target.name}` }).map(
+    return this.deleteResource({ resourceName: `${this.resourceGroupPrefix}_${target.name.replace(":", "_")}` }).map(
       () => {
         this.targets = this.targets.filter((existingTarget) => existingTarget.name !== target.name);
         return undefined;
@@ -173,7 +173,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
   }
 
   addPortalToTarget(target: Target, portal: Portal): ResultAsync<void, ProcessError> {
-    const existingPortals = [...target.portals, portal].map((portal) => portal.address).join(", ");
+    const existingPortals = [...target.portals.map((targetPortal) => targetPortal.address), portal.address + ":3260"].join(", ");
 
     const portalVIP = this.createPortalVIPResource(portal);
     const portblockOnResource = this.createPortalPortblockOnResource(portal);
@@ -182,7 +182,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     return this.server
       .execute(
         new BashCommand(
-          `pcs resource update ${PCSResourceType.TARGET}_${target.name} portals='${existingPortals}'`
+          `pcs resource update ${PCSResourceType.TARGET}_${target.name.replace(":", "_")} portals='${existingPortals}'`
         )
       )
       .andThen(() => this.server.execute(portalVIP.creationCommand!))
@@ -203,7 +203,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     return this.server
       .execute(
         new BashCommand(
-          `pcs resource update ${PCSResourceType.TARGET}_${target.name} portals='${existingPortals}'`
+          `pcs resource update ${PCSResourceType.TARGET}_${target.name.replace(":", "_")} portals='${existingPortals}'`
         )
       )
       .andThen(() =>
@@ -242,7 +242,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     return this.server
       .execute(
         new BashCommand(
-          `pcs resource update ${PCSResourceType.TARGET}_${this.getTargetNameOfInitiatorGroup(initiatorGroup)} allowed_initiators='${existingInitiators}'`
+          `pcs resource update ${PCSResourceType.TARGET}_${this.getTargetNameOfInitiatorGroup(initiatorGroup).replace(":", "_")} allowed_initiators='${existingInitiators}'`
         )
       )
       .andThen(() => okAsync(undefined));
@@ -260,7 +260,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     return this.server
       .execute(
         new BashCommand(
-          `pcs resource update ${PCSResourceType.TARGET}_${this.getTargetNameOfInitiatorGroup(initiatorGroup)} allowed_initiators='${existingInitiators}'`
+          `pcs resource update ${PCSResourceType.TARGET}_${this.getTargetNameOfInitiatorGroup(initiatorGroup).replace(":", "_")} allowed_initiators='${existingInitiators}'`
         )
       )
       .andThen(() => okAsync(undefined));
@@ -281,7 +281,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     initiatorGroup: InitiatorGroup,
     logicalUnitNumber: LogicalUnitNumber
   ): ResultAsync<void, ProcessError> {
-    return this.getCurrentResourcesInGroup(`${this.resourceGroupPrefix}_${this.getTargetNameOfInitiatorGroup(initiatorGroup)}`)
+    return this.getCurrentResourcesInGroup(this.getGroupNameFromTarget(this.getTargetNameOfInitiatorGroup(initiatorGroup)))
           .andThen((resources) => 
             ResultAsync.combine(
               resources.filter((resource) => (resource.resourceName === `${PCSResourceType.LUN}_${logicalUnitNumber.unitNumber}`) || (resource.resourceName === `${PCSResourceType.LVM}_${logicalUnitNumber.name}`))
@@ -295,7 +295,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     chapConfiguration: CHAPConfiguration
   ): ResultAsync<void, ProcessError> {
     const command = new BashCommand(
-      `pcs resource update ${PCSResourceType.TARGET}_${target.name} incoming_username='${chapConfiguration.username}' incoming_password='${chapConfiguration.password}'`
+      `pcs resource update ${PCSResourceType.TARGET}_${target.name.replace(":", "_")} incoming_username='${chapConfiguration.username}' incoming_password='${chapConfiguration.password}'`
     );
 
     return this.server.execute(command).andThen(() => okAsync(undefined));
@@ -308,7 +308,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     return this.server
       .execute(
         new BashCommand(
-          `pcs resource update ${PCSResourceType.TARGET}_${target.name} incoming_username='' incoming_password=''`
+          `pcs resource update ${PCSResourceType.TARGET}_${target.name.replace(":", "_")} incoming_username='' incoming_password=''`
         )
       )
       .andThen(() => okAsync(undefined));
@@ -323,7 +323,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
   }
 
   getPortalsOfTarget(target: Target): ResultAsync<Portal[], ProcessError> {
-    return this.getCurrentResourcesInGroup(`${this.resourceGroupPrefix}_${target.name}`).andThen(
+    return this.getCurrentResourcesInGroup(this.getGroupNameFromTarget(target.name)).andThen(
       (resources) =>
         ResultAsync.combine(
           resources
@@ -391,7 +391,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
   }
 
   getCHAPConfigurationsOfTarget(target: Target): ResultAsync<CHAPConfiguration[], ProcessError> {
-    return this.getCurrentResourcesInGroup(`${this.resourceGroupPrefix}_${target.name}`).andThen(
+    return this.getCurrentResourcesInGroup(this.getGroupNameFromTarget(target.name)).andThen(
       (resources) =>
         ResultAsync.combine(
           resources
@@ -436,7 +436,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
   getLogicalUnitNumbersOfInitiatorGroup(
     initiatorGroup: Pick<InitiatorGroup, "devicePath">
   ): ResultAsync<LogicalUnitNumber[], ProcessError> {
-    return this.getCurrentResourcesInGroup(`${this.resourceGroupPrefix}_${this.getTargetNameOfInitiatorGroup(initiatorGroup)}`).andThen(
+    return this.getCurrentResourcesInGroup(this.getGroupNameFromTarget(this.getTargetNameOfInitiatorGroup(initiatorGroup))).andThen(
       (resources) =>
         ResultAsync.combine(
           resources
@@ -485,7 +485,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
   getInitiatorsOfInitiatorGroup(
     initiatorGroup: Pick<InitiatorGroup, "name" | "devicePath">
   ): ResultAsync<Initiator[], ProcessError> {
-    return this.getCurrentResourcesInGroup(`${this.resourceGroupPrefix}_${this.getTargetNameOfInitiatorGroup(initiatorGroup)}`).andThen(
+    return this.getCurrentResourcesInGroup(this.getGroupNameFromTarget(this.getTargetNameOfInitiatorGroup(initiatorGroup))).andThen(
       (resources) =>
         ResultAsync.combine(
           resources
@@ -618,7 +618,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
   createTargetResource(target: Target): PCSResource {
     const resourceType = PCSResourceType.TARGET;
-    const resourceName = `${resourceType}_${target.name}`;
+    const resourceName = `${resourceType}_${target.name.replace(":", "_")}`;
 
     return {
       resourceName: resourceName,
@@ -637,7 +637,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
       const parser = new DOMParser();
 
       const doc = parser.parseFromString(output, "text/xml");
-      const groupElement = doc.querySelector(`resources > group[id=${groupName}]`);
+      const groupElement = doc.querySelector(`resources > group[id="${groupName}"]`);
 
       if (groupElement) {
         groupElement.querySelectorAll("resource").forEach((resource) => {
@@ -694,7 +694,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
     const currentResourceIndex = PCSResourceTypeOrder[resource.resourceType];
 
-    return this.getCurrentResourcesInGroup(`${this.resourceGroupPrefix}_${target.name}`)
+    return this.getCurrentResourcesInGroup(this.getGroupNameFromTarget(target.name))
       .andThen((resources) => {
         let positionArgument: string[] = [];
 
@@ -712,7 +712,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
           `resource`,
           `group`,
           `add`,
-          `${this.resourceGroupPrefix}_${target.name}`,
+          `${this.getGroupNameFromTarget(target.name)}`,
           ...positionArgument,
           resource.resourceName,
         ]);
@@ -727,5 +727,9 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
   getTargetNameOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "devicePath">) {
     return initiatorGroup.devicePath.split("/")[6]!
+  }
+
+  getGroupNameFromTarget(targetName: string) {
+    return `${this.resourceGroupPrefix}_${targetName.replace(":", "_")}`
   }
 }
