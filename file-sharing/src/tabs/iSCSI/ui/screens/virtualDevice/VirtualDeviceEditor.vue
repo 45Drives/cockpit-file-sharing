@@ -30,6 +30,7 @@
                 <SelectMenu
                     v-model="tempDevice.deviceType"
                     :options="deviceTypeOptions"
+                    @change="updateFileValidator"
                 />
             </InputLabelWrapper>
 
@@ -39,7 +40,7 @@
                 </template>
                 
                 <InputField
-                    :placeholder="'File path to device'"
+                    :placeholder="'Full file path to device'"
                     v-model="tempDevice.filePath"
                 />
                 <ValidationResultView v-bind="filePathValidationResult"/>
@@ -73,18 +74,20 @@
             </div>
         </template>
     </CardContainer>
+    <Modal :show="showFileIOCreation" @click-outside="showFileIOCreation = false">
+        <FileIOCreationPrompt @close="{showFileIOCreation = false; updateFileValidator()}" :filePath="tempDevice.filePath"/>
+    </Modal>
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, SelectMenu, ToggleSwitchGroup, ToggleSwitch, useTempObjectStaging, wrapActions, type SelectMenuOption, ValidationResultView, validationSuccess, validationError, ValidationScope } from '@45drives/houston-common-ui';
-    import { err, ok, type ResultAsync } from 'neverthrow';
-    import { computed, inject, ref, type Ref } from 'vue';
+    import { CardContainer, InputField, InputLabelWrapper, Modal, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, ValidationResultView, validationSuccess, validationError, ValidationScope, type ValidationResultAction, validationWarning } from '@45drives/houston-common-ui';
+    import { err, ok, okAsync, type ResultAsync } from 'neverthrow';
+    import { computed, inject, ref, watchEffect, type Ref } from 'vue';
     import { DeviceType, VirtualDevice } from '@/tabs/iSCSI/types/VirtualDevice';
-    import { Command, Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
+    import { Command, FileSystemNode, Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
     import type { ISCSIDriver } from '@/tabs/iSCSI/types/drivers/ISCSIDriver';
-    import { useUserSettings } from '@/common/user-settings';
-    import type { ISCSIDriverClusteredServer } from '@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer';
     import type { Target } from '@/tabs/iSCSI/types/Target';
+    import FileIOCreationPrompt from '@/tabs/iSCSI/ui/screens/virtualDevice/FileIOCreationPrompt.vue';
 
     const _ = cockpit.gettext;
     
@@ -97,6 +100,8 @@
     const virtualDevices = inject<Ref<VirtualDevice[]>>('virtualDevices')!;
 
     const deviceTypeOptions: Ref<SelectMenuOption<DeviceType>[]> = ref([]);
+
+    const showFileIOCreation = ref(false);
 
     driver.map((driver) => driver.getHandledDeviceTypes()
         .map((deviceType) => ({label: deviceType.toString(), value: deviceType})))
@@ -131,7 +136,24 @@
                         .mapErr((error) => new ProcessError(`Unable to create device ${tempDevice.value.deviceName}: ${error.message}`))
     }
 
-    const actions = wrapActions({createDevice});
+    const createFileIOPrompt = () => {
+        showFileIOCreation.value = true;
+        return okAsync(undefined);
+    }
+
+    const fsNode = (path: string) => getServer().map((server) => new FileSystemNode(server, path));
+
+    const fileExists = ref<boolean>(false);
+
+    const updateFileExists = () => {
+        return fsNode(tempDevice.value.filePath)
+        .andThen((node) => node.exists({superuser: "try"})
+        .map((exists) => fileExists.value = exists));
+    }
+
+    watchEffect(updateFileExists);
+
+    const actions = wrapActions({createDevice, createFileIOPrompt});
 
     const validationScope = new ValidationScope();
 
@@ -147,19 +169,25 @@
         return validationSuccess();
     });
 
-    const { validationResult: filePathValidationResult } = validationScope.useValidator(async () => {
+    const { validationResult: filePathValidationResult, triggerUpdate: updateFileValidator } = validationScope.useValidator(async () => {
         if (!tempDevice.value.filePath) {
             return validationError("Device path is required.");
         }
 
-        const path = new Path(tempDevice.value.filePath);
+        const buttonActions: ValidationResultAction[] =
+            [
+                {
+                    label: _("Create now"),
+                    callback: async () => {
+                        await actions.createFileIOPrompt();
+                    }
+                }
+            ];
 
-        const fileExists = await getServer()
-                            .andThen((server) => path.existsOn(server))
-                            .unwrapOr(false);
+        await updateFileExists();
         
-        if (!fileExists) {
-            return validationError("Device path does not exist.");
+        if (!fileExists.value) {
+            return tempDevice.value.deviceType === DeviceType.BlockIO ? validationError("Device path does not exist.") : validationError("Device path does not exist.", buttonActions);
         }
 
         return validationSuccess();
