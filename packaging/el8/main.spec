@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu Jul 25 2024 Brandon Kelly <brkelly@45drives.com> 4.2.0-1
+- Fixes to iSCSI Tab
 * Tue Jun 11 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.2-1
 - Fixed error spamming when path does not exist for Ceph path settings
 * Tue Jun 11 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.1-1
