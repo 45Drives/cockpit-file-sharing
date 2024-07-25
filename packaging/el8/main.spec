@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu Jul 25 2024 Brandon Kelly <brkelly@45drives.com> 4.2.0-1
+- Fixes to iSCSI Tab
 * Mon Jun 24 2024 Joshua Boudreau <jboudreau@45drives.com> 4.1.0-1
 - Add iSCSI tab
 * Fri Jun 14 2024 Joshua Boudreau <jboudreau@45drives.com> 4.0.3-1

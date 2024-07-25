@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.0-1focal) focal; urgency=medium
+
+  * Fixes to iSCSI Tab
+
+ -- Brandon Kelly <brkelly@45drives.com>  Thu, 25 Jul 2024 08:07:50 -0300
+
 cockpit-file-sharing (4.1.0-1focal) focal; urgency=medium
 
   * Add iSCSI tab
