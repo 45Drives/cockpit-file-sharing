@@ -16,7 +16,7 @@ import {
 } from "@45drives/houston-common-ui";
 import { type SambaShareConfig, newSambaShareConfig } from "@/tabs/samba/data-types";
 import { KeyValueSyntax } from "@45drives/houston-common-lib";
-import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
+import { KeyValueOptionGroup } from "@/tabs/samba/ui/KeyValueOptionGroup"; // TODO: move to common-ui
 import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
 
 const _ = cockpit.gettext;
@@ -85,60 +85,58 @@ watchEffect(() => {
   }
 });
 
-const windowsACLsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
-  include: {
-    "map acl inherit": "yes",
-    "acl_xattr:ignore system acls": "yes",
-    "vfs objects": "acl_xattr",
-  },
-  exclude: {},
-});
-
-const windowsACLsWithLinuxOptions = BooleanKeyValueSuite(
-  () => tempShareConfig.value.advancedOptions,
-  {
-    include: {
-      "map acl inherit": "yes",
-      "vfs objects": "acl_xattr",
-    },
-    exclude: {
-      "acl_xattr:ignore system acls": "yes",
-    },
-  }
+const windowsACLsOptions = computed(
+  new KeyValueOptionGroup(() => tempShareConfig.value.advancedOptions)
+    .requireValuesIf(true, "vfs objects", "acl_xattr")
+    .requireValuesIf(true, "map acl inherit", "yes")
+    .requireValuesIf(true, "acl_xattr:ignore system acls", "yes")
+    .toGetterSetter()
 );
 
-const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
-  include: {
-    "shadow:snapdir": ".zfs/snapshot",
-    "shadow:sort": "desc",
-    "shadow:format": "%Y-%m-%d-%H%M%S",
-    "vfs objects": "shadow_copy2",
-  },
-  exclude: {},
-});
+const windowsACLsWithLinuxOptions = computed(
+  new KeyValueOptionGroup(() => tempShareConfig.value.advancedOptions)
+    .requireValuesIf(true, "vfs objects", "acl_xattr")
+    .requireValuesIf(true, "map acl inherit", "yes")
+    .excludeValuesIf(true, "acl_xattr:ignore system acls", "yes")
+    .toGetterSetter()
+);
 
-const macOSSharesOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
-  include: {
-    "fruit:encoding": "native",
-    "fruit:metadata": "stream",
-    "fruit:zero_file_id": "yes",
-    "fruit:nfs_aces": "no",
-    "vfs objects": "catia fruit streams_xattr",
-  },
-  exclude: {},
-});
+const shadowCopyOptions = computed(
+  new KeyValueOptionGroup(() => tempShareConfig.value.advancedOptions)
+    .requireValuesIf(true, "vfs objects", "shadow_copy2")
+    .setOptionalValuesIf(true, "shadow:snapdir", ".zfs/snapshot")
+    .setOptionalValuesIf(true, "shadow:sort", "desc")
+    .setOptionalValuesIf(true, "shadow:format", "%Y-%m-%d-%H%M%S")
+    .excludeKeysIf(false, /^shadow:/)
+    .toGetterSetter()
+);
 
-const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
-  include: {
-    "vfs objects": "full_audit",
-    "full_audit:priority": "notice",
-    "full_audit:facility": "local5",
-    "full_audit:success": "connect disconnect openat renameat linkat unlinkat",
-    "full_audit:failure": "connect",
-    "full_audit:prefix": "???%I???%u???%m???%S???%T???",
-  },
-  exclude: {},
-});
+const macOSSharesOptions = computed(
+  new KeyValueOptionGroup(() => tempShareConfig.value.advancedOptions)
+    .requireValuesIf(true, "vfs objects", "catia fruit streams_xattr")
+    .setOptionalValuesIf(true, "fruit:encoding", "native")
+    .setOptionalValuesIf(true, "fruit:metadata", "stream")
+    .setOptionalValuesIf(true, "fruit:zero_file_id", "yes")
+    .setOptionalValuesIf(true, "fruit:nfs_aces", "no")
+    .excludeKeysIf(false, /^fruit:/)
+    .toGetterSetter()
+);
+
+const auditLogsOptions = computed(
+  new KeyValueOptionGroup(() => tempShareConfig.value.advancedOptions)
+    .requireValuesIf(true, "vfs objects", "full_audit")
+    .setOptionalValuesIf(true, "full_audit:priority", "notice")
+    .setOptionalValuesIf(true, "full_audit:facility", "local5")
+    .setOptionalValuesIf(
+      true,
+      "full_audit:success",
+      "connect disconnect openat renameat linkat unlinkat"
+    )
+    .setOptionalValuesIf(true, "full_audit:failure", "connect")
+    .setOptionalValuesIf(true, "full_audit:prefix", "???%I???%u???%m???%S???%T???")
+    .excludeKeysIf(false, /^full_audit:/)
+    .toGetterSetter()
+);
 </script>
 
 <template>

@@ -14,7 +14,7 @@ import {
   type SelectMenuOption,
 } from "@45drives/houston-common-ui";
 import { KeyValueSyntax } from "@45drives/houston-common-lib";
-import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
+import { KeyValueOptionGroup } from "@/tabs/samba/ui/KeyValueOptionGroup"; // TODO: move to common-ui
 
 const _ = cockpit.gettext;
 
@@ -39,18 +39,15 @@ watchEffect(() => {
   }
 });
 
-const macOSSharesOptions = BooleanKeyValueSuite(
-  () => tempGlobalConfig.value?.advancedOptions ?? {},
-  {
-    include: {
-      "fruit:encoding": "native",
-      "fruit:metadata": "stream",
-      "fruit:zero_file_id": "yes",
-      "fruit:nfs_aces": "no",
-      "vfs objects": "catia fruit streams_xattr",
-    },
-    exclude: {},
-  }
+const macOSSharesOptions = computed(
+  new KeyValueOptionGroup(() => tempGlobalConfig.value?.advancedOptions ?? {})
+    .requireValuesIf(true, "vfs objects", "catia fruit streams_xattr")
+    .setOptionalValuesIf(true, "fruit:encoding", "native")
+    .setOptionalValuesIf(true, "fruit:metadata", "stream")
+    .setOptionalValuesIf(true, "fruit:zero_file_id", "yes")
+    .setOptionalValuesIf(true, "fruit:nfs_aces", "no")
+    .excludeKeysIf(false, /^fruit:/)
+    .toGetterSetter()
 );
 
 const logLevelOptions: SelectMenuOption<number>[] = [5, 4, 3, 2, 1, 0].map((n) => ({
