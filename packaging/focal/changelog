@@ -1,3 +1,27 @@
+cockpit-file-sharing (4.2.1-1focal) focal; urgency=medium
+
+  * Fixes to iSCSI Tab
+
+ -- Brandon Kelly <brkelly@45drives.com>  Thu, 25 Jul 2024 08:13:54 -0300
+
+cockpit-file-sharing (4.2.0-1focal) focal; urgency=medium
+
+  * Fixes to iSCSI Tab
+
+ -- Brandon Kelly <brkelly@45drives.com>  Thu, 25 Jul 2024 08:07:50 -0300
+
+cockpit-file-sharing (4.1.0-1focal) focal; urgency=medium
+
+  * Add iSCSI tab
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 24 Jun 2024 08:36:58 -0300
+
+cockpit-file-sharing (4.0.3-1focal) focal; urgency=medium
+
+  * New Samba shares now default to read only = no
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 14 Jun 2024 11:42:30 -0300
+
 cockpit-file-sharing (4.0.2-1focal) focal; urgency=medium
 
   * Fixed error spamming when path does not exist for Ceph path settings
