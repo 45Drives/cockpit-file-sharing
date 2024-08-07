@@ -20,12 +20,14 @@ import { useUserSettings } from "@/common/user-settings";
 import { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import type { Target } from "@/tabs/iSCSI/types/Target";
+import { PCSResourceManager } from "@/tabs/iSCSI/types/cluster/PCSResourceManager";
 
 const _ = cockpit.gettext;
 
 const driverInitalized = ref(false);
 
 const createISCSIDriver = (): ResultAsync<ISCSIDriver, ProcessError> => {
+  testFunction();
   return getServer()
   .andThen((server) => {
     return checkForClusteredServer().andThen(() => {
@@ -85,5 +87,20 @@ function checkForClusteredServer() {
       });
     }
   })
+}
+
+function testFunction() {
+  return getServer()
+  .map((server) => new PCSResourceManager(server))
+  .map((manager) => {
+      manager.initialize()
+      .map(() => {
+        console.log(`Current resources:`)
+        console.log(manager.currentResources)
+        console.log(`Current groups:`)
+        console.log(manager.currentResourceGroups)
+      })
+    }
+  )
 }
 </script>
