@@ -26,16 +26,18 @@ export class PCSResourceManager {
 
     }
 
-    createResource(name: string, generationCommand: Command, type: PCSResourceType) {
-        return this.server.execute(generationCommand)
+    createResource(name: string, creationArugments: string, type: PCSResourceType) {
+        const creationCommand = new BashCommand(`pcs resource create ${name} ${creationArugments}`);
+
+        return this.server.execute(creationCommand)
         .map(() => {
-            const resource = new PCSResource(name, generationCommand, type);
+            const resource = new PCSResource(name, creationCommand, type);
             this.currentResources.push(resource);
             return resource;
         })
     }
 
-    deleteResource(resource: PCSResource) {
+    deleteResource(resource: Pick<PCSResource, "name">) {
         return this.server.execute(new BashCommand(`pcs delete ${resource.name}`))
         .map(() => {
             this.currentResources = this.currentResources.filter((existingResource) => existingResource !== resource);
@@ -81,10 +83,15 @@ export class PCSResourceManager {
         .map(() => undefined)
     }
 
-    fetchResourceConfig(resource: PCSResource) {
+    fetchResourceConfig(resource: Pick<PCSResource, "name">) {
         return this.server.execute(new BashCommand(`pcs resource config --output-format json ${resource.name}`))
         .map((process) => process.getStdout())
         .andThen(safeJsonParse<PCSResourceConfigJson>);
+    }
+
+    fetchResourceByName(resourceName: string) {
+        return this.fetchResources()
+            .map((resources) => resources.find((resource) => resource.name === resourceName));
     }
 
     fetchResources(){
@@ -100,10 +107,10 @@ export class PCSResourceManager {
 
                     if (resourceType !== undefined) {
                         let groupObject = undefined;
-                        const groupName = partialObject.groups!.find((value) => value.member_ids.includes(resource.id))?.id;
+                        const group = partialObject.groups!.find((value) => value.member_ids.includes(resource.id));
 
-                        if (groupName !== undefined) {
-                            groupObject = new PCSResourceGroup(groupName);
+                        if (group !== undefined) {
+                            groupObject = new PCSResourceGroup(group.id, group.member_ids);
                         }
 
                         return new PCSResource(resource.id, command, resourceType, groupObject);

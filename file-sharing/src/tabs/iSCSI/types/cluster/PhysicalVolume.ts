@@ -1,9 +1,9 @@
 import type { RadosBlockDevice } from './RadosBlockDevice';
 
 export class PhysicalVolume {
-    filePath: string;
+    rbd: RadosBlockDevice;
 
-    constructor(filePath: string) {
-        this.filePath = filePath;
+    constructor(rbd: RadosBlockDevice) {
+        this.rbd = rbd;
     }
 }

@@ -1,12 +1,20 @@
 import type { Initiator } from "./Initiator";
 import type { LogicalUnitNumber } from "./LogicalUnitNumber";
 
-export interface InitiatorGroup {
+export class InitiatorGroup {
     name: string;
     logicalUnitNumbers: LogicalUnitNumber[];
     initiators: Initiator[];
 
     devicePath: string;
+
+    constructor(name: string, logicalUnitNumber: LogicalUnitNumber[], initiators: Initiator[], devicePath: string) {
+        this.name = name;
+        this.logicalUnitNumbers = logicalUnitNumber;
+        this.initiators = initiators;
+        this.devicePath = devicePath;
+
+    }
 }
 
 export namespace InitiatorGroup {

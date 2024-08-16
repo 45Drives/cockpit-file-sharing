@@ -55,13 +55,13 @@ export class RBDManager {
         const rbdPaths = rbds.map((rbd) => rbd.filePath).join(' ');
         let createdLogicalVolume: LogicalVolume | null = null;
 
-        return ResultAsync.combine(rbds.map((rbd) => this.server.execute(new BashCommand(`pvcreate ${rbd.filePath}`)).map(() => new PhysicalVolume(rbd.filePath))))
+        return ResultAsync.combine(rbds.map((rbd) => this.server.execute(new BashCommand(`pvcreate ${rbd.filePath}`)).map(() => new PhysicalVolume(rbd))))
         .andThen((physicalVolumes) => this.server.execute(new BashCommand(`vgcreate ${volumeGroupName} ${rbdPaths}`)).map(() => new VolumeGroup(volumeGroupName, physicalVolumes)))
         .andThen((volumeGroup) => this.server.execute(new BashCommand(`lvcreate -i ${rbds.length} -I 64 -l 100%FREE -n ${logicalVolumeName} ${volumeGroupName} ${rbdPaths}`))
             .andThen(() => this.server.execute(new BashCommand(`lvdisplay /dev/${volumeGroupName}/${logicalVolumeName} | grep 'LV Size' | awk '{print $3, $4}'`))
                 .map((proc) => proc.getStdout())
                 .map((maximumSize) => {
-                    createdLogicalVolume = new LogicalVolume(logicalVolumeName, 0, volumeGroup, rbds, maximumSize)
+                    createdLogicalVolume = new LogicalVolume(logicalVolumeName, 0, volumeGroup, maximumSize)
                 })
             )
         )
@@ -112,7 +112,7 @@ export class RBDManager {
         .map((proc) => proc.getStdout())
         .andThen(safeJsonParse<MappedRBDJson>)
         .mapErr((err) => new ProcessError(`Unable to get current mapped Rados Block Devices: ${err}`))
-        .map((rbdEntry) => ResultAsync.combine(
+        .andThen((rbdEntry) => ResultAsync.combine(
             rbdEntry.filter((entry) => entry !== undefined)
             .map((entry) => {
                 return new ResultAsync(safeTry(async function * () {
@@ -143,19 +143,30 @@ export class RBDManager {
     }
 
     fetchAvaliableLogicalVolumes() {
+        const self = this;
+
         return this.server.execute(new BashCommand(`lvs --reportformat json`))
-                    .map((proc) => proc.getStdout())
-                    .andThen(safeJsonParse<LogicalVolumeInfoJson>)
-                    .map((logicalVolumeInfo) => logicalVolumeInfo?.report?.flatMap((report) => report.lv))
-                    .map((lvList) => lvList!.flatMap((lvInfo) => 
-                        this.server.execute(new BashCommand(`pvs -S vgname=${lvInfo.vg_name}`))
-                            .map((proc) => proc.getStdout())
-                            .andThen(safeJsonParse<VolumeGroupInfoJson>)
-                            .map((volumeGroupEntries) => volumeGroupEntries!.report!.flatMap((report) => report.pv))
-                            .map((pvList) => pvList.flatMap((pvInfo) => new PhysicalVolume(pvInfo.pv_name)))
-                            .map((volumes) => new VolumeGroup(lvInfo.vg_name, volumes))
-                    ))
-                    .andThen((volumeGroups) => )
+        .map((proc) => proc.getStdout())
+        .andThen(safeJsonParse<LogicalVolumeInfoJson>)
+        .map((logicalVolumeInfo) => logicalVolumeInfo?.report?.flatMap((report) => report.lv))
+        .andThen((lvList) => ResultAsync.combine(lvList!.flatMap((lvInfo) => 
+            this.server.execute(new BashCommand(`pvs -S vgname=${lvInfo.vg_name} --reportformat json`))
+                .map((proc) => proc.getStdout())
+                .andThen(safeJsonParse<VolumeGroupInfoJson>)
+                .map((volumeGroupEntries) => volumeGroupEntries!.report!.flatMap((report) => report.pv))
+                .andThen((pvList) => new ResultAsync(safeTry(async function * () {
+                    const mappedBlockDevices = yield * self.fetchAvaliableRadosBlockDevices().safeUnwrap();
+
+                    const physicalVolumes = pvList.flatMap((rbdItem) => mappedBlockDevices.find((rbd) => rbd.filePath === rbdItem.pv_name))
+                                        .filter((item) => item !== undefined)
+                                        .map((item) => new PhysicalVolume(item!));
+
+                    return okAsync(physicalVolumes);
+                })))
+                .map((volumes) => new VolumeGroup(lvInfo.vg_name, volumes))
+                .map((volumeGroup) => new LogicalVolume(lvInfo.lv_name, 0, volumeGroup, lvInfo.lv_size)))
+        ))
+
     }
 
     getBlockSizeFromDevicePath(path: Pick<VirtualDevice, "filePath"> | string) {
@@ -184,10 +195,6 @@ export class RBDManager {
 
                         return undefined
                     })
-    }
-
-    fetchRadosBlockDeviceByDevicePath(path: Pick<VirtualDevice, "filePath"> | string) {
-        return this.server.execute(new BashCommand(``))
     }
 }
 
