@@ -15,6 +15,8 @@ export class PCSResourceManager {
 
         this.currentResources = [];
         this.currentResourceGroups = [];
+
+        this.initialize();
     }
 
     initialize() {
@@ -23,7 +25,6 @@ export class PCSResourceManager {
             this.currentResources = resources;
             this.currentResourceGroups = resources.filter(resource => resource.resourceGroup !== undefined).map((resource) => resource.resourceGroup!);
         })
-
     }
 
     createResource(name: string, creationArugments: string, type: PCSResourceType) {
@@ -32,13 +33,13 @@ export class PCSResourceManager {
         return this.server.execute(creationCommand)
         .map(() => {
             const resource = new PCSResource(name, creationCommand, type);
-            this.currentResources.push(resource);
+            this.currentResources = [...this.currentResources, resource];
             return resource;
         })
     }
 
     deleteResource(resource: Pick<PCSResource, "name">) {
-        return this.server.execute(new BashCommand(`pcs delete ${resource.name}`))
+        return this.server.execute(new BashCommand(`pcs resource delete ${resource.name}`))
         .map(() => {
             this.currentResources = this.currentResources.filter((existingResource) => existingResource !== resource);
             return undefined;
@@ -46,7 +47,7 @@ export class PCSResourceManager {
     }
 
     updateResource(resource: PCSResource, parameters: String) {
-        return this.server.execute(new BashCommand(`pcs update ${resource.name} ${parameters}`))
+        return this.server.execute(new BashCommand(`pcs resource update ${resource.name} ${parameters}`))
         .map(() => undefined)
     }
 
@@ -58,18 +59,21 @@ export class PCSResourceManager {
     addResourceToGroup(resource: PCSResource, resourceGroup: PCSResourceGroup) {
         const currentResourceIndex = PCSResourceTypeInfo[resource.resourceType].orderInGroup;
 
+        const nextResource = this.currentResources
+        .filter((resource) => resource.resourceGroup?.name === resourceGroup.name)
+        .sort((r1, r2) => PCSResourceTypeInfo[r1.resourceType].orderInGroup - PCSResourceTypeInfo[r2.resourceType].orderInGroup)
+        .find((groupResource) => currentResourceIndex <= PCSResourceTypeInfo[groupResource.resourceType].orderInGroup);
+
         let positionArgument: string[] = [];
 
-        const nextResource = this.currentResources.find(
-          (existingResource) =>
-            currentResourceIndex <= PCSResourceTypeInfo[existingResource.resourceType].orderInGroup
-        );
-
         if (nextResource !== undefined) {
-          positionArgument = [`--before`, nextResource.name];
+            positionArgument = [`--before`, nextResource.name];
         }
+        resource.resourceGroup = resourceGroup;
 
-        return this.server.execute(new Command([`pcs resource group add ${resourceGroup.name}}`, ...positionArgument, resource.name]))
+        console.log(`Adding resource ${resource.name} to group ${resourceGroup.name}`)
+
+        return this.server.execute(new BashCommand(`pcs resource group add ${resourceGroup.name} ${positionArgument.join(" ")} ${resource.name}`))
         .map(() => undefined)
     }
 
@@ -86,12 +90,27 @@ export class PCSResourceManager {
     fetchResourceConfig(resource: Pick<PCSResource, "name">) {
         return this.server.execute(new BashCommand(`pcs resource config --output-format json ${resource.name}`))
         .map((process) => process.getStdout())
-        .andThen(safeJsonParse<PCSResourceConfigJson>);
+        .andThen(safeJsonParse<PCSConfigJson>);
+    }
+
+    fetchResourceInstanceAttributeValue(resource: Pick<PCSResource, "name">, nvPairName: string) {
+        return this.fetchResourceConfig(resource).map((config) => config.primitives![0]!.instance_attributes![0]!.nvpairs.find((pair) => pair.name === nvPairName)?.value);
+    }
+
+    fetchResourceInstanceAttributeValues(resource: Pick<PCSResource, "name">, nvPairName: string[]) {
+        return this.fetchResourceConfig(resource).map((config) => {
+            let pairResults = new Map<string, string | undefined>();
+            
+            for (var pairName of nvPairName) {
+                pairResults.set(pairName, config.primitives![0]!.instance_attributes![0]!.nvpairs.find((pair) => pair.name === pairName)?.value);
+            }
+
+            return pairResults;
+        });
     }
 
     fetchResourceByName(resourceName: string) {
-        return this.fetchResources()
-            .map((resources) => resources.find((resource) => resource.name === resourceName));
+        return this.fetchResources().map((resources) => resources.find((resource) => resource.name === resourceName));
     }
 
     fetchResources(){
@@ -110,7 +129,7 @@ export class PCSResourceManager {
                         const group = partialObject.groups!.find((value) => value.member_ids.includes(resource.id));
 
                         if (group !== undefined) {
-                            groupObject = new PCSResourceGroup(group.id, group.member_ids);
+                            groupObject = new PCSResourceGroup(group.id);
                         }
 
                         return new PCSResource(resource.id, command, resourceType, groupObject);

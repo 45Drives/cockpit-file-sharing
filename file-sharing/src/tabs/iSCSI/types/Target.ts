@@ -9,6 +9,8 @@ export interface Target {
     initiatorGroups: InitiatorGroup[];
     portals: Portal[];
     sessions: Session[];
+
+    devicePath: string;
 }
 
 export namespace Target {
@@ -19,6 +21,7 @@ export namespace Target {
             portals: [],
             sessions: [],
             initiatorGroups: [],
+            devicePath: "",
         }
     }
 }

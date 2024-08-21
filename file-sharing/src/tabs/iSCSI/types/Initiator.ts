@@ -1,5 +1,9 @@
-export interface Initiator {
+export class Initiator {
     name: string;
+
+    constructor(name: string) {
+        this.name = name;
+    }
 }
 
 export namespace Initiator {

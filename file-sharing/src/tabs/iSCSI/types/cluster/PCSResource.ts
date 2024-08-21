@@ -65,7 +65,7 @@ export const PCSResourceTypeInfo: { [key in PCSResourceType]: PCSResourceInfo } 
     [PCSResourceType.RBD]: {
         namePrefix: "rbd",
         internalTypeName: "rbd",
-        orderInGroup: 6,
+        orderInGroup: -1,
     },
 }
 

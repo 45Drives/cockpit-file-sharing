@@ -20,7 +20,7 @@ import { useUserSettings } from "@/common/user-settings";
 import { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import type { Target } from "@/tabs/iSCSI/types/Target";
-import { PCSResourceManager } from "@/tabs/iSCSI/types/cluster/PCSResourceManager";
+import { RBDManager } from "@/tabs/iSCSI/types/cluster/RBDManager";
 
 const _ = cockpit.gettext;
 
@@ -91,16 +91,12 @@ function checkForClusteredServer() {
 
 function testFunction() {
   return getServer()
-  .map((server) => new PCSResourceManager(server))
-  .map((manager) => {
-      manager.initialize()
-      .map(() => {
-        console.log(`Current resources:`)
-        console.log(manager.currentResources)
-        console.log(`Current groups:`)
-        console.log(manager.currentResourceGroups)
-      })
-    }
+  .map((server) => new RBDManager(server))
+  .andThen((manager) => 
+    manager.fetchAvaliableRadosBlockDevices()
+    .map((output) => console.log(output))
+    .mapErr((err) => console.log(err))
+    .map((manager) => manager)
   )
 }
 </script>

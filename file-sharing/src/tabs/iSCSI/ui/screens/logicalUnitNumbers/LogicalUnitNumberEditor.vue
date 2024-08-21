@@ -22,15 +22,6 @@
         <SelectMenu v-model="tempLun.name" :options="deviceOptions" />
         <ValidationResultView v-bind="deviceValidationResult" />
       </InputLabelWrapper>
-
-      <ToggleSwitchGroup v-if="useUserSettings().value.iscsi.clusteredServer">
-          <ToggleSwitch v-model="tempClusterOptions.createLVM">
-          {{ _("Create LVM?") }}
-          <template #description>
-              {{ _("Creates an LVM resource for the device.") }}
-          </template>
-          </ToggleSwitch>
-      </ToggleSwitchGroup>
     </div>
 
     <template v-slot:footer>
@@ -92,28 +83,16 @@ const newLun = ref<LogicalUnitNumber>(LogicalUnitNumber.empty());
 
 const { tempObject: tempLun, modified: lunModified, resetChanges: resetChangesLun } = useTempObjectStaging(newLun);
 
-const clusterOptions = ref({ 
-    createLVM: false,
-});
-
-const { tempObject: tempClusterOptions, modified: clusterOptionsModified, resetChanges: resetChangesClusterOptions } = useTempObjectStaging(clusterOptions);
-
 const handleClose = () => {
   emit("closeEditor");
   resetChangesLun();
-  resetChangesClusterOptions();
 };
 
 const createLun = () => {
   tempLun.value.blockDevice = devices.value.find((device) => device.deviceName === tempLun.value.name);
 
-  if (tempClusterOptions.value.createLVM) {
-    return driver
-    .andThen((driver) => {
-      const targetName = (driver as ISCSIDriverClusteredServer).getTargetNameOfInitiatorGroup(props.initiatorGroup);
-      return (driver as ISCSIDriverClusteredServer).addLVMResource({name: targetName}, tempLun.value.blockDevice!)
-                                                    .andThen(() => driver.addLogicalUnitNumberToGroup(props.initiatorGroup, tempLun.value))
-    })
+  return driver
+    .andThen((driver) => driver.addLogicalUnitNumberToGroup(props.initiatorGroup, tempLun.value))
     .map(() => handleClose())
     .mapErr(
       (error) =>
@@ -121,18 +100,6 @@ const createLun = () => {
           `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
         )
     );
-  }
-  else {
-    return driver
-      .andThen((driver) => driver.addLogicalUnitNumberToGroup(props.initiatorGroup, tempLun.value))
-      .map(() => handleClose())
-      .mapErr(
-        (error) =>
-          new ProcessError(
-            `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
-          )
-      );
-  }
 };
 
 const validationScope = new ValidationScope();
