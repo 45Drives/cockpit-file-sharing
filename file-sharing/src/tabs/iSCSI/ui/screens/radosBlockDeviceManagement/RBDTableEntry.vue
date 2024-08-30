@@ -8,7 +8,7 @@
         <span class="sr-only">Resize</span>
         <WrenchIcon class="size-icon icon-default" />
       </button>
-      <button @click="">
+      <button @click="emit('selectDevice', device)">
         <span class="sr-only">Add</span>
         <PlusIcon class="size-icon icon-default" />
       </button>
@@ -28,6 +28,7 @@ import { ref } from 'vue';
 import RBDExpansionScreen from "@/tabs/iSCSI/ui/screens/radosBlockDeviceManagement/RBDExpansionScreen.vue";
 import { Modal } from "@45drives/houston-common-ui";
 import { PlusIcon } from "@heroicons/vue/24/solid";
+import { VirtualDevice } from '@/tabs/iSCSI/types/VirtualDevice';
 
 const _cockpit = cockpit;
 
@@ -37,7 +38,10 @@ const props = defineProps<{
 
 const showExpandScreen = ref(false);
 
-const emit = defineEmits(['update']);
+const emit = defineEmits<{
+  (e: 'update'): void;
+  (e: 'selectDevice', value: VirtualDevice): void;
+}>();
 
 function getDeviceName() {
   return props.device.deviceName;

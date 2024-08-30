@@ -42,6 +42,7 @@
               :key="index"
               :device="device"
               @update="actions.fetchDevices"
+              @select-device="selectVirtualDevice"
             />
           </template>
         </Table>
@@ -68,6 +69,10 @@ import { type ResultAsync } from "neverthrow";
 import { inject, ref } from "vue";
 
 const _ = cockpit.gettext;
+
+const emit = defineEmits<{
+  (e: 'selectDevice', value: VirtualDevice): void;
+}>();
 
 const showAddRBD = ref(false);
 
@@ -101,6 +106,10 @@ const fetchDevices = () => {
       }
     })
   );
+}
+
+const selectVirtualDevice = (device: VirtualDevice) => {
+  emit('selectDevice', device)
 }
 
 const actions = wrapActions({fetchDevices});

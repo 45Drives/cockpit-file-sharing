@@ -1,15 +1,16 @@
 <template>
   <CardContainer
   :style="{'width': '1000px'}">
-      <RBDTable/>
+    <RBDTable
+      @select-device="selectVirtualDevice"/>
 
-  <template v-slot:footer>
-        <div class="button-group-row justify-end grow">
-            <button
-                class="btn btn-secondary"
-                @click="emit('close')"
-            >{{ ("Close") }}</button>
-        </div>
+    <template v-slot:footer>
+      <div class="button-group-row justify-end grow">
+        <button
+          class="btn btn-secondary"
+          @click="emit('close')"
+        >{{ ("Close") }}</button>
+      </div>
     </template>
   </CardContainer>
 </template>
@@ -19,6 +20,7 @@ import type { LogicalVolume } from "@/tabs/iSCSI/types/cluster/LogicalVolume";
 import type { RadosBlockDevice } from "@/tabs/iSCSI/types/cluster/RadosBlockDevice";
 import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 import RBDDeviceCreationScreen from "@/tabs/iSCSI/ui/screens/radosBlockDeviceManagement/RBDDeviceCreationScreen.vue";
+import { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 import RBDTable from "@/tabs/iSCSI/ui/screens/radosBlockDeviceManagement/RBDTable.vue";
 import type { ProcessError } from "@45drives/houston-common-lib";
 import {
@@ -31,7 +33,12 @@ import { inject, ref } from "vue";
 const _ = cockpit.gettext;
 
 const emit = defineEmits<{
-  (e: "close"): void;
+  (e: 'close'): void;
+  (e: 'selectDevice', value: VirtualDevice): void;
 }>();
+
+const selectVirtualDevice = (device: VirtualDevice) => {
+  emit('selectDevice', device)
+}
 
 </script>

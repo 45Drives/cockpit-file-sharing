@@ -82,7 +82,7 @@
             <FileIOCreationPrompt @close="{showFileIOCreation = false; updateFileValidator()}" :filePath="tempDevice.filePath"/>
         </Modal>
         <Modal class="overflow-y-scroll" :show="showRBDCreation" @click-outside="showRBDCreation = false">
-            <RBDManagementScreen @close="{showRBDCreation = false; updateFileValidator()}"/>
+            <RBDManagementScreen @close="{showRBDCreation = false; updateFileValidator()}" @select-device="fillDeviceInfo"/>
         </Modal>
     </CardContainer>
 </template>
@@ -125,6 +125,12 @@
     const newDevice = ref<VirtualDevice>(new VirtualDevice("", "", 512, DeviceType.BlockIO));
 
     const { tempObject: tempDevice, modified, resetChanges} = useTempObjectStaging(newDevice);
+
+    const fillDeviceInfo = (device: VirtualDevice) => {
+        showRBDCreation.value = false;
+
+        tempDevice.value = device;
+    }
 
     const handleClose = () => {
         emit("closeEditor");
