@@ -15,19 +15,17 @@ import VirtualDeviceTable from "@/tabs/iSCSI/ui/screens/virtualDevice/VirtualDev
 import TargetTable from "@/tabs/iSCSI/ui/screens/target/TargetTable.vue";
 import type { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 import ConfigurationEditor from "@/tabs/iSCSI/ui/screens/config/ConfigurationEditor.vue";
-import { ISCSIDriverClusteredServer } from "../types/drivers/ISCSIDriverClusteredServer";
+import { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 import { useUserSettings } from "@/common/user-settings";
 import { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import type { Target } from "@/tabs/iSCSI/types/Target";
-import { RBDManager } from "@/tabs/iSCSI/types/cluster/RBDManager";
 
 const _ = cockpit.gettext;
 
 const driverInitalized = ref(false);
 
 const createISCSIDriver = (): ResultAsync<ISCSIDriver, ProcessError> => {
-  testFunction();
   return getServer()
   .andThen((server) => {
     return checkForClusteredServer().andThen(() => {
@@ -63,7 +61,6 @@ function refreshTables() {
 function checkForClusteredServer() {
   return ResultAsync.fromSafePromise(useUserSettings(true)).map((userSettings) => {
     if (!userSettings.value.iscsi.clusteredServerChecked) {
-      console.log("Cluster Check")
       const {
         tempObject: tempConfig
       } = useTempObjectStaging(userSettings);
@@ -89,14 +86,4 @@ function checkForClusteredServer() {
   })
 }
 
-function testFunction() {
-  return getServer()
-  .map((server) => new RBDManager(server))
-  .andThen((manager) => 
-    manager.fetchAvaliableRadosBlockDevices()
-    .map((output) => console.log(output))
-    .mapErr((err) => console.log(err))
-    .map((manager) => manager)
-  )
-}
 </script>

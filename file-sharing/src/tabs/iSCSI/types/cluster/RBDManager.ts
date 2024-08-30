@@ -5,9 +5,7 @@ import { LogicalVolume } from '@/tabs/iSCSI/types/cluster/LogicalVolume';
 import { RadosBlockDevice } from './RadosBlockDevice';
 import { Pool, PoolType } from "@/tabs/iSCSI/types/cluster/Pool";
 import { BashCommand, ProcessError, safeJsonParse, StringToIntCaster, type Server } from '@45drives/houston-common-lib';
-import { DeviceType } from '@/tabs/iSCSI/types/VirtualDevice';
 import { err, errAsync, ok, okAsync, ResultAsync, safeTry } from 'neverthrow';
-import { Result } from 'postcss';
 
 export class RBDManager {
 
@@ -17,25 +15,10 @@ export class RBDManager {
         this.server = server;
     }
 
-    createReplicationRadosBlockDevice(name: string, size: string, pool: Pool) {
-        return this.server.execute(new BashCommand(`rbd create ${pool.name}/${name} --size ${size}`))
-        .andThen(() => 
-            this.server.execute(new BashCommand(`rbd map ${pool.name}/${name}`))
-            .andThen((mapProc) => this.server.execute(new BashCommand(`blockdev --getbsz ${mapProc.getStdout()}`))
-                .andThen((blockSizeProc) => {
-                    const blockSize = StringToIntCaster()(blockSizeProc.getStdout())
+    createRadosBlockDevice(name: string, size: number, parentPool: Pool, dataPool?: Pool) {
+        const dataPoolArgument =  dataPool === undefined ? "" :  `--data-pool ${dataPool.name}`
 
-                    if (!blockSize.isNone())
-                        return okAsync(new RadosBlockDevice(name, mapProc.getStdout(), blockSize.some(), size, pool));
-
-                    return errAsync(new ProcessError("Unable to determine block size of RBD"));
-                })
-            )
-        )
-    }
-
-    createErasureCodedRadosBlockDevice(name: string, size: string, dataPool: Pool, parentPool: Pool) {
-        return this.server.execute(new BashCommand(`rbd create ${parentPool.name}/${name} --size ${size} --data-pool ${dataPool.name}`))
+        return this.server.execute(new BashCommand(`rbd create ${parentPool.name}/${name} --size ${size}B ${dataPoolArgument}`))
         .andThen(() => 
             this.server.execute(new BashCommand(`rbd map ${parentPool.name}/${name}`))
             .andThen((mapProc) => this.server.execute(new BashCommand(`blockdev --getbsz ${mapProc.getStdout()}`))
@@ -43,7 +26,7 @@ export class RBDManager {
                     const blockSize = StringToIntCaster()(blockSizeProc.getStdout())
 
                     if (!blockSize.isNone())
-                        return okAsync(new RadosBlockDevice(name, mapProc.getStdout(), blockSize.some(), size, parentPool, dataPool));
+                        return okAsync(new RadosBlockDevice(name, mapProc.getStdout().trim(), blockSize.some(), size, parentPool, dataPool));
 
                     return errAsync(new ProcessError("Unable to determine block size of RBD"));
                 })
@@ -58,24 +41,30 @@ export class RBDManager {
         return ResultAsync.combine(rbds.map((rbd) => this.server.execute(new BashCommand(`pvcreate ${rbd.filePath}`)).map(() => new PhysicalVolume(rbd))))
         .andThen((physicalVolumes) => this.server.execute(new BashCommand(`vgcreate ${volumeGroupName} ${rbdPaths}`)).map(() => new VolumeGroup(volumeGroupName, physicalVolumes)))
         .andThen((volumeGroup) => this.server.execute(new BashCommand(`lvcreate -i ${rbds.length} -I 64 -l 100%FREE -n ${logicalVolumeName} ${volumeGroupName} ${rbdPaths}`))
-            .andThen(() => this.server.execute(new BashCommand(`lvdisplay /dev/${volumeGroupName}/${logicalVolumeName} | grep 'LV Size' | awk '{print $3, $4}'`))
+            .andThen(() => this.server.execute(new BashCommand(`lvdisplay /dev/${volumeGroupName}/${logicalVolumeName} --units B | grep 'LV Size' | awk '{print $3, $4}'`))
                 .map((proc) => proc.getStdout())
                 .map((maximumSize) => {
-                    createdLogicalVolume = new LogicalVolume(logicalVolumeName, 0, volumeGroup, maximumSize)
+                    createdLogicalVolume = new LogicalVolume(logicalVolumeName, 0, volumeGroup, StringToIntCaster()(maximumSize!).some())
                 })
             )
         )
         .map(() => this.server.execute(new BashCommand(`lvchange -an ${createdLogicalVolume!.volumeGroup.name}/${createdLogicalVolume!.deviceName}`)))
-        .map(() => ResultAsync.combine(rbds.map((rbd) => this.server.execute(new BashCommand(`rbd unmap ${rbd.parentPool}/${rbd.deviceName}`)))))
+        //.map(() => ResultAsync.combine(rbds.map((rbd) => this.server.execute(new BashCommand(`rbd unmap ${rbd.parentPool.name}/${rbd.deviceName}`)))))
         .map(() => createdLogicalVolume!);
     }
 
-    expandRadosBlockDevice(device: RadosBlockDevice, newSize: string) {
-        return this.server.execute(new BashCommand(`rbd resize --size ${newSize} ${device.filePath}`));
+    expandRadosBlockDevice(device: RadosBlockDevice, newSizeBytes: number) {
+        return this.server.execute(new BashCommand(`rbd resize --size ${newSizeBytes}B ${device.deviceName}`));
     }
 
-    expandLogicalVolume(volume: LogicalVolume, newSize: string) {
-        return this.server.execute(new BashCommand(`lvextend -L ${newSize} ${volume.filePath}`));
+    expandLogicalVolume(volume: LogicalVolume, newSizeBytes: number) {
+        const newSizePerRBD = Math.round(newSizeBytes/volume.volumeGroup.volumes.length);
+
+        return ResultAsync.combine(volume.volumeGroup.volumes.map((volume) => 
+            this.expandRadosBlockDevice(volume.rbd, newSizePerRBD)
+            .andThen(() => this.server.execute(new BashCommand(`pvresize ${volume.rbd.filePath}`)))
+        ))
+        .andThen(() => this.server.execute(new BashCommand(`lvextend -l +100%FREE ${volume.filePath}`)));
     }
 
     fetchAvaliablePools() {
@@ -103,7 +92,7 @@ export class RBDManager {
                     return okAsync(undefined);
                 })
             ))
-            .map((results) => results.filter((result) => result !== undefined));
+            .map((results) => results.filter((result): result is Pool => result !== undefined));
     }
 
     fetchAvaliableRadosBlockDevices() {
@@ -145,12 +134,12 @@ export class RBDManager {
     fetchAvaliableLogicalVolumes() {
         const self = this;
 
-        return this.server.execute(new BashCommand(`lvs --reportformat json`))
+        return this.server.execute(new BashCommand(`lvs --reportformat json --units B`))
         .map((proc) => proc.getStdout())
         .andThen(safeJsonParse<LogicalVolumeInfoJson>)
         .map((logicalVolumeInfo) => logicalVolumeInfo?.report?.flatMap((report) => report.lv))
         .andThen((lvList) => ResultAsync.combine(lvList!.flatMap((lvInfo) => 
-            this.server.execute(new BashCommand(`pvs -S vgname=${lvInfo.vg_name} --reportformat json`))
+            this.server.execute(new BashCommand(`pvs -S vgname=${lvInfo.vg_name} --reportformat json --units B`))
                 .map((proc) => proc.getStdout())
                 .andThen(safeJsonParse<VolumeGroupInfoJson>)
                 .map((volumeGroupEntries) => volumeGroupEntries!.report!.flatMap((report) => report.pv))
@@ -164,9 +153,8 @@ export class RBDManager {
                     return okAsync(physicalVolumes);
                 })))
                 .map((volumes) => new VolumeGroup(lvInfo.vg_name, volumes))
-                .map((volumeGroup) => new LogicalVolume(lvInfo.lv_name, 0, volumeGroup, lvInfo.lv_size)))
+                .map((volumeGroup) => new LogicalVolume(lvInfo.lv_name, 0, volumeGroup, StringToIntCaster()(lvInfo.lv_size).some())))
         ))
-
     }
 
     getBlockSizeFromDevicePath(path: Pick<VirtualDevice, "filePath"> | string) {
@@ -180,8 +168,8 @@ export class RBDManager {
                     .map((proc) => proc.getStdout())
                     .andThen(safeJsonParse<RBDInfoJson>)
                     .map((rbdInfoEntry) => StringToIntCaster()(rbdInfoEntry.size!))
-                    .map((number) => cockpit.format_bytes(number.some()))
-                    .mapErr(() => new ProcessError(`Unable to determine maximum size of RDB: ${rbdName}`))
+                    .map((number) => number.some())
+                    .mapErr(() => new ProcessError(`Unable to determine maximum size of RBD: ${rbdName}`))
     }
 
     getDataPoolForRBDName(rbdName: Pick<VirtualDevice, "deviceName"> | string, parentPool: Pool) {

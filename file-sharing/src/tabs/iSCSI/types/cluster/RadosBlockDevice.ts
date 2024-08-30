@@ -4,9 +4,9 @@ import { DeviceType, VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 export class RadosBlockDevice extends VirtualDevice {
     parentPool: Pool;
     dataPool: Pool | undefined;
-    maximumSize: String;
+    maximumSize: number;
 
-    constructor(deviceName: string, filePath: string, blockSize: number, maximumSize: String, parentPool: Pool, dataPool?: Pool) {
+    constructor(deviceName: string, filePath: string, blockSize: number, maximumSize: number, parentPool: Pool, dataPool?: Pool) {
         super(deviceName, filePath, blockSize, DeviceType.BlockIO);
 
         this.parentPool = parentPool;

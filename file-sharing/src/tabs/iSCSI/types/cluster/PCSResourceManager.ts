@@ -1,20 +1,18 @@
 import { ResultAsync } from 'neverthrow';
 import { PCSResource, PCSResourceType, PCSResourceTypeInfo } from "@/tabs/iSCSI/types/cluster/PCSResource";
 import { PCSResourceGroup } from '@/tabs/iSCSI/types/cluster/PCSResourceGroup';
-import { BashCommand, Command, ProcessError, safeJsonParse, type Server } from "@45drives/houston-common-lib";
+import { BashCommand, ProcessError, safeJsonParse, type Server } from "@45drives/houston-common-lib";
 
 export class PCSResourceManager {
 
     server: Server;
 
     currentResources: PCSResource[];
-    currentResourceGroups: PCSResourceGroup[];
 
     constructor(server: Server) {
         this.server = server;
 
         this.currentResources = [];
-        this.currentResourceGroups = [];
 
         this.initialize();
     }
@@ -23,7 +21,6 @@ export class PCSResourceManager {
         return this.fetchResources()
         .map((resources) => {
             this.currentResources = resources;
-            this.currentResourceGroups = resources.filter(resource => resource.resourceGroup !== undefined).map((resource) => resource.resourceGroup!);
         })
     }
 
@@ -49,11 +46,6 @@ export class PCSResourceManager {
     updateResource(resource: PCSResource, parameters: String) {
         return this.server.execute(new BashCommand(`pcs resource update ${resource.name} ${parameters}`))
         .map(() => undefined)
-    }
-
-    getResourceConfig(resource: PCSResource) {
-        return this.server.execute(new BashCommand(`pcs resource config --output-format json ${resource.name}`))
-        .map((proc) => proc.getStdout())
     }
 
     addResourceToGroup(resource: PCSResource, resourceGroup: PCSResourceGroup) {

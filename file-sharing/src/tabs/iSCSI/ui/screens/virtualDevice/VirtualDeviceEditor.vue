@@ -7,7 +7,7 @@
             <div class="space-y-content text-base">
                 <div
                     class="text-header"
-                >{{ _("New Device") }}</div>
+                >{{ _("New iSCSI Device") }}</div>
             </div>
 
             <InputLabelWrapper>
@@ -64,6 +64,10 @@
             <div class="button-group-row justify-end grow">
                 <button
                     class="btn btn-secondary"
+                    @click="createRBDManagementPrompt()"
+                >{{ ("Manage RBD/LVs") }}</button>
+                <button
+                    class="btn btn-secondary"
                     @click="handleClose"
                 >{{ ("Cancel") }}</button>
                 <button
@@ -73,10 +77,14 @@
                 >{{ ("Create") }}</button>
             </div>
         </template>
+
+        <Modal :show="showFileIOCreation" @click-outside="showFileIOCreation = false">
+            <FileIOCreationPrompt @close="{showFileIOCreation = false; updateFileValidator()}" :filePath="tempDevice.filePath"/>
+        </Modal>
+        <Modal class="overflow-y-scroll" :show="showRBDCreation" @click-outside="showRBDCreation = false">
+            <RBDManagementScreen @close="{showRBDCreation = false; updateFileValidator()}"/>
+        </Modal>
     </CardContainer>
-    <Modal :show="showFileIOCreation" @click-outside="showFileIOCreation = false">
-        <FileIOCreationPrompt @close="{showFileIOCreation = false; updateFileValidator()}" :filePath="tempDevice.filePath"/>
-    </Modal>
 </template>
 
 <script setup lang="ts">
@@ -88,6 +96,7 @@
     import type { ISCSIDriver } from '@/tabs/iSCSI/types/drivers/ISCSIDriver';
     import type { Target } from '@/tabs/iSCSI/types/Target';
     import FileIOCreationPrompt from '@/tabs/iSCSI/ui/screens/virtualDevice/FileIOCreationPrompt.vue';
+    import RBDManagementScreen from '@/tabs/iSCSI/ui/screens/radosBlockDeviceManagement/RBDManagementScreen.vue';
 
     const _ = cockpit.gettext;
     
@@ -102,6 +111,8 @@
     const deviceTypeOptions: Ref<SelectMenuOption<DeviceType>[]> = ref([]);
 
     const showFileIOCreation = ref(false);
+
+    const showRBDCreation = ref(false);
 
     driver.map((driver) => driver.getHandledDeviceTypes()
         .map((deviceType) => ({label: deviceType.toString(), value: deviceType})))
@@ -138,6 +149,11 @@
 
     const createFileIOPrompt = () => {
         showFileIOCreation.value = true;
+        return okAsync(undefined);
+    }
+
+    const createRBDManagementPrompt = () => {
+        showRBDCreation.value = true;
         return okAsync(undefined);
     }
 
