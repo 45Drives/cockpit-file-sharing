@@ -303,24 +303,26 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         return new ResultAsync(safeTry(async function * () {
             let foundDevices: VirtualDevice[] = [];
 
+            const avaliableLogicalVolumes = yield * self.rbdManager.fetchAvaliableLogicalVolumes().safeUnwrap();
             const avaliableRadosBlockDevices = yield * self.rbdManager.fetchAvaliableRadosBlockDevices().safeUnwrap();
-
-            for (var resource of self.pcsResourceManager.currentResources.filter((resource) => resource.resourceType === PCSResourceType.RBD)) {
-                const resourceFilePath = yield * self.pcsResourceManager.fetchResourceInstanceAttributeValue(resource, "path").safeUnwrap();
-                const foundDevice = avaliableRadosBlockDevices.find((device) => device.filePath === resourceFilePath);
-
-                if (foundDevice !== undefined)
-                    foundDevices.push(foundDevice);
-            }
 
             for (var resource of self.pcsResourceManager.currentResources.filter((resource) => resource.resourceType === PCSResourceType.LUN)) {
                 const attributes = yield * self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["path"]).safeUnwrap();
-                const alreadyFound = foundDevices.find((device) => device.filePath === attributes.get("path")) !== undefined;
-
-                if (!alreadyFound) {
-                    const blockSize = yield * self.rbdManager.getBlockSizeFromDevicePath(attributes.get("path")!).safeUnwrap();
-                    foundDevices.push(new VirtualDevice(attributes.get("path")!, attributes.get("path")!, blockSize, DeviceType.BlockIO))
+                
+                const foundLogicalVolume = avaliableLogicalVolumes.find((volume) => volume.volumeGroup.volumes.some((physicalVolume) => physicalVolume.rbd.filePath === attributes.get("path")));
+                if (foundLogicalVolume !== undefined) {
+                    foundDevices.push(foundLogicalVolume);
+                    break;
                 }
+                
+                const foundRBD = avaliableRadosBlockDevices.find((rbd) => rbd.filePath === attributes.get("path"));
+                if (foundRBD !== undefined) {
+                    foundDevices.push(foundRBD);
+                    break;
+                }
+
+                const blockSize = yield * self.rbdManager.getBlockSizeFromDevicePath(attributes.get("path")!).safeUnwrap();
+                foundDevices.push(new VirtualDevice(attributes.get("path")!, attributes.get("path")!, blockSize, DeviceType.BlockIO));
             }
 
             return ok(foundDevices);
