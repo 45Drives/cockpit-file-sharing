@@ -65,7 +65,7 @@
                 <button
                     class="btn btn-secondary"
                     @click="createRBDManagementPrompt()"
-                >{{ ("Manage RBD/LVs") }}</button>
+                >{{ ("Add/Manage RBDs") }}</button>
                 <button
                     class="btn btn-secondary"
                     @click="handleClose"
@@ -81,8 +81,8 @@
         <Modal :show="showFileIOCreation" @click-outside="showFileIOCreation = false">
             <FileIOCreationPrompt @close="{showFileIOCreation = false; updateFileValidator()}" :filePath="tempDevice.filePath"/>
         </Modal>
-        <Modal class="overflow-y-scroll" :show="showRBDCreation" @click-outside="showRBDCreation = false">
-            <RBDManagementScreen @close="{showRBDCreation = false; updateFileValidator()}" @select-device="fillDeviceInfo"/>
+        <Modal :show="showRBDManager" @click-outside="showRBDManager = false">
+            <RBDManagementScreen @close="{showRBDManager = false; updateFileValidator()}" @select-device="addFromRBDManager"/>
         </Modal>
     </CardContainer>
 </template>
@@ -97,6 +97,8 @@
     import type { Target } from '@/tabs/iSCSI/types/Target';
     import FileIOCreationPrompt from '@/tabs/iSCSI/ui/screens/virtualDevice/FileIOCreationPrompt.vue';
     import RBDManagementScreen from '@/tabs/iSCSI/ui/screens/radosBlockDeviceManagement/RBDManagementScreen.vue';
+    import type { RadosBlockDevice } from '@/tabs/iSCSI/types/cluster/RadosBlockDevice';
+    import type { LogicalVolume } from '@/tabs/iSCSI/types/cluster/LogicalVolume';
 
     const _ = cockpit.gettext;
     
@@ -112,7 +114,7 @@
 
     const showFileIOCreation = ref(false);
 
-    const showRBDCreation = ref(false);
+    const showRBDManager = ref(false);
 
     driver.map((driver) => driver.getHandledDeviceTypes()
         .map((deviceType) => ({label: deviceType.toString(), value: deviceType})))
@@ -126,10 +128,10 @@
 
     const { tempObject: tempDevice, modified, resetChanges} = useTempObjectStaging(newDevice);
 
-    const fillDeviceInfo = (device: VirtualDevice) => {
-        showRBDCreation.value = false;
-
-        tempDevice.value = device;
+    const addFromRBDManager = (device: VirtualDevice) => {
+        showRBDManager.value = false;
+        return driver.andThen((driver) => driver.addVirtualDevice(device))
+            .map(() => handleClose())
     }
 
     const handleClose = () => {
@@ -159,7 +161,7 @@
     }
 
     const createRBDManagementPrompt = () => {
-        showRBDCreation.value = true;
+        showRBDManager.value = true;
         return okAsync(undefined);
     }
 

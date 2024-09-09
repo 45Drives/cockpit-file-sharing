@@ -59,6 +59,7 @@ import { Target } from "@/tabs/iSCSI/types/Target";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import { Portal } from "@/tabs/iSCSI/types/Portal";
 import { useUserSettings } from "@/common/user-settings";
+import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 
 const _ = cockpit.gettext;
 
@@ -88,6 +89,10 @@ const createTarget = () => {
     .andThen((driver) => {
       return driver.createTarget(tempTarget.value)
       .andThen(() => driver.addPortalToTarget(tempTarget.value, tempPortal.value))
+      .mapErr((err) => {
+        driver.removeTarget(tempTarget.value);
+        return err;
+      })
     })
     .map(() => handleClose())
     .mapErr(
@@ -130,6 +135,11 @@ const { validationResult: portalAddressValidationResult } = validationScope.useV
 
     if (tempPortal.value.address.includes(":")) {
       return validationError("The port defaults to 3260.");
+    }
+
+    const targetWithExistingPortal = props.existingTargets.find((target) => target.portals.find((portal) => portal.address === (tempPortal.value.address + ":3260")));
+    if (targetWithExistingPortal !== undefined) {
+      return validationError(`This address is already in use by target: ${targetWithExistingPortal.name}`)
     }
   }
 

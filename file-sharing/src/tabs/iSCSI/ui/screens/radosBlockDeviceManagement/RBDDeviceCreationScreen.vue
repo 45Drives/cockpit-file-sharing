@@ -149,7 +149,7 @@ driver
 const createDevice = () => {
   return driver
     .map((driver) => driver.rbdManager)
-    .map((rbdManager) => {
+    .andThen((rbdManager) => {
       if (tempDeviceOptions.value.creationType === "Single RBD") {
         return rbdManager
           .createRadosBlockDevice(

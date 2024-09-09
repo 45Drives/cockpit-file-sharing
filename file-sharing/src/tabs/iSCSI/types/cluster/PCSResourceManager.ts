@@ -25,11 +25,13 @@ export class PCSResourceManager {
     }
 
     createResource(name: string, creationArugments: string, type: PCSResourceType) {
-        const creationCommand = new BashCommand(`pcs resource create ${name} ${creationArugments}`);
+        const resourceName = name.replace(':', '_');
+
+        const creationCommand = new BashCommand(`pcs resource create ${resourceName} ${creationArugments}`);
 
         return this.server.execute(creationCommand)
         .map(() => {
-            const resource = new PCSResource(name, creationCommand, type);
+            const resource = new PCSResource(resourceName, creationCommand, type);
             this.currentResources = [...this.currentResources, resource];
             return resource;
         })
@@ -38,7 +40,7 @@ export class PCSResourceManager {
     deleteResource(resource: Pick<PCSResource, "name">) {
         return this.server.execute(new BashCommand(`pcs resource delete ${resource.name}`))
         .map(() => {
-            this.currentResources = this.currentResources.filter((existingResource) => existingResource !== resource);
+            this.currentResources = this.currentResources.filter((existingResource) => existingResource.name !== resource.name);
             return undefined;
         })
     }
@@ -62,9 +64,7 @@ export class PCSResourceManager {
             positionArgument = [`--before`, nextResource.name];
         }
         resource.resourceGroup = resourceGroup;
-
-        console.log(`Adding resource ${resource.name} to group ${resourceGroup.name}`)
-
+        
         return this.server.execute(new BashCommand(`pcs resource group add ${resourceGroup.name} ${positionArgument.join(" ")} ${resource.name}`))
         .map(() => undefined)
     }

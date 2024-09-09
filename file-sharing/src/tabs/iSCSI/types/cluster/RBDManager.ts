@@ -48,8 +48,6 @@ export class RBDManager {
                 })
             )
         )
-        .map(() => this.server.execute(new BashCommand(`lvchange -an ${createdLogicalVolume!.volumeGroup.name}/${createdLogicalVolume!.deviceName}`)))
-        //.map(() => ResultAsync.combine(rbds.map((rbd) => this.server.execute(new BashCommand(`rbd unmap ${rbd.parentPool.name}/${rbd.deviceName}`)))))
         .map(() => createdLogicalVolume!);
     }
 
