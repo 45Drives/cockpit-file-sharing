@@ -124,6 +124,10 @@ const { validationResult: targetNameValidationResult } = validationScope.useVali
     return validationError("A target with this name already exists.");
   }
 
+  if (tempTarget.value.name.includes(" ")) {
+    return validationError("Target name has invalid characters.");
+  }
+
   return validationSuccess();
 });
 
@@ -135,6 +139,10 @@ const { validationResult: portalAddressValidationResult } = validationScope.useV
 
     if (tempPortal.value.address.includes(":")) {
       return validationError("The port defaults to 3260.");
+    }
+
+    if (tempPortal.value.address.includes(" ")) {
+      return validationError("The address has invalid characters.");
     }
 
     const targetWithExistingPortal = props.existingTargets.find((target) => target.portals.find((portal) => portal.address === (tempPortal.value.address + ":3260")));

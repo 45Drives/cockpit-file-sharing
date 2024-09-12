@@ -91,6 +91,10 @@ const { validationResult: portalAddressValidationResult } = validationScope.useV
     return validationError("The port defaults to 3260.");
   }
 
+  if (tempPortal.value.address.includes(" ")) {
+    return validationError("The address has invalid characters.");
+  }
+
   if (useUserSettings().value.iscsi.clusteredServer) {
     if (tempPortal.value.address === "0.0.0.0") {
       return validationError("A specific address needs to be specified for clusters.");

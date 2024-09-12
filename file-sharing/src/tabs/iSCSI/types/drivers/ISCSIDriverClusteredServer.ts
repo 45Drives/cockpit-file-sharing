@@ -122,7 +122,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
     removeTarget(target: Target): ResultAsync<void, ProcessError> {
         return this.findTargetPCSResource(target)
-        .andThen((targetResource) => this.pcsResourceManager.deleteResource({name: targetResource.name}))    
+        .andThen((targetResource) => this.pcsResourceManager.deleteResourceGroup(targetResource.resourceGroup!))    
     }
 
     addPortalToTarget(target: Target, portal: Portal){
@@ -371,7 +371,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     getPortalsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<Portal[], ProcessError> {
         return this.findTargetPCSResource(target)
         .andThen((targetResource) => this.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource, "portals"))
-        .map((portalsString) => portalsString!.split(", ").map((portalAddress) => new Portal(portalAddress)))
+        .map((portalsString) => {
+            if (portalsString !== undefined) 
+                return portalsString!.split(", ").map((portalAddress) => new Portal(portalAddress));
+            
+            return [];
+        })
     }
 
     // iSCSI through PCS only seems to support one ini_group 'allowed', that is created automatically.
@@ -405,8 +410,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         })
     }
 
-    getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "devicePath">): ResultAsync<LogicalUnitNumber[], ProcessError> {
-        
+    getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "devicePath">): ResultAsync<LogicalUnitNumber[], ProcessError>  {
         return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
         .map((targetResource) => this.pcsResourceManager.currentResources.filter((resource) => resource.resourceType === PCSResourceType.LUN && resource.resourceGroup?.name === targetResource?.resourceGroup?.name))
         .andThen((filteredResources) => {
@@ -415,9 +419,13 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                     const lunAttribute = StringToIntCaster()(values.get("lun")!);
                     const virtualDevice = this.virtualDevices.find((device) => device.filePath === values.get("path"));
 
-                    return okAsync(new LogicalUnitNumber(virtualDevice!.deviceName, lunAttribute.some(), virtualDevice));
+                    if (virtualDevice !== undefined)
+                        return okAsync(new LogicalUnitNumber(virtualDevice.deviceName, lunAttribute.some(), virtualDevice));
+
+                    return okAsync(undefined);
                 })
             ))
+            .map((foundLuns) => foundLuns.filter((lun) => lun !== undefined)) as ResultAsync<LogicalUnitNumber[], ProcessError>;
         });
     }
 

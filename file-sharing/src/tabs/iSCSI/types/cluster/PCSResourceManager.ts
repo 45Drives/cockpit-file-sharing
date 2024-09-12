@@ -1,3 +1,4 @@
+import { okAsync } from 'neverthrow';
 import { ResultAsync } from 'neverthrow';
 import { PCSResource, PCSResourceType, PCSResourceTypeInfo } from "@/tabs/iSCSI/types/cluster/PCSResource";
 import { PCSResourceGroup } from '@/tabs/iSCSI/types/cluster/PCSResourceGroup';
@@ -27,7 +28,7 @@ export class PCSResourceManager {
     createResource(name: string, creationArugments: string, type: PCSResourceType) {
         const resourceName = name.replace(':', '_');
 
-        const creationCommand = new BashCommand(`pcs resource create ${resourceName} ${creationArugments}`);
+        const creationCommand = new BashCommand(`pcs resource create '${resourceName}' ${creationArugments}`);
 
         return this.server.execute(creationCommand)
         .map(() => {
@@ -38,15 +39,23 @@ export class PCSResourceManager {
     }
 
     deleteResource(resource: Pick<PCSResource, "name">) {
-        return this.server.execute(new BashCommand(`pcs resource delete ${resource.name}`))
+        return this.server.execute(new BashCommand(`pcs resource delete '${resource.name}'`))
         .map(() => {
             this.currentResources = this.currentResources.filter((existingResource) => existingResource.name !== resource.name);
             return undefined;
         })
     }
 
+    deleteResourceGroup(resourceGroup: Pick<PCSResourceGroup, "name">) {
+        return this.server.execute(new BashCommand(`pcs resource delete '${resourceGroup.name}'`))
+        .map(() => {
+            this.currentResources = this.currentResources.filter((existingResource) => existingResource.resourceGroup?.name !== resourceGroup.name);
+            return undefined;
+        })
+    }
+
     updateResource(resource: PCSResource, parameters: String) {
-        return this.server.execute(new BashCommand(`pcs resource update ${resource.name} ${parameters}`))
+        return this.server.execute(new BashCommand(`pcs resource update '${resource.name}' ${parameters}`))
         .map(() => undefined)
     }
 
@@ -65,22 +74,22 @@ export class PCSResourceManager {
         }
         resource.resourceGroup = resourceGroup;
         
-        return this.server.execute(new BashCommand(`pcs resource group add ${resourceGroup.name} ${positionArgument.join(" ")} ${resource.name}`))
+        return this.server.execute(new BashCommand(`pcs resource group add '${resourceGroup.name}' ${positionArgument.join(" ")} '${resource.name}'`))
         .map(() => undefined)
     }
 
     constrainResourceToGroup(resource: PCSResource, resourceGroup: PCSResourceGroup) {
-        return this.server.execute(new BashCommand(`pcs constraint colocation add ${resource.name} with ${resourceGroup.name}`))
+        return this.server.execute(new BashCommand(`pcs constraint colocation add '${resource.name}' with '${resourceGroup.name}'`))
         .map(() => undefined)
     }
 
     orderResourceBeforeGroup(resource: PCSResource, resourceGroup: PCSResourceGroup) {
-        return this.server.execute(new BashCommand(`pcs constraint order start ${resource.name} then ${resourceGroup.name}`))
+        return this.server.execute(new BashCommand(`pcs constraint order start '${resource.name}' then '${resourceGroup.name}'`))
         .map(() => undefined)
     }
 
     fetchResourceConfig(resource: Pick<PCSResource, "name">) {
-        return this.server.execute(new BashCommand(`pcs resource config --output-format json ${resource.name}`))
+        return this.server.execute(new BashCommand(`pcs resource config --output-format json '${resource.name}'`))
         .map((process) => process.getStdout())
         .andThen(safeJsonParse<PCSConfigJson>);
     }
@@ -102,7 +111,7 @@ export class PCSResourceManager {
     }
 
     fetchResourceByName(resourceName: string) {
-        return this.fetchResources().map((resources) => resources.find((resource) => resource.name === resourceName));
+        return okAsync(this.currentResources.find((resource) => resource.name === resourceName));
     }
 
     fetchResources(){
@@ -124,7 +133,9 @@ export class PCSResourceManager {
                             groupObject = new PCSResourceGroup(group.id);
                         }
 
-                        return new PCSResource(resource.id, command, resourceType, groupObject);
+                        // Target Resources require a resource group.
+                        if (resourceType !== PCSResourceType.TARGET || (resourceType === PCSResourceType.TARGET && groupObject !== undefined))
+                            return new PCSResource(resource.id, command, resourceType, groupObject);
                     }
 
                     return undefined;
@@ -157,7 +168,7 @@ export class PCSResourceManager {
     }
 
     getGenerationCommandForPCSResource(resource: PCSResourceConfigJson) {
-        return this.server.execute(new BashCommand(`pcs resource config ${resource.id} --output-format cmd`))
+        return this.server.execute(new BashCommand(`pcs resource config '${resource.id}' --output-format cmd`))
         .map((proc) => new BashCommand(proc.getStdout().replace(/\\\n/g, "").replace(/\n/g, "")));
     }
 }

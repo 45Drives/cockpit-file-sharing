@@ -87,6 +87,10 @@ const { validationResult: initiatorNameValidationResult } = validationScope.useV
     return validationError("A name is required.");
   }
 
+  if (tempInitiator.value.name.includes(" ")) {
+    return validationError("Initiator name has invalid characters.");
+  }
+
   return validationSuccess();
 });
 </script>

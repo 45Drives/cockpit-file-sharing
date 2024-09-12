@@ -11,7 +11,10 @@
     >
       <div class="card">
         <RBDDeviceCreationScreen
-        @update="actions.fetchDevices"
+        @update="() => {
+          showAddRBD = false;
+          actions.fetchDevices();
+        }"
         @close="showAddRBD = false"/>
       </div>
     </div>
