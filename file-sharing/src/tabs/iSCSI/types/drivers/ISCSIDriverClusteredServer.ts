@@ -51,12 +51,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     resourceGroupPrefix = "iscsi_group";
 
     constructor(server: Server) {
-    this.server = server;
-    this.configurationManager = new ConfigurationManager(server);
-    this.rbdManager = new RBDManager(server);
-    this.pcsResourceManager = new PCSResourceManager(server);
-    this.virtualDevices = [];
-    this.targets = [];
+        this.server = server;
+        this.configurationManager = new ConfigurationManager(server);
+        this.rbdManager = new RBDManager(server);
+        this.pcsResourceManager = new PCSResourceManager(server);
+        this.virtualDevices = [];
+        this.targets = [];
     }
 
     initialize() {
@@ -68,7 +68,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                     this.activeNode = server
                     return server;
                 })
-                .map((server) => this.singleServerDriver = new ISCSIDriverSingleServer(server))
+                .map((server) => {
+                    this.singleServerDriver = new ISCSIDriverSingleServer(server);
+                    this.configurationManager = new ConfigurationManager(server);
+                    this.rbdManager = new RBDManager(server);
+                    this.pcsResourceManager = new PCSResourceManager(server);
+                })
                 .andThen(() => this.getExistingVirtualDevices())
                 .map((devices) => this.virtualDevices.push(...devices))
                 .map(() => this);
@@ -354,7 +359,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                     continue;
                 }
 
-                const blockSize = yield * self.rbdManager.getBlockSizeFromDevicePath(attributes.get("path")!).safeUnwrap();
+                const blockSizeResult = await self.rbdManager.getBlockSizeFromDevicePath(attributes.get("path")!);
+                let blockSize = 0;
+
+                if (blockSizeResult.isOk())
+                    blockSize = blockSizeResult.value;
+                    
                 foundDevices.push(new VirtualDevice(attributes.get("path")!, attributes.get("path")!, blockSize, DeviceType.BlockIO));
             }
 
