@@ -121,8 +121,21 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     }
 
     removeTarget(target: Target): ResultAsync<void, ProcessError> {
-        return this.findTargetPCSResource(target)
-        .andThen((targetResource) => this.pcsResourceManager.deleteResourceGroup(targetResource.resourceGroup!))    
+        const self = this;
+
+        return new ResultAsync(safeTry(async function * () {
+            for (let group of target.initiatorGroups) {
+                for (let lun of group.logicalUnitNumbers) {
+                    yield * self.removeLogicalUnitNumberFromGroup(group, lun).safeUnwrap();
+                }
+            }
+
+            const targetResource = yield * self.findTargetPCSResource(target).safeUnwrap();
+
+            yield * self.pcsResourceManager.deleteResourceGroup(targetResource.resourceGroup!).safeUnwrap();
+
+            return okAsync(undefined);
+        }))
     }
 
     addPortalToTarget(target: Target, portal: Portal){
@@ -154,6 +167,10 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             })
             .andThen(() => this.pcsResourceManager.updateResource(targetResource, `portals='${updatedPortalList}'`))
         )
+        .mapErr((err) => {
+            createdResources.forEach((resource) => this.pcsResourceManager.deleteResource(resource))
+            return err;
+        });
     }
 
     deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<void, ProcessError> {
@@ -320,19 +337,21 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             const avaliableLogicalVolumes = yield * self.rbdManager.fetchAvaliableLogicalVolumes().safeUnwrap();
             const avaliableRadosBlockDevices = yield * self.rbdManager.fetchAvaliableRadosBlockDevices().safeUnwrap();
 
-            for (var resource of self.pcsResourceManager.currentResources.filter((resource) => resource.resourceType === PCSResourceType.LUN)) {
+            const resources = yield * self.pcsResourceManager.fetchResources().safeUnwrap();
+
+            for (let resource of resources.filter((resource) => resource.resourceType === PCSResourceType.LUN)) {
                 const attributes = yield * self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["path"]).safeUnwrap();
-                
-                const foundLogicalVolume = avaliableLogicalVolumes.find((volume) => volume.volumeGroup.volumes.some((physicalVolume) => physicalVolume.rbd.filePath === attributes.get("path")));
+
+                const foundLogicalVolume = avaliableLogicalVolumes.find((volume) => volume.filePath === attributes.get("path"));
                 if (foundLogicalVolume !== undefined) {
                     foundDevices.push(foundLogicalVolume);
-                    break;
+                    continue;
                 }
                 
                 const foundRBD = avaliableRadosBlockDevices.find((rbd) => rbd.filePath === attributes.get("path"));
                 if (foundRBD !== undefined) {
                     foundDevices.push(foundRBD);
-                    break;
+                    continue;
                 }
 
                 const blockSize = yield * self.rbdManager.getBlockSizeFromDevicePath(attributes.get("path")!).safeUnwrap();
@@ -348,24 +367,26 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
         return this.pcsResourceManager.fetchResources()
         .map((resources) => resources.filter((resource) => resource.resourceType === PCSResourceType.TARGET))
-        .andThen((filteredResources) => ResultAsync.combine(filteredResources.map((resource) => 
-            new ResultAsync(safeTry(async function * () {
-                const targetIQN = yield * self.pcsResourceManager.fetchResourceInstanceAttributeValue(resource, "iqn").safeUnwrap();
+        .andThen((filteredResources) => ResultAsync.combine(
+            filteredResources.map((resource) => 
+                new ResultAsync(safeTry(async function * () {
+                    const targetIQN = yield * self.pcsResourceManager.fetchResourceInstanceAttributeValue(resource, "iqn").safeUnwrap();
 
-                const partialTarget = {
-                    name: targetIQN!,
-                    devicePath: resource.name
-                };
+                    const partialTarget = {
+                        name: targetIQN!,
+                        devicePath: resource.name
+                    };
 
-                return ok<Target>({
-                    ...partialTarget,
-                    portals: yield * self.getPortalsOfTarget(partialTarget).safeUnwrap(),
-                    chapConfigurations: yield * self.getCHAPConfigurationsOfTarget(partialTarget).safeUnwrap(),
-                    initiatorGroups: yield * self.getInitatorGroupsOfTarget(partialTarget).safeUnwrap(),
-                    sessions: yield * self.getSessionsOfTarget(partialTarget).safeUnwrap()
-                });
-            }))
-        )))
+                    return ok<Target>({
+                        ...partialTarget,
+                        portals: yield * self.getPortalsOfTarget(partialTarget).safeUnwrap(),
+                        chapConfigurations: yield * self.getCHAPConfigurationsOfTarget(partialTarget).safeUnwrap(),
+                        initiatorGroups: yield * self.getInitatorGroupsOfTarget(partialTarget).safeUnwrap(),
+                        sessions: yield * self.getSessionsOfTarget(partialTarget).safeUnwrap()
+                    });
+                }))
+            )
+        ))
     }
 
     getPortalsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<Portal[], ProcessError> {
@@ -412,7 +433,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
     getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "devicePath">): ResultAsync<LogicalUnitNumber[], ProcessError>  {
         return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
-        .map((targetResource) => this.pcsResourceManager.currentResources.filter((resource) => resource.resourceType === PCSResourceType.LUN && resource.resourceGroup?.name === targetResource?.resourceGroup?.name))
+        .andThen((targetResource) => this.pcsResourceManager.fetchResources().map((resources) => resources.filter((resource) => resource.resourceType === PCSResourceType.LUN && resource.resourceGroup?.name === targetResource?.resourceGroup?.name)))
         .andThen((filteredResources) => {
             return ResultAsync.combine(filteredResources.map((resource) => this.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["lun", "path"])
                 .andThen((values) => {
@@ -466,7 +487,9 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         return this.findTargetPCSResource(target)
         .andThen((targetResource) => new ResultAsync(safeTry(async function * () {
             if (targetResource.resourceGroup != undefined) {
-                for (var groupResource of self.pcsResourceManager.currentResources.filter((resource) => resource.resourceGroup?.name === targetResource.resourceGroup?.name)) {
+                let resources = yield * self.pcsResourceManager.fetchResources().safeUnwrap();
+
+                for (var groupResource of resources.filter((resource) => resource.resourceGroup?.name === targetResource.resourceGroup?.name)) {
                     let attributes = yield * self.pcsResourceManager.fetchResourceInstanceAttributeValues({name: groupResource.name}, ["action", "ip"]).safeUnwrap();
 
                     if (attributes.get("action") === actionFromType && attributes.get("ip") === portal.address.split(":")[0]!)  {
@@ -486,7 +509,9 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         return this.findTargetPCSResource(target)
         .andThen((targetResource) => new ResultAsync(safeTry(async function * () {
             if (targetResource.resourceGroup != undefined) {
-                for (var groupResource of self.pcsResourceManager.currentResources.filter((resource) => resource.resourceGroup?.name === targetResource.resourceGroup?.name)) {
+                let resources = yield * self.pcsResourceManager.fetchResources().safeUnwrap();
+
+                for (var groupResource of resources.filter((resource) => resource.resourceGroup?.name === targetResource.resourceGroup?.name)) {
                     const foundResource = yield * self.pcsResourceManager.fetchResourceByName(groupResource.name).safeUnwrap();
                     
                     if (foundResource!.resourceType === PCSResourceType.VIP) {
@@ -529,20 +554,28 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     }
 
     createAndConfigureLVResources(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup) {
+        const self = this;
+
         const blockDevice = (lun.blockDevice! as LogicalVolume);
 
         return this.server.execute(new BashCommand(`lvchange -an ${blockDevice!.volumeGroup.name}/${blockDevice!.deviceName}`))
-        .andThen(() => ResultAsync.combine(blockDevice.volumeGroup.volumes.map((physicalVolume) => 
-            this.server.execute(new BashCommand(`rbd unmap ${physicalVolume.rbd.parentPool.name}/${physicalVolume.rbd.deviceName}`))
-            .andThen(() => this.pcsResourceManager.createResource(`RBD_${physicalVolume.rbd.deviceName}`, `ocf:ceph:rbd name=${physicalVolume.rbd.deviceName} pool=${physicalVolume.rbd.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD))
-            .andThen((resource) => this.pcsResourceManager.constrainResourceToGroup(resource, group)
-                .andThen(() => this.pcsResourceManager.orderResourceBeforeGroup(resource, group))
-            )
-        )))
+        .andThen(() => new ResultAsync(safeTry(async function * () {
+            for (let physicalVolume of blockDevice.volumeGroup.volumes) {
+                yield * self.server.execute(new BashCommand(`rbd unmap ${physicalVolume.rbd.parentPool.name}/${physicalVolume.rbd.deviceName}`)).safeUnwrap();
+                
+                const resource = yield * self.pcsResourceManager.createResource(`RBD_${physicalVolume.rbd.deviceName}`, `ocf:ceph:rbd name=${physicalVolume.rbd.deviceName} pool=${physicalVolume.rbd.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD).safeUnwrap();
+    
+                yield * self.pcsResourceManager.constrainResourceToGroup(resource, group).safeUnwrap();
+                yield * self.pcsResourceManager.orderResourceBeforeGroup(resource, group).safeUnwrap();
+            }
+
+            return ok(undefined);
+        })))
         .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LVM_${blockDevice.deviceName}_${blockDevice.volumeGroup.name}`, `ocf:heartbeat:LVM-activate lvname=${blockDevice.deviceName} vgname=${blockDevice.volumeGroup.name} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, PCSResourceType.LVM))
         .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
         .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN} lun=${lun.unitNumber} path=${blockDevice.filePath} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN))  
         .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
+        .andThen(() => this.server.execute(new BashCommand(`pcs resource cleanup`)))
     }
 
     removeLVAndRelatedResources(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup) {
@@ -553,11 +586,11 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         return new ResultAsync(safeTry(async function * () { 
             let rbdsToRemove = blockDevice.volumeGroup.volumes.map((physicalVolume) => physicalVolume.rbd);
 
-            yield * self.removeRBDResources(rbdsToRemove).safeUnwrap();
+            yield * self.removeLUNResource(lun, targetIQN).safeUnwrap();
 
-            const lvmResources = self.pcsResourceManager.currentResources.filter((resource) => resource.resourceType === PCSResourceType.LVM);
+            const lvmResources = yield * self.pcsResourceManager.fetchResources().safeUnwrap();
 
-            for (var resource of lvmResources) {
+            for (var resource of lvmResources.filter((resource) => resource.resourceType === PCSResourceType.LVM)) {
                 const values = yield * self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["lvname", "vgname"]).safeUnwrap();
 
                 if (values.get("lvname") === blockDevice.deviceName && values.get("vgname") === blockDevice.volumeGroup.name) {
@@ -566,7 +599,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                 }
             }
 
-            yield * self.removeLUNResource(lun, targetIQN).safeUnwrap();
+            yield * self.removeRBDResources(rbdsToRemove).safeUnwrap();
 
             return ok(undefined);
         }))
@@ -574,11 +607,21 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
     removeRBDResources(rbdsToRemove: RadosBlockDevice[]) {
         const self = this;
-
-        const rbdResources = self.pcsResourceManager.currentResources.filter((resource) => resource.resourceType === PCSResourceType.RBD);
-
         return new ResultAsync(safeTry(async function * () { 
-            for (var resource of rbdResources) {
+            const rbdResources = yield * self.pcsResourceManager.fetchResources().safeUnwrap();
+
+            for (var resource of rbdResources.filter((resource) => resource.resourceType === PCSResourceType.RBD)) {
+                const values = yield * self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["name", "pool"]).safeUnwrap();
+
+                for (var rbdToRemove of rbdsToRemove) {
+                    if (values.get("name") === rbdToRemove.deviceName && values.get("pool") === rbdToRemove.parentPool.name) {
+                        yield * self.pcsResourceManager.disableResource(resource).safeUnwrap();
+                        break;
+                    }
+                }
+            }
+
+            for (var resource of rbdResources.filter((resource) => resource.resourceType === PCSResourceType.RBD)) {
                 const values = yield * self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["name", "pool"]).safeUnwrap();
 
                 for (var rbdToRemove of rbdsToRemove) {
@@ -597,9 +640,9 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         const self = this;
 
         return new ResultAsync(safeTry(async function * () { 
-            const lunResources = self.pcsResourceManager.currentResources.filter((resource) => resource.resourceType === PCSResourceType.LUN);
+            const lunResources = yield * self.pcsResourceManager.fetchResources().safeUnwrap();
 
-            for(var resource of lunResources) {
+            for(var resource of lunResources.filter((resource) => resource.resourceType === PCSResourceType.LUN)) {
                 const values = yield * self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["lun", "target_iqn"]).safeUnwrap();
 
                 if (values.get("lun") === lun.unitNumber.toString() && values.get("target_iqn") === targetIQN) {
