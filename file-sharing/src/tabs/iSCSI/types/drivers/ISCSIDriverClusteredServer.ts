@@ -296,10 +296,10 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             const targetIQN = yield * self.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource!, "iqn").safeUnwrap();
                         
             if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
-                yield * self.removeRBDAndRelatedResource(logicalUnitNumber, targetIQN!, targetResource!.resourceGroup!).safeUnwrap();
+                yield * self.removeRBDAndRelatedResource(logicalUnitNumber, targetIQN!).safeUnwrap();
             }
             else if (logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
-                yield * self.removeLVAndRelatedResources(logicalUnitNumber, targetIQN!, targetResource!.resourceGroup!).safeUnwrap();
+                yield * self.removeLVAndRelatedResources(logicalUnitNumber, targetIQN!).safeUnwrap();
             }
             else {
                 yield * self.removeLUNResource(logicalUnitNumber, targetIQN!).safeUnwrap();    
@@ -546,7 +546,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
     }
 
-    removeRBDAndRelatedResource(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup) {
+    removeRBDAndRelatedResource(lun: LogicalUnitNumber, targetIQN: string) {
         const self = this;
 
         const blockDevice = lun.blockDevice! as RadosBlockDevice;
@@ -584,7 +584,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         .andThen(() => this.server.execute(new BashCommand(`pcs resource cleanup`)))
     }
 
-    removeLVAndRelatedResources(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup) {
+    removeLVAndRelatedResources(lun: LogicalUnitNumber, targetIQN: string) {
         const self = this;
 
         const blockDevice = lun.blockDevice! as LogicalVolume;

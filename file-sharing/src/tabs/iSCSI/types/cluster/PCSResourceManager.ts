@@ -82,12 +82,12 @@ export class PCSResourceManager {
 
     constrainResourceToGroup(resource: PCSResource, resourceGroup: PCSResourceGroup) {
         return this.server.execute(new BashCommand(`pcs constraint colocation add '${resource.name}' with '${resourceGroup.name}'`))
-        .map((proc) => undefined)
+        .map(() => undefined)
     }
 
     orderResourceBeforeGroup(resource: PCSResource, resourceGroup: PCSResourceGroup) {
         return this.server.execute(new BashCommand(`pcs constraint order start '${resource.name}' then '${resourceGroup.name}'`))
-        .map((proc) => undefined);
+        .map(() => undefined);
     }
 
     fetchResourceConfig(resource: Pick<PCSResource, "name">) {
