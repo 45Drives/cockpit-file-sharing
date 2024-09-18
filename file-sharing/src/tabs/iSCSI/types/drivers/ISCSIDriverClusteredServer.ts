@@ -31,7 +31,6 @@ import { Result } from 'postcss';
 
 export class ISCSIDriverClusteredServer implements ISCSIDriver {
     server: Server;
-    activeNode: Server | undefined;
     configurationManager: ConfigurationManager;
     rbdManager: RBDManager;
     pcsResourceManager:PCSResourceManager;
@@ -64,15 +63,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         .andThen((exists) => {
             if (exists) {
                 return this.getActiveNode()
-                .map((server) => {
-                    this.activeNode = server
-                    return server;
-                })
-                .map((server) => {
-                    this.singleServerDriver = new ISCSIDriverSingleServer(server);
-                    this.configurationManager = new ConfigurationManager(server);
-                    this.rbdManager = new RBDManager(server);
-                    this.pcsResourceManager = new PCSResourceManager(server);
+                .map((activeNode) => {
+                    this.server = activeNode;
+                    this.singleServerDriver = new ISCSIDriverSingleServer(activeNode);
+                    this.configurationManager = new ConfigurationManager(activeNode);
+                    this.rbdManager = new RBDManager(activeNode);
+                    this.pcsResourceManager = new PCSResourceManager(activeNode);
                 })
                 .andThen(() => this.getExistingVirtualDevices())
                 .map((devices) => this.virtualDevices.push(...devices))
