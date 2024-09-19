@@ -65,6 +65,7 @@
                 <button
                     class="btn btn-secondary"
                     @click="createRBDManagementPrompt()"
+                    v-if="useUserSettings().value.iscsi.clusteredServer"
                 >{{ ("Add/Manage RBDs") }}</button>
                 <button
                     class="btn btn-secondary"
@@ -88,17 +89,16 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputField, InputLabelWrapper, Modal, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, ValidationResultView, validationSuccess, validationError, ValidationScope, type ValidationResultAction, validationWarning } from '@45drives/houston-common-ui';
+    import { CardContainer, InputField, InputLabelWrapper, Modal, SelectMenu, useTempObjectStaging, wrapActions, type SelectMenuOption, ValidationResultView, validationSuccess, validationError, ValidationScope, type ValidationResultAction } from '@45drives/houston-common-ui';
     import { err, ok, okAsync, type ResultAsync } from 'neverthrow';
     import { computed, inject, ref, watchEffect, type Ref } from 'vue';
     import { DeviceType, VirtualDevice } from '@/tabs/iSCSI/types/VirtualDevice';
-    import { Command, FileSystemNode, Path, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
+    import { Command, FileSystemNode, ProcessError, StringToIntCaster, getServer } from '@45drives/houston-common-lib';
     import type { ISCSIDriver } from '@/tabs/iSCSI/types/drivers/ISCSIDriver';
     import type { Target } from '@/tabs/iSCSI/types/Target';
     import FileIOCreationPrompt from '@/tabs/iSCSI/ui/screens/virtualDevice/FileIOCreationPrompt.vue';
     import RBDManagementScreen from '@/tabs/iSCSI/ui/screens/radosBlockDeviceManagement/RBDManagementScreen.vue';
-    import type { RadosBlockDevice } from '@/tabs/iSCSI/types/cluster/RadosBlockDevice';
-    import type { LogicalVolume } from '@/tabs/iSCSI/types/cluster/LogicalVolume';
+    import { useUserSettings } from '@/common/user-settings';
 
     const _ = cockpit.gettext;
     

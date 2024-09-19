@@ -19,19 +19,16 @@ export class ConfigurationManager {
 
     importConfiguration(newConfig: string) {
         return new File(this.server, useUserSettings().value.iscsi.confPath)
-                .create()
-                .andThen((file) => file.write(newConfig))
-                .andThen(() => this.server.execute(new BashCommand(`scstadmin -check_config ${useUserSettings().value.iscsi.confPath}`)))
-                .map(() => this.server.execute(new BashCommand(`scstadmin -config ${useUserSettings().value.iscsi.confPath} -force -noprompt`)))
-                .mapErr(() => new ProcessError("Config file syntax validation failed."))
-                
+            .create()
+            .andThen((file) => file.write(newConfig))
+            .andThen(() => this.server.execute(new BashCommand(`scstadmin -check_config ${useUserSettings().value.iscsi.confPath}`)))
+            .map(() => this.server.execute(new BashCommand(`scstadmin -config ${useUserSettings().value.iscsi.confPath} -force -noprompt`)))
+            .mapErr(() => new ProcessError("Config file syntax validation failed."))
     }
 
     saveCurrentConfiguration(): ResultAsync<File, ProcessError> {
-        return this.exportConfiguration().andThen((config) => {
-            return new File(this.server, useUserSettings().value.iscsi.confPath)
-            .create()
-            .andThen((file) => file.write(config))
-        })
+        return new File(this.server, useUserSettings().value.iscsi.confPath)
+        .create(true)
+        .andThen((file) => this.exportConfiguration().map((config) => file.write(config)).map(() => file))
     }
 }

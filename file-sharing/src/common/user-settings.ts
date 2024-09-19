@@ -45,7 +45,7 @@ const defaultSettings = (): UserSettings => ({
     confPath: "/etc/exports.d/cockpit-file-sharing.exports",
   },
   iscsi: {
-    confPath: "/etc/scst/iSCSI.conf",
+    confPath: "/etc/scst/cockpit-iscsi.conf",
     clusteredServerChecked: false,
     clusteredServer: false,
     subnetMask: 16,
