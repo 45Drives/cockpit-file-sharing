@@ -1,7 +1,14 @@
 
 <template>
     <CardContainer>
-    <template v-slot:header> RBD/LVs </template>
+    <template v-slot:header> 
+      <div class="card-header flex flex-row items-center gap-2">
+        <div class="text-header">{{ _("RBD/LVs") }}</div>
+        <LoadingSpinner
+            v-if="fetchingDevices"
+        />
+      </div>
+    </template>
     <div
       class="overflow-hidden"
       :style="{
@@ -22,7 +29,7 @@
       <div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
         <Table
           headerText="Devices"
-          emptyText="No avaliable devices."
+          :emptyText='(fetchingDevices && deviceList.length === 0) ? "Fetching devices..." : "No avaliable devices."'
           noScroll
           class="!border-none !shadow-none"
         >
@@ -64,6 +71,7 @@ import RBDTableEntry from "@/tabs/iSCSI/ui/screens/radosBlockDeviceManagement/RB
 import type { ProcessError } from "@45drives/houston-common-lib";
 import {
     CardContainer,
+    LoadingSpinner,
     Table,
     wrapActions,
 } from "@45drives/houston-common-ui";
@@ -83,8 +91,12 @@ const driver = inject<ResultAsync<ISCSIDriverClusteredServer, ProcessError>>("iS
 
 const deviceList = ref<(RadosBlockDevice|LogicalVolume)[]>([]);
 
+const fetchingDevices = ref<boolean>(false);
+
 const fetchDevices = () => {
   let rbdDeviceList: RadosBlockDevice[] = [];
+
+  fetchingDevices.value = true;
 
   return driver.andThen((driver) => 
     driver.rbdManager.fetchAvaliableRadosBlockDevices()
@@ -106,6 +118,8 @@ const fetchDevices = () => {
         if (!found) {
           deviceList.value = [...deviceList.value, rbd];
         }
+
+        fetchingDevices.value = false;
       }
     })
   );

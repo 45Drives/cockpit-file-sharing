@@ -20,8 +20,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer } from "@45drives/houston-common-ui";
-    import Table from "../Table.vue";
+    import { CardContainer, Table } from "@45drives/houston-common-ui";
     import type { Session } from "../../../types/Session";
     import ConnectionEntry from "./ConnectionEntry.vue";
 
