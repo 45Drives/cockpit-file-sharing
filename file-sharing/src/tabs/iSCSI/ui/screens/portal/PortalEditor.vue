@@ -65,9 +65,11 @@ const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 let usedAddresses: string[] = [];
 
-getServerCluster("pcs").andThen((servers) => 
-  ResultAsync.combine(servers.map((server) => server.execute(new BashCommand("hostname -I"))))
-  .map((procs) => procs.map((proc) => proc.getStdout().trim().split(" ")))).map((ips) => usedAddresses = ips.flat())
+if (useUserSettings().value.iscsi.clusteredServer) {
+  getServerCluster("pcs").andThen((servers) => 
+    ResultAsync.combine(servers.map((server) => server.execute(new BashCommand("hostname -I"))))
+    .map((procs) => procs.map((proc) => proc.getStdout().trim().split(" ")))).map((ips) => usedAddresses = ips.flat())
+}
 
 const handleClose = () => {
   emit("closeEditor");
