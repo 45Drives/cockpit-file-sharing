@@ -72,19 +72,23 @@ export class RBDManager {
             .map((allPoolInfo) => allPoolInfo.filter((poolInfo) => poolInfo !== undefined))
             .andThen((filteredPoolInfo) => ResultAsync.combine(
                 filteredPoolInfo.map((poolData) => {
-                    let poolType = undefined;
+                    if (poolData !== undefined) {
+                        if (poolData.application_metadata.rbd !== undefined) {
+                            let poolType = undefined;
 
-                    switch (poolData?.type) {
-                        case 1:
-                            poolType = PoolType.Replication;
-                            break;
-                        case 3:
-                            poolType = PoolType.ErasureCoded;
-                            break;
-                    }
+                            switch (poolData.type) {
+                                case 1:
+                                    poolType = PoolType.Replication;
+                                    break;
+                                case 3:
+                                    poolType = PoolType.ErasureCoded;
+                                    break;
+                            }
 
-                    if (poolType !== undefined && poolData!.pool_name !== undefined) {
-                        return okAsync(new Pool(poolData!.pool_name, poolType));
+                            if (poolType !== undefined && poolData.pool_name !== undefined) {
+                                return okAsync(new Pool(poolData.pool_name, poolType));
+                            }
+                        }
                     }
 
                     return okAsync(undefined);
@@ -110,7 +114,7 @@ export class RBDManager {
                     const parentPool = yield * self.fetchAvaliablePools()
                                                 .map((pools) => pools.filter((pool) => pool!.name === entry!.pool)[0])
                                                 .safeUnwrap();
-
+                                                
                     if (parentPool !== undefined) {
                         if (parentPool.poolType === PoolType.Replication) {
                             return ok<RadosBlockDevice>(new RadosBlockDevice(entry!.name, entry!.device, blockSize, maximumSize, parentPool));
@@ -152,7 +156,13 @@ export class RBDManager {
                 })))
                 .map((volumes) => new VolumeGroup(lvInfo.vg_name, volumes))
                 .map((volumeGroup) => new LogicalVolume(lvInfo.lv_name, 0, volumeGroup, StringToIntCaster()(lvInfo.lv_size).some())))
-        ))
+        )).map((LogicalVolumes) => LogicalVolumes.filter((volume) => volume.volumeGroup.volumes.length !== 0));
+    }
+
+    fetchExistingImageNames() {
+        return this.server.execute(new BashCommand(`rbd list`))
+        .map((proc) => proc.getStdout())
+        .map((output) => output.trim().split('\n'));
     }
 
     getBlockSizeFromDevicePath(path: Pick<VirtualDevice, "filePath"> | string) {
@@ -202,6 +212,9 @@ type RBDInfoJson = {
 type PoolInfoJson = {
     pool_name: string,
     type: number,
+    application_metadata: {
+        rbd: {}
+    }
 }[]
 
 type LogicalVolumeInfoJson = {

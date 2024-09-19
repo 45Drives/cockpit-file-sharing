@@ -121,6 +121,10 @@ interface DeviceOptions {
   name: string | undefined;
 }
 
+let existingImages: string[] = [];
+
+driver.map((driver) => driver.rbdManager.fetchExistingImageNames().map((images) => existingImages = images));
+
 const avaliablePools: Ref<SelectMenuOption<undefined | Pool>[]> = ref([]);
 
 const creationType: Ref<SelectMenuOption<String>[]> = ref([
@@ -197,6 +201,20 @@ const validationScope = new ValidationScope();
 const { validationResult: nameValidationResult } = validationScope.useValidator(() => {
   if (tempDeviceOptions.value.name === undefined || tempDeviceOptions.value.name.length === 0)
     return validationError("A name needs to be defined for the Device.");
+
+  if (tempDeviceOptions.value.name.includes(" ")) 
+    return validationError("The name has invalid characters.");
+
+  if (tempDeviceOptions.value.creationType === "LV") {
+    for (let i = 1; i <= tempDeviceOptions.value.numberOfRBDs; i++) {
+      if (existingImages.includes(`${tempDeviceOptions.value.name}_RBD_${i}`))
+        return validationError(`An image with the name ${tempDeviceOptions.value.name}_RBD_${i} already exists.`)
+    }
+  }
+  else {
+    if (existingImages.includes(tempDeviceOptions.value.name))
+      return validationError("An image with this name already exists.");
+  }
 
   return validationSuccess();
 });
