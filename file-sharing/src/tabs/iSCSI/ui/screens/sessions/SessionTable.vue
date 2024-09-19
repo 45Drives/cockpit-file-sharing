@@ -30,9 +30,8 @@
 </template>
 
 <script setup lang="ts">
-import { CardContainer, pushNotification, wrapActions } from "@45drives/houston-common-ui";
+import { CardContainer, wrapActions, Table } from "@45drives/houston-common-ui";
 import { inject, onMounted, onUnmounted } from "vue";
-import Table from "../Table.vue";
 import type { ResultAsync } from "neverthrow";
 import type { ProcessError } from "@45drives/houston-common-lib";
 import SessionEntry from "./SessionEntry.vue";

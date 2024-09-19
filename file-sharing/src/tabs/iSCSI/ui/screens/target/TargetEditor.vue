@@ -52,14 +52,13 @@ import {
   wrapActions,
   ValidationScope,
 } from "@45drives/houston-common-ui";
-import type { ResultAsync } from "neverthrow";
+import { ResultAsync } from "neverthrow";
 import { inject, ref } from "vue";
-import { ProcessError } from "@45drives/houston-common-lib";
+import { BashCommand, getServerCluster, ProcessError } from "@45drives/houston-common-lib";
 import { Target } from "@/tabs/iSCSI/types/Target";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import { Portal } from "@/tabs/iSCSI/types/Portal";
 import { useUserSettings } from "@/common/user-settings";
-import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 
 const _ = cockpit.gettext;
 
@@ -76,6 +75,12 @@ const { tempObject: tempTarget, modified: targetModified, resetChanges: resetCha
 const { tempObject: tempPortal, modified: portalModified, resetChanges: resetChangesPortal } = useTempObjectStaging(newPortal);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
+
+let usedAddresses: string[] = [];
+
+getServerCluster("pcs").andThen((servers) => 
+  ResultAsync.combine(servers.map((server) => server.execute(new BashCommand("hostname -I"))))
+  .map((procs) => procs.map((proc) => proc.getStdout().trim().split(" ")))).map((ips) => usedAddresses = ips.flat())
 
 const handleClose = () => {
   emit("closeEditor");
@@ -143,6 +148,10 @@ const { validationResult: portalAddressValidationResult } = validationScope.useV
 
     if (tempPortal.value.address.includes(" ")) {
       return validationError("The address has invalid characters.");
+    }
+
+    if (usedAddresses.includes(tempPortal.value.address)) {
+      return validationError("The address is already in use.");
     }
 
     const targetWithExistingPortal = props.existingTargets.find((target) => target.portals.find((portal) => portal.address === (tempPortal.value.address + ":3260")));

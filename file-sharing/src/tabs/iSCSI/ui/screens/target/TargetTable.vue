@@ -56,9 +56,8 @@
 </template>
 
 <script setup lang="ts">
-import { CardContainer, wrapActions } from "@45drives/houston-common-ui";
+import { CardContainer, wrapActions, Table } from "@45drives/houston-common-ui";
 import { inject, ref, watch, type Ref } from "vue";
-import Table from "../Table.vue";
 import { PlusIcon } from "@heroicons/vue/24/solid";
 import TargetEntry from "../target/TargetEntry.vue";
 import { ProcessError } from "@45drives/houston-common-lib";

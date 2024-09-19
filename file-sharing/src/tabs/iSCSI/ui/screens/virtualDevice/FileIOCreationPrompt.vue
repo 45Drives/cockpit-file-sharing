@@ -8,14 +8,10 @@
         >
             <InputLabelWrapper>
                 <template #label>
-                    {{ _("File Size (default in bytes, can use suffixes (kB, K, MB, M, etc.))") }}
+                    {{ _("File Size") }}
                 </template>
                 
-                <InputField
-                    :placeholder="'Size'"
-                    type="text"
-                    v-model="tempOptions.fileSize"
-                />
+                <ByteInput v-model="tempOptions.fileSize"/>
                 <ValidationResultView v-bind="fileSizeValidationResult"/>
             </InputLabelWrapper>
         </div>
@@ -38,11 +34,12 @@
 <script setup lang="ts">
 import { BashCommand, getServer } from "@45drives/houston-common-lib";
 import {
-  CardContainer, InputField, InputLabelWrapper, pushNotification, Notification, useTempObjectStaging, validationError, ValidationResultView,
+  CardContainer, InputLabelWrapper, pushNotification, Notification, useTempObjectStaging, validationError, ValidationResultView,
   ValidationScope,
   validationSuccess,
   wrapActions
 } from "@45drives/houston-common-ui";
+import ByteInput from "@45drives/houston-common/houston-common-ui/lib/components/ByteInput.vue";
 import { ref } from "vue";
 
 const _ = cockpit.gettext;
@@ -55,14 +52,14 @@ const props = defineProps<{ filePath: string }>();
 
 const creationOptions = ref(
     {
-        fileSize: "",
+        fileSize: 0,
     });
 
 const { tempObject: tempOptions, modified, resetChanges} = useTempObjectStaging(creationOptions);
 
 const createFile = () => {
     return getServer()
-        .andThen((server) => server.execute(new BashCommand(`dd if=/dev/zero of=${props.filePath} bs=1 count=0 seek=${tempOptions.value.fileSize.replace(" ", "")}`)))
+        .andThen((server) => server.execute(new BashCommand(`dd if=/dev/zero of=${props.filePath} bs=1 count=0 seek=${tempOptions.value.fileSize}`)))
         .map(() => {
             pushNotification(new Notification("Success", `Created file successfully.`, "success", 2000))
             emit('close');
