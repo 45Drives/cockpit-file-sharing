@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu Sep 19 2024 Brandon Kelly <brkelly@45drives.com> 4.2.3-1
+- Added more validations
 * Wed Sep 18 2024 Brandon Kelly <brkelly@45drives.com> 4.2.2-1
 - Refactored iSCSI Clustered integration
 * Thu Jul 25 2024 Brandon Kelly <brkelly@45drives.com> 4.2.1-1

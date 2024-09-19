@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.2-1
+## Cockpit File Sharing 4.2.3-1
 
-* Refactored iSCSI Clustered integration
+* Added more validations
