@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.3-1
+## Cockpit File Sharing 4.2.4-1
 
-* Added more validations
+* Removed standalone RBD creation to use LVs instead
