@@ -105,22 +105,7 @@ const fetchDevices = () => {
     .map((lvDevices) => {
       deviceList.value = lvDevices;
 
-      for (const rbd of rbdDeviceList) {
-        let found = false;
-
-        for (const logicalVolume of lvDevices) {
-          if (checkLogicalVolumeForRBD(rbd, logicalVolume)) {
-            found = true;
-            break;
-          }
-        }
-
-        if (!found) {
-          deviceList.value = [...deviceList.value, rbd];
-        }
-
-        fetchingDevices.value = false;
-      }
+      fetchingDevices.value = false;
     })
   );
 }

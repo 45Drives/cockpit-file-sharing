@@ -62,8 +62,6 @@ import type { ISCSIDriver } from "../../../types/drivers/ISCSIDriver";
 import type { InitiatorGroup } from "../../../types/InitiatorGroup";
 import { LogicalUnitNumber } from "../../../types/LogicalUnitNumber";
 import { VirtualDevice } from "../../../types/VirtualDevice";
-import { useUserSettings } from '@/common/user-settings';
-import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 
 const _ = cockpit.gettext;
 
@@ -76,7 +74,7 @@ const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 const devices = inject<Ref<VirtualDevice[]>>("virtualDevices")!;
 
 const deviceOptions: ComputedRef<SelectMenuOption<string>[]> = computed(() =>
-  devices.value.map((device) => ({ label: device.deviceName, value: device.deviceName }))
+  devices.value.filter((device) => !props.initiatorGroup.logicalUnitNumbers.find((lun) => lun.blockDevice === device)).map((device) => ({ label: device.deviceName, value: device.deviceName }))
 );
 
 const newLun = ref<LogicalUnitNumber>(LogicalUnitNumber.empty());

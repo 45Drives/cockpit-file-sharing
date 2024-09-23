@@ -7,18 +7,10 @@
 
       <InputLabelWrapper>
         <template #label>
-          {{ _("Device Type") }}
-        </template>
-
-        <SelectMenu v-model="tempDeviceOptions.creationType" :options="creationType" />
-      </InputLabelWrapper>
-
-      <InputLabelWrapper>
-        <template #label>
           {{ _("Device Name") }}
         </template>
 
-        <InputField :placeholder="'Name of RBD Image/LV'" v-model="tempDeviceOptions.name" />
+        <InputField :placeholder="'Name of LV'" v-model="tempDeviceOptions.name" />
         <ValidationResultView v-bind="nameValidationResult" />
       </InputLabelWrapper>
 
@@ -57,7 +49,7 @@
         <ValidationResultView v-bind="sizeValidationResult" />
       </InputLabelWrapper>
 
-      <InputLabelWrapper v-if="tempDeviceOptions.creationType === 'LV'">
+      <InputLabelWrapper>
         <template #label>
           {{ _("Number of RBDs to Split Across") }}
         </template>
@@ -113,7 +105,6 @@ const emit = defineEmits<{
 const driver = inject<ResultAsync<ISCSIDriverClusteredServer, ProcessError>>("iSCSIDriver")!;
 
 interface DeviceOptions {
-  creationType: "Single RBD" | "LV";
   parentPool: Pool | undefined;
   dataPool: Pool | undefined;
   maximumSize: number | undefined;
@@ -127,13 +118,7 @@ driver.map((driver) => driver.rbdManager.fetchExistingImageNames().map((images) 
 
 const avaliablePools: Ref<SelectMenuOption<undefined | Pool>[]> = ref([]);
 
-const creationType: Ref<SelectMenuOption<String>[]> = ref([
-  { label: "Single RBD", value: "Single RBD" },
-  { label: "LV", value: "LV" },
-]);
-
 const newOptions = ref<DeviceOptions>({
-  creationType: "Single RBD",
   parentPool: undefined,
   dataPool: undefined,
   maximumSize: undefined,
@@ -154,44 +139,29 @@ const createDevice = () => {
   return driver
     .map((driver) => driver.rbdManager)
     .andThen((rbdManager) => {
-      if (tempDeviceOptions.value.creationType === "Single RBD") {
-        return rbdManager
-          .createRadosBlockDevice(
-            tempDeviceOptions.value.name!,
-            tempDeviceOptions.value.maximumSize!,
+      return new ResultAsync(safeTry(async function * () {
+        let createdRBDs = [];
+
+        const sizePerRBD = Math.round(tempDeviceOptions.value.maximumSize!/tempDeviceOptions.value.numberOfRBDs);
+
+        for (let i = 0; i < tempDeviceOptions.value.numberOfRBDs; i++) {
+          const result = yield * rbdManager.createRadosBlockDevice(
+            `${tempDeviceOptions.value.name!}_RBD_${i+1}`,
+            sizePerRBD,
             tempDeviceOptions.value.parentPool!,
             tempDeviceOptions.value.dataPool
-          )
-          .map(() => {
-            emit('update');
-            resetChanges();
-          });
-      }
-      else {
-        return new ResultAsync(safeTry(async function * () {
-          let createdRBDs = [];
+          ).safeUnwrap();
 
-          const sizePerRBD = Math.round(tempDeviceOptions.value.maximumSize!/tempDeviceOptions.value.numberOfRBDs);
+          createdRBDs.push(result);
+        }
 
-          for (let i = 0; i < tempDeviceOptions.value.numberOfRBDs; i++) {
-            const result = yield * rbdManager.createRadosBlockDevice(
-              `${tempDeviceOptions.value.name!}_RBD_${i+1}`,
-              sizePerRBD,
-              tempDeviceOptions.value.parentPool!,
-              tempDeviceOptions.value.dataPool
-            ).safeUnwrap();
-
-            createdRBDs.push(result);
-          }
-
-          return ok(yield * rbdManager.createLogicalVolumeFromRadosBlockDevices(tempDeviceOptions.value.name!, `${tempDeviceOptions.value.name!}_VG`, createdRBDs).safeUnwrap());
-        }))
-        .map(() => {
-          emit('update');
-          resetChanges();
-        });
-      }
-    });
+        return ok(yield * rbdManager.createLogicalVolumeFromRadosBlockDevices(tempDeviceOptions.value.name!, `${tempDeviceOptions.value.name!}_VG`, createdRBDs).safeUnwrap());
+      }))
+      .map(() => {
+        emit('update');
+        resetChanges();
+      });
+    })
 };
 
 const actions = wrapActions({createDevice});
@@ -205,15 +175,9 @@ const { validationResult: nameValidationResult } = validationScope.useValidator(
   if (tempDeviceOptions.value.name.includes(" ")) 
     return validationError("The name has invalid characters.");
 
-  if (tempDeviceOptions.value.creationType === "LV") {
-    for (let i = 1; i <= tempDeviceOptions.value.numberOfRBDs; i++) {
-      if (existingImages.includes(`${tempDeviceOptions.value.name}_RBD_${i}`))
-        return validationError(`An image with the name ${tempDeviceOptions.value.name}_RBD_${i} already exists.`)
-    }
-  }
-  else {
-    if (existingImages.includes(tempDeviceOptions.value.name))
-      return validationError("An image with this name already exists.");
+  for (let i = 1; i <= tempDeviceOptions.value.numberOfRBDs; i++) {
+    if (existingImages.includes(`${tempDeviceOptions.value.name}_RBD_${i}`))
+      return validationError(`An image with the name ${tempDeviceOptions.value.name}_RBD_${i} already exists.`)
   }
 
   return validationSuccess();
@@ -231,7 +195,7 @@ const { validationResult: dataPoolValidationResult } = validationScope.useValida
 });
 
 const { validationResult: rbdAmountValidationResult } = validationScope.useValidator(() => {
-  if (tempDeviceOptions.value.creationType === "LV" && tempDeviceOptions.value.numberOfRBDs <= 0)
+  if (tempDeviceOptions.value.numberOfRBDs <= 0)
     return validationError("At least one RBD is required.");
 
   return validationSuccess();
