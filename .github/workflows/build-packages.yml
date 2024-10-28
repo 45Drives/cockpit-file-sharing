@@ -8,7 +8,7 @@ on:
       - 'v*.*.*'
 jobs:
   main:
-    runs-on: self-hosted
+    runs-on: deployinatorv1
     permissions:
       contents: write
       packages: write
