@@ -1,0 +1,13 @@
+{
+    "tailwindCSS.classAttributes": [
+        "class",
+        "className",
+        "ngClass",
+        "enter-active-class",
+        "enter-from-class",
+        "enter-to-class",
+        "leave-active-class",
+        "leave-from-class",
+        "leave-to-class"
+    ]
+}

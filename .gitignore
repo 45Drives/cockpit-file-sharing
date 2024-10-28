@@ -1,1 +1,6 @@
 TODO
+node_modules/
+.yarn/
+.yarnrc.yml
+*_generic.tar.gz
+*_generic.zip

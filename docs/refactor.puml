@@ -1,0 +1,191 @@
+@startuml
+namespace Fundamental {
+    class Server {
+        getLocalUsers() : User[]
+        getDomainUsers() : User[]
+        getLocalGroups() : Group[]
+        getDomainGroups() : Group[]
+        execute(command: Command) : Process
+        makeFilesystemNode(Path): FilesystemNode
+        makeFile(Path): File
+        makeDirectory(Path): Directory
+    }
+
+
+    class User {
+        login : string
+        uid : number
+        name : string
+        primaryGroup : Group
+        home : Path
+        getGroups(): Group[]
+    }
+
+    class Group {
+        name : string
+        gid : number
+        members : User[]
+        isDomain : boolean
+    }
+
+    class Path {
+        tokens: string[]
+        basename(): string
+        parent(): Directory
+        isAbsolute() : boolean
+        isRelative() : boolean
+        relativeTo(Path): Path
+    }
+    class FileSystemNode {
+        server : Server
+        exists() : boolean
+        getFilesystemMount() : FilesystemMount
+        create()
+        unlink()
+        stat()
+        chmod(mode)
+        chown(User)
+        chown(Group)
+        chown(User, Group)
+        rename(Path)
+    }
+    Path <|-- FileSystemNode
+    FileSystemNode <|-- BinaryFile
+    BinaryFile <|-- File
+    FileSystemNode <|-- Directory
+    BinaryFile : read() : Uint8Array
+    BinaryFile : replace(Uint8Array)
+    File : read() : string
+    File : replace(string)
+    Directory : list() : List<File|Directory|FilesystemNode>
+
+    class SambaShare {
+        name : string
+        description : string
+        path : Path
+        validUsers : List<User|Group>
+        guestOk : boolean
+        readOnly : boolean
+        browsable : boolean
+        advancedOptions : Map<string, string>
+    }
+
+    class SambaGlobalSettings {
+        logLevel : number
+        workgroup : string
+        serverString : string
+        advancedOptions : Map<string, string>
+    }
+
+    class NFSExport {
+        path : Path
+        name : string
+        clients : NFSExportClient[]
+    }
+
+    class NFSExportClient {
+        host : string
+        settings : string[]
+    }
+
+    class Filesystem {
+        source : string
+        getStats()
+    }
+
+    class FilesystemMount {
+        filesystem : Filesystem
+        mountpoint : Path
+        mountOptions : string[]
+    }
+
+    class SystemdUnit {
+        file : Path
+        settings : {unit: {}, mount?: {}, service?: {}}
+    }
+
+    SystemdUnit <|-- SystemdMount
+    FilesystemMount <|-- SystemdMount
+
+    SystemdUnit <|-- SystemdService
+}
+
+newpage
+
+namespace Interactive {
+    class Command {
+        argv : string[]
+        envp : string[]
+        options : cockpit.SpawnOptions
+    }
+
+    class ProcessBase {
+        command : Command
+    }
+
+    class Process {
+        wait() : ExitedProcess
+        input(data : string|Uint8Array)
+        getOutputStream() : ReadableStream
+        getInputStream() : WritableStream
+        streamInputFrom(ReadableStream)
+        streamOutputInto(WritableStream)
+        close()
+        terminate()
+    }
+    ProcessBase <|-- Process
+
+    class ExitedProcess {
+        exitStatus : number
+        stdout : Uint8Array
+        stderr : string
+        killedBy: string | undefined
+        getStdout(binary : boolean) : string | Uint8Array
+        succeeded() : boolean
+        failed() : boolean
+    }
+    ProcessBase <|-- ExitedProcess
+
+    class "SyntaxParser<T>" as SyntaxParser_T {
+        parse(text : string) : T
+        unparse(repr : T) : string
+    }
+
+    SyntaxParser_T <.. NFSExportSyntax : <<bind>>T::NFSExport[]
+
+
+    SyntaxParser_T <.. SystemdUnitSyntax : "<<bind>>T::{unit: {}, service?: {}, mount?: {}}"
+}
+
+namespace Management {
+    class SambaManager {
+        loadGlobalSettings(server: Server) : SambaGlobalSettings
+        loadShares(Server) : SambaShare[]
+        addShare(Server, SambaShare)
+        removeShare(Server, SambaShare)
+        editShare(Server, SambaShare)
+    }
+    class NFSManager {
+        loadExports(Server) : NFSExport[]
+        addExport(Server, NFSExport)
+        removeExport(Server, NFSExport)
+        editExport(Server, NFSExport)
+    }
+    class SystemdManager {
+        loadMounts(Server) : SystemdMount[]
+        addMount(Server, SystemdMount)
+        removeMount(Server, SystemdMount)
+        editMount(Server, SystemdMount)
+        loadServices(Server) : SystemdService[]
+        addService(Server, SystemdService)
+        removeService(Server, SystemdService)
+        editService(Server, SystemdService)
+        startService(Server, SystemdService)
+        stopService(Server, SystemdService)
+        enableService(Server, SystemdService)
+        disableService(Server, SystemdService)
+    }
+
+
+}
+@enduml
