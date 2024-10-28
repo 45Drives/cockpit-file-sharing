@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.4-1
+## Cockpit File Sharing 4.2.5-1
 
-* Removed standalone RBD creation to use LVs instead
+* iSCSI Release

@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.5-1focal) focal; urgency=medium
+
+  * iSCSI Release
+
+ -- Brandon Kelly <brkelly@45drives.com>  Mon, 28 Oct 2024 12:18:32 -0300
+
 cockpit-file-sharing (4.2.4-1focal) focal; urgency=medium
 
   * Removed standalone RBD creation to use LVs instead

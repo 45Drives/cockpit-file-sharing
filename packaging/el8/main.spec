@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Oct 28 2024 Brandon Kelly <brkelly@45drives.com> 4.2.5-1
+- iSCSI Release
 * Mon Sep 23 2024 Brandon Kelly <brkelly@45drives.com> 4.2.4-1
 - Removed standalone RBD creation to use LVs instead
 * Thu Sep 19 2024 Brandon Kelly <brkelly@45drives.com> 4.2.3-1
