@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.5-1
+## Cockpit File Sharing 4.2.5-2
 
-* iSCSI Release
+* iscsi release
