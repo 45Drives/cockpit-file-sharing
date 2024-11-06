@@ -6,7 +6,8 @@ cockpit-file-sharing (4.2.7-1focal) focal; urgency=medium
 
 cockpit-file-sharing (4.2.6-1focal) focal; urgency=medium
 
-  * Fix bug where only first instance of  was inspected while looking for 
+  * Fix bug where only first instance of "include = " was inspected while looking for "include = registry"
+  * Harden getting list of clustered servers
 
  -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 15 Nov 2024 12:22:25 -0400
 
