@@ -75,7 +75,6 @@
 </template>
 
 <script setup lang="ts">
-import ByteInput from "@45drives/houston-common/houston-common-ui/lib/components/ByteInput.vue";
 import { Pool } from "@/tabs/iSCSI/types/cluster/Pool";
 import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 import type { ProcessError } from "@45drives/houston-common-lib";
@@ -91,6 +90,7 @@ import {
   validationSuccess,
   validationError,
   wrapActions,
+  ByteInput,
 } from "@45drives/houston-common-ui";
 import { ok, ResultAsync, safeTry } from "neverthrow";
 import { inject, ref, type Ref } from "vue";

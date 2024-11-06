@@ -37,9 +37,9 @@ import {
   CardContainer, InputLabelWrapper, pushNotification, Notification, useTempObjectStaging, validationError, ValidationResultView,
   ValidationScope,
   validationSuccess,
-  wrapActions
+  wrapActions,
+  ByteInput,
 } from "@45drives/houston-common-ui";
-import ByteInput from "@45drives/houston-common/houston-common-ui/lib/components/ByteInput.vue";
 import { ref } from "vue";
 
 const _ = cockpit.gettext;
