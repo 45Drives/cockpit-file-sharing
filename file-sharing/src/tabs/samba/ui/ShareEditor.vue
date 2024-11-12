@@ -48,6 +48,7 @@ const shareConf = computed<SambaShareConfig>(() =>
 );
 
 const { tempObject: tempShareConfig, modified, resetChanges } = useTempObjectStaging(shareConf);
+const shareDirectoryOptionsModified = ref(false);
 
 const validationScope = new ValidationScope();
 
@@ -139,6 +140,10 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
   },
   exclude: {},
 });
+
+const shareDirectoryInputAndOptionsRef = ref<InstanceType<
+  typeof ShareDirectoryInputAndOptions
+> | null>(null);
 </script>
 
 <template>
@@ -167,6 +172,9 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
         :disabled="!newShare"
         allowNonExisting
         :validationScope
+        v-model:modified="shareDirectoryOptionsModified"
+        ref="shareDirectoryInputAndOptionsRef"
+        :newShare="newShare ?? false"
       />
 
       <ToggleSwitchGroup>
@@ -228,6 +236,7 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
           @click="
             () => {
               resetChanges();
+              shareDirectoryInputAndOptionsRef?.resetChanges?.();
               $emit('cancel');
             }
           "
@@ -237,7 +246,11 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
         <button
           class="btn btn-primary"
           @click="$emit('apply', tempShareConfig)"
-          :disabled="!validationScope.isValid() || !modified || globalProcessingState !== 0"
+          :disabled="
+            !validationScope.isValid() ||
+            (!modified && !shareDirectoryOptionsModified) ||
+            globalProcessingState !== 0
+          "
         >
           {{ _("Apply") }}
         </button>

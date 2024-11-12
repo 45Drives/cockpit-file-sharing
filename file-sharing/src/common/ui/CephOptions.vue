@@ -1,25 +1,37 @@
 <script setup lang="ts">
-import { inject, defineProps, computed, ref, watchEffect } from "vue";
+import {
+  inject,
+  defineProps,
+  computed,
+  ref,
+  watchEffect,
+  type Ref,
+  watch,
+  reactive,
+  defineModel,
+} from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
-import { okAsync, ok } from "neverthrow";
-import { StringToIntCaster } from "@45drives/houston-common-lib";
+import { Process, StringToIntCaster } from "@45drives/houston-common-lib";
 import {
   wrapActions,
   ToggleSwitch,
   InputLabelWrapper,
   InputField,
   reportSuccess,
-  computedResult,
   SelectMenu,
   type SelectMenuOption,
 } from "@45drives/houston-common-ui";
 import { Maybe } from "monet";
 import { getCephOptionManager } from "@/common/ceph-option-manager";
+import { Hooks, useHookCallback } from "@/common/hooks";
+import { ok, ResultAsync } from "neverthrow";
+import { useTempObjectStaging } from "@45drives/houston-common-ui";
 
 const _ = cockpit.gettext;
 
 const props = defineProps<{
   path: string;
+  newShare: boolean;
 }>();
 
 const serverCluster = inject(serverClusterInjectionKey);
@@ -32,97 +44,166 @@ if (cephClientName === undefined) {
   throw new Error("clientKeyringPath not provided!");
 }
 
+const modifiedModel = defineModel<boolean>("modified", { default: false });
+
 const path = computed(() => props.path);
 
 const cephOptionManager = serverCluster.map((serverCluster) =>
   getCephOptionManager(serverCluster, cephClientName.value)
 );
 
-const [pathIsMountpoint, refetchPathIsMountpoint] = computedResult<boolean>(() => {
-  const currentPath = path.value;
-  return cephOptionManager
-    .andThen((m) => m.pathIsMountpoint(currentPath))
-    .orElse(() => okAsync(false));
-}, false);
+type CephOptions = {
+  remounted: boolean;
+  quota: number | undefined;
+  layoutPool: string | undefined;
+};
 
-const [pathRemountedByFileSharing, refetchPathRemountedByFileSharing] = computedResult(() => {
-  const currentPath = path.value;
-  if (pathIsMountpoint.value === false) {
-    return okAsync(false);
-  }
-  return cephOptionManager
-    .andThen((m) => m.pathMountpointManagedByFileSharing(currentPath))
-    .orElse(() => ok(false));
-}, false);
-
-const [currentQuota, refetchQuota] = computedResult(() => {
-  const currentPath = path.value;
-  return cephOptionManager
-    .andThen((m) => m.getQuotaMaxBytes(currentPath))
-    .map((maybeQuota) => maybeQuota.orUndefined())
-    .orElse(() => ok(undefined));
+const currentOptions: CephOptions = reactive({
+  remounted: false,
+  quota: undefined,
+  layoutPool: undefined,
 });
 
-const [layoutPools] = computedResult(
-  () => cephOptionManager.andThen((m) => m.getLayoutPools()).orElse(() => ok([])),
-  []
+const {
+  tempObject: tempOptions,
+  modified,
+  resetChanges,
+} = useTempObjectStaging(
+  computed(() => currentOptions),
+  (o) => {
+    if (props.newShare) {
+      o.remounted = true;
+    }
+    return o;
+  }
 );
 
-const [currentLayoutPool, refetchCurrentLayoutPool] = computedResult(() => {
-  const currentPath = path.value;
-  return cephOptionManager
-    .andThen((m) => m.getLayoutPool(currentPath))
-    .map((maybeLayoutPool) => maybeLayoutPool.orUndefined())
-    .orElse(() => ok(undefined));
-});
+watchEffect(() => (modifiedModel.value = modified.value));
+
+const layoutPools = ref<string[]>([]);
+
+const remountManagedByFileSharing = ref(false);
 
 // ACTIONS SETUP
-
-const remountPath = (path: string) =>
+const loadPathIsMountpoint = () =>
   cephOptionManager
-    .andThen((m) => m.remountPath(path))
-    .andThen(() => refetchPathIsMountpoint())
-    .andThen(() => refetchPathRemountedByFileSharing())
-    .map(() => reportSuccess(_("Remouted") + ` ${path}`));
+    .andThen((m) => m.pathIsMountpoint(path.value))
+    .orElse((_) => ok(false))
+    .map((v) => (currentOptions.remounted = v));
 
-const removeRemount = (path: string) =>
+const loadPathMountpathMountpointManagedByFileSharing = () =>
   cephOptionManager
-    .andThen((m) => m.removeRemount(path))
-    .andThen(() => refetchPathIsMountpoint())
-    .andThen(() => refetchPathRemountedByFileSharing())
-    .map(() => reportSuccess(_("Removed remount for") + ` ${path}`));
+    .andThen((m) => m.pathMountpointManagedByFileSharing(path.value))
+    .orElse((_) => ok(false))
+    .map((v) => (remountManagedByFileSharing.value = v));
 
-const setQuotaMaxBytes = (path: string, quotaMaxBytes: number) =>
+const loadQuota = () =>
   cephOptionManager
-    .andThen((m) => m.setQuotaMaxBytes(path, quotaMaxBytes))
-    .andThen(() => refetchQuota())
-    .map(() => reportSuccess(_("Set quota for") + ` ${path}`));
+    .andThen((m) => m.getQuotaMaxBytes(path.value))
+    .map((maybeQuota) => maybeQuota.orUndefined())
+    .map((v) => (currentOptions.quota = v));
 
-const removeQuotaMaxBytes = (path: string) =>
-  cephOptionManager
-    .andThen((m) => m.removeQuotaMaxBytes(path))
-    .andThen(() => refetchQuota())
-    .map(() => reportSuccess(_("Removed quota from") + ` ${path}`));
+const loadLayoutPools = () =>
+  cephOptionManager.andThen((m) => m.getLayoutPools()).map((v) => (layoutPools.value = v));
 
-const setLayoutPool = (path: string, layoutPool: string) =>
+const loadLayoutPool = () =>
   cephOptionManager
-    .andThen((m) => m.setLayoutPool(path, layoutPool))
-    .andThen(() => refetchCurrentLayoutPool())
-    .map(() => reportSuccess(_("Set layout pool for") + ` ${path}`));
+    .andThen((m) => m.getLayoutPool(path.value))
+    .map((maybePool) => maybePool.orUndefined())
+    .map((v) => (currentOptions.layoutPool = v));
 
-const removeLayoutPool = (path: string) =>
+const remountPath = () =>
   cephOptionManager
-    .andThen((m) => m.removeLayoutPool(path))
-    .andThen(() => refetchCurrentLayoutPool())
-    .map(() => reportSuccess(_("Removed layout pool from") + ` ${path}`));
+    .andThen((m) => m.remountPath(path.value))
+    .andThen(() => loadPathIsMountpoint())
+    .andThen(() => loadPathMountpathMountpointManagedByFileSharing())
+    .map(() => reportSuccess(_("Remouted") + ` ${path.value}`));
+
+const removeRemount = () =>
+  cephOptionManager
+    .andThen((m) => m.removeRemount(path.value))
+    .andThen(() => loadPathIsMountpoint())
+    .andThen(() => loadPathMountpathMountpointManagedByFileSharing())
+    .map(() => reportSuccess(_("Removed remount for") + ` ${path.value}`));
+
+const setQuotaMaxBytes = (quota: number) =>
+  cephOptionManager
+    .andThen((m) => m.setQuotaMaxBytes(path.value, quota))
+    .andThen(() => loadQuota())
+    .map(() => reportSuccess(_("Set quota for") + ` ${path.value}`));
+
+const removeQuotaMaxBytes = () =>
+  cephOptionManager
+    .andThen((m) => m.removeQuotaMaxBytes(path.value))
+    .andThen(() => loadQuota())
+    .map(() => reportSuccess(_("Removed quota for") + ` ${path.value}`));
+
+const setLayoutPool = (pool: string) =>
+  cephOptionManager
+    .andThen((m) => m.setLayoutPool(path.value, pool))
+    .andThen(() => loadLayoutPool())
+    .map(() => reportSuccess(_("Set layout pool for") + ` ${path.value}`));
+
+const removeLayoutPool = () =>
+  cephOptionManager
+    .andThen((m) => m.removeLayoutPool(path.value))
+    .andThen(() => loadLayoutPool())
+    .map(() => reportSuccess(_("Removed layout pool for") + ` ${path.value}`));
 
 const actions = wrapActions({
+  loadPathIsMountpoint,
+  loadPathMountpathMountpointManagedByFileSharing,
+  loadQuota,
+  loadLayoutPools,
+  loadLayoutPool,
   remountPath,
   removeRemount,
   setQuotaMaxBytes,
   removeQuotaMaxBytes,
   setLayoutPool,
   removeLayoutPool,
+});
+
+actions.loadLayoutPools();
+
+watch(
+  path,
+  () => {
+    loadPathIsMountpoint();
+    loadPathMountpathMountpointManagedByFileSharing();
+    loadQuota();
+    loadLayoutPool();
+  },
+  { immediate: true }
+);
+
+useHookCallback([Hooks.BeforeAddShare, Hooks.BeforeEditShare], () => {
+  if (!modified.value) {
+    return;
+  }
+  const results = [] as ResultAsync<void, Error>[];
+  if (tempOptions.value.remounted && !currentOptions.remounted) {
+    results.push(actions.remountPath());
+  } else if (!tempOptions.value.remounted && currentOptions.remounted) {
+    results.push(actions.removeRemount());
+  }
+  if (tempOptions.value.quota !== currentOptions.quota) {
+    results.push(
+      Maybe.fromUndefined(tempOptions.value.quota).cata(
+        () => actions.removeQuotaMaxBytes(),
+        (quota) => actions.setQuotaMaxBytes(quota)
+      )
+    );
+  }
+  if (tempOptions.value.layoutPool !== currentOptions.layoutPool) {
+    results.push(
+      Maybe.fromUndefined(tempOptions.value.layoutPool).cata(
+        () => actions.removeLayoutPool(),
+        (pool) => actions.setLayoutPool(pool)
+      )
+    );
+  }
+  return ResultAsync.combine(results).map(() => {});
 });
 
 const quotaUnitBase = 1024;
@@ -147,11 +228,11 @@ const quotaUnitExponentRange = quotaUnitExponentOptions
   );
 const quotaUnitExponentInput = ref(3); // default to GiB
 watchEffect(() => {
-  if (currentQuota.value === undefined) {
+  if (tempOptions.value.quota === undefined) {
     return;
   }
-  const currentExponent = Math.floor(Math.log(currentQuota.value) / Math.log(quotaUnitBase));
-  return Math.max(
+  const currentExponent = Math.floor(Math.log(tempOptions.value.quota) / Math.log(quotaUnitBase));
+  quotaUnitExponentInput.value = Math.max(
     Math.min(currentExponent, quotaUnitExponentRange.max),
     quotaUnitExponentRange.min
   );
@@ -159,51 +240,34 @@ watchEffect(() => {
 const quotaInputMultiplier = computed(() => quotaUnitBase ** quotaUnitExponentInput.value);
 const quotaInput = computed<string>({
   get: () =>
-    Maybe.fromUndefined(currentQuota.value)
+    Maybe.fromUndefined(tempOptions.value.quota)
       .map((quota) => quota / quotaInputMultiplier.value)
       .cata(
         () => "",
         (quota) => quota.toString(10)
       ),
   set: (newQuota) =>
-    Maybe.fromEmpty(newQuota)
+    (tempOptions.value.quota = Maybe.fromEmpty(newQuota)
       .flatMap(StringToIntCaster(10))
       .map((q) => Math.round(q * quotaInputMultiplier.value))
-      .cata(
-        () => actions.removeQuotaMaxBytes(path.value),
-        (newQuota) => actions.setQuotaMaxBytes(path.value, newQuota)
-      ),
+      .orUndefined()),
 });
 
-const remountedForCephQuotasInput = computed<boolean>({
-  get: () => pathIsMountpoint.value,
-  set: (value) => (value ? actions.remountPath(path.value) : actions.removeRemount(path.value)),
-});
-
-const layoutPoolInput = computed<string | undefined>({
-  get: () => currentLayoutPool.value,
-  set: (newPool) => {
-    if (newPool === currentLayoutPool.value) {
-      return;
-    }
-    Maybe.fromUndefined(newPool).cata(
-      () => actions.removeLayoutPool(path.value),
-      (newPool) => actions.setLayoutPool(path.value, newPool)
-    );
-  },
-});
 const layoutPoolOptions = computed<SelectMenuOption<string | undefined>[]>(() => [
   { label: "None", value: undefined },
   ...layoutPools.value.map((poolName) => ({ label: poolName, value: poolName })),
 ]);
+
+defineExpose({
+  resetChanges,
+});
 </script>
 
 <template>
   <div class="space-y-content">
     <ToggleSwitch
-      v-if="!pathIsMountpoint || pathRemountedByFileSharing"
-      v-model="remountedForCephQuotasInput"
-      :disabled="actions.remountPath.processing.value || actions.removeRemount.processing.value"
+      v-if="!currentOptions.remounted || remountManagedByFileSharing"
+      v-model="tempOptions.remounted"
     >
       {{ _("Enable Ceph Remount") }}
       <template #tooltip>
@@ -227,7 +291,7 @@ const layoutPoolOptions = computed<SelectMenuOption<string | undefined>[]>(() =>
       <template #label>
         {{ _("Ceph Layout Pool") }}
       </template>
-      <SelectMenu v-model="layoutPoolInput" :options="layoutPoolOptions" />
+      <SelectMenu v-model="tempOptions.layoutPool" :options="layoutPoolOptions" />
     </InputLabelWrapper>
   </div>
 </template>
