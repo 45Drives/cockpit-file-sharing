@@ -177,8 +177,8 @@ watch(
   { immediate: true }
 );
 
-useHookCallback([Hooks.BeforeAddShare, Hooks.BeforeEditShare], () => {
-  if (!modified.value) {
+useHookCallback([Hooks.BeforeAddShare, Hooks.BeforeEditShare], (_, share) => {
+  if (!modified.value || share.path != path.value) {
     return;
   }
   const results = [] as ResultAsync<void, Error>[];
