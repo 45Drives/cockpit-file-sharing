@@ -230,8 +230,8 @@ export class SambaManager implements ISambaManager {
     return new File(this.server, smbConfPath)
       .assertExists()
       .andThen((smbConf) => smbConf.read())
-      .andThen(IniSyntax({ duplicateKey: "ignore" }).apply)
-      .map((smbConf) => smbConf.global?.include === "registry");
+      .andThen(IniSyntax({ duplicateKey: "append" }).apply)
+      .map((smbConf) => [smbConf.global?.include ?? []].flat().includes("registry"));
   }
 
   patchSmbConfIncludeRegistry(smbConfPath: string) {

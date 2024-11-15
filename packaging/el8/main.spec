@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri Nov 15 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.6-1
+- Fix bug where only first instance of  was inspected while looking for 
 * Thu Oct 31 2024 Josh Boudreau <jboudreau@45drives.com> 4.2.5-2
 - iscsi release
 * Mon Oct 28 2024 Brandon Kelly <brkelly@45drives.com> 4.2.5-1
