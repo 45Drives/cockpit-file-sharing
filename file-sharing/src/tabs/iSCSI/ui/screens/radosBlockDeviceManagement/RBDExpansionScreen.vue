@@ -33,9 +33,8 @@
 <script setup lang="ts">
 import { RadosBlockDevice } from "@/tabs/iSCSI/types/cluster/RadosBlockDevice";
 import { LogicalVolume } from "@/tabs/iSCSI/types/cluster/LogicalVolume";
-import { CardContainer, InputLabelWrapper, useTempObjectStaging, validationError, ValidationResultView, ValidationScope, validationSuccess, wrapActions } from "@45drives/houston-common-ui";
+import { CardContainer, InputLabelWrapper, useTempObjectStaging, validationError, ValidationResultView, ValidationScope, validationSuccess, wrapActions, ByteInput } from "@45drives/houston-common-ui";
 import { ResultAsync, okAsync } from "neverthrow";
-import ByteInput from "@45drives/houston-common/houston-common-ui/lib/components/ByteInput.vue";
 import { inject, ref } from "vue";
 import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 import type { ProcessError } from "@45drives/houston-common-lib";
