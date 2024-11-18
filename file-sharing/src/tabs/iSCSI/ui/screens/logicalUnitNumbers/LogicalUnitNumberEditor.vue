@@ -10,7 +10,7 @@
           {{ _("Unit Number") }}
         </template>
 
-        <InputField type="number" v-model="tempLun.unitNumber" />
+        <InputField type="number" v-model="unitNumberInput" />
         <ValidationResultView v-bind="numberValidationResult" />
       </InputLabelWrapper>
 
@@ -40,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { ProcessError, StringToIntCaster } from "@45drives/houston-common-lib";
 import {
   CardContainer,
   InputField,
@@ -47,27 +48,27 @@ import {
   SelectMenu,
   useTempObjectStaging,
   validationError,
-  validationSuccess,
   ValidationResultView,
-  wrapActions,
-  type SelectMenuOption,
   ValidationScope,
-  ToggleSwitchGroup,
-  ToggleSwitch,
+  validationSuccess,
+  wrapActions,
+  type SelectMenuOption
 } from "@45drives/houston-common-ui";
 import type { ResultAsync } from "neverthrow";
 import { computed, inject, ref, type ComputedRef, type Ref } from "vue";
-import { ProcessError } from "@45drives/houston-common-lib";
 import type { ISCSIDriver } from "../../../types/drivers/ISCSIDriver";
 import type { InitiatorGroup } from "../../../types/InitiatorGroup";
 import { LogicalUnitNumber } from "../../../types/LogicalUnitNumber";
 import { VirtualDevice } from "../../../types/VirtualDevice";
+import { Maybe } from "monet";
 
 const _ = cockpit.gettext;
 
 const props = defineProps<{ initiatorGroup: InitiatorGroup }>();
 
 const emit = defineEmits(["closeEditor"]);
+
+defineExpose({populateNextNumber})
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
@@ -80,6 +81,23 @@ const deviceOptions: ComputedRef<SelectMenuOption<string>[]> = computed(() =>
 const newLun = ref<LogicalUnitNumber>(LogicalUnitNumber.empty());
 
 const { tempObject: tempLun, modified: lunModified, resetChanges: resetChangesLun } = useTempObjectStaging(newLun);
+populateNextNumber();
+
+const unitNumberInput = computed<string>({
+  get: () =>
+    Maybe.fromUndefined(tempLun.value.unitNumber)
+      .cata(
+        () => "",
+        (unitNumberInput) => unitNumberInput.toString()
+      ),
+  set: (newUnitNumber) =>
+    Maybe.fromEmpty(newUnitNumber)
+      .flatMap(StringToIntCaster())
+      .cata(
+        () => tempLun.value.unitNumber = 0,
+        (value) => tempLun.value.unitNumber = value,
+      )
+});
 
 const handleClose = () => {
   emit("closeEditor");
@@ -100,6 +118,18 @@ const createLun = () => {
     );
 };
 
+function populateNextNumber() {
+  let nextNumber = 0;
+
+  const existingNumbers = props.initiatorGroup.logicalUnitNumbers.map((lun) => lun.unitNumber);
+  
+  while (existingNumbers.includes(nextNumber)) {
+    nextNumber += 1;
+  }
+
+  tempLun.value.unitNumber = nextNumber;
+}
+
 const validationScope = new ValidationScope();
 
 const { validationResult: numberValidationResult } = validationScope.useValidator(() => {
@@ -111,7 +141,9 @@ const { validationResult: numberValidationResult } = validationScope.useValidato
     return validationError("The Logical Unit Number to be a positive number.");
   }
 
-  if (props.initiatorGroup.logicalUnitNumbers.find((lun) => lun.unitNumber === tempLun.value.unitNumber) !== undefined) {
+  const existingNumbers = props.initiatorGroup.logicalUnitNumbers.map((lun) => lun.unitNumber);
+
+  if (existingNumbers.includes(tempLun.value.unitNumber as number)) {
     return validationError("This Unit Number is already assigned.");
   }
 
