@@ -118,8 +118,16 @@ export class SambaManager implements ISambaManager {
 
   getGlobalConfig() {
     return this.server
-      .execute(this.showShareCommand("global"))
-      .map((p) => p.getStdout())
+      .execute(this.showShareCommand("global"), false)
+      .andThen((p) => {
+        if (p.succeeded()) {
+          return ok(p.getStdout());
+        }
+        if (p.getStdout().includes("SBC_ERR_NO_SUCH_SERVICE")) {
+          return ok("[global]\n");
+        }
+        return err(new ProcessError(p.prefixMessage(p.getStdout() + p.getStderr())));
+      })
       .andThen(SmbConfParser().apply)
       .map(({ global }) => global);
   }
