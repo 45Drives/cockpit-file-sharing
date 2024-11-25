@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.7-1focal) focal; urgency=medium
+
+  * Fix missing global configuration when [global] missing from net conf registry
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 25 Nov 2024 12:20:26 -0400
+
 cockpit-file-sharing (4.2.6-1focal) focal; urgency=medium
 
   * Fix bug where only first instance of  was inspected while looking for 

@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.6-1
+## Cockpit File Sharing 4.2.7-1
 
-* Fix bug where only first instance of  was inspected while looking for 
+* Fix missing global configuration when [global] missing from net conf registry
