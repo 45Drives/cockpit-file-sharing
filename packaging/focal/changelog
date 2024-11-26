@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.8-1focal) focal; urgency=medium
+
+  * Merge AutoAddRBDs_MinorFixes
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Tue, 26 Nov 2024 08:11:58 -0400
+
 cockpit-file-sharing (4.2.7-1focal) focal; urgency=medium
 
   * Fix missing global configuration when [global] missing from net conf registry

@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Nov 26 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.8-1
+- Merge AutoAddRBDs_MinorFixes
 * Mon Nov 25 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.7-1
 - Fix missing global configuration when [global] missing from net conf registry
 * Fri Nov 15 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.6-1
