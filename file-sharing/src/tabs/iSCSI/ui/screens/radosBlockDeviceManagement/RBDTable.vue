@@ -18,10 +18,7 @@
     >
       <div class="card">
         <RBDDeviceCreationScreen
-        @update="() => {
-          showAddRBD = false;
-          actions.fetchDevices();
-        }"
+        @created="selectVirtualDevice"
         @close="showAddRBD = false"/>
       </div>
     </div>
@@ -111,6 +108,7 @@ const fetchDevices = () => {
 }
 
 const selectVirtualDevice = (device: VirtualDevice) => {
+  showAddRBD.value = false;
   emit('selectDevice', device)
 }
 

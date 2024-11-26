@@ -130,8 +130,13 @@
 
     const addFromRBDManager = (device: VirtualDevice) => {
         showRBDManager.value = false;
-        return driver.andThen((driver) => driver.addVirtualDevice(device))
-            .map(() => handleClose())
+
+        if (virtualDevices.value.find((existingDevice) => (existingDevice.deviceName === device.deviceName)) === undefined) {
+            return driver.andThen((driver) => driver.addVirtualDevice(device))
+                .map(() => handleClose())
+        }
+
+        return okAsync(undefined);
     }
 
     const handleClose = () => {

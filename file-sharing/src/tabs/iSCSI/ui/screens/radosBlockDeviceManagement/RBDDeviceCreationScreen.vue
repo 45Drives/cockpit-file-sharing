@@ -77,6 +77,7 @@
 <script setup lang="ts">
 import { Pool } from "@/tabs/iSCSI/types/cluster/Pool";
 import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
+import { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 import type { ProcessError } from "@45drives/houston-common-lib";
 import {
   CardContainer,
@@ -99,7 +100,7 @@ const _ = cockpit.gettext;
 
 const emit = defineEmits<{
   (e: "close"): void;
-  (e: "update"): void;
+  (e: "created", value: VirtualDevice): void;
 }>();
 
 const driver = inject<ResultAsync<ISCSIDriverClusteredServer, ProcessError>>("iSCSIDriver")!;
@@ -157,8 +158,8 @@ const createDevice = () => {
 
         return ok(yield * rbdManager.createLogicalVolumeFromRadosBlockDevices(tempDeviceOptions.value.name!, `${tempDeviceOptions.value.name!}_VG`, createdRBDs).safeUnwrap());
       }))
-      .map(() => {
-        emit('update');
+      .map((logicalVolume) => {
+        emit('created', logicalVolume);
         resetChanges();
       });
     })

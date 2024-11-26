@@ -18,6 +18,7 @@ export interface INFSManager {
   removeExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
   exportConfig(): ResultAsync<string, ProcessError>;
   importConfig(config: string): ResultAsync<this, ProcessError>;
+  onExportsFileChanged(callback: () => void): { remove: () => void };
 }
 
 export class NFSManagerSingleServer implements INFSManager {
@@ -94,6 +95,12 @@ export class NFSManagerSingleServer implements INFSManager {
       )
       .map(() => this);
   }
+
+  onExportsFileChanged(callback: () => void) {
+    return cockpit
+      .file(this.exportsFile.path, { host: this.server.host })
+      .watch((_1, _2) => callback(), { read: false });
+  }
 }
 
 export class NFSManagerClustered implements INFSManager {
@@ -135,6 +142,10 @@ export class NFSManagerClustered implements INFSManager {
 
   importConfig(config: string): ResultAsync<this, ProcessError> {
     return ResultAsync.combine(this.managers.map((m) => m.importConfig(config))).map(() => this);
+  }
+
+  onExportsFileChanged(callback: () => void): { remove: () => void } {
+    return this.getterManager.onExportsFileChanged(callback);
   }
 }
 

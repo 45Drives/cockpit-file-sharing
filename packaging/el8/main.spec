@@ -27,10 +27,13 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Nov 26 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.8-1
+- Merge AutoAddRBDs_MinorFixes
 * Mon Nov 25 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.7-1
 - Fix missing global configuration when [global] missing from net conf registry
 * Fri Nov 15 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.6-1
-- Fix bug where only first instance of  was inspected while looking for 
+- Fix bug where only first instance of "include = " was inspected while looking for "include = registry"
+- Harden getting list of clustered servers
 * Thu Oct 31 2024 Josh Boudreau <jboudreau@45drives.com> 4.2.5-2
 - iscsi release
 * Mon Oct 28 2024 Brandon Kelly <brkelly@45drives.com> 4.2.5-1

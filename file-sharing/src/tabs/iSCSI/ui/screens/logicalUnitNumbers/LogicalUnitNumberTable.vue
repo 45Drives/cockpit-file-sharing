@@ -9,6 +9,7 @@
     >
       <div class="card">
         <LogicalUnitNumberEditor
+          ref="logicalUnitNumberEditor"
           :initiatorGroup="initiatorGroup"
           @close-editor="
             () => {
@@ -33,7 +34,7 @@
               <th scope="col">Number</th>
               <th scope="col" class="flex flex-row justify-end">
                 <span class="sr-only">Delete</span>
-                <button @click="showEditor = !showEditor">
+                <button @click="toggleEditor">
                   <PlusIcon class="size-icon icon-default" />
                 </button>
               </th>
@@ -74,6 +75,8 @@ const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const devices = inject<Ref<VirtualDevice[]>>("virtualDevices");
 
+const logicalUnitNumberEditor = ref<InstanceType<typeof LogicalUnitNumberEditor>>();
+
 if (devices === undefined) {
   throw new Error("Virtual Device list is null");
 }
@@ -89,6 +92,13 @@ const refreshTable = () => {
     });
   });
 };
+
+const toggleEditor = () => {
+  showEditor.value = !showEditor.value;
+
+  if (logicalUnitNumberEditor.value !== undefined)
+    logicalUnitNumberEditor.value.populateNextNumber();
+}
 
 const actions = wrapActions({ refreshTable: refreshTable });
 
