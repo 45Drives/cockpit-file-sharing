@@ -10,7 +10,7 @@ type Common<A, B> = {
 
 export type Share = Common<SambaShareConfig, NFSExport>;
 
-export type HookCallback = (server: Server, share: Share) => ResultAsync<void, Error> | void;
+export type HookCallback = (server: Server, share: Share) => ResultAsync<void, Error>;
 
 export const Hooks = {
   BeforeAddShare: Symbol("BeforeAddShare"),
@@ -32,14 +32,39 @@ const getHookCallbacks = (hook: Hook) => {
   return callbacks ? ok(callbacks) : err(new Error(`Hooks not in Map for ${String(hook)}`));
 };
 
+function runInSequence<T, E, Args extends any[]>(
+  ...args: Args
+): (fns: ReadonlyArray<(...args: Args) => ResultAsync<T, E>>) => ResultAsync<Array<T>, E> {
+  return (fns) => {
+    const run = async () => {
+      const okValues: Array<T> = [];
+
+      for (const fn of fns) {
+        const result = await fn(...args);
+        if (result.isErr()) {
+          return err(result.error);
+        }
+        okValues.push(result.value);
+      }
+
+      return ok(okValues);
+    };
+
+    return new ResultAsync(run());
+  };
+}
+
 export const executeHookCallbacks = (hook: Hook, server: Server, share: Share) =>
-  getHookCallbacks(hook).asyncAndThen((hooks) =>
-    ResultAsync.combine(
-      [...hooks.values()]
-        .map((callback) => callback(server, share))
-        .filter((result): result is ResultAsync<void, Error> => result instanceof ResultAsync)
-    )
-  );
+  getHookCallbacks(hook)
+    .map((callbackSet) => [...callbackSet.values()])
+    .asyncAndThen(runInSequence(server, share));
+// getHookCallbacks(hook).asyncAndThen((hooks) =>
+//   ResultAsync.combine(
+//     [...hooks.values()]
+//       .map((callback) => callback(server, share))
+//       .filter((result): result is ResultAsync<void, Error> => result instanceof ResultAsync)
+//   )
+// );
 
 export const registerHookCallback = (hook: Hook, callback: HookCallback) =>
   getHookCallbacks(hook).map((callbacks) => callbacks.add(callback));
