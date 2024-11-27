@@ -20,11 +20,12 @@ import {
   reportSuccess,
   SelectMenu,
   type SelectMenuOption,
+  confirm,
 } from "@45drives/houston-common-ui";
 import { Maybe } from "monet";
 import { getCephOptionManager } from "@/common/ceph-option-manager";
 import { Hooks, useHookCallback } from "@/common/hooks";
-import { ok, ResultAsync } from "neverthrow";
+import { ok, ResultAsync, okAsync } from "neverthrow";
 import { useTempObjectStaging } from "@45drives/houston-common-ui";
 
 const _ = cockpit.gettext;
@@ -179,7 +180,7 @@ watch(
 
 useHookCallback([Hooks.BeforeAddShare, Hooks.BeforeEditShare], (_, share) => {
   if (!modified.value || share.path != path.value) {
-    return;
+    return okAsync(undefined);
   }
   const results = [] as ResultAsync<void, Error>[];
   if (tempOptions.value.remounted && !currentOptions.remounted) {
@@ -204,6 +205,30 @@ useHookCallback([Hooks.BeforeAddShare, Hooks.BeforeEditShare], (_, share) => {
     );
   }
   return ResultAsync.combine(results).map(() => {});
+});
+
+useHookCallback(Hooks.BeforeRemoveShare, (_server, share) => {
+  if (
+    share.path != path.value ||
+    !(currentOptions.remounted && remountManagedByFileSharing.value)
+  ) {
+    return okAsync(undefined);
+  }
+  return confirm({
+    header: _("Remove Ceph Remount?"),
+    body: _(
+      `Share was remounted by File Sharing for proper reporting of quotas.
+If this path is shared in another tab, you may want to keep it.`
+    ),
+    dangerous: true,
+    confirmButtonText: _("Remove"),
+    cancelButtonText: _("Keep"),
+  }).andThen((remove) => {
+    if (remove) {
+      return actions.removeRemount();
+    }
+    return okAsync(undefined);
+  });
 });
 
 const quotaUnitBase = 1024;
