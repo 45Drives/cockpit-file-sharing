@@ -109,10 +109,13 @@ const windowsACLsWithLinuxOptions = BooleanKeyValueSuite(
 
 const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
+    "vfs objects": "shadow_copy2",
+  },
+  suggest: {
     "shadow:snapdir": ".zfs/snapshot",
     "shadow:sort": "desc",
     "shadow:format": "%Y-%m-%d-%H%M%S",
-    "vfs objects": "shadow_copy2",
+    "shadow:localtime": "yes",
   },
   exclude: {},
 });
@@ -131,6 +134,8 @@ const macOSSharesOptions = BooleanKeyValueSuite(() => tempShareConfig.value.adva
 const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
     "vfs objects": "full_audit",
+  },
+  suggest: {
     "full_audit:priority": "notice",
     "full_audit:facility": "local5",
     "full_audit:success": "connect disconnect openat renameat linkat unlinkat",
