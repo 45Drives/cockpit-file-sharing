@@ -47,7 +47,7 @@ const macOSSharesOptions = BooleanKeyValueSuite(
       "fruit:metadata": "stream",
       "fruit:zero_file_id": "yes",
       "fruit:nfs_aces": "no",
-      "vfs objects": "catia fruit streams_xattr",
+      "vfs objects": ["catia", "fruit", "streams_xattr"],
     },
     exclude: {},
   }

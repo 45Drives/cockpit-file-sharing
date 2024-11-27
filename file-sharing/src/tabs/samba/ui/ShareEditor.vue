@@ -89,7 +89,7 @@ const windowsACLsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.adva
   include: {
     "map acl inherit": "yes",
     "acl_xattr:ignore system acls": "yes",
-    "vfs objects": "acl_xattr",
+    "vfs objects": ["acl_xattr"],
   },
   exclude: {},
 });
@@ -99,7 +99,7 @@ const windowsACLsWithLinuxOptions = BooleanKeyValueSuite(
   {
     include: {
       "map acl inherit": "yes",
-      "vfs objects": "acl_xattr",
+      "vfs objects": ["acl_xattr"],
     },
     exclude: {
       "acl_xattr:ignore system acls": "yes",
@@ -109,7 +109,7 @@ const windowsACLsWithLinuxOptions = BooleanKeyValueSuite(
 
 const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
-    "vfs objects": "shadow_copy2",
+    "vfs objects": ["shadow_copy2"],
   },
   suggest: {
     "shadow:snapdir": ".zfs/snapshot",
@@ -126,20 +126,20 @@ const macOSSharesOptions = BooleanKeyValueSuite(() => tempShareConfig.value.adva
     "fruit:metadata": "stream",
     "fruit:zero_file_id": "yes",
     "fruit:nfs_aces": "no",
-    "vfs objects": "catia fruit streams_xattr",
+    "vfs objects": ["catia", "fruit", "streams_xattr"],
   },
   exclude: {},
 });
 
 const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
-    "vfs objects": "full_audit",
+    "vfs objects": ["full_audit"],
   },
   suggest: {
     "full_audit:priority": "notice",
     "full_audit:facility": "local5",
-    "full_audit:success": "connect disconnect openat renameat linkat unlinkat",
-    "full_audit:failure": "connect",
+    "full_audit:success": ["connect", "disconnect", "openat", "renameat", "linkat", "unlinkat"],
+    "full_audit:failure": ["connect"],
     "full_audit:prefix": "???%I???%u???%m???%S???%T???",
   },
   exclude: {},
