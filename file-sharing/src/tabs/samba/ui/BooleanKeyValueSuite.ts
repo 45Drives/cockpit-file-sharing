@@ -2,7 +2,11 @@ import { computed } from "vue";
 
 export const BooleanKeyValueSuite = (
   objGetter: () => Record<string, string>,
-  trueContents: { include: Record<string, string>; exclude: Record<string, string> }
+  trueContents: {
+    include: Record<string, string>;
+    exclude: Record<string, string>;
+    suggest?: Record<string, string>;
+  }
 ) => {
   return computed<boolean>({
     get() {
@@ -42,7 +46,10 @@ export const BooleanKeyValueSuite = (
           }
         }
       }
-      for (const [key, wantedValuesString] of Object.entries(trueContents.include)) {
+      for (const [key, wantedValuesString] of Object.entries({
+        ...trueContents.include,
+        ...(trueContents.suggest ?? {}),
+      })) {
         const wantedValues = wantedValuesString.split(/\s+/);
         const currentValues = objGetter()[key]?.split(/\s+/) ?? [];
         if (value) {
