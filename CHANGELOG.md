@@ -1,3 +1,4 @@
-## Cockpit File Sharing 4.2.8-1
+## Cockpit File Sharing 4.2.9-1
 
-* Merge AutoAddRBDs_MinorFixes
+* Defer applying Ceph options until apply button is clicked
+* Add shadow:localtime = yes to default macOS share options

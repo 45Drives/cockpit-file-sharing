@@ -27,6 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Nov 27 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.9-1
+- Defer applying Ceph options until apply button is clicked
+- Add shadow:localtime = yes to default macOS share options
 * Tue Nov 26 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.8-1
 - Merge AutoAddRBDs_MinorFixes
 * Mon Nov 25 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.7-1
