@@ -7,7 +7,8 @@ import {
   useTempObjectStaging,
   CardContainer,
 } from "@45drives/houston-common-ui";
-import { defineEmits } from "vue";
+import { StringToIntCaster } from "@45drives/houston-common-lib";
+import { computed, defineEmits } from "vue";
 
 const _ = cockpit.gettext;
 
@@ -19,6 +20,12 @@ const userSettings = useUserSettings();
 const { tempObject: tempUserSettings, modified, resetChanges } = useTempObjectStaging(userSettings);
 
 const applyChanges = () => (userSettings.value = tempUserSettings.value);
+
+const iscsiSubnetMaskInput = computed<string>({
+  get: () => tempUserSettings.value.iscsi.subnetMask.toString(),
+  set: (value: string) =>
+    StringToIntCaster()(value).map((value) => (tempUserSettings.value.iscsi.subnetMask = value)),
+});
 </script>
 
 <template>
@@ -75,11 +82,7 @@ const applyChanges = () => (userSettings.value = tempUserSettings.value);
         <template #label>
           {{ _("iSCSI Subnet Mask") }}
         </template>
-        <InputField
-          v-model="tempUserSettings.iscsi.subnetMask"
-          type: number
-          class="w-full"
-        />
+        <InputField v-model="iscsiSubnetMaskInput" type="number" class="w-full" />
       </InputLabelWrapper>
       <ToggleSwitch v-model="tempUserSettings.iscsi.clusteredServer">
         {{ _("Clustered Server") }}
