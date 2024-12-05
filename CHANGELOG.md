@@ -2,3 +2,5 @@
 
 * Defer applying Ceph options until apply button is clicked
 * Add shadow:localtime = yes to default macOS share options
+* Auto hide tabs that aren't configured
+* Allow overriding tab visibility in user settings menu

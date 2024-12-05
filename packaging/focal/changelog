@@ -2,6 +2,8 @@ cockpit-file-sharing (4.2.9-1focal) focal; urgency=medium
 
   * Defer applying Ceph options until apply button is clicked
   * Add shadow:localtime = yes to default macOS share options
+  * Auto hide tabs that aren't configured
+  * Allow overriding tab visibility in user settings menu
 
  -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 27 Nov 2024 14:10:25 -0400
 
