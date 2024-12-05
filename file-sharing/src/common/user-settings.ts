@@ -1,5 +1,7 @@
 import { computed, ref, type Ref, type WritableComputedRef } from "vue";
 
+export type TabVisibility = "auto" | "always" | "never";
+
 export type UserSettings = {
   /**
    * Samba-specific settings
@@ -9,6 +11,7 @@ export type UserSettings = {
      * Path to smb.conf
      */
     confPath: string;
+    tabVisibility: TabVisibility;
   };
   /**
    * NFS-specific settings
@@ -18,6 +21,7 @@ export type UserSettings = {
      * Path to cockpit-file-sharing.exports or equivalent
      */
     confPath: string;
+    tabVisibility: TabVisibility;
   };
   /**
    * iSCSI-specific settings
@@ -30,6 +34,7 @@ export type UserSettings = {
     clusteredServerChecked: boolean;
     clusteredServer: boolean;
     subnetMask: number;
+    tabVisibility: TabVisibility;
   };
   /**
    * Include users and groups with uid and gid from 1 to 999
@@ -40,15 +45,18 @@ export type UserSettings = {
 const defaultSettings = (): UserSettings => ({
   samba: {
     confPath: "/etc/samba/smb.conf",
+    tabVisibility: "auto",
   },
   nfs: {
     confPath: "/etc/exports.d/cockpit-file-sharing.exports",
+    tabVisibility: "auto",
   },
   iscsi: {
     confPath: "/etc/scst/cockpit-iscsi.conf",
     clusteredServerChecked: false,
     clusteredServer: false,
     subnetMask: 16,
+    tabVisibility: "auto",
   },
   includeSystemAccounts: false,
 });
@@ -69,15 +77,21 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
         config.value = {
           samba: {
             confPath: contents.samba?.confPath || defaultSettings().samba.confPath,
+            tabVisibility: contents.samba?.tabVisibility || defaultSettings().samba.tabVisibility,
           },
           nfs: {
             confPath: contents.nfs?.confPath || defaultSettings().nfs.confPath,
+            tabVisibility: contents.nfs?.tabVisibility || defaultSettings().nfs.tabVisibility,
           },
           iscsi: {
             confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
-            clusteredServer: contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
-            clusteredServerChecked: contents.iscsi?.clusteredServerChecked ?? defaultSettings().iscsi.clusteredServerChecked,
+            clusteredServer:
+              contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
+            clusteredServerChecked:
+              contents.iscsi?.clusteredServerChecked ??
+              defaultSettings().iscsi.clusteredServerChecked,
             subnetMask: contents.iscsi?.subnetMask || defaultSettings().iscsi.subnetMask,
+            tabVisibility: contents.iscsi?.tabVisibility || defaultSettings().iscsi.tabVisibility,
           },
           includeSystemAccounts:
             contents.includeSystemAccounts ?? defaultSettings().includeSystemAccounts,
@@ -95,9 +109,7 @@ const computedSettingsRef = computed({
 });
 
 export function useUserSettings(waitUntilRead?: false): WritableComputedRef<UserSettings>;
-export function useUserSettings(
-  waitUntilRead: true
-): Promise<WritableComputedRef<UserSettings>>;
+export function useUserSettings(waitUntilRead: true): Promise<WritableComputedRef<UserSettings>>;
 export function useUserSettings(waitUntilRead: boolean = false) {
   return waitUntilRead
     ? configFileReadPromise.then(() => computedSettingsRef)
