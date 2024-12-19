@@ -4,6 +4,7 @@ cockpit-file-sharing (4.2.9-1focal) focal; urgency=medium
   * Add shadow:localtime = yes to default shadow-copy share options
   * Auto hide tabs that aren't configured
   * Allow overriding tab visibility in user settings menu
+  * Get PCS cluster nodes from corosync.conf since Ubuntu 20.04 pcs version does not have JSON output
 
  -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 27 Nov 2024 14:10:25 -0400
 
