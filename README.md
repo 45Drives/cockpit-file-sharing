@@ -79,12 +79,15 @@ systemd
 nfs-utils
 samba-common-tools
 ```
-2. Download pre-built archive and install
+2. Install Build Dependencies
+   - `sponge` command from `moreutils`
+   - `yarn` package manager
+   - `make`
+3. Clone git repo, build, and install
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.2.9/cockpit-file-sharing_4.2.9_generic.zip
-unzip cockpit-file-sharing_4.2.9_generic.zip
-cd cockpit-file-sharing_4.2.9_generic
-# no need to run `make` first, the plugin is pre-built
+git clone https://github.com/45Drives/cockpit-file-sharing.git
+cd cockpit-file-sharing
+make
 sudo make install
 ```
 # Usage
