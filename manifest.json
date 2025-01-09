@@ -2,7 +2,7 @@
     "__version": "45D-R2",
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
-    "prerelease": false,
+    "prerelease": true,
     "version": "4.2.9",
     "buildVersion": "1",
     "author": "Josh Boudreau <jboudreau@45drives.com>",
