@@ -14,8 +14,7 @@ import {
   validationError,
   ValidationResultView,
 } from "@45drives/houston-common-ui";
-import { type SambaShareConfig, newSambaShareConfig } from "@/tabs/samba/data-types";
-import { KeyValueSyntax } from "@45drives/houston-common-lib";
+import { KeyValueSyntax, SambaShareConfig } from "@45drives/houston-common-lib";
 import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
 import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
 
@@ -44,7 +43,7 @@ const emit = defineEmits<{
 const globalProcessingState = useGlobalProcessingState();
 
 const shareConf = computed<SambaShareConfig>(() =>
-  props.newShare ? newSambaShareConfig() : props.share
+  props.newShare ? SambaShareConfig.makeNew() : props.share
 );
 
 const { tempObject: tempShareConfig, modified, resetChanges } = useTempObjectStaging(shareConf);

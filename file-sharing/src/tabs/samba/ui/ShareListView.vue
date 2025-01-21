@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, defineProps, nextTick } from "vue";
-import type { SambaShareConfig } from "@/tabs/samba/data-types";
 import {
   CardContainer,
   Disclosure,
@@ -10,6 +9,7 @@ import {
 import { PlusIcon } from "@heroicons/vue/20/solid";
 import ShareEditor from "@/tabs/samba/ui/ShareEditor.vue";
 import { PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
+import { SambaShareConfig } from "@45drives/houston-common-lib";
 
 const _ = cockpit.gettext;
 

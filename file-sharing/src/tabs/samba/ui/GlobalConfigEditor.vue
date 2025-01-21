@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, watchEffect, defineProps, computed, defineEmits } from "vue";
-import type { SambaGlobalConfig } from "@/tabs/samba/data-types";
 import {
   InputField,
   InputLabelWrapper,
@@ -13,7 +12,7 @@ import {
   useTempObjectStaging,
   type SelectMenuOption,
 } from "@45drives/houston-common-ui";
-import { KeyValueSyntax } from "@45drives/houston-common-lib";
+import { KeyValueSyntax, SambaGlobalConfig } from "@45drives/houston-common-lib";
 import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
 
 const _ = cockpit.gettext;
