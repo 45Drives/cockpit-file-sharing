@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu Jan 23 2025 Joshua Boudreau <jboudreau@45drives.com> 4.2.9-2
+- Migrate samba management code to houston-common-lib
 * Wed Nov 27 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.9-1
 - Defer applying Ceph options until apply button is clicked
 - Add shadow:localtime = yes to default shadow-copy share options

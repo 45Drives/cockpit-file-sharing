@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.9-2focal) focal; urgency=medium
+
+  * Migrate samba management code to houston-common-lib
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Thu, 23 Jan 2025 09:54:07 -0400
+
 cockpit-file-sharing (4.2.9-1focal) focal; urgency=medium
 
   * Defer applying Ceph options until apply button is clicked
