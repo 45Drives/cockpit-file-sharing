@@ -1,0 +1,32 @@
+Name: {{ name }}
+Version: {{ version }}
+Release: {{ build_number }}%{?dist}
+Summary: {{ description }}
+License: {{ license }}
+URL: {{ git_url }}
+Source0: %{name}-%{version}.tar.gz
+BuildArch: {{ architecture.rocky }}
+Requires: {{ dependencies.rocky_common | join(',') }}
+
+
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+
+%description
+{{ title }}
+{{ description }}
+
+%prep
+%setup -q
+
+%build
+make OS_PACKAGE_RELEASE=el8
+
+%install
+make DESTDIR=%{buildroot} install
+
+%files
+/usr/share/cockpit/file-sharing/*
+
+%changelog
+* Thu Feb 06 2025 Brett Kelly <bkelly@45drives.com> 4.2.9-1
+- Initial build for el9 

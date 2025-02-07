@@ -1,67 +1,72 @@
 {
-    "__version": "45D-R2",
+    "schema_version": "45D_AP_V2.0",
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
-    "prerelease": false,
+    "description": "A cockpit module to make file sharing with Samba and NFS easier.",
     "version": "4.2.9",
-    "buildVersion": "1",
+    "build_number": "1",
+    "stable": true,
     "author": "Josh Boudreau <jboudreau@45drives.com>",
-    "url": "https://github.com/45Drives/cockpit-file-sharing",
-    "category": "utils",
-    "priority": "optional",
-    "licence": "GPL-3.0+",
+    "git_url": "https://github.com/45Drives/cockpit-file-sharing",
+    "license": "GPL-3.0+",
     "architecture": {
-        "deb": "all",
-        "el": "noarch"
-    },
-    "description": {
-        "long": "A cockpit module to make file sharing with Samba and NFS easier.",
-        "short": "A cockpit module to make file sharing with Samba and NFS easier."
+        "ubuntu": "all",
+        "rocky": "noarch"
     },
     "defaults": {
-        "urgency": "medium"
+        "change_urgency": "medium"
     },
     "dependencies": {
-        "deb": {
-            "focal": [
-                "cockpit-bridge",
-                "coreutils",
-                "attr",
-                "findutils",
-                "hostname",
-                "iproute2",
-                "libc-bin",
-                "systemd",
-                "nfs-kernel-server",
-                "samba-common-bin"
-            ]
-        },
-        "el": {
-            "el8": [
-                "cockpit-bridge",
-                "coreutils",
-                "attr",
-                "findutils",
-                "hostname",
-                "iproute",
-                "glibc-common",
-                "systemd",
-                "nfs-utils",
-                "samba-common-tools"
-            ]
-        }
+        "ubuntu_common": [
+            "cockpit-bridge",
+            "coreutils",
+            "attr",
+            "findutils",
+            "hostname",
+            "iproute2",
+            "libc-bin",
+            "systemd",
+            "nfs-kernel-server",
+            "samba-common-bin"
+        ],
+        "rocky_common": [
+            "cockpit-bridge",
+            "coreutils",
+            "attr",
+            "findutils",
+            "hostname",
+            "iproute",
+            "glibc-common",
+            "systemd",
+            "nfs-utils",
+            "samba-common-tools"
+        ]
     },
-    "releases": [
+    "builds": [
         {
-            "image": "node-ubuntu-focal-builder",
-            "codeName": "focal",
-            "type": "deb"
+            "group": "ubuntu",
+            "os_name": "ubuntu-focal",
+            "image": "ci.cr.45d.io/ci/simple/ubuntu-focal:1"
         },
         {
-            "image": "node-rocky-el8-builder",
-            "codeName": "el8",
-            "type": "el"
+            "group": "ubuntu",
+            "os_name": "ubuntu-jammy",
+            "image": "ci.cr.45d.io/ci/simple/ubuntu-jammy:1"
+        },
+        {
+            "group": "rocky",
+            "os_name": "rocky-el8",
+            "image": "ci.cr.45d.io/ci/simple/rocky-el8:1"
+        },
+        {
+            "group": "rocky",
+            "os_name": "rocky-el9",
+            "image": "ci.cr.45d.io/ci/simple/rocky-el9:1"
         }
+    ],
+    "repos": [
+        "community",
+        "enterprise"
     ],
     "changelog": {
         "urgency": "medium",
