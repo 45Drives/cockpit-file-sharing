@@ -8,7 +8,7 @@ import VueDevTools from "vite-plugin-vue-devtools";
 import manifest from "../manifest.json";
 
 const getAppVersionDefine = () => {
-  return `${manifest.version}-${manifest.buildVersion}${process.env.OS_PACKAGE_RELEASE ?? "built_from_source"}`;
+  return `${manifest.version}-${manifest.build_number}${process.env.OS_PACKAGE_RELEASE ?? "built_from_source"}`;
 };
 
 // https://vitejs.dev/config/
