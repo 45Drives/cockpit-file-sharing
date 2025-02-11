@@ -1,4 +1,4 @@
-cockpit-file-sharing (4.2.9-1focal) focal; urgency=medium
+cockpit-file-sharing (4.2.9-1jammy) jammy; urgency=medium
 
   * Initial build for jammy
 
