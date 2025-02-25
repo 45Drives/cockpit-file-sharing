@@ -74,7 +74,8 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
             confPath: contents.nfs?.confPath || defaultSettings().nfs.confPath,
           },
           iscsi: {
-            confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
+            // confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
+            confPath: '/etc/scst.conf',
             clusteredServer: contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
             clusteredServerChecked: contents.iscsi?.clusteredServerChecked ?? defaultSettings().iscsi.clusteredServerChecked,
             subnetMask: contents.iscsi?.subnetMask || defaultSettings().iscsi.subnetMask,
