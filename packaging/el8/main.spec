@@ -27,6 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Feb 25 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-1
+- Changes user-defined iscsi config path to a static/default path, adds enable +
+  config commands after saving targets to ensure config loads on reboot
 * Tue Nov 26 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.8-1
 - Merge AutoAddRBDs_MinorFixes
 * Mon Nov 25 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.7-1

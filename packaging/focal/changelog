@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.2.9-1focal) focal; urgency=medium
+
+  * Changes user-defined iscsi config path to a static/default path, adds enable
+    + config commands after saving targets to ensure config loads on reboot
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 25 Feb 2025 14:06:15 -0400
+
 cockpit-file-sharing (4.2.8-1focal) focal; urgency=medium
 
   * Merge AutoAddRBDs_MinorFixes
