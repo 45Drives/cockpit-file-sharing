@@ -84,12 +84,10 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
             tabVisibility: contents.nfs?.tabVisibility || defaultSettings().nfs.tabVisibility,
           },
           iscsi: {
-            confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
-            clusteredServer:
-              contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
-            clusteredServerChecked:
-              contents.iscsi?.clusteredServerChecked ??
-              defaultSettings().iscsi.clusteredServerChecked,
+            // confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
+            confPath: '/etc/scst.conf',
+            clusteredServer: contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
+            clusteredServerChecked: contents.iscsi?.clusteredServerChecked ?? defaultSettings().iscsi.clusteredServerChecked,
             subnetMask: contents.iscsi?.subnetMask || defaultSettings().iscsi.subnetMask,
             tabVisibility: contents.iscsi?.tabVisibility || defaultSettings().iscsi.tabVisibility,
           },

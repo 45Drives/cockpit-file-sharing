@@ -27,14 +27,13 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
-* Thu Jan 23 2025 Joshua Boudreau <jboudreau@45drives.com> 4.2.9-2
-- Migrate samba management code to houston-common-lib
-* Wed Nov 27 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.9-1
-- Defer applying Ceph options until apply button is clicked
-- Add shadow:localtime = yes to default shadow-copy share options
-- Auto hide tabs that aren't configured
-- Allow overriding tab visibility in user settings menu
-- Get PCS cluster nodes from corosync.conf since Ubuntu 20.04 pcs version does not have JSON output
+* Tue Feb 25 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-2
+- Updates Build Number + Changes user-defined iscsi config path to a static/default
+  path, adds enable + config commands after saving targets to ensure config loads
+  on reboot
+* Tue Feb 25 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-1
+- Changes user-defined iscsi config path to a static/default path, adds enable +
+  config commands after saving targets to ensure config loads on reboot
 * Tue Nov 26 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.8-1
 - Merge AutoAddRBDs_MinorFixes
 * Mon Nov 25 2024 Joshua Boudreau <jboudreau@45drives.com> 4.2.7-1
