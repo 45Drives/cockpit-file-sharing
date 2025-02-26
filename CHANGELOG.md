@@ -1,3 +1,8 @@
-## Cockpit File Sharing 4.2.9-2
+## Cockpit File Sharing 4.2.10-1
 
-* Updates Build Number + Changes user-defined iscsi config path to a static/default path, adds enable + config commands after saving targets to ensure config loads on reboot
+* Defer applying Ceph options until apply button is clicked
+* Add shadow:localtime = yes to default shadow-copy share options
+* Auto hide tabs that aren't configured
+* Allow overriding tab visibility in user settings menu
+* Get PCS cluster nodes from corosync.conf since Ubuntu 20.04 pcs version does not have JSON output
+* Migrate samba management code to houston-common-lib

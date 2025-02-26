@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, defineProps } from "vue";
-import type { SambaShareConfig } from "@/tabs/samba/data-types";
+import { ref, computed, defineProps, nextTick } from "vue";
 import {
   CardContainer,
   Disclosure,
@@ -10,6 +9,7 @@ import {
 import { PlusIcon } from "@heroicons/vue/20/solid";
 import ShareEditor from "@/tabs/samba/ui/ShareEditor.vue";
 import { PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
+import { SambaShareConfig } from "@45drives/houston-common-lib";
 
 const _ = cockpit.gettext;
 
@@ -86,7 +86,13 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
                   <span class="sr-only">Edit</span>
                   <PencilSquareIcon class="size-icon icon-default" />
                 </button>
-                <button @click="emit('removeShare', share)">
+                <button
+                  @click="
+                    // for fileystem-specific hooks:
+                    setShowEditor(true);
+                    nextTick(() => emit('removeShare', share));
+                  "
+                >
                   <span class="sr-only">Delete</span>
                   <TrashIcon class="size-icon icon-danger" />
                 </button>

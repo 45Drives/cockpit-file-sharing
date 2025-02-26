@@ -39,6 +39,7 @@ const props = withDefaults(
     disabled?: boolean;
     allowNonExisting?: boolean;
     validationScope: ValidationScope;
+    newShare: boolean;
   }>(),
   {}
 );
@@ -47,6 +48,8 @@ const emit = defineEmits<{
   (e: "input", path: string): void;
   (e: "change", path: string): void;
 }>();
+
+const modified = defineModel<boolean>("modified", { default: false });
 
 const usePathInfo = (
   path: Ref<string>,
@@ -238,6 +241,12 @@ const actions = wrapActions({
   createDirectory,
   createZfsDataset,
 });
+
+const cephOptionsRef = ref<InstanceType<typeof CephOptions> | null>(null);
+
+defineExpose({
+  resetChanges: () => cephOptionsRef.value?.resetChanges?.(),
+});
 </script>
 
 <template>
@@ -318,6 +327,9 @@ const actions = wrapActions({
   <CephOptions
     v-if="mountpointInfo?.filesystem.type === 'ceph' && pathValidationResult.type === 'success'"
     :path="path"
+    v-model:modified="modified"
+    ref="cephOptionsRef"
+    :newShare="newShare"
   />
   <template v-else-if="mountpointInfo?.filesystem.type === 'cifs'">
     <InputFeedback type="warning">

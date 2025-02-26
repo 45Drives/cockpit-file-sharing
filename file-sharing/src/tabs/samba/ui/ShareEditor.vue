@@ -14,8 +14,7 @@ import {
   validationError,
   ValidationResultView,
 } from "@45drives/houston-common-ui";
-import { type SambaShareConfig, newSambaShareConfig } from "@/tabs/samba/data-types";
-import { KeyValueSyntax } from "@45drives/houston-common-lib";
+import { KeyValueSyntax, SambaShareConfig } from "@45drives/houston-common-lib";
 import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
 import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
 
@@ -44,10 +43,11 @@ const emit = defineEmits<{
 const globalProcessingState = useGlobalProcessingState();
 
 const shareConf = computed<SambaShareConfig>(() =>
-  props.newShare ? newSambaShareConfig() : props.share
+  props.newShare ? SambaShareConfig.makeNew() : props.share
 );
 
 const { tempObject: tempShareConfig, modified, resetChanges } = useTempObjectStaging(shareConf);
+const shareDirectoryOptionsModified = ref(false);
 
 const validationScope = new ValidationScope();
 
@@ -89,7 +89,7 @@ const windowsACLsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.adva
   include: {
     "map acl inherit": "yes",
     "acl_xattr:ignore system acls": "yes",
-    "vfs objects": "acl_xattr",
+    "vfs objects": ["acl_xattr"],
   },
   exclude: {},
 });
@@ -99,7 +99,7 @@ const windowsACLsWithLinuxOptions = BooleanKeyValueSuite(
   {
     include: {
       "map acl inherit": "yes",
-      "vfs objects": "acl_xattr",
+      "vfs objects": ["acl_xattr"],
     },
     exclude: {
       "acl_xattr:ignore system acls": "yes",
@@ -109,10 +109,13 @@ const windowsACLsWithLinuxOptions = BooleanKeyValueSuite(
 
 const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
+    "vfs objects": ["shadow_copy2"],
+  },
+  suggest: {
     "shadow:snapdir": ".zfs/snapshot",
     "shadow:sort": "desc",
     "shadow:format": "%Y-%m-%d-%H%M%S",
-    "vfs objects": "shadow_copy2",
+    "shadow:localtime": "yes",
   },
   exclude: {},
 });
@@ -123,22 +126,28 @@ const macOSSharesOptions = BooleanKeyValueSuite(() => tempShareConfig.value.adva
     "fruit:metadata": "stream",
     "fruit:zero_file_id": "yes",
     "fruit:nfs_aces": "no",
-    "vfs objects": "catia fruit streams_xattr",
+    "vfs objects": ["catia", "fruit", "streams_xattr"],
   },
   exclude: {},
 });
 
 const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
-    "vfs objects": "full_audit",
+    "vfs objects": ["full_audit"],
+  },
+  suggest: {
     "full_audit:priority": "notice",
     "full_audit:facility": "local5",
-    "full_audit:success": "connect disconnect openat renameat linkat unlinkat",
-    "full_audit:failure": "connect",
+    "full_audit:success": ["connect", "disconnect", "openat", "renameat", "linkat", "unlinkat"],
+    "full_audit:failure": ["connect"],
     "full_audit:prefix": "???%I???%u???%m???%S???%T???",
   },
   exclude: {},
 });
+
+const shareDirectoryInputAndOptionsRef = ref<InstanceType<
+  typeof ShareDirectoryInputAndOptions
+> | null>(null);
 </script>
 
 <template>
@@ -167,6 +176,9 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
         :disabled="!newShare"
         allowNonExisting
         :validationScope
+        v-model:modified="shareDirectoryOptionsModified"
+        ref="shareDirectoryInputAndOptionsRef"
+        :newShare="newShare ?? false"
       />
 
       <ToggleSwitchGroup>
@@ -228,6 +240,7 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
           @click="
             () => {
               resetChanges();
+              shareDirectoryInputAndOptionsRef?.resetChanges?.();
               $emit('cancel');
             }
           "
@@ -237,7 +250,11 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
         <button
           class="btn btn-primary"
           @click="$emit('apply', tempShareConfig)"
-          :disabled="!validationScope.isValid() || !modified || globalProcessingState !== 0"
+          :disabled="
+            !validationScope.isValid() ||
+            (!modified && !shareDirectoryOptionsModified) ||
+            globalProcessingState !== 0
+          "
         >
           {{ _("Apply") }}
         </button>
