@@ -3,8 +3,8 @@
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
     "prerelease": true,
-    "version": "4.2.9",
-    "buildVersion": "2",
+    "version": "4.2.10",
+    "buildVersion": "1",
     "author": "Josh Boudreau <jboudreau@45drives.com>",
     "url": "https://github.com/45Drives/cockpit-file-sharing",
     "category": "utils",
@@ -68,15 +68,8 @@
         "version": "4.2.10",
         "buildVersion": "1",
         "ignore": [],
-        "date": "2025-02-26T12:10:38.072939",
-        "packager": "Joshua Boudreau <jboudreau@45drives.com>",
-        "changes": [
-            "Defer applying Ceph options until apply button is clicked",
-            "Add shadow:localtime = yes to default shadow-copy share options",
-            "Auto hide tabs that aren't configured",
-            "Allow overriding tab visibility in user settings menu",
-            "Get PCS cluster nodes from corosync.conf since Ubuntu 20.04 pcs version does not have JSON output",
-            "Migrate samba management code to houston-common-lib"
-        ]
+        "date": null,
+        "packager": "Josh Boudreau <jboudreau@45drives.com>",
+        "changes": []
     }
 }

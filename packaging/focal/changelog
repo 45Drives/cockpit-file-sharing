@@ -1,3 +1,15 @@
+cockpit-file-sharing (4.2.10-1focal) focal; urgency=medium
+
+  * Defer applying Ceph options until apply button is clicked
+  * Add shadow:localtime = yes to default shadow-copy share options
+  * Auto hide tabs that aren't configured
+  * Allow overriding tab visibility in user settings menu
+  * Get PCS cluster nodes from corosync.conf since Ubuntu 20.04 pcs version does
+    not have JSON output
+  * Migrate samba management code to houston-common-lib
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 26 Feb 2025 08:10:38 -0400
+
 cockpit-file-sharing (4.2.9-2focal) focal; urgency=medium
 
   * Updates Build Number + Changes user-defined iscsi config path to a static/default
