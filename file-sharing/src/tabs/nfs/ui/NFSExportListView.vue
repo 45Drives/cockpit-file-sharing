@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, defineProps } from "vue";
+import { ref, computed, defineProps, nextTick } from "vue";
 import type { NFSExport } from "@/tabs/nfs/data-types";
 import {
   CardContainer,
@@ -80,7 +80,13 @@ const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path)
                   <span class="sr-only">Edit</span>
                   <PencilSquareIcon class="size-icon icon-default" />
                 </button>
-                <button @click="emit('removeExport', nfsExport)">
+                <button
+                  @click="
+                    // for fileystem-specific hooks:
+                    setShowEditor(true);
+                    nextTick(() => emit('removeExport', nfsExport));
+                  "
+                >
                   <span class="sr-only">Delete</span>
                   <TrashIcon class="size-icon icon-danger" />
                 </button>

@@ -53,6 +53,7 @@ const exportConfig = computed<NFSExport>(() =>
 );
 
 const { tempObject: tempExportConfig, modified, resetChanges } = useTempObjectStaging(exportConfig);
+const shareDirectoryOptionsModified = ref(false);
 
 const addClient = () => {
   tempExportConfig.value.clients = [...tempExportConfig.value.clients, newNFSExportClient()];
@@ -196,6 +197,10 @@ const { validationResult: clientSettingsValidationResult } = validationScope.use
   }
   return validationSuccess();
 });
+
+const shareDirectoryInputAndOptionsRef = ref<InstanceType<
+  typeof ShareDirectoryInputAndOptions
+> | null>(null);
 </script>
 
 <template>
@@ -208,6 +213,9 @@ const { validationResult: clientSettingsValidationResult } = validationScope.use
           :disabled="!newExport"
           :validationScope
           @change="() => resolvePath()"
+          ref="shareDirectoryInputAndOptionsRef"
+          v-model:modified="shareDirectoryOptionsModified"
+          :newShare="newExport ?? false"
         />
         <ValidationResultView v-bind="pathValidationResult" />
       </div>
@@ -305,6 +313,7 @@ const { validationResult: clientSettingsValidationResult } = validationScope.use
           @click="
             () => {
               resetChanges();
+              shareDirectoryInputAndOptionsRef?.resetChanges?.();
               $emit('cancel');
             }
           "
@@ -314,7 +323,11 @@ const { validationResult: clientSettingsValidationResult } = validationScope.use
         <button
           class="btn btn-primary"
           @click="$emit('apply', tempExportConfig)"
-          :disabled="!validationScope.isValid() || !modified || globalProcessingState !== 0"
+          :disabled="
+            !validationScope.isValid() ||
+            (!modified && !shareDirectoryOptionsModified) ||
+            globalProcessingState !== 0
+          "
         >
           {{ _("Apply") }}
         </button>

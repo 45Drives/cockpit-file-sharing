@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { useUserSettings } from "@/common/user-settings";
+import { useUserSettings, type TabVisibility } from "@/common/user-settings";
 import {
   InputLabelWrapper,
   InputField,
   ToggleSwitch,
   useTempObjectStaging,
   CardContainer,
+  SelectMenu,
+  type SelectMenuOption,
 } from "@45drives/houston-common-ui";
-import { defineEmits } from "vue";
+import { StringToIntCaster } from "@45drives/houston-common-lib";
+import { computed, defineEmits } from "vue";
 
 const _ = cockpit.gettext;
 
@@ -19,6 +22,27 @@ const userSettings = useUserSettings();
 const { tempObject: tempUserSettings, modified, resetChanges } = useTempObjectStaging(userSettings);
 
 const applyChanges = () => (userSettings.value = tempUserSettings.value);
+
+const iscsiSubnetMaskInput = computed<string>({
+  get: () => tempUserSettings.value.iscsi.subnetMask.toString(),
+  set: (value: string) =>
+    StringToIntCaster()(value).map((value) => (tempUserSettings.value.iscsi.subnetMask = value)),
+});
+
+const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
+  {
+    label: _("Auto"),
+    value: "auto",
+  },
+  {
+    label: _("Always Show"),
+    value: "always",
+  },
+  {
+    label: _("Always Hide"),
+    value: "never",
+  },
+];
 </script>
 
 <template>
@@ -49,6 +73,15 @@ const applyChanges = () => (userSettings.value = tempUserSettings.value);
           placeholder="default: /etc/samba/smb.conf"
         />
       </InputLabelWrapper>
+      <InputLabelWrapper>
+        <template #label>
+          {{ _("Samba Tab Visibility") }}
+        </template>
+        <SelectMenu
+          v-model="tempUserSettings.samba.tabVisibility"
+          :options="tabVisibilityOptions"
+        />
+      </InputLabelWrapper>
       <div class="text-header">NFS</div>
       <InputLabelWrapper>
         <template #label>
@@ -58,6 +91,15 @@ const applyChanges = () => (userSettings.value = tempUserSettings.value);
           v-model="tempUserSettings.nfs.confPath"
           class="w-full"
           placeholder="default: /etc/exports.d/cockpit-file-sharing.exports"
+        />
+      </InputLabelWrapper>
+      <InputLabelWrapper>
+        <template #label>
+          {{ _("NFS Tab Visibility") }}
+        </template>
+        <SelectMenu
+          v-model="tempUserSettings.nfs.tabVisibility"
+          :options="tabVisibilityOptions"
         />
       </InputLabelWrapper>
       <div class="text-header">iSCSI</div>
@@ -75,15 +117,20 @@ const applyChanges = () => (userSettings.value = tempUserSettings.value);
         <template #label>
           {{ _("iSCSI Subnet Mask") }}
         </template>
-        <InputField
-          v-model="tempUserSettings.iscsi.subnetMask"
-          type: number
-          class="w-full"
-        />
+        <InputField v-model="iscsiSubnetMaskInput" type="number" class="w-full" />
       </InputLabelWrapper>
       <ToggleSwitch v-model="tempUserSettings.iscsi.clusteredServer">
         {{ _("Clustered Server") }}
       </ToggleSwitch>
+      <InputLabelWrapper>
+        <template #label>
+          {{ _("iSCSI Tab Visibility") }}
+        </template>
+        <SelectMenu
+          v-model="tempUserSettings.iscsi.tabVisibility"
+          :options="tabVisibilityOptions"
+        />
+      </InputLabelWrapper>
     </div>
     <template #footer>
       <div class="button-group-row justify-end">

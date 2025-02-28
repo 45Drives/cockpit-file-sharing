@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { type SambaShareConfig, type SambaGlobalConfig } from "@/tabs/samba/data-types";
-import { getServer, Download, Upload, getServerCluster } from "@45drives/houston-common-lib";
+import {
+  getServer,
+  Download,
+  Upload,
+  getServerCluster,
+  type SambaShareConfig,
+  type SambaGlobalConfig,
+} from "@45drives/houston-common-lib";
 import {
   CenteredCardColumn,
   Notification,
@@ -20,7 +26,7 @@ import ShareListView from "@/tabs/samba/ui/ShareListView.vue";
 import { provide, ref, watch, computed } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
 
-import { SambaManager } from "@/tabs/samba/samba-manager";
+import { HookedSambaManager as SambaManager } from "@/tabs/samba/samba-manager";
 
 const _ = cockpit.gettext;
 
@@ -95,7 +101,7 @@ const removeShare = (share: SambaShareConfig) =>
 
 const checkIfSmbConfIncludesRegistry = (smbConfPath: string) =>
   sambaManager
-    .andThen((sm) => sm.checkIfSmbConfIncludesRegistry(smbConfPath))
+    .andThen((sm) => sm.checkIfSambaConfIncludesRegistry(smbConfPath))
     .map((smbConfHasIncludeRegistry) => {
       if (!smbConfHasIncludeRegistry) {
         pushNotification(
@@ -115,7 +121,7 @@ const checkIfSmbConfIncludesRegistry = (smbConfPath: string) =>
 
 const fixSmbConfIncludeRegistry = (smbConfPath: string) =>
   sambaManager
-    .andThen((sm) => sm.patchSmbConfIncludeRegistry(smbConfPath))
+    .andThen((sm) => sm.patchSambaConfIncludeRegistry(smbConfPath))
     .map(() => reportSuccess(_("Added `include = registry` to ") + smbConfPath));
 
 const importConfig = () =>
@@ -156,7 +162,7 @@ const importFromSmbConf = (smbConfPath: string) =>
     dangerous: true,
   })
     .andThen(() => sambaManager)
-    .andThen((sm) => sm.importFromSmbConf(smbConfPath))
+    .andThen((sm) => sm.importFromSambaConf(smbConfPath))
     .map(() => reportSuccess(_("Imported configuration")));
 
 const actions = wrapActions({
