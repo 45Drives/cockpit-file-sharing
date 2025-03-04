@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.9-7
+## Cockpit File Sharing 4.2.9-8
 
-* made some type checking changes trying to build again
+* build

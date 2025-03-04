@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.9-8focal) focal; urgency=medium
+
+  * build
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 12:05:53 -0400
+
 cockpit-file-sharing (4.2.9-7focal) focal; urgency=medium
 
   * made some type checking changes trying to build again
