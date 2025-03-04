@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Mar 04 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-4
+- updates dependencies and houston-common
 * Tue Mar 04 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-3
 - Removes unneccesary force config loading, config loading done via ansible playbook/service
   file now

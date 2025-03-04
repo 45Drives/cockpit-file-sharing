@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.9-4focal) focal; urgency=medium
+
+  * updates dependencies and houston-common
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 07:45:55 -0400
+
 cockpit-file-sharing (4.2.9-3focal) focal; urgency=medium
 
   * Removes unneccesary force config loading, config loading done via ansible playbook/service
