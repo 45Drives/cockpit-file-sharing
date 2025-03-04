@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.2.9-3focal) focal; urgency=medium
+
+  * Removes unneccesary force config loading, config loading done via ansible playbook/service
+    file now
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 07:29:37 -0400
+
 cockpit-file-sharing (4.2.10-1focal) focal; urgency=medium
 
   * Changes scst default config path in one other spot that was initially missed,
