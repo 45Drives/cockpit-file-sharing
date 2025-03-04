@@ -20,6 +20,7 @@
     "@45drives/houston-common-lib": "workspace:^",
     "@45drives/houston-common-ui": "workspace:^",
     "@headlessui/vue": "^1.7.22",
+    "@heroicons/vue": "^2.0.18",
     "monet": "^0.9.3",
     "neverthrow": "^6.2.1",
     "vue": "^3.4.27",
