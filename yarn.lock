@@ -30,7 +30,7 @@ __metadata:
     typedoc-plugin-mdn-links: "npm:^4.0.10"
     typedoc-umlclass: "npm:^0.10.1"
     typescript: "npm:~5.4.5"
-    vite: "npm:^6.2.0"
+    vite: "npm:^6.0.11"
     vite-plugin-dts: "npm:^3.9.1"
     vitest: "npm:^1.6.0"
   languageName: unknown
@@ -73,7 +73,7 @@ __metadata:
     three: "npm:^0.173.0"
     typescript: "npm:~5.4.5"
     uuid: "npm:^9.0.1"
-    vite: "npm:^6.2.0"
+    vite: "npm:^6.0.11"
     vite-plugin-dts: "npm:^3.9.1"
     vite-plugin-vue-devtools: "npm:^7.7.1"
     vitest: "npm:^1.6.0"
@@ -7423,7 +7423,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^6.2.0":
+"vite@npm:^6.0.11, vite@npm:^6.2.0":
   version: 6.2.0
   resolution: "vite@npm:6.2.0"
   dependencies:

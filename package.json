@@ -9,5 +9,5 @@
     "build": "yarn build:common && yarn build:app",
     "build:common": "yarn build:css && yarn build:lib && yarn build:ui"
   },
-  "packageManager": "yarn@4.6.0"
+  "packageManager": "yarn@4.7.0"
 }
