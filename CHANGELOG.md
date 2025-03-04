@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.9-2
+## Cockpit File Sharing 4.2.10-1
 
-* Updates Build Number + Changes user-defined iscsi config path to a static/default path, adds enable + config commands after saving targets to ensure config loads on reboot
+* Changes scst default config path in one other spot that was initially missed, and adds check to see if file exists and replaces old config path with new config path if applicable. Should fix bug where scst config not auto-loading on boot.
