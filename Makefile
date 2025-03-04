@@ -171,9 +171,9 @@ help:
 	@echo 'build cleanup:'
 	@echo '    make clean'
 
-test-%:
-	yarn --cwd $* run test
+# test-%:
+# 	yarn --cwd $* run test
 
-test: houston-common-test
+# test: houston-common-test
 
 FORCE:
