@@ -45,7 +45,8 @@ const defaultSettings = (): UserSettings => ({
     confPath: "/etc/exports.d/cockpit-file-sharing.exports",
   },
   iscsi: {
-    confPath: "/etc/scst/cockpit-iscsi.conf",
+    // confPath: "/etc/scst/cockpit-iscsi.conf",
+    confPath: "/etc/scst.conf",
     clusteredServerChecked: false,
     clusteredServer: false,
     subnetMask: 16,
@@ -75,7 +76,7 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
           },
           iscsi: {
             // confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
-            confPath: '/etc/scst.conf',
+            confPath: defaultSettings().iscsi.confPath,
             clusteredServer: contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
             clusteredServerChecked: contents.iscsi?.clusteredServerChecked ?? defaultSettings().iscsi.clusteredServerChecked,
             subnetMask: contents.iscsi?.subnetMask || defaultSettings().iscsi.subnetMask,

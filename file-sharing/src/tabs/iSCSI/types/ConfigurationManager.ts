@@ -32,18 +32,6 @@ export class ConfigurationManager {
     //     .andThen((file) => this.exportConfiguration().map((config) => file.write(config)).map(() => file))
     // }
 
-    // saveCurrentConfiguration(): ResultAsync<File, ProcessError> {
-    //     return new File(this.server, useUserSettings().value.iscsi.confPath)
-    //         .create(true)
-    //         .andThen((file) =>
-    //             this.exportConfiguration()
-    //                 .map((config) => file.write(config))
-    //                 .andThen(() => this.server.execute(new BashCommand(`systemctl enable scst`)))  // Ensure SCST is enabled at boot
-    //                 .andThen(() => this.server.execute(new BashCommand(`systemctl restart scst`))) // Restart SCST to apply changes
-    //                 .map(() => file)
-    //         );
-    // }
-
     saveCurrentConfiguration(): ResultAsync<File, ProcessError> {
         return new File(this.server, useUserSettings().value.iscsi.confPath)
             .create(true)
@@ -52,6 +40,7 @@ export class ConfigurationManager {
                     .map((config) => file.write(config))
                     .andThen(() => this.server.execute(new BashCommand(`systemctl enable scst`)))
                     .andThen(() => this.server.execute(new BashCommand(`scstadmin -config ${useUserSettings().value.iscsi.confPath}`)))
+                    .andThen(() => this.server.execute(new BashCommand(`systemctl restart scst`)))
                     .map(() => file)
             );
     }
