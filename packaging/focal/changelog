@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.9-6focal) focal; urgency=medium
+
+  * Removes module test from makefile to see if debian builds successfully
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 09:49:29 -0400
+
 cockpit-file-sharing (4.2.9-5focal) focal; urgency=medium
 
   * Updates Vue version to 3.5

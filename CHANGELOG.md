@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.9-5
+## Cockpit File Sharing 4.2.9-6
 
-* Updates Vue version to 3.5
+* Removes module test from makefile to see if debian builds successfully
