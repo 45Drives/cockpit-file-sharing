@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Mar 04 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-7
+- made some type checking changes trying to build again
 * Tue Mar 04 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-6
 - Removes module test from makefile to see if debian builds successfully
 * Tue Mar 04 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-5

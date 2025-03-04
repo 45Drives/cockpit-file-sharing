@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.9-6
+## Cockpit File Sharing 4.2.9-7
 
-* Removes module test from makefile to see if debian builds successfully
+* made some type checking changes trying to build again

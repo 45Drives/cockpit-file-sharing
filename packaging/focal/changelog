@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.9-7focal) focal; urgency=medium
+
+  * made some type checking changes trying to build again
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 12:01:12 -0400
+
 cockpit-file-sharing (4.2.9-6focal) focal; urgency=medium
 
   * Removes module test from makefile to see if debian builds successfully
