@@ -27,6 +27,8 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Mar 04 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-5
+- Updates Vue version to 3.5
 * Tue Mar 04 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-4
 - updates dependencies and houston-common
 * Tue Mar 04 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-3

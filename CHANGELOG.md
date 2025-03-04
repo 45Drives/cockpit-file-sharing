@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.9-4
+## Cockpit File Sharing 4.2.9-5
 
-* updates dependencies and houston-common
+* Updates Vue version to 3.5

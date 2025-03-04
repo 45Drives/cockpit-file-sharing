@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.9-5focal) focal; urgency=medium
+
+  * Updates Vue version to 3.5
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 09:41:37 -0400
+
 cockpit-file-sharing (4.2.9-4focal) focal; urgency=medium
 
   * updates dependencies and houston-common
