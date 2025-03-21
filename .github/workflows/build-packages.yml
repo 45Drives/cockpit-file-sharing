@@ -7,7 +7,7 @@ on:
       - 'v*.*.*'
 jobs:
   prebuild:
-    runs-on: buildinator-group
+    runs-on: buildinator-5
     outputs:
       manifest: ${{ steps.prebuild.outputs.manifest }}
       matrix: ${{ steps.prebuild.outputs.matrix }}
@@ -40,7 +40,7 @@ jobs:
     needs:
       - prebuild
       - build
-    runs-on: buildinator-group
+    runs-on: buildinator-5
     steps:
       - name: Run sign playbook
         uses: 45drives/actions/ansible-playbook@main
@@ -60,7 +60,7 @@ jobs:
       - prebuild
       - build
       - sign
-    runs-on: buildinator-group
+    runs-on: buildinator-5
     steps:
       - id: push_local
         name: Push packages into local repository
@@ -74,7 +74,7 @@ jobs:
       - build
       - sign
       - update_repositories
-    runs-on: buildinator-group
+    runs-on: buildinator-5
     steps:
       - id: push_remote
         name: Sync local repository with remote repository

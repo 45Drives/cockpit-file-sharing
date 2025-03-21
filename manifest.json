@@ -49,6 +49,11 @@
             "image": "ci.cr.45d.io/ci/simple/ubuntu-focal:1"
         },
         {
+            "group": "debian",
+            "os_name": "debian-bookworm",
+            "image": "ci.cr.45d.io/ci/simple/ubuntu-jammy:1"
+        },
+        {
             "group": "ubuntu",
             "os_name": "ubuntu-jammy",
             "image": "ci.cr.45d.io/ci/simple/ubuntu-jammy:1"

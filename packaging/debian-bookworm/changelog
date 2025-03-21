@@ -1,0 +1,5 @@
+cockpit-file-sharing (4.2.9-1bookworm) bookworm; urgency=medium
+
+  * Initial build for bookworm
+
+ -- Brett Kelly <bkelly@45drives.com>  Thu, 06 Feb 2025 14:10:25 -0400
