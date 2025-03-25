@@ -28,7 +28,11 @@ export class ConfigurationManager {
 
     saveCurrentConfiguration(): ResultAsync<File, ProcessError> {
         return new File(this.server, useUserSettings().value.iscsi.confPath)
-        .create(true)
-        .andThen((file) => this.exportConfiguration().map((config) => file.write(config)).map(() => file))
+            .create(true)
+            .andThen((file) =>
+                this.exportConfiguration()
+                    .map((config) => file.write(config))
+                    .map(() => file)
+            );
     }
 }

@@ -107,10 +107,10 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
         <template #label>
           {{ _("Configuration Path") }}
         </template>
-        <InputField
+        <InputField disabled
           v-model="tempUserSettings.iscsi.confPath"
           class="w-full"
-          placeholder="default: /tmp/iSCSI.conf"
+          placeholder="default: /etc/scst.conf"
         />
       </InputLabelWrapper>
       <InputLabelWrapper>

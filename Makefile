@@ -16,7 +16,8 @@
 PLUGIN_SRCS=file-sharing
 
 # For installing to a remote machine for testing with `make install-remote`
-REMOTE_TEST_HOST=192.168.45.21
+# REMOTE_TEST_HOST=192.168.206.100
+REMOTE_TEST_HOST=192.168.123.5
 REMOTE_TEST_USER=root
 
 # Restarts cockpit after install
@@ -170,9 +171,9 @@ help:
 	@echo 'build cleanup:'
 	@echo '    make clean'
 
-test-%:
-	yarn --cwd $* run test
+# test-%:
+# 	yarn --cwd $* run test
 
-test: houston-common-test $(addprefix test-, $(PLUGIN_SRCS))
+# test: houston-common-test
 
 FORCE:

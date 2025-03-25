@@ -52,7 +52,8 @@ const defaultSettings = (): UserSettings => ({
     tabVisibility: "auto",
   },
   iscsi: {
-    confPath: "/etc/scst/cockpit-iscsi.conf",
+    // confPath: "/etc/scst/cockpit-iscsi.conf",
+    confPath: "/etc/scst.conf",
     clusteredServerChecked: false,
     clusteredServer: false,
     subnetMask: 16,
@@ -84,14 +85,11 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
             tabVisibility: contents.nfs?.tabVisibility || defaultSettings().nfs.tabVisibility,
           },
           iscsi: {
-            confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
-            clusteredServer:
-              contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
-            clusteredServerChecked:
-              contents.iscsi?.clusteredServerChecked ??
-              defaultSettings().iscsi.clusteredServerChecked,
+            // confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
+            confPath: defaultSettings().iscsi.confPath,
+            clusteredServer: contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
+            clusteredServerChecked: contents.iscsi?.clusteredServerChecked ?? defaultSettings().iscsi.clusteredServerChecked,
             subnetMask: contents.iscsi?.subnetMask || defaultSettings().iscsi.subnetMask,
-            tabVisibility: contents.iscsi?.tabVisibility || defaultSettings().iscsi.tabVisibility,
           },
           includeSystemAccounts:
             contents.includeSystemAccounts ?? defaultSettings().includeSystemAccounts,

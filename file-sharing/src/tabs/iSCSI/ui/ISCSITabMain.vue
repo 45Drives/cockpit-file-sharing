@@ -10,7 +10,7 @@
 import { CenteredCardColumn, pushNotification, Notification, useTempObjectStaging } from "@45drives/houston-common-ui";
 import { provide, reactive, ref } from "vue";
 import { ISCSIDriverSingleServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverSingleServer";
-import { BashCommand, Directory, ProcessError, getServer } from "@45drives/houston-common-lib";
+import { BashCommand, Directory, ExitedProcess, ProcessError, getServer } from "@45drives/houston-common-lib";
 import VirtualDeviceTable from "@/tabs/iSCSI/ui/screens/virtualDevice/VirtualDeviceTable.vue";
 import TargetTable from "@/tabs/iSCSI/ui/screens/target/TargetTable.vue";
 import type { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
@@ -25,24 +25,51 @@ const _ = cockpit.gettext;
 
 const driverInitalized = ref(false);
 
+// File paths
+const OLD_CONF_PATH = "/etc/scst/cockpit-iscsi.conf";
+const NEW_CONF_PATH = "/etc/scst.conf";
+
+// Function to check and move the configuration file
+const moveConfigFileIfNeeded = async () => {
+  const server = await getServer().unwrapOr(undefined);
+  if (!server) return;
+
+  const checkOldConf = await server.execute(new BashCommand(`[ -f "${OLD_CONF_PATH}" ] && echo "exists" || echo "notfound"`), false)
+    .map((proc: ExitedProcess) => proc.getStdout().trim()) 
+    .unwrapOr("notfound");
+
+  const checkNewConf = await server.execute(new BashCommand(`[ -f "${NEW_CONF_PATH}" ] && echo "exists" || echo "notfound"`), false)
+    .map((proc: ExitedProcess) => proc.getStdout().trim()) 
+    .unwrapOr("notfound");
+
+  if (checkOldConf === "exists" && checkNewConf === "notfound") {
+    await server.execute(new BashCommand(`mv "${OLD_CONF_PATH}" "${NEW_CONF_PATH}"`), false)
+      .map(() => console.log(`Moved ${OLD_CONF_PATH} to ${NEW_CONF_PATH}`))
+      .mapErr((err) => console.error(`Failed to move config file: ${err.message}`));
+  }
+};
+
+// Updated function to initialize the iSCSI driver
 const createISCSIDriver = (): ResultAsync<ISCSIDriver, ProcessError> => {
   return getServer()
-  .andThen((server) => {
-    return checkForClusteredServer().andThen(() => {
-      const driver = useUserSettings().value.iscsi.clusteredServer ? new ISCSIDriverClusteredServer(server) : new ISCSIDriverSingleServer(server);
-      return driver.initialize()
-        .map((driver) => {
-          driverInitalized.value = true;
-          return driver;
-        })
-        .mapErr((error) => {
-          pushNotification(new Notification("Failed to initialize iSCSI Driver", `${error.message}`, "error"))
-          return error;
-        }
-      );
+    .andThen((server) => {
+      return checkForClusteredServer().andThen(() => {
+        return ResultAsync.fromSafePromise(moveConfigFileIfNeeded()).andThen(() => {
+          const driver = useUserSettings().value.iscsi.clusteredServer ? new ISCSIDriverClusteredServer(server) : new ISCSIDriverSingleServer(server);
+
+          return driver.initialize()
+            .map((driver) => {
+              driverInitalized.value = true;
+              return driver;
+            })
+            .mapErr((error) => {
+              pushNotification(new Notification("Failed to initialize iSCSI Driver", `${error.message}`, "error"));
+              return error;
+            });
+        });
+      });
     });
-  })
-}
+};
 
 const iSCSIDriver = createISCSIDriver();
 

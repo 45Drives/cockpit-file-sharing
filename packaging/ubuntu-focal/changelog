@@ -1,18 +1,62 @@
+cockpit-file-sharing (4.2.9-8focal) focal; urgency=medium
+
+  * build
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 12:05:53 -0400
+
+cockpit-file-sharing (4.2.9-7focal) focal; urgency=medium
+
+  * made some type checking changes trying to build again
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 12:01:12 -0400
+
+cockpit-file-sharing (4.2.9-6focal) focal; urgency=medium
+
+  * Removes module test from makefile to see if debian builds successfully
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 09:49:29 -0400
+
+cockpit-file-sharing (4.2.9-5focal) focal; urgency=medium
+
+  * Updates Vue version to 3.5
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 09:41:37 -0400
+
+cockpit-file-sharing (4.2.9-4focal) focal; urgency=medium
+
+  * updates dependencies and houston-common
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 07:45:55 -0400
+
+cockpit-file-sharing (4.2.9-3focal) focal; urgency=medium
+
+  * Removes unneccesary force config loading, config loading done via ansible playbook/service
+    file now
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 07:29:37 -0400
+
+cockpit-file-sharing (4.2.10-1focal) focal; urgency=medium
+
+  * Changes scst default config path in one other spot that was initially missed,
+    and adds check to see if file exists and replaces old config path with new config
+    path if applicable. Should fix bug where scst config not auto-loading on boot.
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 04 Mar 2025 05:05:31 -0400
+
 cockpit-file-sharing (4.2.9-2focal) focal; urgency=medium
 
-  * bump build rev
+  * Updates Build Number + Changes user-defined iscsi config path to a static/default
+    path, adds enable + config commands after saving targets to ensure config loads
+    on reboot
 
- -- Josh Boudreau <jboudreau@45drives.com>  Tue, 25 Mar 2025 12:28:20 -0300
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 25 Feb 2025 14:07:50 -0400
 
 cockpit-file-sharing (4.2.9-1focal) focal; urgency=medium
 
-  * Defer applying Ceph options until apply button is clicked
-  * Add shadow:localtime = yes to default shadow-copy share options
-  * Auto hide tabs that aren't configured
-  * Allow overriding tab visibility in user settings menu
-  * Get PCS cluster nodes from corosync.conf since Ubuntu 20.04 pcs version does not have JSON output
+  * Changes user-defined iscsi config path to a static/default path, adds enable
+    + config commands after saving targets to ensure config loads on reboot
 
- -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 27 Nov 2024 14:10:25 -0400
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 25 Feb 2025 14:06:15 -0400
 
 cockpit-file-sharing (4.2.8-1focal) focal; urgency=medium
 
