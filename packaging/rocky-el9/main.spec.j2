@@ -19,7 +19,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 %setup -q
 
 %build
-make OS_PACKAGE_RELEASE=el8
+make OS_PACKAGE_RELEASE=el9
 
 %install
 make DESTDIR=%{buildroot} install
@@ -28,5 +28,7 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Mar 25 2025 Josh Boudreau <jboudreau@45drives.com> 4.2.9-2
+- bump build rev
 * Thu Feb 06 2025 Brett Kelly <bkelly@45drives.com> 4.2.9-1
-- Initial build for el9 
+- Initial build for el9

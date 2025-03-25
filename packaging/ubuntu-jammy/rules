@@ -13,7 +13,7 @@
 # package maintainers to append LDFLAGS
 #export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
 
-export OS_PACKAGE_RELEASE := focal
+export OS_PACKAGE_RELEASE := jammy
 
 %:
 	dh $@
