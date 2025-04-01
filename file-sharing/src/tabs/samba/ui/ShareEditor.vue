@@ -174,10 +174,6 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
         <ToggleSwitch v-model="tempShareConfig.inheritPermissions">
           {{ _("Inherit Permissions") }}
         </ToggleSwitch>
-        <!-- <ToggleSwitch v-show="isDomainJoined" v-model="windowsACLsOptions">
-          {{ _("Windows ACLs") }}
-          <template #description> {{ _("Administer share permissions from Windows") }} </template>
-        </ToggleSwitch> -->
         <ToggleSwitch v-if="isDomainJoined" v-model="windowsACLsOptions">
           {{ _("Windows ACLs") }}
           <template #description> {{ _("Administer share permissions from Windows") }} </template>

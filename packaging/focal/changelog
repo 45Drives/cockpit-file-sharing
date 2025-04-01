@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.2.10-2focal) focal; urgency=medium
+
+  * Removes unused Windows ACL option and adds conditional check to only show desired
+    ACL toggle if server is Domain Joined
+
+ -- Jordan Keough <jkeough@45drives.com>  Tue, 01 Apr 2025 12:29:06 -0300
+
 cockpit-file-sharing (4.2.9-8focal) focal; urgency=medium
 
   * build

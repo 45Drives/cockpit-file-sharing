@@ -27,6 +27,9 @@ make DESTDIR=%{buildroot} install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Tue Apr 01 2025 Jordan Keough <jkeough@45drives.com> 4.2.10-2
+- Removes unused Windows ACL option and adds conditional check to only show desired
+  ACL toggle if server is Domain Joined
 * Tue Mar 04 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-8
 - build
 * Tue Mar 04 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-7
