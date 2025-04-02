@@ -47,6 +47,14 @@ make DESTDIR=%{buildroot} install
 - Changes scst default config path in one other spot that was initially missed, and
   adds check to see if file exists and replaces old config path with new config path
   if applicable. Should fix bug where scst config not auto-loading on boot.
+* Wed Feb 26 2025 Joshua Boudreau <jboudreau@45drives.com> 4.2.10-1
+- Defer applying Ceph options until apply button is clicked
+- Add shadow:localtime = yes to default shadow-copy share options
+- Auto hide tabs that aren't configured
+- Allow overriding tab visibility in user settings menu
+- Get PCS cluster nodes from corosync.conf since Ubuntu 20.04 pcs version does not
+  have JSON output
+- Migrate samba management code to houston-common-lib
 * Tue Feb 25 2025 Jordan Keough <jkeough@45drives.com> 4.2.9-2
 - Updates Build Number + Changes user-defined iscsi config path to a static/default
   path, adds enable + config commands after saving targets to ensure config loads

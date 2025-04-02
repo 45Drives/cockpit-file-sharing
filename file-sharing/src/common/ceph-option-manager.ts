@@ -320,7 +320,7 @@ export function getCephOptionManager(
 export function getCephOptionManager(
   servers: Server | [Server, ...Server[]],
   clientName: `client.${string}`
-): CephOptionManagerSingleServer | CephOptionManagerClustered {
+): ICephOptionManager {
   if (Array.isArray(servers)) {
     return servers.length === 1
       ? new CephOptionManagerSingleServer(servers[0], clientName)
