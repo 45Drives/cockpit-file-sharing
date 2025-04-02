@@ -1,8 +1,7 @@
 import { onMounted, onUnmounted } from "vue";
 import { ResultAsync, ok, err } from "neverthrow";
-import { type SambaShareConfig } from "@/tabs/samba/data-types";
 import { type NFSExport } from "@/tabs/nfs/data-types";
-import { type Server } from "@45drives/houston-common-lib";
+import { type Server, type SambaShareConfig } from "@45drives/houston-common-lib";
 
 type Common<A, B> = {
   [P in keyof A & keyof B]: A[P] | B[P];

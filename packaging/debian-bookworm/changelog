@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.10-3bookworm) bookworm; urgency=medium
+
+  * Merges prerelease packages into stable
+
+ -- Jordan Keough <jkeough@45drives.com>  Wed, 02 Apr 2025 06:53:28 -0300
+
 cockpit-file-sharing (4.2.9-2bookworm) bookworm; urgency=medium
 
   * bump build rev

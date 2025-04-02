@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.9-8
+## Cockpit File Sharing 4.2.10-3
 
-* build
+* Merges prerelease packages into stable

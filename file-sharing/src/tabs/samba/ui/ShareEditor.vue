@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, computed, defineEmits, ref, watchEffect } from "vue";
+import { defineProps, computed, defineEmits, ref, watchEffect, onMounted } from "vue";
 import {
   InputField,
   ToggleSwitch,
@@ -14,8 +14,8 @@ import {
   validationError,
   ValidationResultView,
 } from "@45drives/houston-common-ui";
-import { type SambaShareConfig, newSambaShareConfig } from "@/tabs/samba/data-types";
-import { KeyValueSyntax } from "@45drives/houston-common-lib";
+import { server } from "@45drives/houston-common-lib";
+import { KeyValueSyntax, SambaShareConfig } from "@45drives/houston-common-lib";
 import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
 import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
 
@@ -44,7 +44,7 @@ const emit = defineEmits<{
 const globalProcessingState = useGlobalProcessingState();
 
 const shareConf = computed<SambaShareConfig>(() =>
-  props.newShare ? newSambaShareConfig() : props.share
+  props.newShare ? SambaShareConfig.makeNew() : props.share
 );
 
 const { tempObject: tempShareConfig, modified, resetChanges } = useTempObjectStaging(shareConf);
@@ -86,11 +86,23 @@ watchEffect(() => {
   }
 });
 
+watchEffect(() => {
+  if (!props.newShare && props.share) {
+    resetChanges(); // Re-syncs tempShareConfig with props.share
+  }
+});
+
+const isDomainJoined = ref(false);
+
+onMounted(async () => {
+  isDomainJoined.value = await server.isServerDomainJoined().unwrapOr(false);
+});
+
 const windowsACLsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
     "map acl inherit": "yes",
     "acl_xattr:ignore system acls": "yes",
-    "vfs objects": ["acl_xattr"],
+    "vfs objects": "acl_xattr",
   },
   exclude: {},
 });
@@ -100,7 +112,7 @@ const windowsACLsWithLinuxOptions = BooleanKeyValueSuite(
   {
     include: {
       "map acl inherit": "yes",
-      "vfs objects": ["acl_xattr"],
+      "vfs objects": "acl_xattr",
     },
     exclude: {
       "acl_xattr:ignore system acls": "yes",
@@ -159,11 +171,8 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
         <template #label>
           {{ _("Share Name") }}
         </template>
-        <InputField
-          v-model="tempShareConfig.name"
-          :placeholder="_('A unique name for your share')"
-          :disabled="!newShare"
-        />
+        <InputField v-model="tempShareConfig.name" :placeholder="_('A unique name for your share')"
+          :disabled="!newShare" />
         <ValidationResultView v-bind="shareNameValidationResult" />
       </InputLabelWrapper>
 
@@ -195,15 +204,9 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
         <ToggleSwitch v-model="tempShareConfig.inheritPermissions">
           {{ _("Inherit Permissions") }}
         </ToggleSwitch>
-        <ToggleSwitch v-model="windowsACLsOptions">
+        <ToggleSwitch v-if="isDomainJoined" v-model="windowsACLsOptions">
           {{ _("Windows ACLs") }}
           <template #description> {{ _("Administer share permissions from Windows") }} </template>
-        </ToggleSwitch>
-        <ToggleSwitch v-model="windowsACLsWithLinuxOptions">
-          {{ _("Windows ACLs with Linux/MacOS Support") }}
-          <template #description>
-            {{ _("Administer share permissions from Windows for Windows, Mac, and Linux clients") }}
-          </template>
         </ToggleSwitch>
         <ToggleSwitch v-model="shadowCopyOptions">
           {{ _("Shadow Copy") }}
@@ -229,23 +232,18 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
         <template v-slot:label>
           {{ _("Advanced") }}
         </template>
-        <ParsedTextArea
-          :parser="KeyValueSyntax({ trailingNewline: false })"
-          v-model="tempShareConfig.advancedOptions"
-        />
+        <ParsedTextArea :parser="KeyValueSyntax({ trailingNewline: false })"
+          v-model="tempShareConfig.advancedOptions" />
       </Disclosure>
 
       <div class="button-group-row justify-end grow">
-        <button
-          class="btn btn-secondary"
-          @click="
+        <button class="btn btn-secondary" @click="
             () => {
               resetChanges();
               shareDirectoryInputAndOptionsRef?.resetChanges?.();
               $emit('cancel');
             }
-          "
-        >
+          ">
           {{ _("Cancel") }}
         </button>
         <button

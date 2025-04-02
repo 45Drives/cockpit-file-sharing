@@ -32,6 +32,8 @@ export class ConfigurationManager {
             .andThen((file) =>
                 this.exportConfiguration()
                     .map((config) => file.write(config))
+                    .andThen(() => this.server.execute(new BashCommand(`systemctl enable scst`)))
+                    .andThen(() => this.server.execute(new BashCommand(`scstadmin -config ${useUserSettings().value.iscsi.confPath}`)))
                     .map(() => file)
             );
     }
