@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.10-4jammy) jammy; urgency=medium
+
+  * Updates houston-common commit, fixes isDomainJoined function
+
+ -- Jordan Keough <jkeough@45drives.com>  Fri, 04 Apr 2025 05:55:47 -0300
+
 cockpit-file-sharing (4.2.10-3jammy) jammy; urgency=medium
 
   * Merges prerelease packages into stable

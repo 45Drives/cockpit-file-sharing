@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.10-3
+## Cockpit File Sharing 4.2.10-4
 
-* Merges prerelease packages into stable
+* Updates houston-common commit, fixes isDomainJoined function
