@@ -90,6 +90,7 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
             clusteredServer: contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
             clusteredServerChecked: contents.iscsi?.clusteredServerChecked ?? defaultSettings().iscsi.clusteredServerChecked,
             subnetMask: contents.iscsi?.subnetMask || defaultSettings().iscsi.subnetMask,
+            tabVisibility: contents.iscsi?.tabVisibility || defaultSettings().iscsi.tabVisibility,
           },
           includeSystemAccounts:
             contents.includeSystemAccounts ?? defaultSettings().includeSystemAccounts,
