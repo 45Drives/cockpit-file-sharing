@@ -101,24 +101,10 @@ onMounted(async () => {
 const windowsACLsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
     "map acl inherit": "yes",
-    "acl_xattr:ignore system acls": "yes",
     "vfs objects": "acl_xattr",
   },
   exclude: {},
 });
-
-const windowsACLsWithLinuxOptions = BooleanKeyValueSuite(
-  () => tempShareConfig.value.advancedOptions,
-  {
-    include: {
-      "map acl inherit": "yes",
-      "vfs objects": "acl_xattr",
-    },
-    exclude: {
-      "acl_xattr:ignore system acls": "yes",
-    },
-  }
-);
 
 const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
