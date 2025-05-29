@@ -1,3 +1,13 @@
+cockpit-file-sharing (4.2.11-1jammy) jammy; urgency=medium
+
+  * remove acl_xattr:ignore
+  * system
+  * acls
+  * =
+  * yes option from windowsACLsOptions
+
+ -- Jordan Keough <jkeough@45drives.com>  Thu, 29 May 2025 05:17:16 -0300
+
 cockpit-file-sharing (4.2.10-4jammy) jammy; urgency=medium
 
   * Updates houston-common commit, fixes isDomainJoined function

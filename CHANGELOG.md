@@ -1,3 +1,7 @@
-## Cockpit File Sharing 4.2.10-4
+## Cockpit File Sharing 4.2.11-1
 
-* Updates houston-common commit, fixes isDomainJoined function
+* remove acl_xattr:ignore
+* system
+* acls
+* =
+* yes option from windowsACLsOptions
