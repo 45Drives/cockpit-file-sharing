@@ -65,11 +65,17 @@ const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 let usedAddresses: string[] = [];
 
-if (useUserSettings().value.iscsi.clusteredServer) {
-  getServerCluster("pcs").andThen((servers) => 
-    ResultAsync.combine(servers.map((server) => server.execute(new BashCommand("hostname -I"))))
-    .map((procs) => procs.map((proc) => proc.getStdout().trim().split(" ")))).map((ips) => usedAddresses = ips.flat())
-}
+useUserSettings(true).then((userSettings) => {
+  if (userSettings.value.iscsi.clusteredServer) {
+    getServerCluster("pcs")
+      .andThen((servers) =>
+        ResultAsync.combine(
+          servers.map((server) => server.execute(new BashCommand("hostname -I")))
+        ).map((procs) => procs.map((proc) => proc.getStdout().trim().split(" ")))
+      )
+      .map((ips) => (usedAddresses = ips.flat()));
+  }
+});
 
 const handleClose = () => {
   emit("closeEditor");
@@ -91,6 +97,8 @@ const actions = wrapActions({ createPortal });
 const validationScope = new ValidationScope();
 
 const { validationResult: portalAddressValidationResult } = validationScope.useValidator(() => {
+  const userSettings = useUserSettings().value; // access ref right away for computed to trigger
+
   if (!tempPortal.value.address) {
     return validationError("A portal address is required.");
   }
@@ -107,7 +115,7 @@ const { validationResult: portalAddressValidationResult } = validationScope.useV
     return validationError("The address is already in use.");
   }
 
-  if (useUserSettings().value.iscsi.clusteredServer) {
+  if (userSettings.iscsi.clusteredServer) {
     if (tempPortal.value.address === "0.0.0.0") {
       return validationError("A specific address needs to be specified for clusters.");
     }

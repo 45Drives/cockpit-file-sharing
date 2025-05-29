@@ -29,6 +29,8 @@ import { RadosBlockDevice } from '@/tabs/iSCSI/types/cluster/RadosBlockDevice';
 import { LogicalVolume } from '@/tabs/iSCSI/types/cluster/LogicalVolume';
 import { Result } from 'postcss';
 
+const userSettingsResult = ResultAsync.fromSafePromise(useUserSettings(true));
+
 export class ISCSIDriverClusteredServer implements ISCSIDriver {
     server: Server;
     configurationManager: ConfigurationManager;
@@ -105,7 +107,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     }
 
     removeVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
-        if (useUserSettings().value.iscsi.clusteredServer && virtualDevice.assigned) {
+        if (virtualDevice.assigned) {
             return errAsync(new ProcessError("Cannot delete assigned devices in clustered environment."));
         } else {
             this.virtualDevices = this.virtualDevices.filter((existingDevice) => existingDevice.deviceName !== virtualDevice.deviceName);
@@ -145,38 +147,38 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     }
 
     addPortalToTarget(target: Target, portal: Portal) {
-        const self = this;
+        return userSettingsResult.andThen((userSettings) => {
+            const createdResources: PCSResource[] = [];
 
-        const createdResources: PCSResource[] = [];
+            const updatedPortalList = [...target.portals.map((targetPortal) => targetPortal.address), portal.address + ":3260"].join(", ");
 
-        const updatedPortalList = [...target.portals.map((targetPortal) => targetPortal.address), portal.address + ":3260"].join(", ");
+            const vipCreationArugments = `ocf:heartbeat:IPaddr2 ip=${portal.address} cidr_netmask=${userSettings.value.iscsi.subnetMask.toString()} op start timeout=20 op stop timeout=20 op monitor interval=10`;
+            const portblockOnCreationArugments = `ocf:heartbeat:portblock ip=${portal.address} portno=3260 protocol=tcp action=block op start timeout=20 op stop timeout=20 op monitor timeout=20 interval=20`;
+            const portblockOffCreationArugments = `ocf:heartbeat:portblock ip=${portal.address} portno=3260 protocol=tcp action=unblock op start timeout=20 op stop timeout=20 op monitor timeout=20 interval=20`;
 
-        const vipCreationArugments = `ocf:heartbeat:IPaddr2 ip=${portal.address} cidr_netmask=${useUserSettings().value.iscsi.subnetMask.toString()} op start timeout=20 op stop timeout=20 op monitor interval=10`;
-        const portblockOnCreationArugments = `ocf:heartbeat:portblock ip=${portal.address} portno=3260 protocol=tcp action=block op start timeout=20 op stop timeout=20 op monitor timeout=20 interval=20`;
-        const portblockOffCreationArugments = `ocf:heartbeat:portblock ip=${portal.address} portno=3260 protocol=tcp action=unblock op start timeout=20 op stop timeout=20 op monitor timeout=20 interval=20`;
-
-        return this.findTargetPCSResource(target)
-            .andThen((targetResource) => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_VIP_${portal.address}`, vipCreationArugments, PCSResourceType.VIP)
-                .andThen((vipResource) => {
-                    createdResources.push(vipResource);
-                    return this.pcsResourceManager.addResourceToGroup(vipResource, targetResource.resourceGroup!);
-                })
-                .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_PORTBLOCKON_${portal.address}`, portblockOnCreationArugments, PCSResourceType.PORTBLOCK_ON))
-                .andThen((portBlockResource) => {
-                    createdResources.push(portBlockResource);
-                    return this.pcsResourceManager.addResourceToGroup(portBlockResource, targetResource.resourceGroup!);
-                })
-                .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_PORTBLOCKOFF_${portal.address}`, portblockOffCreationArugments, PCSResourceType.PORTBLOCK_OFF))
-                .andThen((portBlockResource) => {
-                    createdResources.push(portBlockResource);
-                    return this.pcsResourceManager.addResourceToGroup(portBlockResource, targetResource.resourceGroup!);
-                })
-                .andThen(() => this.pcsResourceManager.updateResource(targetResource, `portals='${updatedPortalList}'`))
-            )
-            .mapErr((err) => {
-                createdResources.forEach((resource) => this.pcsResourceManager.deleteResource(resource))
-                return err;
-            });
+            return this.findTargetPCSResource(target)
+                .andThen((targetResource) => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_VIP_${portal.address}`, vipCreationArugments, PCSResourceType.VIP)
+                    .andThen((vipResource) => {
+                        createdResources.push(vipResource);
+                        return this.pcsResourceManager.addResourceToGroup(vipResource, targetResource.resourceGroup!);
+                    })
+                    .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_PORTBLOCKON_${portal.address}`, portblockOnCreationArugments, PCSResourceType.PORTBLOCK_ON))
+                    .andThen((portBlockResource) => {
+                        createdResources.push(portBlockResource);
+                        return this.pcsResourceManager.addResourceToGroup(portBlockResource, targetResource.resourceGroup!);
+                    })
+                    .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_PORTBLOCKOFF_${portal.address}`, portblockOffCreationArugments, PCSResourceType.PORTBLOCK_OFF))
+                    .andThen((portBlockResource) => {
+                        createdResources.push(portBlockResource);
+                        return this.pcsResourceManager.addResourceToGroup(portBlockResource, targetResource.resourceGroup!);
+                    })
+                    .andThen(() => this.pcsResourceManager.updateResource(targetResource, `portals='${updatedPortalList}'`))
+                )
+                .mapErr((err) => {
+                    createdResources.forEach((resource) => this.pcsResourceManager.deleteResource(resource))
+                    return err;
+                });
+        });
     }
 
     deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<void, ProcessError> {
