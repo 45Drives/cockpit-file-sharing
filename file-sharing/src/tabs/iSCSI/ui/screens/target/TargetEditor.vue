@@ -89,31 +89,33 @@ const handleClose = () => {
 };
 
 const createTarget = () => {
-  if (useUserSettings().value.iscsi.clusteredServer) {
-    return driver
-    .andThen((driver) => {
-      return driver.createTarget(tempTarget.value)
-      .andThen(() => driver.addPortalToTarget(tempTarget.value, tempPortal.value))
-      .mapErr((err) => {
-        driver.removeTarget(tempTarget.value);
-        return err;
+  return ResultAsync.fromSafePromise(useUserSettings(true)).andThen(userSettings => {
+    if (userSettings.value.iscsi.clusteredServer) {
+      return driver
+      .andThen((driver) => {
+        return driver.createTarget(tempTarget.value)
+        .andThen(() => driver.addPortalToTarget(tempTarget.value, tempPortal.value))
+        .mapErr((err) => {
+          driver.removeTarget(tempTarget.value);
+          return err;
+        })
       })
-    })
-    .map(() => handleClose())
-    .mapErr(
-      (error) =>
-        new ProcessError(`Unable to create target ${tempTarget.value.name}: ${error.message}`)
-    );
-  }
-  else {
-    return driver
-    .andThen((driver) => driver.createTarget(tempTarget.value))
-    .map(() => handleClose())
-    .mapErr(
-      (error) =>
-        new ProcessError(`Unable to create target ${tempTarget.value.name}: ${error.message}`)
-    );
-  }
+      .map(() => handleClose())
+      .mapErr(
+        (error) =>
+          new ProcessError(`Unable to create target ${tempTarget.value.name}: ${error.message}`)
+      );
+    }
+    else {
+      return driver
+      .andThen((driver) => driver.createTarget(tempTarget.value))
+      .map(() => handleClose())
+      .mapErr(
+        (error) =>
+          new ProcessError(`Unable to create target ${tempTarget.value.name}: ${error.message}`)
+      );
+    }
+  })
 };
 
 const actions = wrapActions({ createTarget });

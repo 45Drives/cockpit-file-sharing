@@ -1,38 +1,29 @@
 <template>
   <CardContainer>
     <template v-slot:header> Devices </template>
-    <div
-      class="overflow-hidden"
-      :style="{
-        'max-height': showAddDevice ? '1500px' : '0',
-        transition: showAddDevice ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out',
-      }"
-    >
+    <div class="overflow-hidden" :style="{
+      'max-height': showAddDevice ? '1500px' : '0',
+      transition: showAddDevice ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out',
+    }">
       <div class="card">
-        <VirtualDeviceEditor
-          @close-editor="
-            () => {
-              showAddDevice = false;
-              actions.refreshDevices();
-            }
-          "
-        />
+        <VirtualDeviceEditor @close-editor="
+          () => {
+            showAddDevice = false;
+            actions.refreshDevices();
+          }
+        " />
       </div>
     </div>
     <div class="card">
       <div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
-        <Table
-          emptyText="No devices. Click '+' to add one."
-          noScroll
-          noHeader
-          class="!border-none !shadow-none"
-        >
+        <Table emptyText="No devices. Click '+' to add one." noScroll noHeader class="!border-none !shadow-none">
           <template #thead>
             <tr>
               <th scope="col">Device Name</th>
               <th scope="col">File Path</th>
               <th scope="col">Block Size</th>
               <th scope="col">Type</th>
+              <th v-if="useUserSettings().value.iscsi.clusteredServer" scope=" col">In Use</th>
               <th scope="col" class="flex flex-row justify-end">
                 <span class="sr-only">Delete</span>
                 <button @click="showAddDevice = !showAddDevice">
@@ -42,12 +33,8 @@
             </tr>
           </template>
           <template #tbody>
-            <VirtualDeviceEntry
-              v-for="(device, index) in virtualDevices"
-              :key="index"
-              :device="device"
-              @deleteDevice="actions.refreshDevices"
-            />
+            <VirtualDeviceEntry v-for="(device, index) in virtualDevices" :key="index" :device="device"
+              @deleteDevice="actions.refreshDevices" />
           </template>
         </Table>
       </div>
@@ -62,6 +49,7 @@ import { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 import { PlusIcon } from "@heroicons/vue/24/solid";
 import VirtualDeviceEntry from "../virtualDevice/VirtualDeviceEntry.vue";
 import VirtualDeviceEditor from "../virtualDevice/VirtualDeviceEditor.vue";
+import { useUserSettings } from "@/common/user-settings";
 import type { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import type { ProcessError } from "@45drives/houston-common-lib";
