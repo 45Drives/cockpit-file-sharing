@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.12-1bookworm) bookworm; urgency=medium
+
+  * ISCSI - Shows all virtual devices and whether in use or not
+
+ -- Jordan Keough <jkeough@45drives.com>  Thu, 29 May 2025 11:03:26 -0300
+
 cockpit-file-sharing (4.2.11-1bookworm) bookworm; urgency=medium
 
   * remove acl_xattr:ignore
