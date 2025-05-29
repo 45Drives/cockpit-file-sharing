@@ -4,11 +4,16 @@
     <td>{{ device.filePath }}</td>
     <td>{{ device.blockSize }}</td>
     <td>{{ getDeviceType() }}</td>
-    <td class="button-group-row justify-end">
+    <td v-if="useUserSettings().value.iscsi.clusteredServer">{{ device.assigned ? 'Yes' : 'No' }}</td>
+    <td class=" button-group-row justify-end">
       <button v-if="!useUserSettings().value.iscsi.clusteredServer" @click="promptDeletion">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
+      <!-- <button v-else disabled title="Deletion is disabled in clustered environemnts for safety.">
+        <span class="sr-only">Delete</span>
+        <TrashIcon class="size-icon icon-default" />
+      </button> -->
     </td>
   </tr>
 </template>
