@@ -90,6 +90,9 @@ jobs:
           name: ${{env.TITLE}} ${{env.VERSION}}
           prerelease: ${{env.PRERELEASE}}
           body_path: ${{github.workspace}}/CHANGELOG.md
+          files: |
+            /mnt/ci_artifacts/${{ needs.prebuild.outputs.uuid }}/sign/**/*.deb
+            /mnt/ci_artifacts/${{ needs.prebuild.outputs.uuid }}/sign/**/*.rpm
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
