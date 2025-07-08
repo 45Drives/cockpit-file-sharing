@@ -1,52 +1,43 @@
 <template>
   <CardContainer>
-    <div
-      class="overflow-hidden"
-      :style="{
+    <div class="overflow-hidden" :style="{
         'max-height': showEditor ? '1500px' : '0',
         transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out',
-      }"
-    >
+      }">
       <div class="card">
-        <InitiatorGroupEditor
-          :target="target"
-          @close-editor="
+        <InitiatorGroupEditor :target="target" @close-editor="
             () => {
               showEditor = false;
               actions.refreshTable();
             }
-          "
-        />
+          " />
       </div>
     </div>
     <div class="card">
       <div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
-        <Table
-          headerText="Initiator Groups"
-          emptyText="No initiator groups. Click '+' to add one."
-          noScroll
-          shrink-height="h-160"
-          class="!border-none !shadow-none"
-        >
+        <Table headerText="Initiator Groups" emptyText="No initiator groups. Click '+' to add one." noScroll
+          shrink-height="h-160" class="!border-none !shadow-none">
           <template #thead>
             <tr>
               <th scope="col">Group Name</th>
-              <th scope="col" :class="{'flex flex-row': !useUserSettings().value.iscsi.clusteredServer, 'justify-end': true} ">
+              <!-- <th scope="col" :class="{'flex flex-row': !useUserSettings().value.iscsi.clusteredServer, 'justify-end': true} ">
                 <span class="sr-only">Delete</span>
                 <button @click="showEditor = !showEditor" v-if="!useUserSettings().value.iscsi.clusteredServer">
+                  <PlusIcon class="size-icon icon-default" />
+                </button>
+              </th> -->
+              <th scope="col"
+                class="flex flex-row justify-end'">
+                <span class="sr-only">Delete</span>
+                <button @click="showEditor = !showEditor">
                   <PlusIcon class="size-icon icon-default" />
                 </button>
               </th>
             </tr>
           </template>
           <template #tbody>
-            <InitiatorGroupEntry
-              v-for="(group, index) in target.initiatorGroups"
-              :key="index"
-              :target="target"
-              :initiatorGroup="group"
-              @deleteEntry="actions.refreshTable"
-            />
+            <InitiatorGroupEntry v-for="(group, index) in target.initiatorGroups" :key="index" :target="target"
+              :initiatorGroup="group" @deleteEntry="actions.refreshTable" />
           </template>
         </Table>
       </div>
