@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.12-1
+## Cockpit File Sharing 4.2.13-1
 
-* ISCSI - Shows all virtual devices and whether in use or not
+* Removes conditional flag on group add/delete for iscsi initiator groups
