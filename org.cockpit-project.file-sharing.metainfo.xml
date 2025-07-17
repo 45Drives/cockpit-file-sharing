@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="addon">
+  <id>org.cockpit_project.file-sharing</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <name>File Sharing</name>
+  <summary>File Sharing plugin for Cockpit</summary>
+  <description>
+    <p>
+     A Cockpit plugin to easily manage samba and NFS file sharing
+    </p>
+  </description>
+  <extends>org.cockpit_project.cockpit</extends>
+  <launchable type="cockpit-manifest">file-sharing</launchable>
+  <url type="homepage">https://github.com/45Drives/cockpit-file-sharing</url>
+  <url type="bugtracker">https://github.com/45Drives/cockpit-file-sharing/issues</url>
+</component>
