@@ -5,12 +5,13 @@ export class RadosBlockDevice extends VirtualDevice {
     parentPool: Pool;
     dataPool: Pool | undefined;
     maximumSize: number;
-
-    constructor(deviceName: string, filePath: string, blockSize: number, maximumSize: number, parentPool: Pool, dataPool?: Pool) {
+    vgName?: string;
+    constructor(deviceName: string, filePath: string, blockSize: number, maximumSize: number, parentPool: Pool, dataPool?: Pool,vgName?: string) {
         super(deviceName, filePath, blockSize, DeviceType.BlockIO);
 
         this.parentPool = parentPool;
         this.dataPool = dataPool;
         this.maximumSize = maximumSize;
-    }
+        this.vgName = vgName;
+    } 
 }
