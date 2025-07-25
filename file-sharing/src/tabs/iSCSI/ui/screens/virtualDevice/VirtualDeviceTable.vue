@@ -32,10 +32,21 @@
               </th>
             </tr>
           </template>
-          <template #tbody>
-            <VirtualDeviceEntry v-for="(device, index) in virtualDevices" :key="index" :device="device"
-              @deleteDevice="actions.refreshDevices" />
-          </template>
+            <template #tbody>
+  <template v-if="filteredDevices.length > 0">
+    <template v-for="(device, index) in filteredDevices" :key="index">
+      <VirtualDeviceEntry
+        :device="device"
+        @deleteDevice="actions.refreshDevices"
+      />
+    </template>
+  </template>
+  <tr v-else>
+    <td colspan="6" class="p-4 text-gray-500 text-sm text-center">Loading devices...</td>
+  </tr>
+</template>
+
+
         </Table>
       </div>
     </div>
@@ -44,7 +55,7 @@
 
 <script setup lang="ts">
 import { CardContainer, wrapActions, Table } from "@45drives/houston-common-ui";
-import { inject, ref, watch, type Ref } from "vue";
+import { inject, ref, watch, type Ref,computed } from "vue";
 import { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 import { PlusIcon } from "@heroicons/vue/24/solid";
 import VirtualDeviceEntry from "../virtualDevice/VirtualDeviceEntry.vue";
@@ -53,6 +64,7 @@ import { useUserSettings } from "@/common/user-settings";
 import type { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import type { ProcessError } from "@45drives/houston-common-lib";
+
 
 const showAddDevice = ref(false);
 
@@ -68,6 +80,10 @@ watch(forceRefreshRecords, () => {
     forceRefreshRecords["devices"] = false;
   }
 });
+const filteredDevices = computed(() => {
+  return virtualDevices?.value?.filter((d) => d.vgName === undefined) ?? [];
+});
+
 
 const refreshDevices = () => {
   return driver.andThen((driver) => {

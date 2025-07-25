@@ -75,6 +75,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                         .andThen(() => this.getExistingVirtualDevices())
                         .map((devices) => this.virtualDevices.push(...devices))
                         .map(() => this);
+
                 }
 
                 return err(new ProcessError("/sys/kernel/scst_tgt was not found. Is SCST installed?"))
@@ -380,14 +381,11 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             }
 
             // === 2. Add all UNASSIGNED RBDs ===
-            for (const rbd of availableRadosBlockDevices) {
-                const isInVG = rbd.vgName !== undefined && rbd.vgName !== null && rbd.vgName !== "";
-                const isAssigned = assignedPaths.has(rbd.filePath);
-          
-                if (!isAssigned && !isInVG) {
-                  foundDevices.push(new VirtualDevice(rbd.deviceName, rbd.filePath, rbd.blockSize, rbd.deviceType, false));
+            for (let rbd of availableRadosBlockDevices) {
+                if (!assignedPaths.has(rbd.filePath)) {
+                    foundDevices.push(new VirtualDevice(rbd.deviceName, rbd.filePath, rbd.blockSize, rbd.deviceType, false,rbd.vgName));
                 }
-              }   
+            }
 
             // === 3. Add all UNASSIGNED Logical Volumes ===
             for (let lv of availableLogicalVolumes) {
@@ -395,6 +393,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                     foundDevices.push(new VirtualDevice(lv.deviceName, lv.filePath, lv.blockSize, lv.deviceType, false));
                 }
             }
+            console.log("Found devices:", foundDevices);
             return ok(foundDevices);
         }));
     }

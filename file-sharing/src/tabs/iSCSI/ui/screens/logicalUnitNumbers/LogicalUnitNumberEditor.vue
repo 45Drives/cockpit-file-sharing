@@ -75,7 +75,8 @@ const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 const devices = inject<Ref<VirtualDevice[]>>("virtualDevices")!;
 
 const deviceOptions: ComputedRef<SelectMenuOption<string>[]> = computed(() =>
-  devices.value.filter((device) => !props.initiatorGroup.logicalUnitNumbers.find((lun) => lun.blockDevice === device)).map((device) => ({ label: device.deviceName, value: device.deviceName }))
+
+  devices.value.filter((device) => !device.vgName && !props.initiatorGroup.logicalUnitNumbers.find((lun) => lun.blockDevice === device)).map((device) => ({ label: device.deviceName, value: device.deviceName }))
 );
 
 const newLun = ref<LogicalUnitNumber>(LogicalUnitNumber.empty());
