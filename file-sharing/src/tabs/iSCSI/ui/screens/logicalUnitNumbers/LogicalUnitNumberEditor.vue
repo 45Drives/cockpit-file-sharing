@@ -107,7 +107,6 @@ const handleClose = () => {
 
 const createLun = () => {
   tempLun.value.blockDevice = devices.value.find((device) => device.deviceName === tempLun.value.name);
-
   return driver
     .andThen((driver) => driver.addLogicalUnitNumberToGroup(props.initiatorGroup, tempLun.value))
     .map(() => handleClose())

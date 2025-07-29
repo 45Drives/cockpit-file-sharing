@@ -275,15 +275,55 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                         const targetIQN = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource, "iqn").safeUnwrap();
 
                         if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
+
                             yield* self.createAndConfigureRBDResource(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
                         }
                         else if (logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
+
                             yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
                         }
                         else {
-                            yield* self.pcsResourceManager.createResource(`${targetResource.resourceGroup!.name}_LUN_${logicalUnitNumber.unitNumber}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN} lun=${logicalUnitNumber.unitNumber} path=${logicalUnitNumber.blockDevice!.filePath} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN)
-                                .andThen((resource) => self.pcsResourceManager.addResourceToGroup(resource, targetResource.resourceGroup!)).safeUnwrap();
-                        }
+
+                            const lvPath = logicalUnitNumber.blockDevice!.filePath;
+                            const pathParts = lvPath.split("/");
+                
+                            if (pathParts.length < 4) {
+                              throw new Error(`Invalid block device path: ${lvPath}`);
+                            }
+                
+                            const vgname = pathParts[2];
+                            const lvname = pathParts[3];
+                
+                            // Step 1: Create LVM-activate resource
+                            yield* self.pcsResourceManager
+                              .createResource(
+                                `${targetResource.resourceGroup!.name}_LVM_${lvname}_${vgname}`,
+                                `ocf:heartbeat:LVM-activate lvname=${lvname} vgname=${vgname} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`,
+                                PCSResourceType.LVM
+                              )
+                              .andThen((lvmResource) =>
+                                self.pcsResourceManager.addResourceToGroup(
+                                  lvmResource,
+                                  targetResource.resourceGroup!
+                                )
+                              )
+                              .safeUnwrap();
+                
+                            // Step 2: Create iSCSI LUN resource
+                            yield* self.pcsResourceManager
+                              .createResource(
+                                `${targetResource.resourceGroup!.name}_LUN_${logicalUnitNumber.unitNumber}`,
+                                `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN} lun=${logicalUnitNumber.unitNumber} path=${lvPath} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`,
+                                PCSResourceType.LUN
+                              )
+                              .andThen((lunResource) =>
+                                self.pcsResourceManager.addResourceToGroup(
+                                  lunResource,
+                                  targetResource.resourceGroup!
+                                )
+                              )
+                              .safeUnwrap();
+                                                      }
 
                         return okAsync(undefined);
                     }))
@@ -590,11 +630,10 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         }))
     }
 
-    createAndConfigureLVResources(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup) {
+     createAndConfigureLVResources(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup) {
         const self = this;
 
         const blockDevice = (lun.blockDevice! as LogicalVolume);
-
         return this.server.execute(new BashCommand(`lvchange -an ${blockDevice!.volumeGroup.name}/${blockDevice!.deviceName}`))
             .andThen(() => new ResultAsync(safeTry(async function* () {
                 for (let physicalVolume of blockDevice.volumeGroup.volumes) {
@@ -614,7 +653,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
             .andThen(() => this.server.execute(new BashCommand(`pcs resource cleanup`)))
     }
-
+    
     removeLVAndRelatedResources(lun: LogicalUnitNumber, targetIQN: string) {
         const self = this;
 

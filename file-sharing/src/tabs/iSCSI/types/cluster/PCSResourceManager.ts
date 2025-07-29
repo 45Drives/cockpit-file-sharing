@@ -57,7 +57,6 @@ export class PCSResourceManager {
 
     addResourceToGroup(resource: PCSResource, resourceGroup: PCSResourceGroup): ResultAsync<void, ProcessError>  {
         const self = this;
-
         return new ResultAsync(safeTry(async function * () {
             const currentResourceIndex = PCSResourceTypeInfo[resource.resourceType].orderInGroup;
 
