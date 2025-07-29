@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.2.14-3bookworm) bookworm; urgency=medium
+
+  * build package
+  * added logic to add LVM's to pcs target even after page refresh
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 29 Jul 2025 12:19:36 -0300
+
 cockpit-file-sharing (4.2.14-2bookworm) bookworm; urgency=medium
 
   * building
