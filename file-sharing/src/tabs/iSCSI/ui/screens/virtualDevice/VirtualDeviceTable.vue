@@ -33,7 +33,7 @@
             </tr>
           </template>
             <template #tbody>
-  <template v-if="filteredDevices.length > 0">
+  <template v-if="      !fetchingDevices ">
     <template v-for="(device, index) in filteredDevices" :key="index">
       <VirtualDeviceEntry
         :device="device"
@@ -73,6 +73,7 @@ const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 const virtualDevices = inject<Ref<VirtualDevice[]>>("virtualDevices")!;
 
 const forceRefreshRecords = inject<Record<string, boolean>>("forceRefreshRecords")!;
+  const fetchingDevices = ref<boolean>(false);
 
 watch(forceRefreshRecords, () => {
   if (forceRefreshRecords["devices"]) {
@@ -82,15 +83,22 @@ watch(forceRefreshRecords, () => {
 });
 const filteredDevices = computed(() => {
   return virtualDevices?.value?.filter((d) => d.vgName === undefined) ?? [];
+
 });
 
 
 const refreshDevices = () => {
-  return driver.andThen((driver) => {
-    return driver.getVirtualDevices().map((devices) => {
-      virtualDevices.value = devices;
-    });
-  });
+  fetchingDevices.value = true;
+  return driver
+    .andThen((driver) =>
+      driver.getVirtualDevices().map((devices) => {
+        virtualDevices.value = devices;
+        fetchingDevices.value = false;
+
+      })
+    )
+    
+   
 };
 
 const actions = wrapActions({ refreshDevices: refreshDevices });
