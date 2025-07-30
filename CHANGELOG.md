@@ -1,4 +1,3 @@
-## Cockpit File Sharing 4.2.14-3
+## Cockpit File Sharing 4.2.14-4
 
 * build package
-* added logic to add LVM's to pcs target even after page refresh

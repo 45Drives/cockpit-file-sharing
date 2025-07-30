@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.14-4focal) focal; urgency=medium
+
+  * build package
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 30 Jul 2025 09:51:09 -0300
+
 cockpit-file-sharing (4.2.14-3focal) focal; urgency=medium
 
   * build package
