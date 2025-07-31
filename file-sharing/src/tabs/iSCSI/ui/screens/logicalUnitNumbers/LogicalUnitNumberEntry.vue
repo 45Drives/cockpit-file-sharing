@@ -35,8 +35,10 @@ const deleteEntry = () => {
     .andThen((driver) =>
       driver.removeLogicalUnitNumberFromGroup(props.initiatorGroup, props.logicalUnitNumber)
     )
-    .map(() => emit("deleteEntry"))
-    .mapErr(
+    .map(() => {
+      emit("deleteEntry");
+      emit("lunDeleted", props.logicalUnitNumber.blockDevice?.deviceName);
+    })    .mapErr(
       (error) =>
         new ProcessError(
           `Unable to remove LUN ${props.logicalUnitNumber.unitNumber} from group ${props.initiatorGroup.name} : ${error.message}`
