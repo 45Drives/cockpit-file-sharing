@@ -44,7 +44,7 @@ export const PCSResourceTypeInfo: { [key in PCSResourceType]: PCSResourceInfo } 
     },
     [PCSResourceType.LVM]: {
         namePrefix: "iscsi_lvm",
-        internalTypeName: "LVM_activate",
+        internalTypeName: "LVM-activate",
         orderInGroup: 2,
     },
     [PCSResourceType.TARGET]: {

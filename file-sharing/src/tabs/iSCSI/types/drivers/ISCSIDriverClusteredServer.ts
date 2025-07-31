@@ -275,44 +275,34 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                 if (targetResource !== undefined) {
                     return new ResultAsync(safeTry(async function* () {
                         const targetIQN = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource, "iqn").safeUnwrap();
+                        if( logicalUnitNumber.blockDevice?.vgName === undefined) {
+                            if(logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
+                                yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
+                            }
+                            else{
+                                const lvPath = logicalUnitNumber.blockDevice!.filePath;
+                                const pathParts = lvPath.split("/");
+                
+                               if (pathParts.length < 4) {
+                                 throw new Error(`Invalid block device path: ${lvPath}`);
+                                }
+       
+                                const vgname = pathParts[2];
+                                const lvname = pathParts[3];
+           
+                               if (vgname && lvname) {
+                                   const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname).safeUnwrap();
+                                    logicalUnitNumber.blockDevice = logicalVolume;
+                                    }
 
-                        if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
+                    
+                            yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
+                            }
+                        }
+                       else  if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
 
                             yield* self.createAndConfigureRBDResource(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
                         }
-                        else if (logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
-
-                            yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
-                        }
-                        else {
-                             const lvPath = logicalUnitNumber.blockDevice!.filePath;
-                             const pathParts = lvPath.split("/");
-                
-                            if (pathParts.length < 4) {
-                              throw new Error(`Invalid block device path: ${lvPath}`);
-                             }
-            
-                             const vgname = pathParts[2];
-                             const lvname = pathParts[3];
-                
-                          
-                            if (vgname && lvname) {
-                                const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname).safeUnwrap();
-                                    yield* self.createAndConfigureLVResources(
-                                    new LogicalUnitNumber(
-                                        logicalVolume.deviceName,
-                                        logicalUnitNumber.unitNumber,
-                                        logicalVolume
-                                    ),
-                                    targetIQN!,
-                                    targetResource.resourceGroup!
-                                    ).safeUnwrap();
-
-                            } else {
-                                throw new Error(`Invalid vgname or lvname: vgname=${vgname}, lvname=${lvname}`);
-                            }
-                                                      }
-
                         return okAsync(undefined);
                     }))
                 }
@@ -743,12 +733,14 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             yield* self.removeLUNResource(lun, targetIQN).safeUnwrap();
 
             const lvmResources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
+            console.log("LVM resource ",lvmResources)
 
             for (var resource of lvmResources.filter((resource) => resource.resourceType === PCSResourceType.LVM)) {
-               console.log("LVM resource ",resource)
+               console.log("LVM resource in for loop",resource)
                 const values = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["lvname", "vgname"]).safeUnwrap();
-
+                console.log("LVM resource values ",values)
                 if (values.get("lvname") === blockDevice.deviceName && values.get("vgname") === blockDevice.volumeGroup.name) {
+                    console.log("Deleting LVM resource ",resource)
                     yield* self.pcsResourceManager.deleteResource(resource).safeUnwrap();
                     break;
                 }
