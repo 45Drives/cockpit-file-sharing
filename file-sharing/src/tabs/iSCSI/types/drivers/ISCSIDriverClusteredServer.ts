@@ -353,13 +353,42 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                             vg,
                             StringToIntCaster()(lvInfo.lv_size).some()
                         );
-    
                         return okAsync(lv);
                     })))
             );
     }
 
-    removeLogicalUnitNumberFromGroup(
+    // removeLogicalUnitNumberFromGroup(
+    //     initiatorGroup: InitiatorGroup,
+    //     logicalUnitNumber: LogicalUnitNumber
+    // ): ResultAsync<void, ProcessError> {
+    //     const self = this;
+    //     console.log("hello from removeLogicalUnitNumberFromGroup")
+    //     return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
+    //         .andThen((targetResource) => new ResultAsync(safeTry(async function* () {
+    //             const targetIQN = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource!, "iqn").safeUnwrap();
+    //             if(logicalUnitNumber.blockDevice?.vgName=== undefined) {
+
+    //             }
+    //             if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
+    //                 console.log("removing from RadosBlockDevice block ", logicalUnitNumber)
+
+    //                 yield* self.removeRBDAndRelatedResource(logicalUnitNumber, targetIQN!).safeUnwrap();
+    //             }
+    //             else if (logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
+    //                 console.log("removing from LogicalVolume block ", logicalUnitNumber)
+
+    //                 yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetIQN!).safeUnwrap();
+    //             }
+    //             else {
+    //                 console.log("removing from else block ", logicalUnitNumber)
+    //                 yield* self.removeLUNResource(logicalUnitNumber, targetIQN!).safeUnwrap();
+    //             }
+
+    //             return okAsync(undefined)
+    //         })));
+    // }
+ removeLogicalUnitNumberFromGroup(
         initiatorGroup: InitiatorGroup,
         logicalUnitNumber: LogicalUnitNumber
     ): ResultAsync<void, ProcessError> {
@@ -368,12 +397,34 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
             .andThen((targetResource) => new ResultAsync(safeTry(async function* () {
                 const targetIQN = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource!, "iqn").safeUnwrap();
+                if(logicalUnitNumber.blockDevice?.vgName === undefined) {
+                    if(logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
+                        yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetIQN!).safeUnwrap();
 
-                if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
-                    yield* self.removeRBDAndRelatedResource(logicalUnitNumber, targetIQN!).safeUnwrap();
-                }
-                else if (logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
+                    }
+                    else{
+                        const lvPath = logicalUnitNumber.blockDevice!.filePath;
+                        const pathParts = lvPath.split("/");
+           
+                       if (pathParts.length < 4) {
+                         throw new Error(`Invalid block device path: ${lvPath}`);
+                        }
+       
+                        const vgname = pathParts[2];
+                        const lvname = pathParts[3];
+           
+
+                       if (vgname && lvname) {
+                           const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname).safeUnwrap();
+                            logicalUnitNumber.blockDevice = logicalVolume;
+                            }
+
+                    
                     yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetIQN!).safeUnwrap();
+                        }
+                }
+               else if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
+                    yield* self.removeRBDAndRelatedResource(logicalUnitNumber, targetIQN!).safeUnwrap();
                 }
                 else {
                     yield* self.removeLUNResource(logicalUnitNumber, targetIQN!).safeUnwrap();
@@ -694,6 +745,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             const lvmResources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
 
             for (var resource of lvmResources.filter((resource) => resource.resourceType === PCSResourceType.LVM)) {
+               console.log("LVM resource ",resource)
                 const values = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["lvname", "vgname"]).safeUnwrap();
 
                 if (values.get("lvname") === blockDevice.deviceName && values.get("vgname") === blockDevice.volumeGroup.name) {
