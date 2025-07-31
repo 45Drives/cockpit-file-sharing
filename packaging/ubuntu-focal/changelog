@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.14-6focal) focal; urgency=medium
+
+  * build package + fixed deletion
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 31 Jul 2025 10:41:16 -0300
+
 cockpit-file-sharing (4.2.14-5focal) focal; urgency=medium
 
   * fixed rbd's removal

@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.14-5
+## Cockpit File Sharing 4.2.14-6
 
-* fixed rbd's removal
+* build package + fixed deletion
