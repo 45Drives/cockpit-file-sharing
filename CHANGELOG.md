@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.14-8
+## Cockpit File Sharing 4.2.14-9
 
-* package build + fix rbdreactivity bug
+* package build + fix selectmenu options

@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.14-9jammy) jammy; urgency=medium
+
+  * package build + fix selectmenu options
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 01 Aug 2025 14:14:33 -0300
+
 cockpit-file-sharing (4.2.14-8jammy) jammy; urgency=medium
 
   * package build + fix rbdreactivity bug
