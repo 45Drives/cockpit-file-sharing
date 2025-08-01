@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.14-6
+## Cockpit File Sharing 4.2.14-8
 
-* build package + fixed deletion
+* package build + fix rbdreactivity bug
