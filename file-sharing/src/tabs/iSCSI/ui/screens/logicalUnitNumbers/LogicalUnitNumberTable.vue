@@ -95,8 +95,6 @@ function removeVirtualDevice(deviceName?: string) {
   if (index !== -1) {
     virtualDevices.value.splice(index, 1);
   }
-  console.log(`Removed virtual device: ${deviceName}`);
-  console.log("Updated virtual devices:", virtualDevices.value);
 }
 
 

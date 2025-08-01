@@ -240,7 +240,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     ): ResultAsync<void, ProcessError> {
         const updatedInitiatorList = [...initiatorGroup.initiators, initiator].map((initiator) => initiator.name).join(" ");
 
-        return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
+        return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath).map(() => undefined)
             .andThen((targetResource) => {
                 if (targetResource !== undefined)
                     return this.pcsResourceManager.updateResource(targetResource, `allowed_initiators='${updatedInitiatorList}'`)
@@ -378,51 +378,56 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     //             return okAsync(undefined)
     //         })));
     // }
- removeLogicalUnitNumberFromGroup(
+    removeLogicalUnitNumberFromGroup(
         initiatorGroup: InitiatorGroup,
         logicalUnitNumber: LogicalUnitNumber
-    ): ResultAsync<void, ProcessError> {
+      ): ResultAsync<void, ProcessError> {
         const self = this;
-
+      
         return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
-            .andThen((targetResource) => new ResultAsync(safeTry(async function* () {
-                const targetIQN = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource!, "iqn").safeUnwrap();
-                if(logicalUnitNumber.blockDevice?.vgName === undefined) {
-                    if(logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
-                        yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetIQN!).safeUnwrap();
-
-                    }
-                    else{
-                        const lvPath = logicalUnitNumber.blockDevice!.filePath;
-                        const pathParts = lvPath.split("/");
-           
-                       if (pathParts.length < 4) {
-                         throw new Error(`Invalid block device path: ${lvPath}`);
-                        }
-       
-                        const vgname = pathParts[2];
-                        const lvname = pathParts[3];
-           
-
-                       if (vgname && lvname) {
-                           const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname).safeUnwrap();
-                            logicalUnitNumber.blockDevice = logicalVolume;
-                            }
-
-                    
-                    yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetIQN!).safeUnwrap();
-                        }
+          .andThen((targetResource) =>
+            new ResultAsync(safeTry(async function* () {
+              const targetIQN = yield* self.pcsResourceManager
+                .fetchResourceInstanceAttributeValue(targetResource!, "iqn")
+                .safeUnwrap();
+      
+              if (logicalUnitNumber.blockDevice?.vgName === undefined) {
+                if (logicalUnitNumber.blockDevice instanceof LogicalVolume) {
+                  yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetIQN!).safeUnwrap();
+                } else {
+                  const lvPath = logicalUnitNumber.blockDevice!.filePath;
+                  const pathParts = lvPath.split("/");
+      
+                  if (pathParts.length < 4) {
+                    throw new Error(`Invalid block device path: ${lvPath}`);
+                  }
+      
+                  const vgname = pathParts[2];
+                  const lvname = pathParts[3];
+      
+                  if (vgname && lvname) {
+                    const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname).safeUnwrap();
+                    logicalUnitNumber.blockDevice = logicalVolume;
+                  }
+      
+                  yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetIQN!).safeUnwrap();
                 }
-               else if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
-                    yield* self.removeRBDAndRelatedResource(logicalUnitNumber, targetIQN!).safeUnwrap();
-                }
-                else {
-                    yield* self.removeLUNResource(logicalUnitNumber, targetIQN!).safeUnwrap();
-                }
-
-                return okAsync(undefined)
-            })));
-    }
+              } else if (logicalUnitNumber.blockDevice instanceof RadosBlockDevice) {
+                yield* self.removeRBDAndRelatedResource(logicalUnitNumber, targetIQN!).safeUnwrap();
+              } else {
+                yield* self.removeLUNResource(logicalUnitNumber, targetIQN!).safeUnwrap();
+              }
+      
+              return ok(undefined); // ✅ Do not use okAsync inside safeTry
+            }))
+          )
+          .andThen(() => {
+            return this.server
+              .execute(new BashCommand(`pcs resource cleanup`))
+              .map(() => undefined); // Ensures return type matches: ResultAsync<void, ProcessError>
+          });
+      }
+      
 
     addCHAPConfigurationToTarget(
         target: Target,
