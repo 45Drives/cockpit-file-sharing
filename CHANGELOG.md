@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.14-10
+## Cockpit File Sharing 4.2.14-11
 
-* building package
+* fixed group target not found error
