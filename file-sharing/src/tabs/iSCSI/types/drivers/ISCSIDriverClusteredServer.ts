@@ -240,7 +240,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     ): ResultAsync<void, ProcessError> {
         const updatedInitiatorList = [...initiatorGroup.initiators, initiator].map((initiator) => initiator.name).join(" ");
 
-        return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath).map(() => undefined)
+        return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
             .andThen((targetResource) => {
                 if (targetResource !== undefined)
                     return this.pcsResourceManager.updateResource(targetResource, `allowed_initiators='${updatedInitiatorList}'`)
@@ -457,7 +457,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
             const availableLogicalVolumes = yield* self.rbdManager.fetchAvaliableLogicalVolumes().safeUnwrap();
             const availableRadosBlockDevices = yield* self.rbdManager.fetchAvaliableRadosBlockDevices().safeUnwrap();
-
+            console.log("Available Logical Volumes:", availableLogicalVolumes);
             const resources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
 
             // Track paths used in LUNs
@@ -481,10 +481,10 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                 // Try to match RBD
                 const rbd = availableRadosBlockDevices.find((r) => r.filePath === path);
                 if (rbd) {
-                    foundDevices.push(new VirtualDevice(rbd.deviceName, rbd.filePath, rbd.blockSize, rbd.deviceType, true));
+                    rbd.assigned = true;
+                    foundDevices.push(rbd);
                     continue;
                 }
-
                 // Fallback unknown BlockIO device
                 const blockSizeResult = await self.rbdManager.getBlockSizeFromDevicePath(path);
                 const blockSize = blockSizeResult.isOk() ? blockSizeResult.value : 0;
