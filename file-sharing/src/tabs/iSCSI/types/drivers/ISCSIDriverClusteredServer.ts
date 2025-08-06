@@ -95,15 +95,24 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             .map((proc) => {
                 const output = proc.getStdout();
                 const parser = new DOMParser();
-
                 const doc = parser.parseFromString(output, "text/xml");
-                return doc
-                    .getElementsByTagName("resource")[0]
-                    ?.getElementsByTagName("node")[0]
-                    ?.attributes.getNamedItem("name")?.value;
+    
+                const nodeElements = doc.getElementsByTagName("node");
+                for (let i = 0; i < nodeElements.length; i++) {
+                    const node = nodeElements[i];
+                    const standby = node.getAttribute("standby");
+                    const name = node.getAttribute("name");
+                    if (standby === "false" && name) {
+                        console.log(`Active node found: ${name}`);
+                        return name;
+                    }
+                }
+    
+                throw new Error("No non-standby node found");
             })
             .map((nodeIP) => new Server(nodeIP));
     }
+    
 
     addVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
         this.virtualDevices = [...this.virtualDevices, virtualDevice];

@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.14-14jammy) jammy; urgency=medium
+
+  * getting first unstandby node evrytime 
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 06 Aug 2025 12:52:15 -0300
+
 cockpit-file-sharing (4.2.14-13jammy) jammy; urgency=medium
 
   * createRadosBlockDevice updated to update cachedRBDS
