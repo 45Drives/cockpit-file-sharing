@@ -15,42 +15,86 @@ export class RBDManager {
         this.server = server;
     }
 
+    // createRadosBlockDevice(name: string, size: number, parentPool: Pool, dataPool?: Pool) {
+    //     const dataPoolArgument =  dataPool === undefined ? "" :  `--data-pool ${dataPool.name}`
+
+    //     return this.server.execute(new BashCommand(`rbd create ${parentPool.name}/${name} --size ${size}B ${dataPoolArgument}`))
+    //     .andThen(() => 
+    //         this.server.execute(new BashCommand(`rbd map ${parentPool.name}/${name}`))
+    //         .andThen((mapProc) => this.server.execute(new BashCommand(`blockdev --getbsz ${mapProc.getStdout()}`))
+    //             .andThen((blockSizeProc) => {
+    //                 const blockSize = StringToIntCaster()(blockSizeProc.getStdout())
+
+    //                 if (!blockSize.isNone())
+    //                     return okAsync(new RadosBlockDevice(name, mapProc.getStdout().trim(), blockSize.some(), size, parentPool, dataPool));
+    //                 if (this.cachedRBDs === null) {
+    //                     this.cachedRBDs = [];
+    //                 }
+    //                 this.cachedRBDs.push(new RadosBlockDevice(name, mapProc.getStdout().trim(), blockSize.some(), size, parentPool, dataPool));
+    //                 return errAsync(new ProcessError("Unable to determine block size of RBD"));
+    //             })
+    //         )
+    //     )
+    // }
     createRadosBlockDevice(name: string, size: number, parentPool: Pool, dataPool?: Pool) {
-        const dataPoolArgument = dataPool === undefined ? "" : `--data-pool ${dataPool.name}`;
-    
+        const dataPoolArgument =  dataPool === undefined ? "" :  `--data-pool ${dataPool.name}`
+
         return this.server.execute(new BashCommand(`rbd create ${parentPool.name}/${name} --size ${size}B ${dataPoolArgument}`))
-            .andThen(() => 
-                this.server.execute(new BashCommand(`rbd map ${parentPool.name}/${name}`))
-                .andThen((mapProc) =>
-                    this.server.execute(new BashCommand(`blockdev --getbsz ${mapProc.getStdout().trim()}`))
-                        .andThen((blockSizeProc) => {
-                            const blockSize = StringToIntCaster()(blockSizeProc.getStdout());
-    
-                            const rbd = new RadosBlockDevice(
-                                name,
-                                mapProc.getStdout().trim(),
-                                blockSize.unwrapOr(0),
-                                size,
-                                parentPool,
-                                dataPool
-                            );
-    
-                            // Always update cache
-                            if (this.cachedRBDs === null) {
-                                this.cachedRBDs = [];
-                            }
-                            this.cachedRBDs.push(rbd);
-    
-                            // Return error if block size is invalid
-                            if (blockSize.isNone()) {
-                                return errAsync(new ProcessError("Unable to determine block size of RBD"));
-                            }
-    
-                            return okAsync(rbd);
-                        })
-                )
-            );
+        .andThen(() => 
+            this.server.execute(new BashCommand(`rbd map ${parentPool.name}/${name}`))
+            .andThen((mapProc) => this.server.execute(new BashCommand(`blockdev --getbsz ${mapProc.getStdout()}`))
+                .andThen((blockSizeProc) => {
+                    const blockSize = StringToIntCaster()(blockSizeProc.getStdout())
+
+                    if (!blockSize.isNone())
+                        if (this.cachedRBDs === null) {
+                            this.cachedRBDs = [];
+                        }
+                      const  newRbd = new RadosBlockDevice(name, mapProc.getStdout().trim(), blockSize.some(), size, parentPool, dataPool);
+                        this.cachedRBDs.push(newRbd);
+                        return okAsync(newRbd)
+                    return errAsync(new ProcessError("Unable to determine block size of RBD"));
+                })
+            )
+        )
     }
+
+    // createRadosBlockDevice(name: string, size: number, parentPool: Pool, dataPool?: Pool) {
+    //     const dataPoolArgument = dataPool === undefined ? "" : `--data-pool ${dataPool.name}`;
+    
+    //     return this.server.execute(new BashCommand(`rbd create ${parentPool.name}/${name} --size ${size}B ${dataPoolArgument}`))
+    //         .andThen(() => 
+    //             this.server.execute(new BashCommand(`rbd map ${parentPool.name}/${name}`))
+    //             .andThen((mapProc) =>
+    //                 this.server.execute(new BashCommand(`blockdev --getbsz ${mapProc.getStdout().trim()}`))
+    //                     .andThen((blockSizeProc) => {
+    //                         const blockSizeOpt = StringToIntCaster()(blockSizeProc.getStdout());
+    
+    //                         if (blockSizeOpt.isNone()) {
+    //                             return errAsync(new ProcessError("Unable to determine block size of RBD"));
+    //                         }
+    
+    
+    //                         const rbd = new RadosBlockDevice(
+    //                             name,
+    //                             mapProc.getStdout().trim(),
+    //                             blockSize.some(),
+    //                             size,
+    //                             parentPool,
+    //                             dataPool
+    //                         );
+    
+    //                         // Always update cache
+    //                         if (this.cachedRBDs === null) {
+    //                             this.cachedRBDs = [];
+    //                         }
+    //                         this.cachedRBDs.push(rbd);
+    
+    //                         return okAsync(rbd);
+    //                     })
+    //             )
+    //         );
+    // }
     
 
     createLogicalVolumeFromRadosBlockDevices(logicalVolumeName: string, volumeGroupName: string, rbds: RadosBlockDevice[]) {

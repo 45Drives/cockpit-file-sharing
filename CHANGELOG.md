@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.14-12
+## Cockpit File Sharing 4.2.14-13
 
-* cached rbds for improving spped in iscsi cluter
+* createRadosBlockDevice updated to update cachedRBDS
