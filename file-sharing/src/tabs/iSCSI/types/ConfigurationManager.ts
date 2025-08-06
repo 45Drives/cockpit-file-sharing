@@ -9,6 +9,7 @@ export class ConfigurationManager {
     
     constructor(server: Server) {
         this.server = server;
+        console.log("ConfigurationManager initialized with server: ", server);
     }
 
     exportConfiguration(): ResultAsync<string, ProcessError> {

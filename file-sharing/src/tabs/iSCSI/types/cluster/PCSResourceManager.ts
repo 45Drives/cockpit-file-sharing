@@ -14,6 +14,7 @@ export class PCSResourceManager {
         this.server = server;
 
         this.currentResources = undefined;
+        console.log("server ", server);
     }
 
     createResource(name: string, creationArugments: string, type: PCSResourceType) {
@@ -25,6 +26,9 @@ export class PCSResourceManager {
         .map(() => {
             const resource = new PCSResource(resourceName, creationCommand, type);
             this.currentResources = [...this.currentResources!, resource];
+            console.log("Created resource: ", name, creationArugments, type);
+            console.log("created resource at server ",this.server)
+    
             return resource;
         })
     }

@@ -53,10 +53,14 @@ const moveConfigFileIfNeeded = async () => {
 const createISCSIDriver = (): ResultAsync<ISCSIDriver, ProcessError> => {
   return getServer()
     .andThen((server) => {
+      console.log("Initializing iSCSI Driver... from server ", server)
+    
       return checkForClusteredServer().andThen(() => {
         return ResultAsync.fromSafePromise(moveConfigFileIfNeeded()).andThen(() => {
           const driver = useUserSettings().value.iscsi.clusteredServer ? new ISCSIDriverClusteredServer(server) : new ISCSIDriverSingleServer(server);
-
+          console.log("iSCSI Driver created: ", driver);
+          console.log("Using clustered server: ", useUserSettings().value.iscsi.clusteredServer);
+          console.log("User settings: ", useUserSettings().value);
           return driver.initialize()
             .map((driver) => {
               driverInitalized.value = true;
@@ -95,6 +99,7 @@ function checkForClusteredServer() {
       tempConfig.value.iscsi.clusteredServerChecked = true;
 
       getServer().andThen((server) => {
+        console.log("Checking for clustered server configuration...", server);
         return server
         .execute(new BashCommand("command -v pcs"), false)
         .map((proc) => {

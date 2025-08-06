@@ -44,6 +44,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
     targets: Target[];
     virtualDevices: VirtualDevice[];
+    allServers: Server[];
 
     deviceTypeToHandlerDirectory = {
         [DeviceType.BlockIO]: "/sys/kernel/scst_tgt/handlers/vdisk_blockio",
@@ -61,34 +62,36 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         this.pcsResourceManager = new PCSResourceManager(server);
         this.virtualDevices = [];
         this.targets = [];
+        this.allServers = [];
     }
 
     initialize() {
         return new Directory(this.server, "/sys/kernel/scst_tgt").exists()
             .andThen((exists) => {
-                if (exists) {
-                    return this.getActiveNode()
-                        .map((activeNode) => {
-                            this.server = activeNode;
-                            this.singleServerDriver = new ISCSIDriverSingleServer(activeNode);
-                            this.configurationManager = new ConfigurationManager(activeNode);
-                            this.rbdManager = new RBDManager(activeNode);
-                            this.pcsResourceManager = new PCSResourceManager(activeNode);
-                        })
-                        .andThen(() => this.getExistingVirtualDevices())
-                        .map((devices) => this.virtualDevices.push(...devices))
-                        .map(() => this);
-
+                if (!exists) {
+                    return err(new ProcessError("/sys/kernel/scst_tgt was not found. Is SCST installed?"));
                 }
+                const primaryServer = this.server;
+                // Initialize core managers with the primary server
+                this.server = primaryServer;
+                this.singleServerDriver = new ISCSIDriverSingleServer(primaryServer);
+                this.configurationManager = new ConfigurationManager(primaryServer);
+                this.rbdManager = new RBDManager(primaryServer);
+                this.pcsResourceManager = new PCSResourceManager(primaryServer);
+                // Fetch virtual devices after setting up the server
+                return this.rbdManager.initialize()
+                .andThen(() => this.getExistingVirtualDevices())
+                .map((devices) => this.virtualDevices.push(...devices))
+                .map(() => this);
+        });
 
-                return err(new ProcessError("/sys/kernel/scst_tgt was not found. Is SCST installed?"))
-            })
     }
-
-    getHandledDeviceTypes(): DeviceType[] {
+        getHandledDeviceTypes(): DeviceType[] {
         return Object.keys(this.deviceTypeToHandlerDirectory) as DeviceType[];
     }
 
+
+    
     getActiveNode(): ResultAsync<Server, ProcessError> {
         return this.server
             .execute(new BashCommand(`pcs status xml`))
@@ -455,9 +458,9 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         return new ResultAsync(safeTry(async function* () {
             const foundDevices: VirtualDevice[] = [];
 
-            const availableLogicalVolumes = yield* self.rbdManager.fetchAvaliableLogicalVolumes().safeUnwrap();
+          const availableLogicalVolumes = yield* self.rbdManager.fetchAvaliableLogicalVolumes().safeUnwrap();
             const availableRadosBlockDevices = yield* self.rbdManager.fetchAvaliableRadosBlockDevices().safeUnwrap();
-            console.log("Available Logical Volumes:", availableLogicalVolumes);
+          console.log("Available Logical Volumes:", availableLogicalVolumes);
             const resources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
 
             // Track paths used in LUNs
@@ -472,7 +475,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                 assignedPaths.add(path);
 
                 // Try to match Logical Volume
-                const lv = availableLogicalVolumes.find((vol) => vol.filePath === path);
+               const lv = availableLogicalVolumes.find((vol) => vol.filePath === path);
                 if (lv) {
                     foundDevices.push(new VirtualDevice(lv.deviceName, lv.filePath, lv.blockSize, lv.deviceType, true));
                     continue;
@@ -486,8 +489,8 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                     continue;
                 }
                 // Fallback unknown BlockIO device
-                const blockSizeResult = await self.rbdManager.getBlockSizeFromDevicePath(path);
-                const blockSize = blockSizeResult.isOk() ? blockSizeResult.value : 0;
+                const blockSizeResult = await self.rbdManager.getBlockSizeFromDevicePath(path,server);
+                const blockSize = 0;
 
                 foundDevices.push(new VirtualDevice(path, path, blockSize, DeviceType.BlockIO, true));
             }
