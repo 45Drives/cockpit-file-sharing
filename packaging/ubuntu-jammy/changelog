@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.13-3jammy) jammy; urgency=medium
+
+  * build package
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 12 Aug 2025 11:07:28 -0300
+
 cockpit-file-sharing (4.2.13-2jammy) jammy; urgency=medium
 
   * fixing dropdown values getting hidden
