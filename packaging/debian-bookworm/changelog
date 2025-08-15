@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.13-4bookworm) bookworm; urgency=medium
+
+  * build package
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 15 Aug 2025 08:07:28 -0300
+
 cockpit-file-sharing (4.2.13-3bookworm) bookworm; urgency=medium
 
   * build package
