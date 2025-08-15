@@ -1,6 +1,6 @@
 import { safeTry, okAsync, ok } from 'neverthrow';
 import { ResultAsync } from 'neverthrow';
-import { PCSResource, PCSResourceType, PCSResourceTypeInfo } from "@/tabs/iSCSI/types/cluster/PCSResource";
+import { PCSResource, PCSResourceType, PCSResourceTypeInfo, type PCSConfigJson, type PCSResourceConfigJson } from "@/tabs/iSCSI/types/cluster/PCSResource";
 import { PCSResourceGroup } from '@/tabs/iSCSI/types/cluster/PCSResourceGroup';
 import { BashCommand, ProcessError, safeJsonParse, type Server } from "@45drives/houston-common-lib";
 
@@ -23,7 +23,7 @@ export class PCSResourceManager {
 
         return this.server.execute(creationCommand)
         .map(() => {
-            const resource = new PCSResource(resourceName, creationCommand, type);
+            const resource = new PCSResource(resourceName, /* creationCommand, */ type);
             this.currentResources = [...this.currentResources!, resource];
             return resource;
         })
@@ -90,17 +90,22 @@ export class PCSResourceManager {
         .map(() => undefined);
     }
 
-    fetchResourceConfig(resource: Pick<PCSResource, "name">) {
+    fetchResourceConfig(resource: Pick<PCSResource, "name" | "configJson">): ResultAsync<Partial<PCSConfigJson>, ProcessError | SyntaxError> {
+        if (resource.configJson !== undefined)
+            return okAsync(resource.configJson);
         return this.server.execute(new BashCommand(`pcs resource config --output-format json '${resource.name}'`))
         .map((process) => process.getStdout())
-        .andThen(safeJsonParse<PCSConfigJson>);
+        .andThen(safeJsonParse<PCSConfigJson>).map(configJson => {
+            resource.configJson = configJson as PCSConfigJson;
+            return configJson;
+        });
     }
 
-    fetchResourceInstanceAttributeValue(resource: Pick<PCSResource, "name">, nvPairName: string) {
+    fetchResourceInstanceAttributeValue(resource: Pick<PCSResource, "name" | "configJson">, nvPairName: string) {
         return this.fetchResourceConfig(resource).map((config) => config.primitives![0]!.instance_attributes![0]!.nvpairs.find((pair) => pair.name === nvPairName)?.value);
     }
 
-    fetchResourceInstanceAttributeValues(resource: Pick<PCSResource, "name">, nvPairName: string[]) {
+    fetchResourceInstanceAttributeValues(resource: Pick<PCSResource, "name" | "configJson">, nvPairName: string[]) {
         return this.fetchResourceConfig(resource).map((config) => {
             let pairResults = new Map<string, string | undefined>();
             
@@ -138,7 +143,7 @@ export class PCSResourceManager {
 
                             // Target Resources require a resource group.
                             if (resourceType !== PCSResourceType.TARGET || (resourceType === PCSResourceType.TARGET && groupObject !== undefined))
-                                return new PCSResource(resource.id, command, resourceType, groupObject);
+                                return new PCSResource(resource.id, /* command, */ resourceType, partialObject as PCSConfigJson, groupObject);
                         }
 
                         return undefined;
@@ -178,29 +183,8 @@ export class PCSResourceManager {
     }
 
     getGenerationCommandForPCSResource(resource: PCSResourceConfigJson) {
+        return okAsync(undefined);
         return this.server.execute(new BashCommand(`pcs resource config '${resource.id}' --output-format cmd`))
         .map((proc) => new BashCommand(proc.getStdout().replace(/\\\n/g, "").replace(/\n/g, "")));
     }
-}
-
-type PCSResourceConfigJson = {
-    id: string,
-    agent_name: {
-        type: string
-    },
-    instance_attributes: {
-        nvpairs: {
-            id: string,
-            name: string,
-            value: string,
-        }[]
-    }[]
-}
-
-type PCSConfigJson = {
-    primitives: PCSResourceConfigJson[],
-    groups: {
-        id: string,
-        member_ids: string[]
-    }[]
 }

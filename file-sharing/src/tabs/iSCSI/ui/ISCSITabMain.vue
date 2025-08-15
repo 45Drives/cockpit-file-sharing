@@ -7,7 +7,7 @@
 </template>
 
 <script setup lang="ts">
-import { CenteredCardColumn, pushNotification, Notification, useTempObjectStaging } from "@45drives/houston-common-ui";
+import { CenteredCardColumn, pushNotification, Notification, useTempObjectStaging, wrapAction } from "@45drives/houston-common-ui";
 import { provide, reactive, ref } from "vue";
 import { ISCSIDriverSingleServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverSingleServer";
 import { BashCommand, Directory, ExitedProcess, ProcessError, getServer } from "@45drives/houston-common-lib";
@@ -71,7 +71,7 @@ const createISCSIDriver = (): ResultAsync<ISCSIDriver, ProcessError> => {
     });
 };
 
-const iSCSIDriver = createISCSIDriver();
+const iSCSIDriver = wrapAction(createISCSIDriver)();
 
 provide("iSCSIDriver", iSCSIDriver);
 provide("virtualDevices", ref<VirtualDevice[]>());
