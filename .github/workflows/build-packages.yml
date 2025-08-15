@@ -2,7 +2,7 @@ name: Build Packages
 on:
   push:
     branches: 
-      - fixDropdown
+      - build
     tags:
       - 'v*.*.*'
 jobs:
