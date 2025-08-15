@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.13-1
+## Cockpit File Sharing 4.2.13-4
 
-* Removes conditional flag on group add/delete for iscsi initiator groups
+* build package

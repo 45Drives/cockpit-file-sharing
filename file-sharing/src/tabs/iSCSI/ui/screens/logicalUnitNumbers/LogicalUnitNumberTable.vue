@@ -1,7 +1,7 @@
 <template>
   <CardContainer>
     <div
-      class="overflow-hidden"
+      class=""
       :style="{
         'max-height': showEditor ? '1500px' : '0',
         transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out',
@@ -9,6 +9,7 @@
     >
       <div class="card">
         <LogicalUnitNumberEditor
+        v-if="showEditor"
           ref="logicalUnitNumberEditor"
           :initiatorGroup="initiatorGroup"
           @close-editor="

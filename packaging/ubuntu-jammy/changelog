@@ -1,3 +1,21 @@
+cockpit-file-sharing (4.2.13-4jammy) jammy; urgency=medium
+
+  * build package
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 15 Aug 2025 08:07:28 -0300
+
+cockpit-file-sharing (4.2.13-3jammy) jammy; urgency=medium
+
+  * build package
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 12 Aug 2025 11:07:28 -0300
+
+cockpit-file-sharing (4.2.13-2jammy) jammy; urgency=medium
+
+  * fixing dropdown values getting hidden
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 11 Aug 2025 07:56:53 -0300
+
 cockpit-file-sharing (4.2.13-1jammy) jammy; urgency=medium
 
   * Removes conditional flag on group add/delete for iscsi initiator groups

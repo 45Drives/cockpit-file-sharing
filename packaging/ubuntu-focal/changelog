@@ -1,3 +1,21 @@
+cockpit-file-sharing (4.2.13-4focal) focal; urgency=medium
+
+  * build package
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 15 Aug 2025 08:07:28 -0300
+
+cockpit-file-sharing (4.2.13-3focal) focal; urgency=medium
+
+  * build package
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 12 Aug 2025 11:07:28 -0300
+
+cockpit-file-sharing (4.2.13-2focal) focal; urgency=medium
+
+  * fixing dropdown values getting hidden
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 11 Aug 2025 07:56:53 -0300
+
 cockpit-file-sharing (4.2.13-1focal) focal; urgency=medium
 
   * Removes conditional flag on group add/delete for iscsi initiator groups
