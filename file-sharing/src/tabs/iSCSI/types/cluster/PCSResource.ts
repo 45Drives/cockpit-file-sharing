@@ -1,16 +1,44 @@
 import type { PCSResourceGroup } from "@/tabs/iSCSI/types/cluster/PCSResourceGroup";
 import type { Command } from "@45drives/houston-common-lib";
 
+export type PCSResourceConfigJson = {
+    id: string,
+    agent_name: {
+        type: string
+    },
+    instance_attributes: {
+        nvpairs: {
+            id: string,
+            name: string,
+            value: string,
+        }[]
+    }[]
+}
+
+export type PCSConfigJson = {
+    primitives: PCSResourceConfigJson[],
+    groups: {
+        id: string,
+        member_ids: string[]
+    }[]
+}
+
+
 export class PCSResource {
     name: string;
-    generationCommand: Command;
+    // generationCommand: Command;
     resourceType: PCSResourceType;
-    resourceGroup: PCSResourceGroup | undefined;
 
-    constructor(name: string, generationCommand: Command, type: PCSResourceType, group?: PCSResourceGroup) {
+    configJson?: PCSConfigJson;
+
+    resourceGroup?: PCSResourceGroup;
+
+
+    constructor(name: string /*, generationCommand: Command */, type: PCSResourceType, configJson?: PCSConfigJson, group?: PCSResourceGroup) {
         this.name = name;
-        this.generationCommand = generationCommand;
+        // this.generationCommand = generationCommand;
         this.resourceType = type
+        this.configJson = configJson;
         this.resourceGroup = group;
     }
 }
@@ -44,7 +72,7 @@ export const PCSResourceTypeInfo: { [key in PCSResourceType]: PCSResourceInfo } 
     },
     [PCSResourceType.LVM]: {
         namePrefix: "iscsi_lvm",
-        internalTypeName: "LVM-activate",
+        internalTypeName: "LVM_activate",
         orderInGroup: 2,
     },
     [PCSResourceType.TARGET]: {
@@ -68,4 +96,3 @@ export const PCSResourceTypeInfo: { [key in PCSResourceType]: PCSResourceInfo } 
         orderInGroup: -1,
     },
 }
-
