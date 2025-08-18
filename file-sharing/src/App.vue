@@ -6,6 +6,8 @@ import {
   globalProcessingWrapPromise,
   CardContainer,
   CenteredCardColumn,
+  pushNotification,
+  Notification,
 } from "@45drives/houston-common-ui";
 import { SambaTabMain } from "@/tabs/samba/ui";
 import ISCSITabMain from "@/tabs/iSCSI/ui/ISCSITabMain.vue";
@@ -53,6 +55,21 @@ globalProcessingWrapPromise(useUserSettings(true)).then((userSettings) => {
   watchStopHandle = watch(
     userSettings,
     (userSettings) => {
+      if (userSettings.includeDomainAccounts) {
+        getServer()
+          .andThen((s) => s.isServerDomainJoined())
+          .map((isDomainJoined) => {
+            if (!isDomainJoined) {
+              pushNotification(
+                new Notification(
+                  _("Not Domain Joined"),
+                  "'Include Domain (Active Directory) Accounts' setting is True, but this server is not joined to a domain.",
+                  "warning"
+                )
+              );
+            }
+          });
+      }
       switch (userSettings.samba.tabVisibility) {
         case "always":
           showSambaTab.value = true;
