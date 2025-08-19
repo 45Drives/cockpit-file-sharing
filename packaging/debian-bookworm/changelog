@@ -1,3 +1,16 @@
+cockpit-file-sharing (4.3.0-1bookworm) bookworm; urgency=medium
+
+  * Add option for Active Directory/Domain users and groups to appear in dropdown
+    lists while editing path permissions
+  * Improvements to SelectMenu UX
+  * Samba - make 'Inherit Permissions' and 'Windows ACLs' options mutually-exclusive
+  * Prompt to kick all users from share while deleting
+  * Clarify warning messages while deleting shares that files and folders will not
+    be deleted
+  * Fix importing smb.conf
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Tue, 19 Aug 2025 13:29:20 -0300
+
 cockpit-file-sharing (4.2.13-4bookworm) bookworm; urgency=medium
 
   * build package
