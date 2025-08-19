@@ -14,6 +14,7 @@ import {
   wrapActions,
   CardContainer,
   assertConfirm,
+  confirm,
   reportSuccess,
   computedResult,
   ToolTip,
@@ -27,6 +28,7 @@ import { provide, ref, watch, computed } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
 
 import { HookedSambaManager as SambaManager } from "@/tabs/samba/samba-manager";
+import { okAsync } from "neverthrow";
 
 const _ = cockpit.gettext;
 
@@ -91,11 +93,27 @@ const editShare = (share: SambaShareConfig) =>
 const removeShare = (share: SambaShareConfig) =>
   assertConfirm({
     header: _("Permanently delete") + ` ${share.name}?`,
-    body: _("This cannot be undone."),
+    body: _(
+      "This cannot be undone.\nThis only removes the share definition, no files or folders will be deleted."
+    ),
     dangerous: true,
   })
     .andThen(() => sambaManager)
-    .andThen((sm) => sm.removeShare(share))
+    .andThen((sm) => {
+      return confirm({
+        header: _("Kick users from") + ` ${share.name}?`,
+        body: _("Run `smbcontrol smbd close-share` before deleting share?"),
+        confirmButtonText: _("Yes"),
+        cancelButtonText: _("No"),
+      })
+        .andThen((kickUsers) => {
+          if (kickUsers) {
+            return sm.closeSambaShare(share.name);
+          }
+          return okAsync(null);
+        })
+        .andThen(() => sm.removeShare(share));
+    })
     .map(() => (shares.value = shares.value.filter((s) => s.name !== share.name)))
     .map(() => reportSuccess(`${_("Successfully removed share")} ${share.name}`));
 
