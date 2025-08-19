@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { defineProps, computed, defineEmits, ref, watchEffect, onMounted } from "vue";
+import {
+  defineProps,
+  computed,
+  defineEmits,
+  ref,
+  watchEffect,
+  onMounted,
+  type Ref,
+  watch,
+} from "vue";
 import {
   InputField,
   ToggleSwitch,
@@ -147,6 +156,27 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
 const shareDirectoryInputAndOptionsRef = ref<InstanceType<
   typeof ShareDirectoryInputAndOptions
 > | null>(null);
+
+function mutuallyExclusive(a: Ref<boolean>, b: Ref<boolean>) {
+  watch(a, (a) => {
+    if (a) {
+      b.value = false;
+    }
+  });
+  watch(b, (b) => {
+    if (b) {
+      a.value = false;
+    }
+  });
+}
+
+mutuallyExclusive(
+  windowsACLsOptions,
+  computed({
+    get: () => tempShareConfig.value.inheritPermissions,
+    set: (v) => (tempShareConfig.value.inheritPermissions = v),
+  })
+);
 </script>
 
 <template>
