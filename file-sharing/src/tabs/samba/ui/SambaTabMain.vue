@@ -181,6 +181,8 @@ const importFromSmbConf = (smbConfPath: string) =>
   })
     .andThen(() => sambaManager)
     .andThen((sm) => sm.importFromSambaConf(smbConfPath))
+    .andThen(() => reloadGlobalConf())
+    .andThen(() => reloadShares())
     .map(() => reportSuccess(_("Imported configuration")));
 
 const actions = wrapActions({
@@ -229,7 +231,7 @@ watch(smbConfPath, () => actions.checkIfSmbConfIncludesRegistry(smbConfPath.valu
         </button>
         <button
           class="btn btn-secondary inline-flex flex-row items-center gap-1"
-          @click="actions.importFromSmbConf"
+          @click="actions.importFromSmbConf(smbConfPath)"
         >
           <span class="space-x-1">
             <span>
