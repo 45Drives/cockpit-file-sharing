@@ -747,14 +747,10 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             yield* self.removeLUNResource(lun, targetIQN).safeUnwrap();
 
             const lvmResources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
-            console.log("LVM resource ",lvmResources)
 
             for (var resource of lvmResources.filter((resource) => resource.resourceType === PCSResourceType.LVM)) {
-               console.log("LVM resource in for loop",resource)
                 const values = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["lvname", "vgname"]).safeUnwrap();
-                console.log("LVM resource values ",values)
                 if (values.get("lvname") === blockDevice.deviceName && values.get("vgname") === blockDevice.volumeGroup.name) {
-                    console.log("Deleting LVM resource ",resource)
                     yield* self.pcsResourceManager.deleteResource(resource).safeUnwrap();
                     break;
                 }
