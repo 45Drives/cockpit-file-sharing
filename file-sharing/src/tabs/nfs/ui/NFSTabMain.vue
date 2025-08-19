@@ -57,7 +57,7 @@ const editExport = (nfsExport: NFSExport) =>
 const removeExport = (nfsExport: NFSExport) =>
   assertConfirm({
     header: _("Permanently delete export for") + ` ${nfsExport.path}?`,
-    body: _("This cannot be undone."),
+    body: _("This cannot be undone.\nThis only removes the export definition, no files or folders will be deleted."),
     dangerous: true,
   })
     .andThen(() => nfsManager.value)
