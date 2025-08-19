@@ -187,8 +187,11 @@ mutuallyExclusive(
         <template #label>
           {{ _("Share Name") }}
         </template>
-        <InputField v-model="tempShareConfig.name" :placeholder="_('A unique name for your share')"
-          :disabled="!newShare" />
+        <InputField
+          v-model="tempShareConfig.name"
+          :placeholder="_('A unique name for your share')"
+          :disabled="!newShare"
+        />
         <ValidationResultView v-bind="shareNameValidationResult" />
       </InputLabelWrapper>
 
@@ -248,18 +251,23 @@ mutuallyExclusive(
         <template v-slot:label>
           {{ _("Advanced") }}
         </template>
-        <ParsedTextArea :parser="KeyValueSyntax({ trailingNewline: false })"
-          v-model="tempShareConfig.advancedOptions" />
+        <ParsedTextArea
+          :parser="KeyValueSyntax({ trailingNewline: false })"
+          v-model="tempShareConfig.advancedOptions"
+        />
       </Disclosure>
 
       <div class="button-group-row justify-end grow">
-        <button class="btn btn-secondary" @click="
+        <button
+          class="btn btn-secondary"
+          @click="
             () => {
               resetChanges();
               shareDirectoryInputAndOptionsRef?.resetChanges?.();
               $emit('cancel');
             }
-          ">
+          "
+        >
           {{ _("Cancel") }}
         </button>
         <button
