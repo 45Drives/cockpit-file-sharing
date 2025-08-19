@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { defineProps, computed, defineEmits, ref, watchEffect, onMounted } from "vue";
+import {
+  defineProps,
+  computed,
+  defineEmits,
+  ref,
+  watchEffect,
+  onMounted,
+  type Ref,
+  watch,
+} from "vue";
 import {
   InputField,
   ToggleSwitch,
@@ -147,6 +156,27 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
 const shareDirectoryInputAndOptionsRef = ref<InstanceType<
   typeof ShareDirectoryInputAndOptions
 > | null>(null);
+
+function mutuallyExclusive(a: Ref<boolean>, b: Ref<boolean>) {
+  watch(a, (a) => {
+    if (a) {
+      b.value = false;
+    }
+  });
+  watch(b, (b) => {
+    if (b) {
+      a.value = false;
+    }
+  });
+}
+
+mutuallyExclusive(
+  windowsACLsOptions,
+  computed({
+    get: () => tempShareConfig.value.inheritPermissions,
+    set: (v) => (tempShareConfig.value.inheritPermissions = v),
+  })
+);
 </script>
 
 <template>
@@ -157,8 +187,11 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
         <template #label>
           {{ _("Share Name") }}
         </template>
-        <InputField v-model="tempShareConfig.name" :placeholder="_('A unique name for your share')"
-          :disabled="!newShare" />
+        <InputField
+          v-model="tempShareConfig.name"
+          :placeholder="_('A unique name for your share')"
+          :disabled="!newShare"
+        />
         <ValidationResultView v-bind="shareNameValidationResult" />
       </InputLabelWrapper>
 
@@ -218,18 +251,23 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
         <template v-slot:label>
           {{ _("Advanced") }}
         </template>
-        <ParsedTextArea :parser="KeyValueSyntax({ trailingNewline: false })"
-          v-model="tempShareConfig.advancedOptions" />
+        <ParsedTextArea
+          :parser="KeyValueSyntax({ trailingNewline: false })"
+          v-model="tempShareConfig.advancedOptions"
+        />
       </Disclosure>
 
       <div class="button-group-row justify-end grow">
-        <button class="btn btn-secondary" @click="
+        <button
+          class="btn btn-secondary"
+          @click="
             () => {
               resetChanges();
               shareDirectoryInputAndOptionsRef?.resetChanges?.();
               $emit('cancel');
             }
-          ">
+          "
+        >
           {{ _("Cancel") }}
         </button>
         <button

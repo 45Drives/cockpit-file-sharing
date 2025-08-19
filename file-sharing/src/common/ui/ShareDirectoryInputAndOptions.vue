@@ -307,6 +307,7 @@ defineExpose({
         :server="server"
         :includeSystemUsers="userSettings.includeSystemAccounts"
         :includeSystemGroups="userSettings.includeSystemAccounts"
+        :includeDomain="userSettings.includeDomainAccounts"
         @apply="showPermissionsEditor = false"
         @cancel="showPermissionsEditor = false"
         ref="modeAndPermissionsEditorRef"
