@@ -65,7 +65,9 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
       <ToggleSwitch v-model="tempUserSettings.includeDomainAccounts">
         {{ _("Include Domain (Active Directory) Accounts") }}
         <template #description>
-          {{ _("Include users/groups from Domain/Active Directory in dropdown lists.") }}
+          <div class="whitespace-pre-wrap">
+            {{ _("Include users/groups from Domain/Active Directory in dropdown lists.\nWarning: this can cause performance issues on large domains.") }}
+          </div>
         </template>
       </ToggleSwitch>
       <div class="text-header">Samba</div>
