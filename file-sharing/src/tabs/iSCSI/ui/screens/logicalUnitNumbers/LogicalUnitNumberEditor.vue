@@ -55,7 +55,7 @@ import {
   type SelectMenuOption
 } from "@45drives/houston-common-ui";
 import type { ResultAsync } from "neverthrow";
-import { computed, inject, ref, type ComputedRef, type Ref } from "vue";
+import { computed, inject, ref, toRaw, type ComputedRef, type Ref } from "vue";
 import type { ISCSIDriver } from "../../../types/drivers/ISCSIDriver";
 import type { InitiatorGroup } from "../../../types/InitiatorGroup";
 import { LogicalUnitNumber } from "../../../types/LogicalUnitNumber";
@@ -104,22 +104,60 @@ const handleClose = () => {
   resetChangesLun();
 };
 
+// const createLun = () => {
+//   const blockDevice = devices.value.find((device) => device.deviceName === tempLun.value.name);
+
+//   console.log("Creating LUN with blockDevice", blockDevice);
+//   tempLun.value.blockDevice = blockDevice ;;
+
+// if (tempLun.value.blockDevice){
+//   tempLun.value.blockDevice.assigned = true;
+  
+// } 
+//   console.log("tempLun after assignment", tempLun.value);
+//   return driver
+//     .andThen((driver) => driver.addLogicalUnitNumberToGroup(props.initiatorGroup,tempLun.value ))
+//     .map(() => handleClose())
+//     .mapErr(
+//       (error) =>
+//         new ProcessError(
+//           `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
+//         )
+//     );
+// };
 const createLun = () => {
-  tempLun.value.blockDevice = devices.value.find((device) => device.deviceName === tempLun.value.name);
-  const device = devices.value.find(d => d.deviceName === tempLun.value.name);
-if (device) device.assigned = true;
+  const dev = devices.value.find(d => d.deviceName === tempLun.value.name);
+
+  if (!dev) {
+    return Result.err(new ProcessError(`Device ${tempLun.value.name} not found`));
+  }
+
+  // mark assigned on the shared instance
+  dev.assigned = true;
+
+  // plain payload
+  const payload = {
+    ...toRaw(tempLun.value),
+    blockDevice: toRaw(dev),
+    // include root-level server if your backend expects it
+  };
+
+  console.log("createLun payload", {
+    name: payload.name,
+    unitNumber: payload.unitNumber,
+    serverAtRoot: payload.server,
+    serverInBlock: payload.blockDevice?.server,
+  });
 
   return driver
-    .andThen((driver) => driver.addLogicalUnitNumberToGroup(props.initiatorGroup, tempLun.value))
+    .andThen(d => d.addLogicalUnitNumberToGroup(props.initiatorGroup, payload))
     .map(() => handleClose())
-    .mapErr(
-      (error) =>
-        new ProcessError(
-          `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
-        )
+    .mapErr(error =>
+      new ProcessError(
+        `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
+      )
     );
 };
-
 function populateNextNumber() {
   let nextNumber = 0;
 
@@ -161,4 +199,6 @@ const { validationResult: deviceValidationResult } = validationScope.useValidato
 });
 
 const actions = wrapActions({ createLun });
+
+
 </script>
