@@ -132,7 +132,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     createTarget(target: Target): ResultAsync<void, ProcessError> {
         const targetResourceName = `${this.resourceNamePrefix}_TARGET_${target.name}`;
         const creationArugments = `ocf:heartbeat:iSCSITarget iqn=${target.name} op start timeout=20 op stop timeout=20 op monitor interval=20 timeout=40`;
-        return this.pcsResourceManager.createResource(targetResourceName, creationArugments, PCSResourceType.TARGET)
+        return this.pcsResourceManager.createResource(targetResourceName, creationArugments, PCSResourceType.TARGET,server)
             .andThen((resource) => {
                 target.devicePath = resource.name;
                 return this.pcsResourceManager.addResourceToGroup(resource, new PCSResourceGroup(`${this.resourceGroupPrefix}_${resource.name}`))
@@ -170,17 +170,17 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             const portblockOffCreationArugments = `ocf:heartbeat:portblock ip=${portal.address} portno=3260 protocol=tcp action=unblock op start timeout=20 op stop timeout=20 op monitor timeout=20 interval=20`;
 
             return this.findTargetPCSResource(target)
-                .andThen((targetResource) => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_VIP_${portal.address}`, vipCreationArugments, PCSResourceType.VIP)
+                .andThen((targetResource) => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_VIP_${portal.address}`, vipCreationArugments, PCSResourceType.VIP,server)
                     .andThen((vipResource) => {
                         createdResources.push(vipResource);
                         return this.pcsResourceManager.addResourceToGroup(vipResource, targetResource.resourceGroup!);
                     })
-                    .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_PORTBLOCKON_${portal.address}`, portblockOnCreationArugments, PCSResourceType.PORTBLOCK_ON))
+                    .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_PORTBLOCKON_${portal.address}`, portblockOnCreationArugments, PCSResourceType.PORTBLOCK_ON,server))
                     .andThen((portBlockResource) => {
                         createdResources.push(portBlockResource);
                         return this.pcsResourceManager.addResourceToGroup(portBlockResource, targetResource.resourceGroup!);
                     })
-                    .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_PORTBLOCKOFF_${portal.address}`, portblockOffCreationArugments, PCSResourceType.PORTBLOCK_OFF))
+                    .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_PORTBLOCKOFF_${portal.address}`, portblockOffCreationArugments, PCSResourceType.PORTBLOCK_OFF,server))
                     .andThen((portBlockResource) => {
                         createdResources.push(portBlockResource);
                         return this.pcsResourceManager.addResourceToGroup(portBlockResource, targetResource.resourceGroup!);
@@ -281,6 +281,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         console.log("hello from addLogicalUnitNumberToGroup", logicalUnitNumber)
         return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
             .andThen((targetResource) => {
+                console.log("targetResource in addLogicalUnitNumberToGroup", targetResource)
                 if (targetResource !== undefined) {
                     return new ResultAsync(safeTry(async function* () {
                         const targetIQN = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource, "iqn").safeUnwrap();
@@ -420,7 +421,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                   const lvname = pathParts[3];
       
                   if (vgname && lvname) {
-                    const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname).safeUnwrap();
+                    const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname,server).safeUnwrap();
                     logicalUnitNumber.blockDevice = logicalVolume;
                   }
       
@@ -696,11 +697,11 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         const blockDevice = (lun.blockDevice! as RadosBlockDevice);
         const server = blockDevice.server;
         return server.execute(new BashCommand(`rbd unmap ${blockDevice.parentPool.name}/${blockDevice.deviceName}`))
-            .andThen(() => this.pcsResourceManager.createResource(`RBD_${blockDevice.deviceName}`, `ocf:ceph:rbd name=${blockDevice.deviceName} pool=${blockDevice.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD)
-                .andThen((resource) => this.pcsResourceManager.constrainResourceToGroup(resource, group)
+            .andThen(() => this.pcsResourceManager.createResource(`RBD_${blockDevice.deviceName}`, `ocf:ceph:rbd name=${blockDevice.deviceName} pool=${blockDevice.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD,server)
+                .andThen((resource) => this.pcsResourceManager.constrainResourceToGroup(resource, group,server)
                     .andThen(() => this.pcsResourceManager.orderResourceBeforeGroup(resource, group)))
             )
-            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN} lun=${lun.unitNumber} path=${blockDevice.filePath} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN))
+            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN} lun=${lun.unitNumber} path=${blockDevice.filePath} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
             .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
     }
 
@@ -723,22 +724,29 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         const blockDevice = (lun.blockDevice! as LogicalVolume);
         // const blockDevice = lun.blockDevice ?? await self.resolveLogicalVolume(lun);
         console.log("BlockDevice ",blockDevice)
+        console.log("BlockDevice server ",server)
+        console.log("PCSRESourcegroup ",group)
+        if(!server){
+            return errAsync(new ProcessError("Server is undefined for Logical Volume"));
+        }
         return server.execute(new BashCommand(`lvchange -an ${blockDevice!.volumeGroup.name}/${blockDevice!.deviceName}`))
             .andThen(() => new ResultAsync(safeTry(async function* () {
                 for (let physicalVolume of blockDevice.volumeGroup.volumes) {
-                    yield* self.server.execute(new BashCommand(`rbd unmap ${physicalVolume.rbd.parentPool.name}/${physicalVolume.rbd.deviceName}`)).safeUnwrap();
-
-                    const resource = yield* self.pcsResourceManager.createResource(`RBD_${physicalVolume.rbd.deviceName}`, `ocf:ceph:rbd name=${physicalVolume.rbd.deviceName} pool=${physicalVolume.rbd.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD).safeUnwrap();
-
-                    yield* self.pcsResourceManager.constrainResourceToGroup(resource, group).safeUnwrap();
+                    console.log("PhysicalVolume server",server)
+                    yield* server.execute(new BashCommand(`rbd unmap ${physicalVolume.rbd.parentPool.name}/${physicalVolume.rbd.deviceName}`)).safeUnwrap();
+                    
+                    const resource = yield* self.pcsResourceManager.createResource(`RBD_${physicalVolume.rbd.deviceName}`, `ocf:ceph:rbd name=${physicalVolume.rbd.deviceName} pool=${physicalVolume.rbd.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD,server).safeUnwrap();
+                    console.log("Created RBD resource:", resource);
+                    console.log("Constrain resource to group:", resource, group,server)
+                    yield* self.pcsResourceManager.constrainResourceToGroup(resource, group,server).safeUnwrap();
                     yield* self.pcsResourceManager.orderResourceBeforeGroup(resource, group).safeUnwrap();
                 }
 
                 return ok(undefined);
             })))
-            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LVM_${blockDevice.deviceName}_${blockDevice.volumeGroup.name}`, `ocf:heartbeat:LVM-activate lvname=${blockDevice.deviceName} vgname=${blockDevice.volumeGroup.name} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, PCSResourceType.LVM))
+            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LVM_${blockDevice.deviceName}_${blockDevice.volumeGroup.name}`, `ocf:heartbeat:LVM-activate lvname=${blockDevice.deviceName} vgname=${blockDevice.volumeGroup.name} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, PCSResourceType.LVM,server))
             .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
-            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN} lun=${lun.unitNumber} path=${blockDevice.filePath} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN))
+            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN} lun=${lun.unitNumber} path=${blockDevice.filePath} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
             .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
             .andThen(() => this.server.execute(new BashCommand(`pcs resource cleanup`)))
     }
