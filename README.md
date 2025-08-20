@@ -28,30 +28,38 @@ User and group management was removed from cockpit-file-sharing in favour of man
 
 # Installation
 Recommended: [cockpit-identities](https://github.com/45drives/cockpit-identities) for managing Samba password.
-## Ubuntu 20.04
-### From 45Drives Repo (Recommended, Ubuntu 20.04 only)
+## Ubuntu / Debian
+### From 45Drives Repo (Recommended, automatic updates)
+Supported Ubuntu Versions: 20.04 (focal), 22.04 (jammy) \
+Supported Debain Versions: 12 (Bookworm)
 ```bash
 curl -sSL https://repo.45drives.com/setup | sudo bash
-sudo apt-get update
+sudo apt update
 sudo apt install cockpit-file-sharing
 ```
 ### Direct from .deb
 Installing this way may work for other versions of Ubuntu and Debian, but it is unsupported. You won't get automatic updates this way.
+Get the latest download link from the [release page](https://github.com/45Drives/cockpit-file-sharing/releases) for your OS.\
+For Version 4.2.12 and Ubuntu jammy the installation looks like that:
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.2.10/cockpit-file-sharing_4.2.10-1focal_all.deb
-sudo apt install ./cockpit-file-sharing_4.2.10-1focal_all.deb
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.2.12/cockpit-file-sharing_4.2.12-1jammy_all.deb
+sudo apt install ./cockpit-file-sharing_4.2.12-1jammy_all.deb
 ```
-## Rocky 8
-### From 45Drives Repo (Recommended, Rocky 8 only)
+## RHEL
+### From 45Drives Repo (Recommended, automatic updates)
+Supported RHEL Versions: 7, 8, 9 \
+Unsupported for other RHEL forks, but should probably work
 ```bash
 curl -sSL https://repo.45drives.com/setup | sudo bash
 sudo dnf install cockpit-file-sharing
 ```
 ### Direct from .rpm
 Installing this way may work for other versions of Rocky/Centos/RHEL/Fedora/etc, but it is unsupported. You won't get automatic updates this way.
+Get the latest download link from the [release page](https://github.com/45Drives/cockpit-file-sharing/releases) for your OS.\
+For Version 4.2.12 and el9 (for RHEL/Rocky version 9) the installation looks like that:
 ```bash
 # dnf or yum
-sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.2.10/cockpit-file-sharing-4.2.10-1.el8.noarch.rpm
+sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.2.12/cockpit-file-sharing-4.2.12-1.el9.noarch.rpm
 ```
 ## Generic Installation
 1. Install Dependencies
