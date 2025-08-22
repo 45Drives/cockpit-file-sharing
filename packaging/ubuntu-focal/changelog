@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.3.1-1focal) focal; urgency=medium
+
+  * Fix build issue causing edit permissions popup to be blank
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 22 Aug 2025 09:59:33 -0300
+
 cockpit-file-sharing (4.3.0-1focal) focal; urgency=medium
 
   * Add option for Active Directory/Domain users and groups to appear in dropdown
