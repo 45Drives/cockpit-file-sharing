@@ -3,7 +3,7 @@
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
     "description": "A cockpit module to make file sharing with Samba and NFS easier.",
-    "version": "4.3.0",
+    "version": "4.3.1",
     "build_number": "1",
     "stable": true,
     "author": "Josh Boudreau <jboudreau@45drives.com>",
@@ -75,7 +75,7 @@
     ],
     "changelog": {
         "urgency": "medium",
-        "version": "4.3.0",
+        "version": "4.3.1",
         "build_number": "1",
         "date": null,
         "packager": "Josh Boudreau <jboudreau@45drives.com>",
