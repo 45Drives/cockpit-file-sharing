@@ -34,6 +34,8 @@ export class PCSResourceManager {
     }
 
     deleteResource(resource: Pick<PCSResource, "name">) {
+        console.log("Deleting resource: ", resource.name);
+
         return this.server.execute(new BashCommand(`pcs resource delete '${resource.name}'`))
         .map(() => {
             this.currentResources = this.currentResources!.filter((existingResource) => existingResource.name !== resource.name);
@@ -123,7 +125,6 @@ export class PCSResourceManager {
 
     fetchResources() {
         if (this.currentResources === undefined) {
-            console.log("Fetching current PCS resources from server: ", this.server);
             return this.server.execute(new BashCommand(`pcs resource config --output-format json`))
             .map((process) => process.getStdout())
             .andThen(safeJsonParse<PCSConfigJson>)

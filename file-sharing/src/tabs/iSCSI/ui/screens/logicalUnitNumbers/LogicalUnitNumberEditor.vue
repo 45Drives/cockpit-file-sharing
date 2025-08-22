@@ -56,7 +56,7 @@ import {
 } from "@45drives/houston-common-ui";
 import type { ResultAsync } from "neverthrow";
 import { computed, inject, ref, toRaw, type ComputedRef, type Ref } from "vue";
-import type { ISCSIDriver } from "../../../types/drivers/ISCSIDriver";
+import { ISCSIDriver } from "../../../types/drivers/ISCSIDriver";
 import type { InitiatorGroup } from "../../../types/InitiatorGroup";
 import { LogicalUnitNumber } from "../../../types/LogicalUnitNumber";
 import { VirtualDevice } from "../../../types/VirtualDevice";
@@ -127,7 +127,6 @@ const handleClose = () => {
 // };
 const createLun = () => {
   const dev = devices.value.find(d => d.deviceName === tempLun.value.name);
-
   if (!dev) {
     return Result.err(new ProcessError(`Device ${tempLun.value.name} not found`));
   }
@@ -141,7 +140,7 @@ const createLun = () => {
     blockDevice: toRaw(dev),
     // include root-level server if your backend expects it
   };
-
+  console.log("initiatorGroup", props.initiatorGroup);
   console.log("createLun payload", {
     name: payload.name,
     unitNumber: payload.unitNumber,
@@ -150,14 +149,37 @@ const createLun = () => {
   });
 
   return driver
-    .andThen(d => d.addLogicalUnitNumberToGroup(props.initiatorGroup, payload))
-    .map(() => handleClose())
-    .mapErr(error =>
-      new ProcessError(
-        `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
+  .andThen(d => d.addLogicalUnitNumberToGroup(props.initiatorGroup, payload))
+  .map((execServer ) => {
+    if(execServer){
+      dev.server = execServer;
+      console.log("Server assigned to device:", dev.server);
+
+      console.log("props after adding ",props.initiatorGroup.logicalUnitNumbers);
+      // if(props.initiatorGroup.logicalUnitNumbers[0]?.blockDevice?.server){
+      //   const foundLun = props.initiatorGroup.logicalUnitNumbers.find(lun => lun.unitNumber === tempLun.value.unitNumber);
+      //   if (foundLun?.blockDevice) {
+      //     foundLun.blockDevice.server = props.initiatorGroup.logicalUnitNumbers[0]?.blockDevice?.server;
+      //   }
+      // }
+      // console.log("props after adding2222222222 ",props.initiatorGroup.logicalUnitNumbers);
+    }
+  })
+  
+  .mapErr(error => new ProcessError(
+    `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
+  ))
+  .andThen(() =>
+      driver.andThen(d => d.getnode())
       )
-    );
+      .map(() => {
+        console.log("changing  ",props.initiatorGroup.logicalUnitNumbers);
+        console.log("LUN created successfully");
+        handleClose();
+
+});
 };
+
 function populateNextNumber() {
   let nextNumber = 0;
 

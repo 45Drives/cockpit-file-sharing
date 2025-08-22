@@ -32,6 +32,7 @@ import { LogicalVolume } from '@/tabs/iSCSI/types/cluster/LogicalVolume';
 import { Result } from 'postcss';
 import { PhysicalVolume } from '../cluster/PhysicalVolume';
 import { VolumeGroup } from '../cluster/VolumeGroup';
+import { log } from 'console';
 
 const userSettingsResult = ResultAsync.fromSafePromise(useUserSettings(true));
 
@@ -62,6 +63,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         this.pcsResourceManager = new PCSResourceManager(server);
         this.virtualDevices = [];
         this.targets = [];
+        console.log(" primary constructor server ", server);
     }
     initialize() {
         return new Directory(this.server, "/sys/kernel/scst_tgt").exists()
@@ -112,7 +114,10 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             })
             .map((nodeIP) => new Server(nodeIP));
     }
-    
+    getnode(): ResultAsync<Server | undefined, ProcessError> {
+        const node = this.rbdManager.allServers[0];
+        return ResultAsync.fromSafePromise(Promise.resolve(node));
+      }
 
     addVirtualDevice(virtualDevice: VirtualDevice): ResultAsync<void, ProcessError> {
         this.virtualDevices = [...this.virtualDevices, virtualDevice];
@@ -143,10 +148,11 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
     removeTarget(target: Target): ResultAsync<void, ProcessError> {
         const self = this;
-
+        console.log("removeTarget" , target.initiatorGroups)
         return new ResultAsync(safeTry(async function* () {
             for (let group of target.initiatorGroups) {
                 for (let lun of group.logicalUnitNumbers) {
+
                     yield* self.removeLogicalUnitNumberFromGroup(group, lun).safeUnwrap();
                 }
             }
@@ -276,19 +282,17 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     addLogicalUnitNumberToGroup(
         initiatorGroup: InitiatorGroup,
         logicalUnitNumber: LogicalUnitNumber
-    ): ResultAsync<void, ProcessError> {
+    ): ResultAsync< Server, ProcessError> {
         const self = this;
-        console.log("hello from addLogicalUnitNumberToGroup", logicalUnitNumber)
         return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
             .andThen((targetResource) => {
-                console.log("targetResource in addLogicalUnitNumberToGroup", targetResource)
+                
                 if (targetResource !== undefined) {
                     return new ResultAsync(safeTry(async function* () {
                         const targetIQN = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource, "iqn").safeUnwrap();
                         if( logicalUnitNumber.blockDevice?.vgName === undefined) {
                             if(logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
                                 yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
-                                console.log("added LogicalVolume directly createAndConfigureLVResources", logicalUnitNumber)
                             }
                             else{
                                 const lvPath = logicalUnitNumber.blockDevice!.filePath;
@@ -301,24 +305,27 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                                 const vgname = pathParts[2];
                                 const lvname = pathParts[3];
                                 const server = logicalUnitNumber.blockDevice.server;
-           
+                                console.log("adding from else block ", logicalUnitNumber, vgname, lvname, server);
                                if (vgname && lvname && server) {
                                    const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname,server).safeUnwrap();
-                                   console.log("resolved logical volume: ", logicalVolume)
                                     logicalUnitNumber.blockDevice = logicalVolume;
                                     }
 
                     
                             yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
-                                    console.log("added LogicalVolume via resolveLogicalVolume createAndConfigureLVResources", logicalUnitNumber)
+                            if (logicalUnitNumber.blockDevice?.server) {
+                                logicalUnitNumber.blockDevice.server = self.rbdManager.allServers[0];
+                            }
                         }
                         }
                        else  if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
 
                             yield* self.createAndConfigureRBDResource(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
-                            console.log("added RBD createAndConfigureRBDResource", logicalUnitNumber)
                         }
-                        return okAsync(undefined);
+                        const execServer =  self.rbdManager.allServers[0];
+                        console.log("execserver ", server)
+                        console.log("Adding Logical Unit Number to group: ", logicalUnitNumber);
+                        return okAsync(execServer);
                     }))
                 }
 
@@ -328,12 +335,15 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     
     resolveLogicalVolume(vgname: string, lvname: string,server:Server): ResultAsync<LogicalVolume, Error> {
         const self = this;
+        console.log("resolvelogicalvolume",server)
         return server.execute(new BashCommand(`lvs --reportformat json --units B`))
             .map((proc) => proc.getStdout())
             .andThen(safeJsonParse<LogicalVolumeInfoJson>)
             .map((lvData) => {
                 const lvs = lvData?.report?.flatMap((r) => r.lv) ?? [];
                 const match = lvs.find((lv) => lv.lv_name === lvname && lv.vg_name === vgname);
+                console.log("match",match)
+                console.log("lvs",lvs)
                 if (!match) throw new Error(`Logical volume ${vgname}/${lvname} not found`);
                 return match;
             })
@@ -344,12 +354,17 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                     .map((pvData) => pvData?.report?.flatMap((r) => r.pv) ?? [])
                     .andThen((pvList) =>   new ResultAsync<LogicalVolume, Error>(safeTry(async function* () {
                         const mappedBlockDevices = yield* self.rbdManager.fetchAvaliableRadosBlockDevices().safeUnwrap();
+                        console.log("mappedBlockDevices", mappedBlockDevices)
+                        console.log("server", server)
+                        console.log("pvList", pvList)
+                        
                         const physicalVolumes = pvList.flatMap((pv) =>
-                            mappedBlockDevices.find((rbd) => rbd.filePath === pv.pv_name && rbd.server === server)
+                            mappedBlockDevices.find((rbd) => rbd.filePath === pv.pv_name && rbd.server.host == server.host)
                         )
                         .filter((rbd): rbd is RadosBlockDevice => rbd !== undefined)
                         .map((rbd) => new PhysicalVolume(rbd));
-    
+                        
+                        console.log("physicalVolumes", physicalVolumes)
                         const vg = new VolumeGroup(vgname, physicalVolumes,server);
                         const lv = new LogicalVolume(
                             lvname,
@@ -419,8 +434,11 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
       
                   const vgname = pathParts[2];
                   const lvname = pathParts[3];
-      
-                  if (vgname && lvname) {
+                  let server = logicalUnitNumber.blockDevice?.server;
+                  console.log("removing from else block ", logicalUnitNumber, vgname, lvname, server);
+                  console.log("self.server", self.server);
+
+                  if (vgname && lvname && server) {
                     const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname,server).safeUnwrap();
                     logicalUnitNumber.blockDevice = logicalVolume;
                   }
@@ -432,11 +450,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
               } else {
                 yield* self.removeLUNResource(logicalUnitNumber, targetIQN!).safeUnwrap();
               }
-      
+              console.log("Removing Logical Unit Number from group: ", logicalUnitNumber);
               return ok(undefined); // ✅ Do not use okAsync inside safeTry
             }))
           )
           .andThen(() => {
+            console.log("Cleaning up resources after removing Logical Unit Number ", this.server);
             return this.server
               .execute(new BashCommand(`pcs resource cleanup`))
               .map(() => undefined); // Ensures return type matches: ResultAsync<void, ProcessError>
@@ -471,8 +490,8 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             const foundDevices: VirtualDevice[] = [];
 
             const availableLogicalVolumes = yield* self.rbdManager.fetchAvaliableLogicalVolumes().safeUnwrap();
+            console.log("availableLogicalVolumes", availableLogicalVolumes);
             const availableRadosBlockDevices = yield* self.rbdManager.fetchAvaliableRadosBlockDevices().safeUnwrap();
-            console.log("Available Logical Volumes:", availableLogicalVolumes);
             const resources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
 
             // Track paths used in LUNs
@@ -489,10 +508,10 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                 // Try to match Logical Volume
                 const lv = availableLogicalVolumes.find((vol) => vol.filePath === path);
                 if (lv) {
-                    foundDevices.push(new VirtualDevice(lv.deviceName, lv.filePath, lv.blockSize, lv.deviceType, true,undefined,server));
+                    foundDevices.push(new VirtualDevice(lv.deviceName, lv.filePath, lv.blockSize, lv.deviceType, true,undefined,lv.server));
+
                     continue;
                 }
-
                 // Try to match RBD
                 const rbd = availableRadosBlockDevices.find((r) => r.filePath === path);
                 if (rbd) {
@@ -501,17 +520,18 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                     continue;
                 }
                 // Fallback unknown BlockIO device
-                console.log("getting block size for unknown device at path:", path);
                 const blockSizeResult = await self.rbdManager.getBlockSizeFromDevicePath(path,server);
                 const blockSize = blockSizeResult.isOk() ? blockSizeResult.value : 0;
 
                 foundDevices.push(new VirtualDevice(path, path, blockSize, DeviceType.BlockIO, true,undefined,server));
+
             }
 
             // === 2. Add all UNASSIGNED RBDs ===
             for (let rbd of availableRadosBlockDevices) {
                 if (!assignedPaths.has(rbd.filePath)) {
                     foundDevices.push(new VirtualDevice(rbd.deviceName, rbd.filePath, rbd.blockSize, rbd.deviceType, false,rbd.vgName,rbd.server));
+
                 }
             }
 
@@ -519,9 +539,9 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             for (let lv of availableLogicalVolumes) {
                 if (!assignedPaths.has(lv.filePath)) {
                     foundDevices.push(new VirtualDevice(lv.deviceName, lv.filePath, lv.blockSize, lv.deviceType, false,undefined,lv.server));
+
                 }
             }
-            console.log("Found devices:", foundDevices);
             return ok(foundDevices);
         }));
     }
@@ -529,7 +549,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
     getTargets(): ResultAsync<Target[], ProcessError> {
         const self = this;
-
+        
         return this.pcsResourceManager.fetchResources()
             .map((resources) => resources.filter((resource) => resource.resourceType === PCSResourceType.TARGET))
             .andThen((filteredResources) => ResultAsync.combine(
@@ -604,10 +624,8 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                     .andThen((values) => {
                         const lunAttribute = StringToIntCaster()(values.get("lun")!);
                         const virtualDevice = this.virtualDevices.find((device) => device.filePath === values.get("path"));
-
                         if (virtualDevice !== undefined)
                             return okAsync(new LogicalUnitNumber(virtualDevice.deviceName, lunAttribute.some(), virtualDevice));
-
                         return okAsync(undefined);
                     })
                 ))
@@ -707,7 +725,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
     removeRBDAndRelatedResource(lun: LogicalUnitNumber, targetIQN: string) {
         const self = this;
-
+        console.log("removeRBDAndRelatedResource", lun, targetIQN);
         const blockDevice = lun.blockDevice! as RadosBlockDevice;
 
         return new ResultAsync(safeTry(async function* () {
@@ -723,23 +741,18 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
        const server = lun.blockDevice?.server;
         const blockDevice = (lun.blockDevice! as LogicalVolume);
         // const blockDevice = lun.blockDevice ?? await self.resolveLogicalVolume(lun);
-        console.log("BlockDevice ",blockDevice)
-        console.log("BlockDevice server ",server)
-        console.log("PCSRESourcegroup ",group)
         if(!server){
             return errAsync(new ProcessError("Server is undefined for Logical Volume"));
         }
         return server.execute(new BashCommand(`lvchange -an ${blockDevice!.volumeGroup.name}/${blockDevice!.deviceName}`))
             .andThen(() => new ResultAsync(safeTry(async function* () {
                 for (let physicalVolume of blockDevice.volumeGroup.volumes) {
-                    console.log("PhysicalVolume server",server)
                     yield* server.execute(new BashCommand(`rbd unmap ${physicalVolume.rbd.parentPool.name}/${physicalVolume.rbd.deviceName}`)).safeUnwrap();
                     
                     const resource = yield* self.pcsResourceManager.createResource(`RBD_${physicalVolume.rbd.deviceName}`, `ocf:ceph:rbd name=${physicalVolume.rbd.deviceName} pool=${physicalVolume.rbd.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD,server).safeUnwrap();
-                    console.log("Created RBD resource:", resource);
-                    console.log("Constrain resource to group:", resource, group,server)
                     yield* self.pcsResourceManager.constrainResourceToGroup(resource, group,server).safeUnwrap();
                     yield* self.pcsResourceManager.orderResourceBeforeGroup(resource, group).safeUnwrap();
+
                 }
 
                 return ok(undefined);
@@ -757,7 +770,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
         return new ResultAsync(safeTry(async function* () {
             let rbdsToRemove = blockDevice.volumeGroup.volumes.map((physicalVolume) => physicalVolume.rbd);
-
+            console.log("removeLVAndRelatedResources", lun, targetIQN, rbdsToRemove);
             yield* self.removeLUNResource(lun, targetIQN).safeUnwrap();
 
             const lvmResources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
@@ -769,7 +782,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                     break;
                 }
             }
-
+            console.log("rbdsToRemove", rbdsToRemove);
             yield* self.removeRBDResources(rbdsToRemove).safeUnwrap();
 
             return ok(undefined);
@@ -838,6 +851,7 @@ type LogicalVolumeInfoJson = {
             lv_name: string,
             vg_name: string,
             lv_size: string,
+            server: Server
         }[]
     }[]
 }

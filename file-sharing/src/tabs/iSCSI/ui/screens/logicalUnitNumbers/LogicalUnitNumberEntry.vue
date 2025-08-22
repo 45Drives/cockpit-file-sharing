@@ -31,6 +31,9 @@ const emit = defineEmits(["deleteEntry"]);
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const deleteEntry = () => {
+  console.log(
+    `Removing LUN ${props.logicalUnitNumber.blockDevice} from group ${props.initiatorGroup.name}`
+  );
   return driver
     .andThen((driver) =>
       driver.removeLogicalUnitNumberFromGroup(props.initiatorGroup, props.logicalUnitNumber)

@@ -82,13 +82,16 @@ export class RBDManager {
                   .map(el => el.getAttribute("name"))
                   .filter((name): name is string => !!name)
                   .map(name => new Server(name));
-              console.log("Online cluster nodes:", servers);
               if (servers.length === 0) {
                   return errAsync(new ProcessError("No online cluster nodes found."));
               }
   
               return okAsync(servers);
           });
+  }
+
+  getPrimaryServer(){
+    return this.allServers[0]
   }
     // createRadosBlockDevice(name: string, size: number, parentPool: Pool, dataPool?: Pool) {
     //     const dataPoolArgument = dataPool === undefined ? "" : `--data-pool ${dataPool.name}`;
@@ -131,7 +134,7 @@ export class RBDManager {
     createLogicalVolumeFromRadosBlockDevices(logicalVolumeName: string, volumeGroupName: string, rbds: RadosBlockDevice[]) {
         const rbdPaths = rbds.map((rbd) => rbd.filePath).join(' ');
         let createdLogicalVolume: LogicalVolume | null = null;
-
+        console.log(`Creating logical volume ${logicalVolumeName} in volume group ${volumeGroupName} from RBDs: ${rbdPaths}`);
         return ResultAsync.combine(rbds.map((rbd) => this.server.execute(new BashCommand(`pvcreate ${rbd.filePath}`)).map(() => new PhysicalVolume(rbd))))
         .andThen((physicalVolumes) => this.server.execute(new BashCommand(`vgcreate ${volumeGroupName} ${rbdPaths}`)).map(() => new VolumeGroup(volumeGroupName, physicalVolumes,this.server)))
         .andThen((volumeGroup) => this.server.execute(new BashCommand(`lvcreate -i ${rbds.length} -I 64 -l 100%FREE -n ${logicalVolumeName} ${volumeGroupName} ${rbdPaths}`))
@@ -426,7 +429,6 @@ export class RBDManager {
     
       return ResultAsync.combine(
         this.allServers.map((server) => {
-          console.log(`Fetching mapped RBDs from ${server}`);
     
           return ResultAsync.combine([
             server.execute(new BashCommand(`rbd showmapped --format json`))
@@ -510,7 +512,6 @@ export class RBDManager {
 
     fetchAvaliableLogicalVolumes(): ResultAsync<LogicalVolume[], ProcessError> {
       const self = this;
-      console.log(this.allServers)
       return ResultAsync.combine(
         this.allServers.map((server) =>
           server.execute(new BashCommand(`lvs --reportformat json --units B`))
@@ -529,13 +530,10 @@ export class RBDManager {
                     .andThen((pvList) =>
                       new ResultAsync(safeTry(async function* () {
                         const mappedBlockDevices = yield* self.fetchAvaliableRadosBlockDevices().safeUnwrap();
-                        console.log("Mapped Block Devices:, server ", mappedBlockDevices);
-                        console.log("server ", server)
                         const physicalVolumes = pvList
                           .map((pv) => mappedBlockDevices.find((rbd) => rbd.filePath === pv.pv_name && rbd.server === server))
                           .filter((item): item is RadosBlockDevice => !!item)
                           .map((rbd) => new PhysicalVolume(rbd));
-                        console.log("Physical Volumes: ", physicalVolumes, " for server: ", server);
                         return okAsync(physicalVolumes);
                       }))
                     )
@@ -566,7 +564,6 @@ export class RBDManager {
     }
 
     getBlockSizeFromDevicePath(path: Pick<VirtualDevice, "filePath"> | string, server: Server) {
-      console.log(`Fetching block size for device: ${path}`,  " and from server: ", server);
         return server.execute(new BashCommand(`blockdev --getbsz ${path}`))
                     .map((proc) => StringToIntCaster()(proc.getStdout()))
                     .andThen((maybeNumber) => maybeNumber.isSome() ? okAsync(maybeNumber.some()) : errAsync(new ProcessError(`Unable to determine block size for device: ${path}`)))

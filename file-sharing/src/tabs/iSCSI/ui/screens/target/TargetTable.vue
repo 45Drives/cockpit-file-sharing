@@ -84,6 +84,7 @@ watch(forceRefreshRecords, () => {
 const refreshTargets = () => {
   return driver.andThen((driver) => {
     return driver.getTargets().map((targetList) => {
+      console.debug("Fetched targets:", targetList);
       targets.value = targetList;
     });
   });
