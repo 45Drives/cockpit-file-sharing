@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.3.1-2focal) focal; urgency=medium
+
+  * Fix os release display in app info popup on EL8/EL9
+  * Enable AD accounts what's new popup for v4.3.1
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 25 Aug 2025 08:31:47 -0300
+
 cockpit-file-sharing (4.3.1-1focal) focal; urgency=medium
 
   * Fix build issue causing edit permissions popup to be blank

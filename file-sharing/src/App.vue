@@ -53,7 +53,7 @@ const iscsiConfigured = (): ResultAsync<boolean, never> => {
 let watchStopHandle: WatchStopHandle;
 
 globalProcessingWrapPromise(useUserSettings(true)).then((userSettings) => {
-  if (!userSettings.value.includeDomainAccounts && appVersion.startsWith("4.3.0")) {
+  if (!userSettings.value.includeDomainAccounts && appVersion.startsWith("4.3.1")) {
     getServer()
       .andThen((s) => s.isServerDomainJoined())
       .map((domainJoined) => {

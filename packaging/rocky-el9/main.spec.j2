@@ -22,12 +22,15 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 make OS_PACKAGE_RELEASE=el9
 
 %install
-make DESTDIR=%{buildroot} install
+make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el9 install
 
 %files
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Aug 25 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.1-2
+- Fix os release display in app info popup on EL8/EL9
+- Enable AD accounts what's new popup for v4.3.1
 * Fri Aug 22 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.1-1
 - Fix build issue causing edit permissions popup to be blank
 * Tue Aug 19 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.0-1
