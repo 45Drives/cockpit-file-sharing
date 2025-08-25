@@ -14,7 +14,6 @@ export class PCSResourceManager {
         this.server = server;
 
         this.currentResources = undefined;
-        console.log("server ", server);
     }
 
     createResource(name: string, creationArugments: string, type: PCSResourceType,server: Server) {
@@ -26,15 +25,12 @@ export class PCSResourceManager {
         .map(() => {
             const resource = new PCSResource(resourceName, /* creationCommand, */ type);
             this.currentResources = [...this.currentResources!, resource];
-            console.log("Created resource: ", name, creationArugments, type);
-            console.log("created resource at server ",this.server)
     
             return resource;
         })
     }
 
     deleteResource(resource: Pick<PCSResource, "name">) {
-        console.log("Deleting resource: ", resource.name);
 
         return this.server.execute(new BashCommand(`pcs resource delete '${resource.name}'`))
         .map(() => {
@@ -86,7 +82,6 @@ export class PCSResourceManager {
     }
 
     constrainResourceToGroup(resource: PCSResource, resourceGroup: PCSResourceGroup,server: Server) {
-        console.log("Constrain resource to group: ", resource.name, resourceGroup.name, server);
         return server.execute(new BashCommand(`pcs constraint colocation add '${resource.name}' with '${resourceGroup.name}'`))
         .map(() => undefined)
     }
@@ -123,42 +118,77 @@ export class PCSResourceManager {
         return this.fetchResources().map((resources) => resources.find((resource) => resource.name === resourceName));
     }
 
-    fetchResources() {
-        if (this.currentResources === undefined) {
-            return this.server.execute(new BashCommand(`pcs resource config --output-format json`))
-            .map((process) => process.getStdout())
-            .andThen(safeJsonParse<PCSConfigJson>)
-            .mapErr((err) => new ProcessError(`Unable to get current PCS configuration: ${err}`))
-            .map((partialObject) => {
-                return partialObject.primitives!.map((resource) => {
-                    return this.getGenerationCommandForPCSResource(resource)
-                    .map((command) => {
-                        const resourceType = this.getResourceTypeOfPCSResource(resource);
+    // fetchResources() {
+    //     if (this.currentResources === undefined) {
+    //         return this.server.execute(new BashCommand(`pcs resource config --output-format json`))
+    //         .map((process) => process.getStdout())
+    //         .andThen(safeJsonParse<PCSConfigJson>)
+    //         .mapErr((err) => new ProcessError(`Unable to get current PCS configuration: ${err}`))
+    //         .map((partialObject) => {
+    //             return partialObject.primitives!.map((resource) => {
+    //                 return this.getGenerationCommandForPCSResource(resource)
+    //                 .map((command) => {
+    //                     const resourceType = this.getResourceTypeOfPCSResource(resource);
 
-                        if (resourceType !== undefined) {
-                            let groupObject = undefined;
-                            const group = partialObject.groups!.find((value) => value.member_ids.includes(resource.id));
+    //                     if (resourceType !== undefined) {
+    //                         let groupObject = undefined;
+    //                         const group = partialObject.groups!.find((value) => value.member_ids.includes(resource.id));
 
-                            if (group !== undefined) {
-                                groupObject = new PCSResourceGroup(group.id);
-                            }
-                            // Target Resources require a resource group.
-                            if (resourceType !== PCSResourceType.TARGET || (resourceType === PCSResourceType.TARGET && groupObject !== undefined))
-                                return new PCSResource(resource.id, /* command, */ resourceType, groupObject);                        }
+    //                         if (group !== undefined) {
+    //                             groupObject = new PCSResourceGroup(group.id);
+    //                         }
+    //                         // Target Resources require a resource group.
+    //                         if (resourceType !== PCSResourceType.TARGET || (resourceType === PCSResourceType.TARGET && groupObject !== undefined))
+    //                             return new PCSResource(resource.id, /* command, */ resourceType, groupObject);                        }
 
-                        return undefined;
-                    })
-                })
-            })
-            .andThen((resourceMap) => ResultAsync.combine(resourceMap).map((resourceList) => resourceList.filter((resource) => resource !== undefined)) as ResultAsync<PCSResource[], ProcessError>)
-            .map((resources) => {
-                this.currentResources = resources;
-                return resources;
-            });
+    //                     return undefined;
+    //                 })
+    //             })
+    //         })
+    //         .andThen((resourceMap) => ResultAsync.combine(resourceMap).map((resourceList) => resourceList.filter((resource) => resource !== undefined)) as ResultAsync<PCSResource[], ProcessError>)
+    //         .map((resources) => {
+    //             this.currentResources = resources;
+    //             return resources;
+    //         });
+    //     }
+
+    //     return okAsync(this.currentResources!);
+    // }
+    fetchResources(): ResultAsync<PCSResource[], ProcessError> {
+        if (this.currentResources !== undefined) {
+          return okAsync(this.currentResources);
         }
-
-        return okAsync(this.currentResources!);
-    }
+      
+        return this.server
+          .execute(new BashCommand(`pcs resource config --output-format json`))
+          .map(proc => proc.getStdout())
+          .andThen(safeJsonParse<PCSConfigJson>)
+          .mapErr(err => new ProcessError(`Unable to get current PCS configuration: ${err}`))
+          .map((cfg) => {
+            const primitives = cfg.primitives ?? [];
+            const groups = cfg.groups ?? [];
+      
+            const resources = primitives
+              .map((resource) => {
+                const resourceType = this.getResourceTypeOfPCSResource(resource);
+                if (!resourceType) return undefined;
+      
+                const group = groups.find(g => g.member_ids.includes(resource.id));
+                const groupObject = group ? new PCSResourceGroup(group.id) : undefined;
+      
+                // Target resources must be in a group
+                if (resourceType !== PCSResourceType.TARGET || groupObject) {
+                  return new PCSResource(resource.id,  resourceType, groupObject);
+                }
+                return undefined;
+              })
+              .filter((r): r is PCSResource => r !== undefined);
+      
+            this.currentResources = resources;
+            return resources;
+          });
+      }
+      
 
     getResourceTypeOfPCSResource(resource: PCSResourceConfigJson) {
         for (const type of Object.values(PCSResourceType).filter((value) => typeof value === 'number')){

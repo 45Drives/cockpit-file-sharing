@@ -90,30 +90,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     getHandledDeviceTypes(): DeviceType[] {
         return Object.keys(this.deviceTypeToHandlerDirectory) as DeviceType[];
     }
-
-    getActiveNode(): ResultAsync<Server, ProcessError> {
-        return this.server
-            .execute(new BashCommand(`pcs status xml`))
-            .map((proc) => {
-                const output = proc.getStdout();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(output, "text/xml");
     
-                const nodeElements = doc.getElementsByTagName("node");
-                for (let i = 0; i < nodeElements.length; i++) {
-                    const node = nodeElements[i];
-                    const standby = node.getAttribute("standby");
-                    const name = node.getAttribute("name");
-                    if (standby === "false" && name) {
-                        console.log(`Active node found: ${name}`);
-                        return name;
-                    }
-                }
-    
-                throw new Error("No non-standby node found");
-            })
-            .map((nodeIP) => new Server(nodeIP));
-    }
     getnode(): ResultAsync<Server | undefined, ProcessError> {
         const node = this.rbdManager.allServers[0];
         return ResultAsync.fromSafePromise(Promise.resolve(node));
@@ -528,12 +505,14 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             }
 
             // === 2. Add all UNASSIGNED RBDs ===
-            for (let rbd of availableRadosBlockDevices) {
-                if (!assignedPaths.has(rbd.filePath)) {
-                    foundDevices.push(new VirtualDevice(rbd.deviceName, rbd.filePath, rbd.blockSize, rbd.deviceType, false,rbd.vgName,rbd.server));
+            // for (let rbd of availableRadosBlockDevices) {
+            //     if (!assignedPaths.has(rbd.filePath)) {
+            //         console.log("checking rbd", rbd, assignedPaths);
 
-                }
-            }
+            //         foundDevices.push(new VirtualDevice(rbd.deviceName, rbd.filePath, rbd.blockSize, rbd.deviceType, false,rbd.vgName,rbd.server));
+
+            //     }
+            // }
 
             // === 3. Add all UNASSIGNED Logical Volumes ===
             for (let lv of availableLogicalVolumes) {

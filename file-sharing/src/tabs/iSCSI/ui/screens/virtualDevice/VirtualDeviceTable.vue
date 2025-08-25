@@ -24,17 +24,20 @@
               <th scope="col">Block Size</th>
               <th scope="col">Type</th>
               <th v-if="useUserSettings().value.iscsi.clusteredServer" scope=" col">In Use</th>
+              <th scope="col"> Node IP
+              </th>
               <th scope="col" class="flex flex-row justify-end">
                 <span class="sr-only">Delete</span>
                 <button @click="showAddDevice = !showAddDevice">
                   <PlusIcon class="size-icon icon-default" />
                 </button>
               </th>
+
             </tr>
           </template>
             <template #tbody>
   <template v-if="      !fetchingDevices ">
-    <template v-for="(device, index) in filteredDevices" :key="index">
+    <template v-for="(device, index) in virtualDevices" :key="index">
       <VirtualDeviceEntry
         :device="device"
         @deleteDevice="actions.refreshDevices"
@@ -81,10 +84,10 @@ watch(forceRefreshRecords, () => {
     forceRefreshRecords["devices"] = false;
   }
 });
-const filteredDevices = computed(() => {
-  return virtualDevices?.value?.filter((d) => d.vgName === undefined) ?? [];
+// const filteredDevices = computed(() => {
+//   return virtualDevices?.value?.filter((d) => d.vgName === undefined) ?? [];
 
-});
+// });
 
 
 const refreshDevices = () => {

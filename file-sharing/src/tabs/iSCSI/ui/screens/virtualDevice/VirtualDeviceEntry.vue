@@ -5,6 +5,7 @@
     <td>{{ device.blockSize }}</td>
     <td>{{ getDeviceType() }}</td>
     <td v-if="useUserSettings().value.iscsi.clusteredServer">{{ device.assigned ? 'Yes' : 'No' }}</td>
+    <td>{{ device.server?.host }}</td>
     <td class=" button-group-row justify-end">
       <button v-if="!useUserSettings().value.iscsi.clusteredServer" @click="promptDeletion">
         <span class="sr-only">Delete</span>
