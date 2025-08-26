@@ -38,6 +38,7 @@ import { ResultAsync, okAsync } from "neverthrow";
 import { inject, ref } from "vue";
 import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 import type { ProcessError } from "@45drives/houston-common-lib";
+import type { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 
 const _cockpit = cockpit;
 
@@ -46,7 +47,7 @@ const _ = cockpit.gettext;
 const driver = inject<ResultAsync<ISCSIDriverClusteredServer, ProcessError>>("iSCSIDriver")!;
 
 const props = defineProps<{
-  device: RadosBlockDevice | LogicalVolume;
+  device: RadosBlockDevice | LogicalVolume | VirtualDevice;
 }>();
 
 const emit = defineEmits<{

@@ -1,7 +1,18 @@
 <template>
   <CardContainer>
     <template v-slot:header> Devices </template>
-    <div class="overflow-hidden" :style="{
+    <div v-if="useUserSettings().value.iscsi.clusteredServer"class="overflow-hidden" :style="{
+      'max-height': showAddDevice ? '1500px' : '0',
+      transition: showAddDevice ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out',
+    }">
+        <div class="card">
+        <RBDDeviceCreationScreen
+        @created="selectVirtualDevice"
+        @close="showAddDevice = false"/>
+      </div>
+
+      </div>
+    <div v-else class="overflow-hidden" :style="{
       'max-height': showAddDevice ? '1500px' : '0',
       transition: showAddDevice ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out',
     }">
@@ -22,9 +33,9 @@
               <th scope="col">Device Name</th>
               <th scope="col">File Path</th>
               <th scope="col">Block Size</th>
-              <th scope="col">Type</th>
+              <th  scope="col">Type</th>
               <th v-if="useUserSettings().value.iscsi.clusteredServer" scope=" col">In Use</th>
-              <th scope="col"> Node IP
+              <th v-if="useUserSettings().value.iscsi.clusteredServer" scope="col"> Node IP
               </th>
               <th scope="col" class="flex flex-row justify-end">
                 <span class="sr-only">Delete</span>
@@ -41,6 +52,7 @@
       <VirtualDeviceEntry
         :device="device"
         @deleteDevice="actions.refreshDevices"
+        @update="actions.refreshDevices"
       />
     </template>
   </template>
@@ -67,13 +79,14 @@ import { useUserSettings } from "@/common/user-settings";
 import type { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import type { ProcessError } from "@45drives/houston-common-lib";
-
+import RBDDeviceCreationScreen from "../radosBlockDeviceManagement/RBDDeviceCreationScreen.vue";
 
 const showAddDevice = ref(false);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const virtualDevices = inject<Ref<VirtualDevice[]>>("virtualDevices")!;
+  const showAddRBD = ref(false);
 
 const forceRefreshRecords = inject<Record<string, boolean>>("forceRefreshRecords")!;
   const fetchingDevices = ref<boolean>(false);
@@ -84,12 +97,26 @@ watch(forceRefreshRecords, () => {
     forceRefreshRecords["devices"] = false;
   }
 });
-// const filteredDevices = computed(() => {
-//   return virtualDevices?.value?.filter((d) => d.vgName === undefined) ?? [];
-
-// });
 
 
+const emit = defineEmits<{
+  (e: 'update'): void;
+  (e: 'selectDevice', value: VirtualDevice): void;
+}>();
+
+
+    const selectVirtualDevice = (device: VirtualDevice) => {
+      console.log("hellor")
+      if (virtualDevices.value.find((existingDevice) => (existingDevice.deviceName === device.deviceName)) === undefined) {
+            return driver.andThen((driver) => driver.addVirtualDevice(device))
+            .andThen(() => actions.refreshDevices())           // refresh list
+                .map(() => {
+                  emit('selectDevice', device)
+                  showAddDevice.value = false;
+                });
+        }
+      return undefined;
+}
 const refreshDevices = () => {
   fetchingDevices.value = true;
   return driver

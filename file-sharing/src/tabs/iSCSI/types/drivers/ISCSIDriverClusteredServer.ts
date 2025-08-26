@@ -63,7 +63,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         this.pcsResourceManager = new PCSResourceManager(server);
         this.virtualDevices = [];
         this.targets = [];
-        console.log(" primary constructor server ", server);
+        // console.log(" primary constructor server ", server);
     }
     initialize() {
         return new Directory(this.server, "/sys/kernel/scst_tgt").exists()
@@ -467,8 +467,8 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             const foundDevices: VirtualDevice[] = [];
 
             const availableLogicalVolumes = yield* self.rbdManager.fetchAvaliableLogicalVolumes().safeUnwrap();
-            console.log("availableLogicalVolumes", availableLogicalVolumes);
-            const availableRadosBlockDevices = yield* self.rbdManager.fetchAvaliableRadosBlockDevices().safeUnwrap();
+            // console.log("availableLogicalVolumes", availableLogicalVolumes);
+          //  const availableRadosBlockDevices = yield* self.rbdManager.fetchAvaliableRadosBlockDevices().safeUnwrap();
             const resources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
 
             // Track paths used in LUNs
@@ -485,22 +485,22 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                 // Try to match Logical Volume
                 const lv = availableLogicalVolumes.find((vol) => vol.filePath === path);
                 if (lv) {
-                    foundDevices.push(new VirtualDevice(lv.deviceName, lv.filePath, lv.blockSize, lv.deviceType, true,undefined,lv.server));
+                    foundDevices.push(new VirtualDevice(lv.deviceName, lv.filePath, lv.blockSize, lv.deviceType,lv.maximumSize, true,undefined,lv.server));
 
                     continue;
                 }
-                // Try to match RBD
-                const rbd = availableRadosBlockDevices.find((r) => r.filePath === path);
-                if (rbd) {
-                    rbd.assigned = true;
-                    foundDevices.push(rbd);
-                    continue;
-                }
+                // // Try to match RBD
+                // const rbd = availableRadosBlockDevices.find((r) => r.filePath === path);
+                // if (rbd) {
+                //     rbd.assigned = true;
+                //     foundDevices.push(rbd);
+                //     continue;
+                // }
                 // Fallback unknown BlockIO device
                 const blockSizeResult = await self.rbdManager.getBlockSizeFromDevicePath(path,server);
                 const blockSize = blockSizeResult.isOk() ? blockSizeResult.value : 0;
 
-                foundDevices.push(new VirtualDevice(path, path, blockSize, DeviceType.BlockIO, true,undefined,server));
+                foundDevices.push(new VirtualDevice(path, path, blockSize, DeviceType.BlockIO,0,true,undefined,server));
 
             }
 
@@ -517,10 +517,11 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             // === 3. Add all UNASSIGNED Logical Volumes ===
             for (let lv of availableLogicalVolumes) {
                 if (!assignedPaths.has(lv.filePath)) {
-                    foundDevices.push(new VirtualDevice(lv.deviceName, lv.filePath, lv.blockSize, lv.deviceType, false,undefined,lv.server));
+                    foundDevices.push(new VirtualDevice(lv.deviceName, lv.filePath, lv.blockSize, lv.deviceType,lv.maximumSize, false,undefined,lv.server));
 
                 }
             }
+            console.log("foundDevices", foundDevices);
             return ok(foundDevices);
         }));
     }

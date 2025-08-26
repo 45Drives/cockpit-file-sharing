@@ -5,11 +5,10 @@ import type { Server } from "@45drives/houston-common-lib";
 export class RadosBlockDevice extends VirtualDevice {
     parentPool: Pool;
     dataPool: Pool | undefined;
-    maximumSize: number;
     server: Server;
     vgName?: string;
     constructor(deviceName: string, filePath: string, blockSize: number, maximumSize: number, parentPool: Pool,server: Server, dataPool?: Pool,vgName?: string) {
-        super(deviceName, filePath, blockSize, DeviceType.BlockIO);
+        super(deviceName, filePath, blockSize, DeviceType.BlockIO,    maximumSize);      
 
         this.parentPool = parentPool;
         this.dataPool = dataPool;

@@ -61,7 +61,6 @@ export class RBDManager {
                             this.cachedRBDs = [];
                         }
                       const  newRbd = new RadosBlockDevice(name, mapProc.getStdout().trim(), blockSize.some(), size, parentPool, dataPool);
-                        this.cachedRBDs.push(newRbd);
                         return okAsync(newRbd)
                     return errAsync(new ProcessError("Unable to determine block size of RBD"));
                 })
@@ -510,53 +509,130 @@ export class RBDManager {
     //     )).map((LogicalVolumes) => LogicalVolumes.filter((volume) => volume.volumeGroup.volumes.length !== 0));
     // }
 
-    fetchAvaliableLogicalVolumes(): ResultAsync<LogicalVolume[], ProcessError> {
+    // fetchAvaliableLogicalVolumes(): ResultAsync<LogicalVolume[], ProcessError> {
+    //   const self = this;
+    //   return ResultAsync.combine(
+    //     this.allServers.map((server) =>
+    //       server.execute(new BashCommand(`lvs --reportformat json --units B`))
+    //         .map((proc) => proc.getStdout())
+    //         .andThen(safeJsonParse<LogicalVolumeInfoJson>)
+    //         .map((logicalVolumeInfo) =>
+    //           logicalVolumeInfo?.report?.flatMap((report) => report.lv) ?? []
+    //         )
+    //         .andThen((lvList) =>
+    //           ResultAsync.combine(
+    //             lvList.map((lvInfo) =>
+    //               server.execute(new BashCommand(`pvs -S vgname=${lvInfo.vg_name} --reportformat json --units B`))
+    //                 .map((proc) => proc.getStdout())
+    //                 .andThen(safeJsonParse<VolumeGroupInfoJson>)
+    //                 .map((vgInfo) => vgInfo.report?.flatMap((report) => report.pv) ?? [])
+    //                 .andThen((pvList) =>
+    //                   new ResultAsync(safeTry(async function* () {
+    //                     const mappedBlockDevices = yield* self.fetchAvaliableRadosBlockDevices().safeUnwrap();
+    //                     const physicalVolumes = pvList
+    //                       .map((pv) => mappedBlockDevices.find((rbd) => rbd.filePath === pv.pv_name && rbd.server === server))
+    //                       .filter((item): item is RadosBlockDevice => !!item)
+    //                       .map((rbd) => new PhysicalVolume(rbd));
+    //                     return okAsync(physicalVolumes);
+    //                   }))
+    //                 )
+    //                 .map((volumes) => new VolumeGroup(lvInfo.vg_name, volumes,server))
+    //                 .map((vg) =>
+    //                   new LogicalVolume(
+    //                     lvInfo.lv_name,
+    //                     0,
+    //                     vg,
+    //                     StringToIntCaster()(lvInfo.lv_size).some(),
+    //                     server
+    //                   )
+    //                 )
+    //             )
+    //           )
+    //         )
+    //     )
+    //   ).map((perServerLVs) =>
+    //     perServerLVs
+    //       .flat()
+    //       .filter((lv) => lv.volumeGroup.volumes.length !== 0)
+    //   );
+    // }      
+
+
+     fetchAvaliableLogicalVolumes(): ResultAsync<LogicalVolume[], ProcessError> {
       const self = this;
+    
       return ResultAsync.combine(
         this.allServers.map((server) =>
-          server.execute(new BashCommand(`lvs --reportformat json --units B`))
-            .map((proc) => proc.getStdout())
+          // 1) get all LVs for this server
+          server.execute(  new BashCommand(
+            `lvs --reportformat json --units B \
+             -o lv_name,vg_name,lv_size,lv_path,lv_attr \
+             -S 'vg_name!="rl" && lv_name!~"^(root|home|swap)$"'`
+          ))
+            .map(p => p.getStdout())
             .andThen(safeJsonParse<LogicalVolumeInfoJson>)
-            .map((logicalVolumeInfo) =>
-              logicalVolumeInfo?.report?.flatMap((report) => report.lv) ?? []
+            .map(info => info?.report?.flatMap(r => r.lv) ?? [])
+            // 2) get PV->VG data ONCE (not per-LV)
+            .andThen(lvList =>
+              ResultAsync.combine([
+                okAsync(lvList),
+                server.execute(new BashCommand(`pvs --reportformat json --units B -o pv_name,vg_name`))
+                  .map(p => p.getStdout())
+                  .andThen(safeJsonParse<PVToVGJson>)
+              ])
             )
-            .andThen((lvList) =>
-              ResultAsync.combine(
-                lvList.map((lvInfo) =>
-                  server.execute(new BashCommand(`pvs -S vgname=${lvInfo.vg_name} --reportformat json --units B`))
-                    .map((proc) => proc.getStdout())
-                    .andThen(safeJsonParse<VolumeGroupInfoJson>)
-                    .map((vgInfo) => vgInfo.report?.flatMap((report) => report.pv) ?? [])
-                    .andThen((pvList) =>
-                      new ResultAsync(safeTry(async function* () {
-                        const mappedBlockDevices = yield* self.fetchAvaliableRadosBlockDevices().safeUnwrap();
-                        const physicalVolumes = pvList
-                          .map((pv) => mappedBlockDevices.find((rbd) => rbd.filePath === pv.pv_name && rbd.server === server))
-                          .filter((item): item is RadosBlockDevice => !!item)
-                          .map((rbd) => new PhysicalVolume(rbd));
-                        return okAsync(physicalVolumes);
-                      }))
-                    )
-                    .map((volumes) => new VolumeGroup(lvInfo.vg_name, volumes,server))
-                    .map((vg) =>
-                      new LogicalVolume(
-                        lvInfo.lv_name,
-                        0,
-                        vg,
-                        StringToIntCaster()(lvInfo.lv_size).some(),
-                        server
-                      )
-                    )
+            // 3) get ALL mapped RBDs ONCE (not per-LV), for ALL servers, and reuse
+            .andThen(([lvList, pvJson]) =>
+              ResultAsync.combine([
+                okAsync(lvList),
+                okAsync(pvJson.report?.flatMap(r => r.pv) ?? []),
+                self.fetchAvaliableRadosBlockDevices()  // <-- once
+              ])
+            )
+            .andThen(([lvList, pvList, allRBDs]) => {
+              const rbdByServer = new Map<Server, RadosBlockDevice[]>();
+              for (const rbd of allRBDs) {
+                const arr = rbdByServer.get(rbd.server) ?? [];
+                arr.push(rbd);
+                rbdByServer.set(rbd.server, arr);
+              }
+              const rbdHere = rbdByServer.get(server) ?? [];
+    
+              // Build PV objects by matching to RBDs on THIS server
+              const pvsForServer = pvList
+                .map(pv => rbdHere.find(r => r.filePath === pv.pv_name))
+                .filter((x): x is RadosBlockDevice => !!x)
+                .map(rbd => new PhysicalVolume(rbd));
+    
+              // De-dup VGs so we don't rebuild per-LV
+              const vgCache = new Map<string, VolumeGroup>();
+              function getVG(vgName: string): VolumeGroup {
+                const hit = vgCache.get(vgName);
+                if (hit) return hit;
+                const vg = new VolumeGroup(vgName, pvsForServer, server);
+                vgCache.set(vgName, vg);
+                return vg;
+              }
+    
+              const lvs = lvList.map(lvInfo =>
+                new LogicalVolume(
+                  lvInfo.lv_name,
+                  0,
+                  getVG(lvInfo.vg_name),
+                  StringToIntCaster()(lvInfo.lv_size).some(),
+                  server
                 )
-              )
-            )
+              );
+    
+              return okAsync(lvs);
+            })
         )
-      ).map((perServerLVs) =>
-        perServerLVs
-          .flat()
-          .filter((lv) => lv.volumeGroup.volumes.length !== 0)
+      ).map(perServer => perServer.flat()
+         // keep only LVs whose VG actually has backing PVs (RBD-backed)
+         .filter(lv => lv.volumeGroup.volumes.length !== 0)
       );
-    }      
+    }
+    
     fetchExistingImageNames() {
         return this.server.execute(new BashCommand(`rbd list`))
         .map((proc) => proc.getStdout())

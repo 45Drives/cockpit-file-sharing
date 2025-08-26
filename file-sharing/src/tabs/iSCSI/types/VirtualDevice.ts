@@ -8,7 +8,10 @@ export class VirtualDevice {
     assigned?: boolean;
     vgName?: string;
     server?: Server;
-    constructor(deviceName: string, filePath: string, blockSize: number, deviceType: DeviceType, assigned?: boolean,    vgName?: string,server?:Server) {
+    maximumSize?: number;
+
+    constructor(deviceName: string, filePath: string, blockSize: number, deviceType: DeviceType,   maximumSize?: number,
+        assigned?: boolean,    vgName?: string,server?:Server, ) {
         this.deviceName = deviceName;
         this.filePath = filePath;
         this.blockSize = blockSize;
@@ -16,6 +19,7 @@ export class VirtualDevice {
         this.assigned = assigned;
         this.vgName = vgName;
         this.server = server;;
+          this.maximumSize =   maximumSize;
     }
 }
 
