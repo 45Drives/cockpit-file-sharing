@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.2.14-14
+## Cockpit File Sharing 4.2.14-15
 
-* getting first unstandby node evrytime 
+* building package fetching data from all servrs of cluster

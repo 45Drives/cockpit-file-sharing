@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.2.14-15jammy) jammy; urgency=medium
+
+  * building package fetching data from all servrs of cluster
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 26 Aug 2025 08:41:09 -0300
+
 cockpit-file-sharing (4.2.14-14jammy) jammy; urgency=medium
 
   * getting first unstandby node evrytime 
