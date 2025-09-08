@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.3.2-1focal) focal; urgency=medium
+
+  * Fix bug causing nfs server crash during export removal with ceph by removing
+    ceph remount after removing share instead of before
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 08 Sep 2025 13:27:59 -0300
+
 cockpit-file-sharing (4.3.1-2focal) focal; urgency=medium
 
   * Fix os release display in app info popup on EL8/EL9
