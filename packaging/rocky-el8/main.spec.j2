@@ -28,6 +28,10 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el8 install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri Sep 19 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.2-2
+- Fix bug causing nfs server crash during export removal with ceph by removing ceph
+  remount after removing share instead of before
+- Fix bug causing NFS hooks to be run multiple times for clustered environments
 * Mon Sep 08 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.2-1
 - Fix bug causing nfs server crash during export removal with ceph by removing ceph
   remount after removing share instead of before
