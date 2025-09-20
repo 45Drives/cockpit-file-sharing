@@ -72,8 +72,11 @@ const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const refreshTable = () => {
   return driver.andThen((driver) => {
+    console.log("befor Refreshing initiators for group", props.initiatorGroup);
     return driver.getInitiatorsOfInitiatorGroup(props.initiatorGroup).map((initiators) => {
-      props.initiatorGroup.initiators = initiators;
+     props.initiatorGroup.initiators = initiators;
+      console.log("befor Refreshing initiators for group", props.initiatorGroup);
+
     });
   });
 };

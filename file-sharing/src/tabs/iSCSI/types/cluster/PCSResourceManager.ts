@@ -92,22 +92,25 @@ export class PCSResourceManager {
     }
 
     fetchResourceConfig(resource: Pick<PCSResource, "name">) {
+        console.log("fetching config for resource",this.server.execute(new BashCommand(`pcs resource config --output-format json '${resource.name}'`)) );
         return this.server.execute(new BashCommand(`pcs resource config --output-format json '${resource.name}'`))
         .map((process) => process.getStdout())
         .andThen(safeJsonParse<PCSConfigJson>);
     }
 
     fetchResourceInstanceAttributeValue(resource: Pick<PCSResource, "name">, nvPairName: string) {
-
+        console.log("resource", resource);
+        const result =        this.fetchResourceConfig(resource).map((config) => config.primitives![0]!.instance_attributes![0]!.nvpairs.find((pair) => pair.name === nvPairName)?.value);
+        console.log("result", result);
         return this.fetchResourceConfig(resource).map((config) => config.primitives![0]!.instance_attributes![0]!.nvpairs.find((pair) => pair.name === nvPairName)?.value);
 
     }
     fetchResourceInstanceAttributeValues(resource: Pick<PCSResource, "name">, nvPairName: string[]) {
         return this.fetchResourceConfig(resource).map((config) => {
             let pairResults = new Map<string, string | undefined>();
-            
             for (var pairName of nvPairName) {
                 pairResults.set(pairName, config.primitives![0]!.instance_attributes![0]!.nvpairs.find((pair) => pair.name === pairName)?.value);
+            
             }
 
             return pairResults;
@@ -116,6 +119,10 @@ export class PCSResourceManager {
 
     fetchResourceByName(resourceName: string) {
         return this.fetchResources().map((resources) => resources.find((resource) => resource.name === resourceName));
+    }
+
+    getTargetGroups(){
+    
     }
 
     // fetchResources() {
@@ -156,6 +163,7 @@ export class PCSResourceManager {
     // }
     fetchResources(): ResultAsync<PCSResource[], ProcessError> {
         if (this.currentResources !== undefined) {
+            console.log("currentresources", this.currentResources);
           return okAsync(this.currentResources);
         }
       

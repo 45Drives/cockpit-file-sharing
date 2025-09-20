@@ -428,7 +428,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                 yield* self.removeLUNResource(logicalUnitNumber, targetIQN!).safeUnwrap();
               }
               console.log("Removing Logical Unit Number from group: ", logicalUnitNumber);
-              return ok(undefined); // ✅ Do not use okAsync inside safeTry
+              return ok(undefined);
             }))
           )
           .andThen(() => {
@@ -565,25 +565,164 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             })
     }
 
+
+
     // iSCSI through PCS only seems to support one ini_group 'allowed', that is created automatically.
-    getInitatorGroupsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<InitiatorGroup[], ProcessError> {
-        const self = this;
+    // getInitatorGroupsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<InitiatorGroup[], ProcessError> {
+    //     const self = this;
 
-        return this.findTargetPCSResource(target)
-            .andThen((resource) => new ResultAsync(safeTry(async function* () {
-                const partialInitiatorGroup = {
-                    name: "allowed",
-                    devicePath: resource.name,
-                }
+    //     return this.findTargetPCSResource(target)
+    //         .andThen((resource) => new ResultAsync(safeTry(async function* () {
+    //             const partialInitiatorGroup = {
+    //                 name: "allowed",
+    //                 devicePath: resource.name,
+    //             }
+    //             let attributes = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValues({ name: resource.name }, ["initiator_groups"]).safeUnwrap();
 
-                return ok<InitiatorGroup[]>([{
-                    ...partialInitiatorGroup,
-                    logicalUnitNumbers: yield* self.getLogicalUnitNumbersOfInitiatorGroup(partialInitiatorGroup).safeUnwrap(),
-                    initiators: yield* self.getInitiatorsOfInitiatorGroup(partialInitiatorGroup).safeUnwrap()
-                }])
-            })))
+    //             console.log("target attributes", attributes)
+    //             console.log("resource", resource)
+    //             return ok<InitiatorGroup[]>([{
+    //                 ...partialInitiatorGroup,
+    //                 logicalUnitNumbers: yield* self.getLogicalUnitNumbersOfInitiatorGroup(partialInitiatorGroup).safeUnwrap(),
+    //                 initiators: yield* self.getInitiatorsOfInitiatorGroup(partialInitiatorGroup).safeUnwrap()
+    //             }])
+    //         })))
+    // }
+// top-level helper (or make it `private parseInitiatorGroups(...)` in the class)
+//  parseInitiatorGroups(attr?: string): Map<string, string[]> {
+//     const out = new Map<string, string[]>();
+//     if (!attr) return out;
+  
+//     for (const segment of attr.split(";")) {
+//       const s = segment.trim();
+//       if (!s) continue;
+  
+//       const i = s.indexOf(":");        // only the first colon splits group vs list
+//       if (i < 0) continue;
+  
+//       const group = s.slice(0, i).trim();
+//       const rhs   = s.slice(i + 1).trim();   // may contain colons inside IQNs
+//       if (!group || !rhs) continue;
+  
+//       const iqns = rhs.split(",").map(x => x.trim()).filter(Boolean);
+//       if (iqns.length) out.set(group, iqns);
+//     }
+//     return out;
+//   }
+parseInitiatorGroups(attr?: string): Map<string, string[]> {
+    const out = new Map<string, string[]>();
+    if (!attr) return out;
+  
+    for (const segment of attr.split(";")) {
+      const s = segment.trim();
+      if (!s) continue;
+  
+      const i = s.indexOf(":");
+      if (i < 0) continue;
+  
+      const group = s.slice(0, i).trim();
+      const rhs   = s.slice(i + 1).trim();  // may be empty
+      if (!group) continue;
+  
+      const iqns = rhs
+        ? rhs.split(",").map(x => x.trim()).filter(Boolean)
+        : [];
+  
+      out.set(group, Array.from(new Set(iqns)).sort()); // de-dupe + sort
     }
-
+    return out;
+  }  
+    // getInitatorGroupsOfTarget(
+    //     target: Pick<Target, "name" | "devicePath">
+    //   ): ResultAsync<InitiatorGroup[], ProcessError> {
+    //     const self = this;
+      
+    //     const toInitiators = (iqns: string[]): Initiator[] =>
+    //       iqns.map(iqn => ({ name: iqn }));
+      
+    //     return this.findTargetPCSResource(target).andThen((resource) =>
+    //       new ResultAsync(
+    //         safeTry(async function* () {
+    //           const attrs = yield* self.pcsResourceManager
+    //             .fetchResourceInstanceAttributeValues(
+    //               { name: resource.name },
+    //               ["initiator_groups"]
+    //             )
+    //             .safeUnwrap();
+      
+    //           const igAttr = attrs.get("initiator_groups");
+    //           const groupsMap = self.parseInitiatorGroups(igAttr);
+      
+    //           const names = groupsMap.size
+    //             ? Array.from(groupsMap.keys())
+    //             : ["allowed"]; // fallback
+      
+    //           const groups: InitiatorGroup[] = [];
+    //           for (const name of names) {
+    //             const iqns = groupsMap.get(name) ?? [];
+    //             const group: InitiatorGroup = {
+    //               name,
+    //               devicePath: resource.name,
+    //               logicalUnitNumbers: [],
+    //               initiators: toInitiators(iqns),
+    //             };
+      
+    //             // If your LUN lookup only needs the target resource to scope by RG,
+    //             // passing just devicePath is fine. If you later need per-group LUN masking,
+    //             // extend this call to accept group.name too.
+    //             group.logicalUnitNumbers = yield* self
+    //               .getLogicalUnitNumbersOfInitiatorGroup({ devicePath: group.devicePath })
+    //               .safeUnwrap();
+      
+    //             groups.push(group);
+    //           }
+      
+    //           return ok<InitiatorGroup[]>(groups);
+    //         })
+    //       )
+    //     );
+    //   }
+    getInitatorGroupsOfTarget(
+        target: Pick<Target, "name" | "devicePath">
+      ): ResultAsync<InitiatorGroup[], ProcessError> {
+        const self = this;
+      
+        const toInitiators = (iqns: string[]): Initiator[] =>
+          iqns.map((iqn) => new Initiator(iqn)); // or { name: iqn }
+      
+        return this.findTargetPCSResource(target).andThen((resource) =>
+          new ResultAsync(safeTry(async function* () {
+            const attrs = yield* self.pcsResourceManager
+              .fetchResourceInstanceAttributeValues({ name: resource.name }, ["initiator_groups"])
+              .safeUnwrap();
+      
+            const groupsMap = self.parseInitiatorGroups(attrs.get("initiator_groups"));
+            const groupNames = groupsMap.size
+              ? Array.from(groupsMap.keys()).sort()
+              : ["allowed"]; // fallback if attribute missing
+      
+            const groups: InitiatorGroup[] = [];
+            for (const name of groupNames) {
+              const iqns = groupsMap.get(name) ?? [];
+              const group: InitiatorGroup = {
+                name,
+                devicePath: resource.name, // PCS resource id; if you prefer IQN, pass that consistently everywhere
+                logicalUnitNumbers: [],
+                initiators: toInitiators(iqns),
+              };
+      
+              group.logicalUnitNumbers = yield* self
+                .getLogicalUnitNumbersOfInitiatorGroup({ devicePath: group.devicePath })
+                .safeUnwrap();
+      
+              groups.push(group);
+            }
+      
+            return ok(groups);
+          }))
+        );
+      }
+      
     getCHAPConfigurationsOfTarget(target: Pick<Target, "name" | "devicePath">): ResultAsync<CHAPConfiguration[], ProcessError> {
         return this.findTargetPCSResource(target)
             .andThen((resource) => this.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["incoming_username", "incoming_password"]))
@@ -600,11 +739,13 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
             .andThen((targetResource) => this.pcsResourceManager.fetchResources().map((resources) => resources.filter((resource) => resource.resourceType === PCSResourceType.LUN && resource.resourceGroup?.name === targetResource?.resourceGroup?.name)))
             .andThen((filteredResources) => {
+                console.log("filteredResources", filteredResources);
                 return ResultAsync.combine(filteredResources.map((resource) => this.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["lun", "path"])
                     .andThen((values) => {
                         const lunAttribute = StringToIntCaster()(values.get("lun")!);
                         const virtualDevice = this.virtualDevices.find((device) => device.filePath === values.get("path"));
                         if (virtualDevice !== undefined)
+                            console.log("found matching device for LUN", values, virtualDevice);
                             return okAsync(new LogicalUnitNumber(virtualDevice.deviceName, lunAttribute.some(), virtualDevice));
                         return okAsync(undefined);
                     })
@@ -613,18 +754,45 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             });
     }
 
-    getInitiatorsOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "name" | "devicePath">): ResultAsync<Initiator[], ProcessError> {
-        return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
-            .andThen((targetResource) => this.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource!, "allowed_initiators"))
-            .map((value) => {
-                if (value !== undefined) {
-                    return value.split(" ").map((initiatorName) => new Initiator(initiatorName))
-                }
+    // getInitiatorsOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "name" | "devicePath">): ResultAsync<Initiator[], ProcessError> {
+    //    console.log("getInitiatorsOfInitiatorGroup", initiatorGroup);
+    //     return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
+    //         .andThen((targetResource) => this.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource!, "initiator_groups"))
+    //         .map((value) => {
+    //             if (value !== undefined) {
+    //                 return value.split(" ").map((initiatorName) => new Initiator(initiatorName))
+    //             }
 
-                return [];
-            })
-    }
+    //             return [];
+    //         })
+    // }
 
+    getInitiatorsOfInitiatorGroup(
+        initiatorGroup: Pick<InitiatorGroup, "name" | "devicePath">
+      ): ResultAsync<Initiator[], ProcessError> {
+        return this.pcsResourceManager
+          .fetchResourceByName(initiatorGroup.devicePath) // if this is actually an IQN, switch to fetchResourceByAttr("iqn", initiatorGroup.devicePath, PCSResourceType.TARGET)
+          .andThen((targetResource) => {
+            if (!targetResource) {
+              return errAsync(new ProcessError(
+                `Target resource '${initiatorGroup.devicePath}' not found.`
+              ));
+            }
+            return this.pcsResourceManager.fetchResourceInstanceAttributeValue(
+              { name: targetResource.name },
+              "initiator_groups"
+            );
+          })
+          .map((raw) => {
+            const map = this.parseInitiatorGroups(raw);
+            const iqns = map.get(initiatorGroup.name.trim()) ?? [];
+            // Choose one construction style and keep it everywhere:
+            return iqns.map((iqn) => new Initiator(iqn));
+            // or: return iqns.map((iqn) => ({ name: iqn }));
+          });
+      }
+      
+    
     getSessionsOfTarget(target: Pick<Target, "name">): ResultAsync<Session[], ProcessError> {
         return this.singleServerDriver!.getSessionsOfTarget(target);
     }
@@ -638,6 +806,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
         return this.pcsResourceManager.fetchResourceByName(target.devicePath)
             .andThen((resource) => {
+                console.log("findTargetPCSResource", target, resource);
                 return resource !== undefined ? okAsync(resource) : errAsync(new ProcessError(`Unable to find resource for Target IQN ${target.name}.`))
             });
     }
@@ -654,7 +823,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
                     for (var groupResource of resources.filter((resource) => resource.resourceGroup?.name === targetResource.resourceGroup?.name)) {
                         let attributes = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValues({ name: groupResource.name }, ["action", "ip"]).safeUnwrap();
-
+                        
                         if (attributes.get("action") === actionFromType && attributes.get("ip") === portal.address.split(":")[0]!) {
                             const resource = yield* self.pcsResourceManager.fetchResourceByName(groupResource.name).safeUnwrap();
                             return ok<PCSResource>(resource!);
