@@ -49,7 +49,6 @@
 import { CardContainer, wrapActions, Table } from "@45drives/houston-common-ui";
 import { inject, ref, type Ref } from "vue";
 import { PlusIcon } from "@heroicons/vue/24/solid";
-import { useUserSettings } from "@/common/user-settings";
 import type { ResultAsync } from "neverthrow";
 import type { ProcessError } from "@45drives/houston-common-lib";
 import type { Target } from "@/tabs/iSCSI/types/Target";

@@ -32,8 +32,6 @@ import { LogicalVolume } from '@/tabs/iSCSI/types/cluster/LogicalVolume';
 import { Result } from 'postcss';
 import { PhysicalVolume } from '../cluster/PhysicalVolume';
 import { VolumeGroup } from '../cluster/VolumeGroup';
-import { log } from 'console';
-import { unknown } from 'zod';
 
 const userSettingsResult = ResultAsync.fromSafePromise(useUserSettings(true));
 
@@ -218,7 +216,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         const self = this;
       
         initiatorGroup.devicePath = target.devicePath;
-              
+
         return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
           .andThen((targetResource) => {
             if (!targetResource) {
@@ -248,35 +246,102 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         throw new Error("Removing initiator groups is not supported by this driver.");
     }
 
+    // addInitiatorToGroup(
+    //     initiatorGroup: InitiatorGroup,
+    //     initiator: Initiator
+    // ): ResultAsync<void, ProcessError> {
+    //     const updatedInitiatorList = [...initiatorGroup.initiators, initiator].map((initiator) => initiator.name).join(" ");
+
+    //     return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
+    //         .andThen((targetResource) => {
+    //             if (targetResource !== undefined)
+    //                 return this.pcsResourceManager.updateResource(targetResource, `allowed_initiators='${updatedInitiatorList}'`)
+
+    //             return errAsync(new ProcessError("Could not find Target resource."))
+    //         })
+    // }
+  
+  
+  
     addInitiatorToGroup(
-        initiatorGroup: InitiatorGroup,
-        initiator: Initiator
-    ): ResultAsync<void, ProcessError> {
-        const updatedInitiatorList = [...initiatorGroup.initiators, initiator].map((initiator) => initiator.name).join(" ");
+    group: InitiatorGroup,
+    newInitiator:  Initiator
+  ): ResultAsync<void, ProcessError> {
+    const self = this;
+  
+    // The PCS resource name lives in target.devicePath (e.g., "iscsi_TARGET_target1")
+    return this.pcsResourceManager.fetchResourceByName(group.devicePath)
+      .andThen((targetResource) => {
+        if (!targetResource) {
+          return errAsync(new ProcessError("Could not find Target resource."));
+        }
+  
+        return self.pcsResourceManager
+          .fetchResourceInstanceAttributeValues(
+            { name: targetResource.name },
+            ["initiator_groups"]
+          )
+          .andThen((attrs) => {
+            const existing = attrs.get("initiator_groups") ?? "";
+            const map = self.parseInitiatorGroups(existing);
+  
+            // merge (add group if it doesn't exist; dedupe IQNs)
+            const current = new Set(map.get(group.name) ?? []);
+            current.add(newInitiator.name);
+            map.set(group.name, Array.from(current));
+  
+            const updated = self.serializeInitiatorGroups(map);
+            console.log("Updated initiator groups:", updated);
+            return self.pcsResourceManager
+              .updateResource(targetResource, `initiator_groups='${updated}'`)
+              .map(() => undefined);
+          });
+      });
+  }
+  
 
-        return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
-            .andThen((targetResource) => {
-                if (targetResource !== undefined)
-                    return this.pcsResourceManager.updateResource(targetResource, `allowed_initiators='${updatedInitiatorList}'`)
-
-                return errAsync(new ProcessError("Could not find Target resource."))
-            })
-    }
-
-    removeInitiatorFromGroup(
-        initiatorGroup: InitiatorGroup,
-        initiator: Initiator
-    ): ResultAsync<void, ProcessError> {
-        const updatedInitiatorList = initiatorGroup.initiators.filter((existinginitiator) => existinginitiator !== initiator).map((existinginitiator) => existinginitiator.name).join(" ");
-
-        return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
-            .andThen((targetResource) => {
-                if (targetResource !== undefined)
-                    return this.pcsResourceManager.updateResource(targetResource, `allowed_initiators='${updatedInitiatorList}'`)
-
-                return errAsync(new ProcessError("Could not find Target resource."))
-            })
-    }
+  removeInitiatorFromGroup(
+    group: InitiatorGroup,
+    initiator: Initiator,
+  ): ResultAsync<void, ProcessError> {
+    const self = this;
+  
+    return this.pcsResourceManager.fetchResourceByName(group.devicePath)
+      .andThen((targetResource) => {
+        if (!targetResource) {
+          return errAsync(new ProcessError("Could not find Target resource."));
+        }
+  
+        return self.pcsResourceManager
+          .fetchResourceInstanceAttributeValues(
+            { name: targetResource.name },
+            ["initiator_groups"]
+          )
+          .andThen((attrs) => {
+            const existing = attrs.get("initiator_groups") ?? "";
+            const map = self.parseInitiatorGroups(existing);
+    
+            // Remove IQN from the group (no-op if it isn't there)
+            const cur = new Set(map.get(group.name) ?? []);
+            const beforeSize = cur.size;
+            cur.delete(initiator.name);
+  
+            const nextList = Array.from(cur);
+              map.set(group.name, nextList);     // keep empty group as `Group:`
+            
+  
+            const updated = self.serializeInitiatorGroups(map);
+            if (updated === existing) {
+              return okAsync<void>(undefined);
+            }
+            const param = `initiator_groups='${updated}'`;
+            return self.pcsResourceManager
+              .updateResource(targetResource, param)
+              .map(() => undefined);
+          });
+      });
+  }
+  
 
     addLogicalUnitNumberToGroup(
         initiatorGroup: InitiatorGroup,

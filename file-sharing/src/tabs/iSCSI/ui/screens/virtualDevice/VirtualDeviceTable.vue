@@ -106,7 +106,6 @@ const emit = defineEmits<{
 
 
     const selectVirtualDevice = (device: VirtualDevice) => {
-      console.log("hellor")
       if (virtualDevices.value.find((existingDevice) => (existingDevice.deviceName === device.deviceName)) === undefined) {
             return driver.andThen((driver) => driver.addVirtualDevice(device))
             .andThen(() => actions.refreshDevices())           // refresh list
