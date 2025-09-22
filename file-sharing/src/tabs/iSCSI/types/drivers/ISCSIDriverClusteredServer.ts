@@ -33,6 +33,7 @@ import { Result } from 'postcss';
 import { PhysicalVolume } from '../cluster/PhysicalVolume';
 import { VolumeGroup } from '../cluster/VolumeGroup';
 import { log } from 'console';
+import { unknown } from 'zod';
 
 const userSettingsResult = ResultAsync.fromSafePromise(useUserSettings(true));
 
@@ -210,14 +211,35 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             })
     }
 
-    // Only group available is created by default by the Target resource, called 'allowed'
     addInitiatorGroupToTarget(
-        _target: Target,
-        _initiatorGroup: InitiatorGroup
-    ): ResultAsync<void, ProcessError> {
-        throw new Error("Adding initiator groups is not supported by this driver.");
-    }
-
+        target: Target,
+        initiatorGroup: InitiatorGroup
+      ): ResultAsync<void, ProcessError> {
+        const self = this;
+      
+        initiatorGroup.devicePath = target.devicePath;
+              
+        return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
+          .andThen((targetResource) => {
+            if (!targetResource) {
+              return errAsync(new ProcessError("Could not find Target resource."));
+            }
+      
+            return self.pcsResourceManager
+              .fetchResourceInstanceAttributeValues(
+                { name: target.devicePath },      
+                ["initiator_groups"]
+              )
+              .andThen((attributes) => {
+                const existing = attributes.get("initiator_groups") ?? ""; // e.g. "TestA:iqn1;TestB:iqn2"
+                const updatedInitiatorList = existing + ';' + initiatorGroup.name + ':';
+                return self.pcsResourceManager
+                  .updateResource(targetResource, `initiator_groups='${updatedInitiatorList}'`)
+                  .map(() => undefined);
+              });
+          });
+      }
+      
     // Only group available is created by default by the Target resource, called 'allowed'
     deleteInitiatorGroupFromTarget(
         _target: Target,
@@ -632,6 +654,13 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
     }
     return out;
   }  
+   serializeInitiatorGroups(groups: Map<string, string[]>): string {
+    // Keep stable alphabetical order; change to original order if you prefer.
+    return Array.from(groups.keys())
+      .sort()
+      .map(g => `${g}:${(groups.get(g) ?? []).join(",")}`)
+      .join(";");
+  }
     // getInitatorGroupsOfTarget(
     //     target: Pick<Target, "name" | "devicePath">
     //   ): ResultAsync<InitiatorGroup[], ProcessError> {
