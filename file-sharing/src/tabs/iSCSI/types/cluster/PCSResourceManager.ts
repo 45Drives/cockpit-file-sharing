@@ -20,7 +20,6 @@ export class PCSResourceManager {
         const resourceName = name.replace(':', '_');
 
         const creationCommand = new BashCommand(`pcs resource create '${resourceName}' ${creationArugments}`);
-
         return server.execute(creationCommand)
         .map(() => {
             const resource = new PCSResource(resourceName, /* creationCommand, */ type);
@@ -76,7 +75,6 @@ export class PCSResourceManager {
             }
 
             resource.resourceGroup = resourceGroup;
-            
             return self.server.execute(new BashCommand(`pcs resource group add '${resourceGroup.name}' ${positionArgument.join(" ")} '${resource.name}'`)).map(() => undefined);
         }))
     }
@@ -92,16 +90,13 @@ export class PCSResourceManager {
     }
 
     fetchResourceConfig(resource: Pick<PCSResource, "name">) {
-        console.log("fetching config for resource",this.server.execute(new BashCommand(`pcs resource config --output-format json '${resource.name}'`)) );
         return this.server.execute(new BashCommand(`pcs resource config --output-format json '${resource.name}'`))
         .map((process) => process.getStdout())
         .andThen(safeJsonParse<PCSConfigJson>);
     }
 
     fetchResourceInstanceAttributeValue(resource: Pick<PCSResource, "name">, nvPairName: string) {
-        console.log("resource", resource);
         const result =        this.fetchResourceConfig(resource).map((config) => config.primitives![0]!.instance_attributes![0]!.nvpairs.find((pair) => pair.name === nvPairName)?.value);
-        console.log("result", result);
         return this.fetchResourceConfig(resource).map((config) => config.primitives![0]!.instance_attributes![0]!.nvpairs.find((pair) => pair.name === nvPairName)?.value);
 
     }
@@ -163,7 +158,6 @@ export class PCSResourceManager {
     // }
     fetchResources(): ResultAsync<PCSResource[], ProcessError> {
         if (this.currentResources !== undefined) {
-            console.log("currentresources", this.currentResources);
           return okAsync(this.currentResources);
         }
       

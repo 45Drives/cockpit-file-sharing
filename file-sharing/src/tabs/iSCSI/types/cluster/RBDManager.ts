@@ -458,7 +458,6 @@ export class RBDManager {
                   const vgName = pvToVGMap.get(devicePath);
     
                   const blockSize = yield* self.getBlockSizeFromDevicePath(devicePath,server).safeUnwrap();
-                  const maximumSize = yield* self.getMaximumSizeFromRBDName(entry.name,server).safeUnwrap();
     
                   const parentPool = yield* self.fetchAvaliablePools(server)
                     .map(pools => pools.find(pool => pool.name === entry.pool))
@@ -466,6 +465,7 @@ export class RBDManager {
     
                   if (parentPool) {
                     if (parentPool.poolType === PoolType.Replication) {
+                      const maximumSize = yield* self.getMaximumSizeFromRBDName(entry.name,parentPool,server).safeUnwrap();
                       return ok(new RadosBlockDevice(entry.name, devicePath, blockSize, maximumSize, parentPool, server, undefined, vgName));
                     } else if (parentPool.poolType === PoolType.ErasureCoded) {
                       const dataPool = yield* self.getDataPoolForRBDName(entry.name, parentPool,server).safeUnwrap();
@@ -645,8 +645,8 @@ export class RBDManager {
                     .andThen((maybeNumber) => maybeNumber.isSome() ? okAsync(maybeNumber.some()) : errAsync(new ProcessError(`Unable to determine block size for device: ${path}`)))
     }
 
-    getMaximumSizeFromRBDName(rbdName: Pick<VirtualDevice, "deviceName"> | string, server: Server) {
-        return server.execute(new BashCommand(`rbd info ${rbdName} --format json`))
+    getMaximumSizeFromRBDName(rbdName: Pick<VirtualDevice, "deviceName"> | string,parentPool: Pool, server: Server) {
+        return server.execute(new BashCommand(`rbd info ${parentPool.name}/${rbdName} --format json`))
                     .map((proc) => proc.getStdout())
                     .andThen(safeJsonParse<RBDInfoJson>)
                     .map((rbdInfoEntry) => StringToIntCaster()(rbdInfoEntry.size!))

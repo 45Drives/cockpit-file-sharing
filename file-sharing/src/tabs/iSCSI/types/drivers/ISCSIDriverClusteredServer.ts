@@ -124,7 +124,6 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
     removeTarget(target: Target): ResultAsync<void, ProcessError> {
         const self = this;
-        console.log("removeTarget" , target.initiatorGroups)
         return new ResultAsync(safeTry(async function* () {
             for (let group of target.initiatorGroups) {
                 for (let lun of group.logicalUnitNumbers) {
@@ -291,7 +290,6 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             map.set(group.name, Array.from(current));
   
             const updated = self.serializeInitiatorGroups(map);
-            console.log("Updated initiator groups:", updated);
             return self.pcsResourceManager
               .updateResource(targetResource, `initiator_groups='${updated}'`)
               .map(() => undefined);
@@ -350,13 +348,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         const self = this;
         return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
             .andThen((targetResource) => {
-                
                 if (targetResource !== undefined) {
                     return new ResultAsync(safeTry(async function* () {
                         const targetIQN = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource, "iqn").safeUnwrap();
                         if( logicalUnitNumber.blockDevice?.vgName === undefined) {
                             if(logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
-                                yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
+                                yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!,initiatorGroup.name).safeUnwrap();
                             }
                             else{
                                 const lvPath = logicalUnitNumber.blockDevice!.filePath;
@@ -369,14 +366,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                                 const vgname = pathParts[2];
                                 const lvname = pathParts[3];
                                 const server = logicalUnitNumber.blockDevice.server;
-                                console.log("adding from else block ", logicalUnitNumber, vgname, lvname, server);
                                if (vgname && lvname && server) {
                                    const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname,server).safeUnwrap();
                                     logicalUnitNumber.blockDevice = logicalVolume;
                                     }
-
-                    
-                            yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
+           
+                            yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!,initiatorGroup.name).safeUnwrap();
                             if (logicalUnitNumber.blockDevice?.server) {
                                 logicalUnitNumber.blockDevice.server = self.rbdManager.allServers[0];
                             }
@@ -384,7 +379,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                         }
                        else  if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
 
-                            yield* self.createAndConfigureRBDResource(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!).safeUnwrap();
+                            yield* self.createAndConfigureRBDResource(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!,initiatorGroup.name).safeUnwrap();
                         }
                         const execServer =  self.rbdManager.allServers[0];
                         console.log("execserver ", server)
@@ -399,15 +394,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     
     resolveLogicalVolume(vgname: string, lvname: string,server:Server): ResultAsync<LogicalVolume, Error> {
         const self = this;
-        console.log("resolvelogicalvolume",server)
         return server.execute(new BashCommand(`lvs --reportformat json --units B`))
             .map((proc) => proc.getStdout())
             .andThen(safeJsonParse<LogicalVolumeInfoJson>)
             .map((lvData) => {
                 const lvs = lvData?.report?.flatMap((r) => r.lv) ?? [];
                 const match = lvs.find((lv) => lv.lv_name === lvname && lv.vg_name === vgname);
-                console.log("match",match)
-                console.log("lvs",lvs)
                 if (!match) throw new Error(`Logical volume ${vgname}/${lvname} not found`);
                 return match;
             })
@@ -418,9 +410,6 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                     .map((pvData) => pvData?.report?.flatMap((r) => r.pv) ?? [])
                     .andThen((pvList) =>   new ResultAsync<LogicalVolume, Error>(safeTry(async function* () {
                         const mappedBlockDevices = yield* self.rbdManager.fetchAvaliableRadosBlockDevices().safeUnwrap();
-                        console.log("mappedBlockDevices", mappedBlockDevices)
-                        console.log("server", server)
-                        console.log("pvList", pvList)
                         
                         const physicalVolumes = pvList.flatMap((pv) =>
                             mappedBlockDevices.find((rbd) => rbd.filePath === pv.pv_name && rbd.server.host == server.host)
@@ -428,7 +417,6 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                         .filter((rbd): rbd is RadosBlockDevice => rbd !== undefined)
                         .map((rbd) => new PhysicalVolume(rbd));
                         
-                        console.log("physicalVolumes", physicalVolumes)
                         const vg = new VolumeGroup(vgname, physicalVolumes,server);
                         const lv = new LogicalVolume(
                             lvname,
@@ -442,36 +430,6 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             );
     }
 
-    // removeLogicalUnitNumberFromGroup(
-    //     initiatorGroup: InitiatorGroup,
-    //     logicalUnitNumber: LogicalUnitNumber
-    // ): ResultAsync<void, ProcessError> {
-    //     const self = this;
-    //     console.log("hello from removeLogicalUnitNumberFromGroup")
-    //     return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
-    //         .andThen((targetResource) => new ResultAsync(safeTry(async function* () {
-    //             const targetIQN = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource!, "iqn").safeUnwrap();
-    //             if(logicalUnitNumber.blockDevice?.vgName=== undefined) {
-
-    //             }
-    //             if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
-    //                 console.log("removing from RadosBlockDevice block ", logicalUnitNumber)
-
-    //                 yield* self.removeRBDAndRelatedResource(logicalUnitNumber, targetIQN!).safeUnwrap();
-    //             }
-    //             else if (logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
-    //                 console.log("removing from LogicalVolume block ", logicalUnitNumber)
-
-    //                 yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetIQN!).safeUnwrap();
-    //             }
-    //             else {
-    //                 console.log("removing from else block ", logicalUnitNumber)
-    //                 yield* self.removeLUNResource(logicalUnitNumber, targetIQN!).safeUnwrap();
-    //             }
-
-    //             return okAsync(undefined)
-    //         })));
-    // }
     removeLogicalUnitNumberFromGroup(
         initiatorGroup: InitiatorGroup,
         logicalUnitNumber: LogicalUnitNumber
@@ -499,8 +457,6 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                   const vgname = pathParts[2];
                   const lvname = pathParts[3];
                   let server = logicalUnitNumber.blockDevice?.server;
-                  console.log("removing from else block ", logicalUnitNumber, vgname, lvname, server);
-                  console.log("self.server", self.server);
 
                   if (vgname && lvname && server) {
                     const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname,server).safeUnwrap();
@@ -514,12 +470,10 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
               } else {
                 yield* self.removeLUNResource(logicalUnitNumber, targetIQN!).safeUnwrap();
               }
-              console.log("Removing Logical Unit Number from group: ", logicalUnitNumber);
               return ok(undefined);
             }))
           )
           .andThen(() => {
-            console.log("Cleaning up resources after removing Logical Unit Number ", this.server);
             return this.server
               .execute(new BashCommand(`pcs resource cleanup`))
               .map(() => undefined); // Ensures return type matches: ResultAsync<void, ProcessError>
@@ -608,7 +562,6 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
                 }
             }
-            console.log("foundDevices", foundDevices);
             return ok(foundDevices);
         }));
     }
@@ -829,37 +782,53 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
             })
     }
 
-    getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "devicePath">): ResultAsync<LogicalUnitNumber[], ProcessError> {
-        return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
-            .andThen((targetResource) => this.pcsResourceManager.fetchResources().map((resources) => resources.filter((resource) => resource.resourceType === PCSResourceType.LUN && resource.resourceGroup?.name === targetResource?.resourceGroup?.name)))
-            .andThen((filteredResources) => {
-                console.log("filteredResources", filteredResources);
-                return ResultAsync.combine(filteredResources.map((resource) => this.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["lun", "path"])
-                    .andThen((values) => {
-                        const lunAttribute = StringToIntCaster()(values.get("lun")!);
-                        const virtualDevice = this.virtualDevices.find((device) => device.filePath === values.get("path"));
-                        if (virtualDevice !== undefined)
-                            console.log("found matching device for LUN", values, virtualDevice);
-                            return okAsync(new LogicalUnitNumber(virtualDevice.deviceName, lunAttribute.some(), virtualDevice));
-                        return okAsync(undefined);
-                    })
-                ))
-                    .map((foundLuns) => foundLuns.filter((lun) => lun !== undefined)) as ResultAsync<LogicalUnitNumber[], ProcessError>;
-            });
-    }
+    getLogicalUnitNumbersOfInitiatorGroup(
+        initiatorGroup: InitiatorGroup
+      ): ResultAsync<LogicalUnitNumber[], ProcessError> {   
+       const target = initiatorGroup.devicePath.split("iscsi_TARGET_")[1];  
+       
+        return this.pcsResourceManager.fetchResources()
+          .map(resources => resources.filter(r =>
+            r.resourceType === PCSResourceType.LUN
+          ))
+          .andThen(lunResources =>
+            ResultAsync.combine(
+              lunResources.map(res =>
+                this.pcsResourceManager
+                  .fetchResourceInstanceAttributeValues(res, ["group", "lun", "path","target_iqn"])
+                  .map(attrs => ({ attrs }))
+              )
+            )
+          )
+          .map(items => items.filter(({ attrs }) =>
+            (attrs.get("group") ?? "") === initiatorGroup.name &&
+           (attrs.get("target_iqn") ?? "") === target
+          
+          ))
+          .andThen(items =>
+            ResultAsync.combine(
+              items.map(({ attrs }) => {
+                const lunStr  = attrs.get("lun")  ?? "";
+                const pathRaw = attrs.get("path") ?? "";
+                const parsed = StringToIntCaster()(lunStr);
+                
+                const dev = this.virtualDevices.find(d =>
+                d.filePath === pathRaw
+                );
+      
+                if (!dev) {
+                  return okAsync<LogicalUnitNumber | undefined>(undefined);
+                }
 
-    // getInitiatorsOfInitiatorGroup(initiatorGroup: Pick<InitiatorGroup, "name" | "devicePath">): ResultAsync<Initiator[], ProcessError> {
-    //    console.log("getInitiatorsOfInitiatorGroup", initiatorGroup);
-    //     return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
-    //         .andThen((targetResource) => this.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource!, "initiator_groups"))
-    //         .map((value) => {
-    //             if (value !== undefined) {
-    //                 return value.split(" ").map((initiatorName) => new Initiator(initiatorName))
-    //             }
-
-    //             return [];
-    //         })
-    // }
+                return okAsync<LogicalUnitNumber | undefined>(
+                  new LogicalUnitNumber(dev.deviceName, parsed.some(), dev)
+                );
+              })
+            )
+          )
+         .map((list) => list.filter((lun) => lun !== undefined)) as ResultAsync<LogicalUnitNumber[], ProcessError>;
+      }
+                  
 
     getInitiatorsOfInitiatorGroup(
         initiatorGroup: Pick<InitiatorGroup, "name" | "devicePath">
@@ -900,7 +869,6 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
 
         return this.pcsResourceManager.fetchResourceByName(target.devicePath)
             .andThen((resource) => {
-                console.log("findTargetPCSResource", target, resource);
                 return resource !== undefined ? okAsync(resource) : errAsync(new ProcessError(`Unable to find resource for Target IQN ${target.name}.`))
             });
     }
@@ -954,7 +922,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
             })))
     }
 
-    createAndConfigureRBDResource(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup) {
+    createAndConfigureRBDResource(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup,initiatorGroupName: string) {
         const blockDevice = (lun.blockDevice! as RadosBlockDevice);
         const server = blockDevice.server;
         return server.execute(new BashCommand(`rbd unmap ${blockDevice.parentPool.name}/${blockDevice.deviceName}`))
@@ -962,13 +930,12 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
                 .andThen((resource) => this.pcsResourceManager.constrainResourceToGroup(resource, group,server)
                     .andThen(() => this.pcsResourceManager.orderResourceBeforeGroup(resource, group)))
             )
-            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN} lun=${lun.unitNumber} path=${blockDevice.filePath} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
+            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit implementation=scst target_iqn=${targetIQN} path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
             .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
     }
 
     removeRBDAndRelatedResource(lun: LogicalUnitNumber, targetIQN: string) {
         const self = this;
-        console.log("removeRBDAndRelatedResource", lun, targetIQN);
         const blockDevice = lun.blockDevice! as RadosBlockDevice;
 
         return new ResultAsync(safeTry(async function* () {
@@ -979,7 +946,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         }))
     }
 
-     createAndConfigureLVResources(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup) {
+     createAndConfigureLVResources(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup,initiatorGroupName: string) {
         const self = this;
        const server = lun.blockDevice?.server;
         const blockDevice = (lun.blockDevice! as LogicalVolume);
@@ -1002,7 +969,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
             })))
             .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LVM_${blockDevice.deviceName}_${blockDevice.volumeGroup.name}`, `ocf:heartbeat:LVM-activate lvname=${blockDevice.deviceName} vgname=${blockDevice.volumeGroup.name} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, PCSResourceType.LVM,server))
             .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
-            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN} lun=${lun.unitNumber} path=${blockDevice.filePath} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
+            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN}  path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
             .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
             .andThen(() => this.server.execute(new BashCommand(`pcs resource cleanup`)))
     }
@@ -1013,7 +980,6 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
 
         return new ResultAsync(safeTry(async function* () {
             let rbdsToRemove = blockDevice.volumeGroup.volumes.map((physicalVolume) => physicalVolume.rbd);
-            console.log("removeLVAndRelatedResources", lun, targetIQN, rbdsToRemove);
             yield* self.removeLUNResource(lun, targetIQN).safeUnwrap();
 
             const lvmResources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
@@ -1025,7 +991,6 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
                     break;
                 }
             }
-            console.log("rbdsToRemove", rbdsToRemove);
             yield* self.removeRBDResources(rbdsToRemove).safeUnwrap();
 
             return ok(undefined);
