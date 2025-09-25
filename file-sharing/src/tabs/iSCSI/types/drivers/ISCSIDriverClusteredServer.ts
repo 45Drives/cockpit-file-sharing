@@ -1,4 +1,4 @@
-import { PCSResourceType, PCSResourceTypeInfo } from '@/tabs/iSCSI/types/cluster/PCSResource';
+import { PCSResourceType } from '@/tabs/iSCSI/types/cluster/PCSResource';
 import { PCSResourceManager } from './../cluster/PCSResourceManager';
 import { RBDManager } from './../cluster/RBDManager';
 import { ConfigurationManager } from "@/tabs/iSCSI/types/ConfigurationManager";
@@ -29,7 +29,6 @@ import { PCSResource } from '@/tabs/iSCSI/types/cluster/PCSResource';
 import { PCSResourceGroup } from '@/tabs/iSCSI/types/cluster/PCSResourceGroup';
 import { RadosBlockDevice } from '@/tabs/iSCSI/types/cluster/RadosBlockDevice';
 import { LogicalVolume } from '@/tabs/iSCSI/types/cluster/LogicalVolume';
-import { Result } from 'postcss';
 import { PhysicalVolume } from '../cluster/PhysicalVolume';
 import { VolumeGroup } from '../cluster/VolumeGroup';
 
@@ -118,7 +117,6 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                 target.devicePath = resource.name;
                 return this.pcsResourceManager.addResourceToGroup(resource, new PCSResourceGroup(`${this.resourceGroupPrefix}_${resource.name}`))
             })
-            .map(() => target.initiatorGroups.push(new InitiatorGroup("allowed", [], [], targetResourceName)))
             .map(() => undefined)
     }
 
@@ -217,6 +215,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         initiatorGroup.devicePath = target.devicePath;
 
         return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
+            .andThen((resource) => {
+                if (!resource) {
+                    return errAsync(new ProcessError("Resource not found."));
+                }
+                return okAsync(resource);
+            })
           .andThen((targetResource) => {
             if (!targetResource) {
               return errAsync(new ProcessError("Could not find Target resource."));
@@ -236,31 +240,44 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
               });
           });
       }
-      
-    // Only group available is created by default by the Target resource, called 'allowed'
-    deleteInitiatorGroupFromTarget(
+
+      deleteInitiatorGroupFromTarget(
         _target: Target,
-        _initiatorGroup: InitiatorGroup
-    ): ResultAsync<void, ProcessError> {
-        throw new Error("Removing initiator groups is not supported by this driver.");
-    }
-
-    // addInitiatorToGroup(
-    //     initiatorGroup: InitiatorGroup,
-    //     initiator: Initiator
-    // ): ResultAsync<void, ProcessError> {
-    //     const updatedInitiatorList = [...initiatorGroup.initiators, initiator].map((initiator) => initiator.name).join(" ");
-
-    //     return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
-    //         .andThen((targetResource) => {
-    //             if (targetResource !== undefined)
-    //                 return this.pcsResourceManager.updateResource(targetResource, `allowed_initiators='${updatedInitiatorList}'`)
-
-    //             return errAsync(new ProcessError("Could not find Target resource."))
-    //         })
-    // }
-  
-  
+        group: InitiatorGroup
+      ): ResultAsync<void, ProcessError> {
+        const ensureLuns =
+          Array.isArray(group.logicalUnitNumbers) && group.logicalUnitNumbers.length > 0
+            ? okAsync(group.logicalUnitNumbers)
+            : this.getLogicalUnitNumbersOfInitiatorGroup(group).map(luns => {
+                group.logicalUnitNumbers = luns;
+                return luns;
+              });      
+        return ensureLuns
+          .andThen(luns =>
+            ResultAsync
+              .combine(luns.map(l => this.removeLogicalUnitNumberFromGroup(group, l).map(() => undefined)))
+              .map(() => undefined)
+          )
+          .andThen(() =>
+            this.pcsResourceManager.fetchResourceByName(group.devicePath).andThen(res => {
+              if (!res) return errAsync(new ProcessError("Could not find Target resource."));
+              return this.pcsResourceManager
+                .fetchResourceInstanceAttributeValues({ name: res.name }, ["initiator_groups"])
+                .andThen(attrs => {
+                  const existing = attrs.get("initiator_groups") ?? "";
+                  const map = this.parseInitiatorGroups(existing);
+                  if (!map.has(group.name)) return okAsync(undefined);
+                  map.delete(group.name);
+                  const updated = this.serializeInitiatorGroups(map);
+                  if (updated === existing) return okAsync(undefined);
+                  return this.pcsResourceManager
+                    .updateResource(res, `initiator_groups=${updated}`)
+                    .map(() => undefined);
+                });
+            })
+          );
+      }
+      
   
     addInitiatorToGroup(
     group: InitiatorGroup,
@@ -365,7 +382,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
        
                                 const vgname = pathParts[2];
                                 const lvname = pathParts[3];
-                                const server = logicalUnitNumber.blockDevice.server;
+                                const server = logicalUnitNumber.blockDevice?.server;
                                if (vgname && lvname && server) {
                                    const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname,server).safeUnwrap();
                                     logicalUnitNumber.blockDevice = logicalVolume;
@@ -382,8 +399,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                             yield* self.createAndConfigureRBDResource(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!,initiatorGroup.name).safeUnwrap();
                         }
                         const execServer =  self.rbdManager.allServers[0];
-                        console.log("execserver ", server)
-                        console.log("Adding Logical Unit Number to group: ", logicalUnitNumber);
+                        console.log(self.rbdManager.allServers[0])
                         return okAsync(execServer);
                     }))
                 }
@@ -679,56 +695,6 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
       .map(g => `${g}:${(groups.get(g) ?? []).join(",")}`)
       .join(";");
   }
-    // getInitatorGroupsOfTarget(
-    //     target: Pick<Target, "name" | "devicePath">
-    //   ): ResultAsync<InitiatorGroup[], ProcessError> {
-    //     const self = this;
-      
-    //     const toInitiators = (iqns: string[]): Initiator[] =>
-    //       iqns.map(iqn => ({ name: iqn }));
-      
-    //     return this.findTargetPCSResource(target).andThen((resource) =>
-    //       new ResultAsync(
-    //         safeTry(async function* () {
-    //           const attrs = yield* self.pcsResourceManager
-    //             .fetchResourceInstanceAttributeValues(
-    //               { name: resource.name },
-    //               ["initiator_groups"]
-    //             )
-    //             .safeUnwrap();
-      
-    //           const igAttr = attrs.get("initiator_groups");
-    //           const groupsMap = self.parseInitiatorGroups(igAttr);
-      
-    //           const names = groupsMap.size
-    //             ? Array.from(groupsMap.keys())
-    //             : ["allowed"]; // fallback
-      
-    //           const groups: InitiatorGroup[] = [];
-    //           for (const name of names) {
-    //             const iqns = groupsMap.get(name) ?? [];
-    //             const group: InitiatorGroup = {
-    //               name,
-    //               devicePath: resource.name,
-    //               logicalUnitNumbers: [],
-    //               initiators: toInitiators(iqns),
-    //             };
-      
-    //             // If your LUN lookup only needs the target resource to scope by RG,
-    //             // passing just devicePath is fine. If you later need per-group LUN masking,
-    //             // extend this call to accept group.name too.
-    //             group.logicalUnitNumbers = yield* self
-    //               .getLogicalUnitNumbersOfInitiatorGroup({ devicePath: group.devicePath })
-    //               .safeUnwrap();
-      
-    //             groups.push(group);
-    //           }
-      
-    //           return ok<InitiatorGroup[]>(groups);
-    //         })
-    //       )
-    //     );
-    //   }
     getInitatorGroupsOfTarget(
         target: Pick<Target, "name" | "devicePath">
       ): ResultAsync<InitiatorGroup[], ProcessError> {
@@ -744,9 +710,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
               .safeUnwrap();
       
             const groupsMap = self.parseInitiatorGroups(attrs.get("initiator_groups"));
-            const groupNames = groupsMap.size
-              ? Array.from(groupsMap.keys()).sort()
-              : ["allowed"]; // fallback if attribute missing
+            const groupNames = Array.from(groupsMap.keys()).sort();
       
             const groups: InitiatorGroup[] = [];
             for (const name of groupNames) {
@@ -849,9 +813,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
           .map((raw) => {
             const map = this.parseInitiatorGroups(raw);
             const iqns = map.get(initiatorGroup.name.trim()) ?? [];
-            // Choose one construction style and keep it everywhere:
             return iqns.map((iqn) => new Initiator(iqn));
-            // or: return iqns.map((iqn) => ({ name: iqn }));
           });
       }
       
@@ -1047,10 +1009,6 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         }));
     }
 }
-
-
-
-
 
 
 type LogicalVolumeInfoJson = {

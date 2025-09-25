@@ -77,7 +77,7 @@ export class RBDManager {
   
               const nodeElements = Array.from(doc.getElementsByTagName("node"));
               const servers = nodeElements
-                  .filter(el => el.getAttribute("online") === "true")
+                  .filter(el => el.getAttribute("online") === "true" && el.getAttribute("standby")==="false")
                   .map(el => el.getAttribute("name"))
                   .filter((name): name is string => !!name)
                   .map(name => new Server(name));
@@ -92,42 +92,7 @@ export class RBDManager {
   getPrimaryServer(){
     return this.allServers[0]
   }
-    // createRadosBlockDevice(name: string, size: number, parentPool: Pool, dataPool?: Pool) {
-    //     const dataPoolArgument = dataPool === undefined ? "" : `--data-pool ${dataPool.name}`;
-    
-    //     return this.server.execute(new BashCommand(`rbd create ${parentPool.name}/${name} --size ${size}B ${dataPoolArgument}`))
-    //         .andThen(() => 
-    //             this.server.execute(new BashCommand(`rbd map ${parentPool.name}/${name}`))
-    //             .andThen((mapProc) =>
-    //                 this.server.execute(new BashCommand(`blockdev --getbsz ${mapProc.getStdout().trim()}`))
-    //                     .andThen((blockSizeProc) => {
-    //                         const blockSizeOpt = StringToIntCaster()(blockSizeProc.getStdout());
-    
-    //                         if (blockSizeOpt.isNone()) {
-    //                             return errAsync(new ProcessError("Unable to determine block size of RBD"));
-    //                         }
-    
-    
-    //                         const rbd = new RadosBlockDevice(
-    //                             name,
-    //                             mapProc.getStdout().trim(),
-    //                             blockSize.some(),
-    //                             size,
-    //                             parentPool,
-    //                             dataPool
-    //                         );
-    
-    //                         // Always update cache
-    //                         if (this.cachedRBDs === null) {
-    //                             this.cachedRBDs = [];
-    //                         }
-    //                         this.cachedRBDs.push(rbd);
-    
-    //                         return okAsync(rbd);
-    //                     })
-    //             )
-    //         );
-    // }
+
     
 
     createLogicalVolumeFromRadosBlockDevices(logicalVolumeName: string, volumeGroupName: string, rbds: RadosBlockDevice[]) {
@@ -140,8 +105,18 @@ export class RBDManager {
             .andThen(() => this.server.execute(new BashCommand(`lvdisplay /dev/${volumeGroupName}/${logicalVolumeName} --units B | grep 'LV Size' | awk '{print $3, $4}'`))
                 .map((proc) => proc.getStdout())
                 .map((maximumSize) => {
-                    createdLogicalVolume = new LogicalVolume(logicalVolumeName, 0, volumeGroup, StringToIntCaster()(maximumSize!).some(),this.server)
-                })
+                  
+                  return this.server.getIpAddress(false).map((/* ip */) => {
+                    console.log("server ip address fetched for logical volume creation:", this.server);
+                    createdLogicalVolume = new LogicalVolume(
+                      logicalVolumeName,
+                      0,
+                      volumeGroup,
+                      StringToIntCaster()(maximumSize).some(),
+                      this.server // now has up-to-date ipAddress cached
+                    );
+                  });
+                                })
             )
         )
         .map(() => createdLogicalVolume!);
@@ -249,180 +224,6 @@ export class RBDManager {
 
     private cachedRBDs: RadosBlockDevice[] | null = null;
 
-    // fetchAvaliableRadosBlockDevices(): ResultAsync<RadosBlockDevice[], ProcessError> {
-    //   const self = this;
-    
-    //   if (this.cachedRBDs !== null) {
-    //     return okAsync(this.cachedRBDs);
-    //   }
-    
-    //   return ResultAsync.combine([
-    //     this.server.execute(new BashCommand(`rbd showmapped --format json`))
-    //       .map((proc) => proc.getStdout())
-    //       .andThen(safeJsonParse<MappedRBDJson>)
-    //       .mapErr((err) => new ProcessError(`Unable to get current mapped Rados Block Devices: ${err}`)),
-    
-    //     this.server.execute(new BashCommand(`pvs --reportformat json -o pv_name,vg_name`))
-    //       .map((proc) => proc.getStdout())
-    //       .andThen(safeJsonParse<PVToVGJson>)
-    //       .map((parsed) => {
-    //         const map = new Map<string, string>();
-    //         parsed.report.forEach(report => {
-    //           report.pv.forEach(entry => {
-    //             if (entry.vg_name) {
-    //               map.set(entry.pv_name, entry.vg_name);
-    //             }
-    //           });
-    //         });
-    //         return map;
-    //       })
-    //   ])
-    //   .andThen(([rbdEntries, pvToVGMap]) => {
-    //     return ResultAsync.combine(
-    //       rbdEntries.filter(Boolean).map((entry) => {
-    //         return new ResultAsync(safeTry(async function* () {
-    //           const devicePath = entry.device;
-    //           const vgName = pvToVGMap.get(devicePath);
-    
-    //           const blockSize = yield* self.getBlockSizeFromDevicePath(devicePath).safeUnwrap();
-    //           const maximumSize = yield* self.getMaximumSizeFromRBDName(entry.name).safeUnwrap();
-    
-    //           const parentPool = yield* self.fetchAvaliablePools()
-    //             .map(pools => pools.find(pool => pool.name === entry.pool))
-    //             .safeUnwrap();
-    
-    //           if (parentPool) {
-    //             if (parentPool.poolType === PoolType.Replication) {
-    //               return ok(new RadosBlockDevice(entry.name, devicePath, blockSize, maximumSize, parentPool, undefined, vgName));
-    //             } else if (parentPool.poolType === PoolType.ErasureCoded) {
-    //               const dataPool = yield* self.getDataPoolForRBDName(entry.name, parentPool).safeUnwrap();
-    //               if (dataPool) {
-    //                 return ok(new RadosBlockDevice(entry.name, devicePath, blockSize, maximumSize, parentPool, dataPool, vgName));
-    //               }
-    //             }
-    //           }
-    
-    //           return err(new ProcessError("Unable to get Block Device information."));
-    //         }));
-    //       })
-    //     ).map((rbdList) => {
-    //       self.cachedRBDs = rbdList; // ✅ cache result
-    //       return rbdList;
-    //     });
-    //   });
-    // }
-    // fetchAvaliableRadosBlockDevices(): ResultAsync<RadosBlockDevice[], ProcessError> {
-    //   const self = this;
-    
-    //   // simple cache
-    //   if (this.cachedRBDs !== null) {
-    //     return okAsync(this.cachedRBDs);
-    //   }
-    
-    //   // helper: normalize various showmapped JSON shapes to a uniform array
-    //   const normalizeMapped = (json: any): Array<{
-    //     id?: number | string;
-    //     pool: string;
-    //     name: string;
-    //     snap?: string;
-    //     device: string;
-    //   }> => {
-    //     if (!json) return [];
-    //     if (Array.isArray(json)) return json;
-    //     if (Array.isArray(json.mapped)) return json.mapped;
-    //     if (typeof json === "object") {
-    //       return Object.values(json).filter((e: any) => e && e.device && e.name);
-    //     }
-    //     return [];
-    //   };
-    
-    //   return ResultAsync
-    //     .combine(
-    //       this.allServers.map((server) => {
-    //         console.log(`Fetching mapped RBDs from ${server ?? String(server)}`);
-    
-    //         // Per-server: run showmapped + pvs concurrently
-    //         return ResultAsync
-    //           .combine([
-    //             server.execute(
-    //               new BashCommand(`bash -lc 'PATH="$PATH:/usr/sbin:/sbin"; rbd showmapped --format json'`)
-    //             )
-    //               .map((p) => p.getStdout())
-    //               .andThen(safeJsonParse<any>)
-    //               .map(normalizeMapped)
-    //               .mapErr((err) => new ProcessError(`Unable to get mapped RBDs from ${server}: ${err}`)),
-    
-    //             server.execute(
-    //               new BashCommand(`bash -lc 'PATH="$PATH:/usr/sbin:/sbin"; pvs --reportformat json -o pv_name,vg_name'`)
-    //             )
-    //               .map((p) => p.getStdout())
-    //               .andThen(safeJsonParse<PVToVGJson>)
-    //               .map((parsed) => {
-    //                 const map = new Map<string, string>();
-    //                 parsed.report?.forEach((r: any) => {
-    //                   r.pv?.forEach((e: any) => {
-    //                     if (e?.vg_name) map.set(e.pv_name, e.vg_name);
-    //                   });
-    //                 });
-    //                 return map;
-    //               }),
-    //           ])
-    //           // Build this server's RadosBlockDevice[] in parallel
-    //           .andThen(([entries, pvToVGMap]) =>
-    //             ResultAsync.combine(
-    //               entries.map((entry) =>
-    //                 new ResultAsync(
-    //                   safeTry(async function* () {
-    //                     const devicePath = entry.device;
-    //                     const vgName = pvToVGMap.get(devicePath);
-    
-    //                     const blockSize   = yield* self.getBlockSizeFromDevicePath(devicePath, server).safeUnwrap();
-    //                     const maximumSize = yield* self.getMaximumSizeFromRBDName(entry.name, server).safeUnwrap();
-    
-    //                     const parentPool = yield* self
-    //                       .fetchAvaliablePools(server)
-    //                       .map((pools) => pools.find((p) => p.name === entry.pool))
-    //                       .safeUnwrap();
-    
-    //                     if (parentPool) {
-    //                       if (parentPool.poolType === PoolType.Replication) {
-    //                         return ok(
-    //                           new RadosBlockDevice(
-    //                             entry.name, devicePath, blockSize, maximumSize,
-    //                             parentPool, server,undefined, vgName
-    //                           )
-    //                         );
-    //                       } else if (parentPool.poolType === PoolType.ErasureCoded) {
-    //                         const dataPool = yield* self.getDataPoolForRBDName(entry.name, parentPool, server).safeUnwrap();
-    //                         if (dataPool) {
-    //                           return ok(
-    //                             new RadosBlockDevice(
-    //                               entry.name, devicePath, blockSize, maximumSize,
-    //                               parentPool, server, undefined, vgName
-    //                             )
-    //                           );
-    //                         }
-    //                       }
-    //                     }
-    
-    //                     return err(
-    //                       new ProcessError(`Unable to resolve block device info for ${entry.name} on ${server.name}`)
-    //                     );
-    //                   })
-    //                 )
-    //               )
-    //             )
-    //           );
-    //       })
-    //     )
-    //     // Flatten all servers' results and cache
-    //     .map((perServerLists) => {
-    //       const flat = perServerLists.flat();
-    //       this.cachedRBDs = flat;
-    //       return flat;
-    //     });
-    // }
-
     fetchAvaliableRadosBlockDevices(): ResultAsync<RadosBlockDevice[], ProcessError> {
       const self = this;
     
@@ -483,80 +284,6 @@ export class RBDManager {
         })
       ).map((resultsPerServer) => resultsPerServer.flat());
     }
-    // fetchAvaliableLogicalVolumes() {
-    //     const self = this;
-
-    //     return this.server.execute(new BashCommand(`lvs --reportformat json --units B`))
-    //     .map((proc) => proc.getStdout())
-    //     .andThen(safeJsonParse<LogicalVolumeInfoJson>)
-    //     .map((logicalVolumeInfo) => logicalVolumeInfo?.report?.flatMap((report) => report.lv))
-    //     .andThen((lvList) => ResultAsync.combine(lvList!.flatMap((lvInfo) => 
-    //         this.server.execute(new BashCommand(`pvs -S vgname=${lvInfo.vg_name} --reportformat json --units B`))
-    //             .map((proc) => proc.getStdout())
-    //             .andThen(safeJsonParse<VolumeGroupInfoJson>)
-    //             .map((volumeGroupEntries) => volumeGroupEntries!.report!.flatMap((report) => report.pv))
-    //             .andThen((pvList) => new ResultAsync(safeTry(async function * () {
-    //                 const mappedBlockDevices = yield * self.fetchAvaliableRadosBlockDevices().safeUnwrap();
-
-    //                 const physicalVolumes = pvList.flatMap((rbdItem) => mappedBlockDevices.find((rbd) => rbd.filePath === rbdItem.pv_name))
-    //                                     .filter((item) => item !== undefined)
-    //                                     .map((item) => new PhysicalVolume(item!));
-
-    //                 return okAsync(physicalVolumes);
-    //             })))
-    //             .map((volumes) => new VolumeGroup(lvInfo.vg_name, volumes))
-    //             .map((volumeGroup) => new LogicalVolume(lvInfo.lv_name, 0, volumeGroup, StringToIntCaster()(lvInfo.lv_size).some())))
-    //     )).map((LogicalVolumes) => LogicalVolumes.filter((volume) => volume.volumeGroup.volumes.length !== 0));
-    // }
-
-    // fetchAvaliableLogicalVolumes(): ResultAsync<LogicalVolume[], ProcessError> {
-    //   const self = this;
-    //   return ResultAsync.combine(
-    //     this.allServers.map((server) =>
-    //       server.execute(new BashCommand(`lvs --reportformat json --units B`))
-    //         .map((proc) => proc.getStdout())
-    //         .andThen(safeJsonParse<LogicalVolumeInfoJson>)
-    //         .map((logicalVolumeInfo) =>
-    //           logicalVolumeInfo?.report?.flatMap((report) => report.lv) ?? []
-    //         )
-    //         .andThen((lvList) =>
-    //           ResultAsync.combine(
-    //             lvList.map((lvInfo) =>
-    //               server.execute(new BashCommand(`pvs -S vgname=${lvInfo.vg_name} --reportformat json --units B`))
-    //                 .map((proc) => proc.getStdout())
-    //                 .andThen(safeJsonParse<VolumeGroupInfoJson>)
-    //                 .map((vgInfo) => vgInfo.report?.flatMap((report) => report.pv) ?? [])
-    //                 .andThen((pvList) =>
-    //                   new ResultAsync(safeTry(async function* () {
-    //                     const mappedBlockDevices = yield* self.fetchAvaliableRadosBlockDevices().safeUnwrap();
-    //                     const physicalVolumes = pvList
-    //                       .map((pv) => mappedBlockDevices.find((rbd) => rbd.filePath === pv.pv_name && rbd.server === server))
-    //                       .filter((item): item is RadosBlockDevice => !!item)
-    //                       .map((rbd) => new PhysicalVolume(rbd));
-    //                     return okAsync(physicalVolumes);
-    //                   }))
-    //                 )
-    //                 .map((volumes) => new VolumeGroup(lvInfo.vg_name, volumes,server))
-    //                 .map((vg) =>
-    //                   new LogicalVolume(
-    //                     lvInfo.lv_name,
-    //                     0,
-    //                     vg,
-    //                     StringToIntCaster()(lvInfo.lv_size).some(),
-    //                     server
-    //                   )
-    //                 )
-    //             )
-    //           )
-    //         )
-    //     )
-    //   ).map((perServerLVs) =>
-    //     perServerLVs
-    //       .flat()
-    //       .filter((lv) => lv.volumeGroup.volumes.length !== 0)
-    //   );
-    // }      
-
 
      fetchAvaliableLogicalVolumes(): ResultAsync<LogicalVolume[], ProcessError> {
       const self = this;

@@ -104,27 +104,6 @@ const handleClose = () => {
   resetChangesLun();
 };
 
-// const createLun = () => {
-//   const blockDevice = devices.value.find((device) => device.deviceName === tempLun.value.name);
-
-//   console.log("Creating LUN with blockDevice", blockDevice);
-//   tempLun.value.blockDevice = blockDevice ;;
-
-// if (tempLun.value.blockDevice){
-//   tempLun.value.blockDevice.assigned = true;
-  
-// } 
-//   console.log("tempLun after assignment", tempLun.value);
-//   return driver
-//     .andThen((driver) => driver.addLogicalUnitNumberToGroup(props.initiatorGroup,tempLun.value ))
-//     .map(() => handleClose())
-//     .mapErr(
-//       (error) =>
-//         new ProcessError(
-//           `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
-//         )
-//     );
-// };
 const createLun = () => {
   const dev = devices.value.find(d => d.deviceName === tempLun.value.name);
   if (!dev) {
@@ -134,19 +113,10 @@ const createLun = () => {
   // mark assigned on the shared instance
   dev.assigned = true;
 
-  // plain payload
   const payload = {
     ...toRaw(tempLun.value),
     blockDevice: toRaw(dev),
-    // include root-level server if your backend expects it
   };
-  console.log("initiatorGroup", props.initiatorGroup);
-  console.log("createLun payload", {
-    name: payload.name,
-    unitNumber: payload.unitNumber,
-    serverAtRoot: payload.server,
-    serverInBlock: payload.blockDevice?.server,
-  });
 
   return driver
   .andThen(d => d.addLogicalUnitNumberToGroup(props.initiatorGroup, payload))
@@ -156,13 +126,6 @@ const createLun = () => {
       console.log("Server assigned to device:", dev.server);
 
       console.log("props after adding ",props.initiatorGroup.logicalUnitNumbers);
-      // if(props.initiatorGroup.logicalUnitNumbers[0]?.blockDevice?.server){
-      //   const foundLun = props.initiatorGroup.logicalUnitNumbers.find(lun => lun.unitNumber === tempLun.value.unitNumber);
-      //   if (foundLun?.blockDevice) {
-      //     foundLun.blockDevice.server = props.initiatorGroup.logicalUnitNumbers[0]?.blockDevice?.server;
-      //   }
-      // }
-      // console.log("props after adding2222222222 ",props.initiatorGroup.logicalUnitNumbers);
     }
   })
   

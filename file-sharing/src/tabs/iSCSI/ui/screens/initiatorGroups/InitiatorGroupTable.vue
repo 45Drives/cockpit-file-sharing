@@ -27,7 +27,7 @@
                 </button>
               </th> -->
               <th scope="col"
-                class="flex flex-row justify-end'">
+                class="flex flex-row justify-end">
                 <span class="sr-only">Delete</span>
                 <button @click="showEditor = !showEditor">
                   <PlusIcon class="size-icon icon-default" />

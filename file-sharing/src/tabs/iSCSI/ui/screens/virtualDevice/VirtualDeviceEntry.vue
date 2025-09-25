@@ -6,7 +6,7 @@
         <td>{{ getDeviceType() }}</td>
     <td v-if="useUserSettings().value.iscsi.clusteredServer">{{ device.assigned ? 'Yes' : 'No' }}</td>
 
-    <td v-if="useUserSettings().value.iscsi.clusteredServer" >{{ device.server?.host }}</td>
+    <td v-if="useUserSettings().value.iscsi.clusteredServer " >  {{ displayServerAddress(device.server) }}</td>
     <td v-if="useUserSettings().value.iscsi.clusteredServer" class="button-group-row justify-end">
       <button @click="showExpandScreen = true">
         <span class="sr-only">Resize</span>
@@ -35,7 +35,7 @@
 import { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 import { TrashIcon } from "@heroicons/vue/20/solid";
 import { wrapActions, confirmBeforeAction } from "@45drives/houston-common-ui";
-import { inject, ref } from "vue";
+import { inject, ref,reactive } from "vue";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import { ResultAsync } from "neverthrow";
 import { ProcessError } from "@45drives/houston-common-lib";
@@ -49,13 +49,13 @@ import { WrenchIcon } from "@heroicons/vue/20/solid";
 const props = defineProps<{
   device: VirtualDevice | RadosBlockDevice | LogicalVolume
 }>();
-
+const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
 const _cockpit = cockpit;
 
 const _ = cockpit.gettext;
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!
-
+  const serverAddr = reactive(new Map<object, string>());
 const showExpandScreen = ref(false);
 
 const emit = defineEmits<{
@@ -65,7 +65,14 @@ const emit = defineEmits<{
 
 }>();
 
-	
+function displayServerAddress(s?: any /* Server */): string {
+  if (!s) return "";
+  const host = s.host ?? "";
+  if (!localHosts.has(host)) return host;
+
+  const cached = serverAddr.get(s) ?? s.ipAddress ?? s.ipaddress; // whichever your class exposes
+  return cached || host; // fallback to host until we resolve
+}
 
   const deleteDevice = () => {
   return driver

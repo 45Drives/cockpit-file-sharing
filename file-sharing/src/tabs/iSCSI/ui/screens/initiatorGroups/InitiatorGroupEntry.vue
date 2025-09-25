@@ -10,6 +10,11 @@
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
+      <button @click="promptDeletion">
+        <span class="sr-only">Delete</span>
+        <TrashIcon class="size-icon icon-danger" />
+      </button>
+
     </td>
   </tr>
   <tr></tr>

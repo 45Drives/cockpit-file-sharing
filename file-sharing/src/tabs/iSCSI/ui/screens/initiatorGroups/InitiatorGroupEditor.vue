@@ -42,20 +42,22 @@
 <script setup lang="ts">
     import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, validationSuccess, validationError, ValidationResultView, ValidationScope } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
-    import { inject, ref } from 'vue';
+    import { inject, ref,computed } from 'vue';
     import { ProcessError } from '@45drives/houston-common-lib';
     import type { Target } from '@/tabs/iSCSI/types/Target';
     import { InitiatorGroup } from '@/tabs/iSCSI/types/InitiatorGroup';
     import type { ISCSIDriver } from '@/tabs/iSCSI/types/drivers/ISCSIDriver';
 
+
     const _ = cockpit.gettext;
 
-    const props = defineProps<{target: Target}>();
+    const props = defineProps<{target: Target
+    }>();
 
     const emit = defineEmits(['closeEditor']);
 
     const newInitiatorGroup = ref<InitiatorGroup>(InitiatorGroup.empty());
-
+    const norm = (s: string | undefined | null) => (s ?? "").trim()
     const { tempObject: tempInitiatorGroup, modified, resetChanges } = useTempObjectStaging(newInitiatorGroup);
 
     const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
@@ -79,8 +81,18 @@
         if (!tempInitiatorGroup.value.name) {
             return validationError("A group name is required.");
         }
+        if (duplicateName.value) return validationError("That group name already exists on this target.");
 
         return validationSuccess();
     });
+
+    const duplicateName = computed(() => {
+        const wanted = norm(tempInitiatorGroup.value?.name);
+        if (!wanted) return false;
+        return (props.target.initiatorGroups ?? []).some(g => norm(g?.name) === wanted);
+    });
     
+
+
+
 </script>
