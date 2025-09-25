@@ -12,6 +12,7 @@ import { NFSExportsParser } from "@/tabs/nfs/exports-parser";
 import { Hooks, executeHookCallbacks } from "@/common/hooks";
 
 export interface INFSManager {
+  server: Server;
   getExports(): ResultAsync<NFSExport[], ProcessError | ParsingError>;
   addExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
   editExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
@@ -26,7 +27,7 @@ export class NFSManagerSingleServer implements INFSManager {
   private commandOptions: CommandOptions = { superuser: "try" };
   private nfsExportsParser = new NFSExportsParser();
   constructor(
-    private server: Server,
+    public server: Server,
     exportsFilePath: string
   ) {
     this.exportsFile = new File(this.server, exportsFilePath);
@@ -58,29 +59,23 @@ export class NFSManagerSingleServer implements INFSManager {
   }
 
   addExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return executeHookCallbacks(Hooks.BeforeAddShare, this.server, nfsExport)
-      .andThen(() => this.getExports())
+    return this.getExports()
       .map((exports) => [...exports, nfsExport])
       .andThen((exports) => this.setExports(exports))
-      .andThen(() => executeHookCallbacks(Hooks.AfterAddShare, this.server, nfsExport))
       .map(() => nfsExport);
   }
 
   editExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return executeHookCallbacks(Hooks.BeforeEditShare, this.server, nfsExport)
-      .andThen(() => this.getExports())
+    return this.getExports()
       .map((exports) => exports.map((e) => (e.path === nfsExport.path ? nfsExport : e)))
       .andThen((exports) => this.setExports(exports))
-      .andThen(() => executeHookCallbacks(Hooks.AfterEditShare, this.server, nfsExport))
       .map(() => nfsExport);
   }
 
   removeExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return executeHookCallbacks(Hooks.BeforeRemoveShare, this.server, nfsExport)
-      .andThen(() => this.getExports())
+    return this.getExports()
       .map((exports) => exports.filter((e) => e.path !== nfsExport.path))
       .andThen((exports) => this.setExports(exports))
-      .andThen(() => executeHookCallbacks(Hooks.AfterRemoveShare, this.server, nfsExport))
       .map(() => nfsExport);
   }
 
@@ -106,12 +101,14 @@ export class NFSManagerSingleServer implements INFSManager {
 export class NFSManagerClustered implements INFSManager {
   private managers: [NFSManagerSingleServer, ...NFSManagerSingleServer[]];
   private getterManager: NFSManagerSingleServer;
+  public server: Server;
 
   constructor(servers: [Server, ...Server[]], exportsFilePath: string) {
     this.managers = servers.map(
       (server) => new NFSManagerSingleServer(server, exportsFilePath)
     ) as [NFSManagerSingleServer, ...NFSManagerSingleServer[]];
     this.getterManager = this.managers[0];
+    this.server = this.getterManager.server;
   }
 
   getExports(...args: Parameters<NFSManagerSingleServer["getExports"]>) {
@@ -149,7 +146,7 @@ export class NFSManagerClustered implements INFSManager {
   }
 }
 
-export function getNFSManager(
+function _getNFSManager(
   servers: Server | [Server, ...Server[]],
   exportsFilePath: string
 ): INFSManager {
@@ -159,4 +156,56 @@ export function getNFSManager(
       : new NFSManagerClustered(servers, exportsFilePath);
   }
   return new NFSManagerSingleServer(servers, exportsFilePath);
+}
+
+class HookedNFSManager implements INFSManager {
+  public server: Server;
+  constructor(private mgr: INFSManager) {
+    this.server = mgr.server;
+  }
+
+  getExports(...args: Parameters<NFSManagerSingleServer["getExports"]>) {
+    return this.mgr.getExports(...args);
+  }
+
+  addExport(...args: Parameters<NFSManagerSingleServer["addExport"]>) {
+    return executeHookCallbacks(Hooks.BeforeAddShare, this.server, args[0])
+      .andThen(() => this.mgr.addExport(...args))
+      .andThen((r) => executeHookCallbacks(Hooks.AfterAddShare, this.server, args[0]).map(() => r));
+  }
+
+  editExport(...args: Parameters<NFSManagerSingleServer["editExport"]>) {
+    return executeHookCallbacks(Hooks.BeforeEditShare, this.server, args[0])
+      .andThen(() => this.mgr.editExport(...args))
+      .andThen((r) =>
+        executeHookCallbacks(Hooks.AfterEditShare, this.server, args[0]).map(() => r)
+      );
+  }
+
+  removeExport(...args: Parameters<NFSManagerSingleServer["removeExport"]>) {
+    return executeHookCallbacks(Hooks.BeforeRemoveShare, this.server, args[0])
+      .andThen(() => this.mgr.removeExport(...args))
+      .andThen((r) =>
+        executeHookCallbacks(Hooks.AfterRemoveShare, this.server, args[0]).map(() => r)
+      );
+  }
+
+  exportConfig(...args: Parameters<NFSManagerSingleServer["exportConfig"]>) {
+    return this.mgr.exportConfig(...args);
+  }
+
+  importConfig(...args: Parameters<NFSManagerSingleServer["importConfig"]>) {
+    return this.mgr.importConfig(...args).map(() => this);
+  }
+
+  onExportsFileChanged(...args: Parameters<NFSManagerSingleServer["onExportsFileChanged"]>) {
+    return this.mgr.onExportsFileChanged(...args);
+  }
+}
+
+export function getNFSManager(
+  servers: Server | [Server, ...Server[]],
+  exportsFilePath: string
+): INFSManager {
+  return new HookedNFSManager(_getNFSManager(servers, exportsFilePath));
 }
