@@ -98,7 +98,6 @@ export class RBDManager {
     createLogicalVolumeFromRadosBlockDevices(logicalVolumeName: string, volumeGroupName: string, rbds: RadosBlockDevice[]) {
         const rbdPaths = rbds.map((rbd) => rbd.filePath).join(' ');
         let createdLogicalVolume: LogicalVolume | null = null;
-        console.log(`Creating logical volume ${logicalVolumeName} in volume group ${volumeGroupName} from RBDs: ${rbdPaths}`);
         return ResultAsync.combine(rbds.map((rbd) => this.server.execute(new BashCommand(`pvcreate ${rbd.filePath}`)).map(() => new PhysicalVolume(rbd))))
         .andThen((physicalVolumes) => this.server.execute(new BashCommand(`vgcreate ${volumeGroupName} ${rbdPaths}`)).map(() => new VolumeGroup(volumeGroupName, physicalVolumes,this.server)))
         .andThen((volumeGroup) => this.server.execute(new BashCommand(`lvcreate -i ${rbds.length} -I 64 -l 100%FREE -n ${logicalVolumeName} ${volumeGroupName} ${rbdPaths}`))
@@ -107,7 +106,6 @@ export class RBDManager {
                 .map((maximumSize) => {
                   
                   return this.server.getIpAddress(false).map((/* ip */) => {
-                    console.log("server ip address fetched for logical volume creation:", this.server);
                     createdLogicalVolume = new LogicalVolume(
                       logicalVolumeName,
                       0,
