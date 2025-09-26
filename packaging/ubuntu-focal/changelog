@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.4.1-1focal) focal; urgency=medium
+
+  * improved speed of iscsi module + added functionality f adding multiple groups
+    to target + build package
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 26 Sep 2025 08:34:55 -0300
+
 cockpit-file-sharing (4.3.2-2focal) focal; urgency=medium
 
   * Fix bug causing nfs server crash during export removal with ceph by removing
