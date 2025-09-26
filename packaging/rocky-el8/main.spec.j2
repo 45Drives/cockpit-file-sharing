@@ -38,6 +38,8 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el8 install
 * Mon Sep 08 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.2-1
 - Fix bug causing nfs server crash during export removal with ceph by removing ceph
   remount after removing share instead of before
+  * Tue Aug 26 2025 Rachit Hans <rhans@45drives.com> 4.2.14-15
+- building package fetching data from all servrs of cluster
 * Mon Aug 25 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.1-2
 - Fix os release display in app info popup on EL8/EL9
 - Enable AD accounts what's new popup for v4.3.1
@@ -58,8 +60,6 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el8 install
 - build package
 * Mon Aug 11 2025 Rachit Hans <rhans@45drives.com> 4.2.13-2
 - fixing dropdown values getting hidden
-* Tue Aug 26 2025 Rachit Hans <rhans@45drives.com> 4.2.14-15
-- building package fetching data from all servrs of cluster
 * Wed Aug 06 2025 Rachit Hans <rhans@45drives.com> 4.2.14-14
 - getting first unstandby node evrytime 
 * Tue Aug 05 2025 Rachit Hans <rhans@45drives.com> 4.2.14-13
