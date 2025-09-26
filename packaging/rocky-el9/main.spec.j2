@@ -22,40 +22,39 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 make OS_PACKAGE_RELEASE=el9
 
 %install
-make DESTDIR=%{buildroot} install
+make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el9 install
 
 %files
 /usr/share/cockpit/file-sharing/*
 
 %changelog
-* Tue Aug 26 2025 Rachit Hans <rhans@45drives.com> 4.2.14-15
-- building package fetching data from all servrs of cluster
-* Wed Aug 06 2025 Rachit Hans <rhans@45drives.com> 4.2.14-14
-- getting first unstandby node evrytime 
-* Tue Aug 05 2025 Rachit Hans <rhans@45drives.com> 4.2.14-13
-- createRadosBlockDevice updated to update cachedRBDS
-* Tue Aug 05 2025 Rachit Hans <rhans@45drives.com> 4.2.14-12
-- cached rbds for improving spped in iscsi cluter
-* Mon Aug 04 2025 Rachit Hans <rhans@45drives.com> 4.2.14-10
-- building package
-* Fri Aug 01 2025 Rachit Hans <rhans@45drives.com> 4.2.14-9
-- package build + fix selectmenu options
-* Thu Jul 31 2025 Rachit Hans <rhans@45drives.com> 4.2.14-8
-- package build + fix rbdreactivity bug
-* Thu Jul 31 2025 Rachit Hans <rhans@45drives.com> 4.2.14-6
-- build package + fixed deletion
-* Wed Jul 30 2025 Rachit Hans <rhans@45drives.com> 4.2.14-5
-- fixed rbd's removal
-* Wed Jul 30 2025 Rachit Hans <rhans@45drives.com> 4.2.14-4
+* Fri Sep 19 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.2-2
+- Fix bug causing nfs server crash during export removal with ceph by removing ceph
+  remount after removing share instead of before
+- Fix bug causing NFS hooks to be run multiple times for clustered environments
+* Mon Sep 08 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.2-1
+- Fix bug causing nfs server crash during export removal with ceph by removing ceph
+  remount after removing share instead of before
+* Mon Aug 25 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.1-2
+- Fix os release display in app info popup on EL8/EL9
+- Enable AD accounts what's new popup for v4.3.1
+* Fri Aug 22 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.1-1
+- Fix build issue causing edit permissions popup to be blank
+* Tue Aug 19 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.0-1
+- Add option for Active Directory/Domain users and groups to appear in dropdown lists
+  while editing path permissions
+- Improvements to SelectMenu UX
+- Samba - make 'Inherit Permissions' and 'Windows ACLs' options mutually-exclusive
+- Prompt to kick all users from share while deleting
+- Clarify warning messages while deleting shares that files and folders will not
+  be deleted
+- Fix importing smb.conf
+* Fri Aug 15 2025 Rachit Hans <rhans@45drives.com> 4.2.13-4
 - build package
-* Tue Jul 29 2025 Rachit Hans <rhans@45drives.com> 4.2.14-3
+* Tue Aug 12 2025 Rachit Hans <rhans@45drives.com> 4.2.13-3
 - build package
-- added logic to add LVM's to pcs target even after page refresh
-* Fri Jul 25 2025 Rachit Hans <rhans@45drives.com> 4.2.14-2
-- building
-- package
-* Thu Jul 24 2025 Rachit Hans <rhans@45drives.com> 4.2.14-1
-- building package
+* Mon Aug 11 2025 Rachit Hans <rhans@45drives.com> 4.2.13-2
+- fixing dropdown values getting hidden
 * Tue Jul 08 2025 Jordan Keough <jkeough@45drives.com> 4.2.13-1
 - Removes conditional flag on group add/delete for iscsi initiator groups
 * Thu May 29 2025 Jordan Keough <jkeough@45drives.com> 4.2.12-1

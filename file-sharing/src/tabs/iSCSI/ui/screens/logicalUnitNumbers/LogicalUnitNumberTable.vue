@@ -2,6 +2,7 @@
   <CardContainer>
     <div
       class=""
+      class=""
       :style="{
         'max-height': showEditor ? '1500px' : '0',
         transition: showEditor ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out',

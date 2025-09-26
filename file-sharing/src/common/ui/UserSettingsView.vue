@@ -55,11 +55,19 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
         <span v-if="modified">*</span>
       </div>
     </template>
-    <div class="space-y-content">
+    <div class="space-y-content flex flex-col">
       <ToggleSwitch v-model="tempUserSettings.includeSystemAccounts">
         {{ _("Include System Accounts") }}
         <template #description>
           {{ _("Include local users/groups with uids/gids between 0 and 1000 in dropdown lists.") }}
+        </template>
+      </ToggleSwitch>
+      <ToggleSwitch v-model="tempUserSettings.includeDomainAccounts">
+        {{ _("Include Domain (Active Directory) Accounts") }}
+        <template #description>
+          <div class="whitespace-pre-wrap">
+            {{ _("Include users/groups from Domain/Active Directory in dropdown lists.\nWarning: this can cause performance issues on large domains.") }}
+          </div>
         </template>
       </ToggleSwitch>
       <div class="text-header">Samba</div>
@@ -97,17 +105,15 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
         <template #label>
           {{ _("NFS Tab Visibility") }}
         </template>
-        <SelectMenu
-          v-model="tempUserSettings.nfs.tabVisibility"
-          :options="tabVisibilityOptions"
-        />
+        <SelectMenu v-model="tempUserSettings.nfs.tabVisibility" :options="tabVisibilityOptions" />
       </InputLabelWrapper>
       <div class="text-header">iSCSI</div>
       <InputLabelWrapper>
         <template #label>
           {{ _("Configuration Path") }}
         </template>
-        <InputField disabled
+        <InputField
+          disabled
           v-model="tempUserSettings.iscsi.confPath"
           class="w-full"
           placeholder="default: /etc/scst.conf"

@@ -1,82 +1,61 @@
-cockpit-file-sharing (4.2.14-15bookworm) bookworm; urgency=medium
+cockpit-file-sharing (4.3.2-2bookworm) bookworm; urgency=medium
 
-  * building package fetching data from all servrs of cluster
+  * Fix bug causing nfs server crash during export removal with ceph by removing
+    ceph remount after removing share instead of before
+  * Fix bug causing NFS hooks to be run multiple times for clustered environments
 
- -- Rachit Hans <rhans@45drives.com>  Tue, 26 Aug 2025 08:41:09 -0300
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 19 Sep 2025 11:33:07 -0300
 
-cockpit-file-sharing (4.2.14-14bookworm) bookworm; urgency=medium
+cockpit-file-sharing (4.3.2-1bookworm) bookworm; urgency=medium
 
-  * getting first unstandby node evrytime 
+  * Fix bug causing nfs server crash during export removal with ceph by removing
+    ceph remount after removing share instead of before
 
- -- Rachit Hans <rhans@45drives.com>  Wed, 06 Aug 2025 12:52:15 -0300
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 08 Sep 2025 13:27:59 -0300
 
-cockpit-file-sharing (4.2.14-13bookworm) bookworm; urgency=medium
+cockpit-file-sharing (4.3.1-2bookworm) bookworm; urgency=medium
 
-  * createRadosBlockDevice updated to update cachedRBDS
+  * Fix os release display in app info popup on EL8/EL9
+  * Enable AD accounts what's new popup for v4.3.1
 
- -- Rachit Hans <rhans@45drives.com>  Tue, 05 Aug 2025 21:45:31 -0300
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 25 Aug 2025 08:31:47 -0300
 
-cockpit-file-sharing (4.2.14-12bookworm) bookworm; urgency=medium
+cockpit-file-sharing (4.3.1-1bookworm) bookworm; urgency=medium
 
-  * cached rbds for improving spped in iscsi cluter
+  * Fix build issue causing edit permissions popup to be blank
 
- -- Rachit Hans <rhans@45drives.com>  Tue, 05 Aug 2025 21:03:34 -0300
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 22 Aug 2025 09:59:33 -0300
 
-cockpit-file-sharing (4.2.14-10bookworm) bookworm; urgency=medium
+cockpit-file-sharing (4.3.0-1bookworm) bookworm; urgency=medium
 
-  * building package
+  * Add option for Active Directory/Domain users and groups to appear in dropdown
+    lists while editing path permissions
+  * Improvements to SelectMenu UX
+  * Samba - make 'Inherit Permissions' and 'Windows ACLs' options mutually-exclusive
+  * Prompt to kick all users from share while deleting
+  * Clarify warning messages while deleting shares that files and folders will not
+    be deleted
+  * Fix importing smb.conf
 
- -- Rachit Hans <rhans@45drives.com>  Mon, 04 Aug 2025 11:58:58 -0300
+ -- Joshua Boudreau <jboudreau@45drives.com>  Tue, 19 Aug 2025 13:29:20 -0300
 
-cockpit-file-sharing (4.2.14-9bookworm) bookworm; urgency=medium
-
-  * package build + fix selectmenu options
-
- -- Rachit Hans <rhans@45drives.com>  Fri, 01 Aug 2025 14:14:33 -0300
-
-cockpit-file-sharing (4.2.14-8bookworm) bookworm; urgency=medium
-
-  * package build + fix rbdreactivity bug
-
- -- Rachit Hans <rhans@45drives.com>  Thu, 31 Jul 2025 20:16:56 -0300
-
-cockpit-file-sharing (4.2.14-6bookworm) bookworm; urgency=medium
-
-  * build package + fixed deletion
-
- -- Rachit Hans <rhans@45drives.com>  Thu, 31 Jul 2025 10:41:16 -0300
-
-cockpit-file-sharing (4.2.14-5bookworm) bookworm; urgency=medium
-
-  * fixed rbd's removal
-
- -- Rachit Hans <rhans@45drives.com>  Wed, 30 Jul 2025 22:11:58 -0300
-
-cockpit-file-sharing (4.2.14-4bookworm) bookworm; urgency=medium
+cockpit-file-sharing (4.2.13-4bookworm) bookworm; urgency=medium
 
   * build package
 
- -- Rachit Hans <rhans@45drives.com>  Wed, 30 Jul 2025 09:51:09 -0300
+ -- Rachit Hans <rhans@45drives.com>  Fri, 15 Aug 2025 08:07:28 -0300
 
-cockpit-file-sharing (4.2.14-3bookworm) bookworm; urgency=medium
+cockpit-file-sharing (4.2.13-3bookworm) bookworm; urgency=medium
 
   * build package
-  * added logic to add LVM's to pcs target even after page refresh
 
- -- Rachit Hans <rhans@45drives.com>  Tue, 29 Jul 2025 12:19:36 -0300
+ -- Rachit Hans <rhans@45drives.com>  Tue, 12 Aug 2025 11:07:28 -0300
 
-cockpit-file-sharing (4.2.14-2bookworm) bookworm; urgency=medium
+cockpit-file-sharing (4.2.13-2bookworm) bookworm; urgency=medium
 
-  * building
-  * package
+  * fixing dropdown values getting hidden
 
- -- Rachit Hans <rhans@45drives.com>  Fri, 25 Jul 2025 11:46:22 -0300
-
-cockpit-file-sharing (4.2.14-1bookworm) bookworm; urgency=medium
-
-  * building package
-
- -- Rachit Hans <rhans@45drives.com>  Thu, 24 Jul 2025 10:49:27 -0300
+ -- Rachit Hans <rhans@45drives.com>  Mon, 11 Aug 2025 07:56:53 -0300
 
 cockpit-file-sharing (4.2.13-1bookworm) bookworm; urgency=medium
 

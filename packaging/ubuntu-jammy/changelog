@@ -1,3 +1,62 @@
+cockpit-file-sharing (4.3.2-2jammy) jammy; urgency=medium
+
+  * Fix bug causing nfs server crash during export removal with ceph by removing
+    ceph remount after removing share instead of before
+  * Fix bug causing NFS hooks to be run multiple times for clustered environments
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 19 Sep 2025 11:33:07 -0300
+
+cockpit-file-sharing (4.3.2-1jammy) jammy; urgency=medium
+
+  * Fix bug causing nfs server crash during export removal with ceph by removing
+    ceph remount after removing share instead of before
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 08 Sep 2025 13:27:59 -0300
+
+cockpit-file-sharing (4.3.1-2jammy) jammy; urgency=medium
+
+  * Fix os release display in app info popup on EL8/EL9
+  * Enable AD accounts what's new popup for v4.3.1
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 25 Aug 2025 08:31:47 -0300
+
+cockpit-file-sharing (4.3.1-1jammy) jammy; urgency=medium
+
+  * Fix build issue causing edit permissions popup to be blank
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 22 Aug 2025 09:59:33 -0300
+
+cockpit-file-sharing (4.3.0-1jammy) jammy; urgency=medium
+
+  * Add option for Active Directory/Domain users and groups to appear in dropdown
+    lists while editing path permissions
+  * Improvements to SelectMenu UX
+  * Samba - make 'Inherit Permissions' and 'Windows ACLs' options mutually-exclusive
+  * Prompt to kick all users from share while deleting
+  * Clarify warning messages while deleting shares that files and folders will not
+    be deleted
+  * Fix importing smb.conf
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Tue, 19 Aug 2025 13:29:20 -0300
+
+cockpit-file-sharing (4.2.13-4jammy) jammy; urgency=medium
+
+  * build package
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 15 Aug 2025 08:07:28 -0300
+
+cockpit-file-sharing (4.2.13-3jammy) jammy; urgency=medium
+
+  * build package
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 12 Aug 2025 11:07:28 -0300
+
+cockpit-file-sharing (4.2.13-2jammy) jammy; urgency=medium
+
+  * fixing dropdown values getting hidden
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 11 Aug 2025 07:56:53 -0300
+
 cockpit-file-sharing (4.2.14-15jammy) jammy; urgency=medium
 
   * building package fetching data from all servrs of cluster

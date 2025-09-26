@@ -147,7 +147,7 @@ package-generic: default
 	tar -czf "$${PKG_NAME}.tar.gz" "$${FILES[@]}" && \
 	rm "$${PKG_NAME}"
 
-clean: FORCE
+clean: FORCE houston-common-clean
 	rm $(dir $(OUTPUTS)) -rf
 
 clean-all: clean FORCE

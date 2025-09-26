@@ -40,6 +40,10 @@ export type UserSettings = {
    * Include users and groups with uid and gid from 1 to 999
    */
   includeSystemAccounts: boolean;
+  /**
+   * Fetch users and groups from domain
+   */
+  includeDomainAccounts: boolean;
 };
 
 const defaultSettings = (): UserSettings => ({
@@ -60,6 +64,7 @@ const defaultSettings = (): UserSettings => ({
     tabVisibility: "auto",
   },
   includeSystemAccounts: false,
+  includeDomainAccounts: false,
 });
 
 const configPath = "/etc/cockpit-file-sharing.conf.json";
@@ -87,13 +92,18 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
           iscsi: {
             // confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
             confPath: defaultSettings().iscsi.confPath,
-            clusteredServer: contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
-            clusteredServerChecked: contents.iscsi?.clusteredServerChecked ?? defaultSettings().iscsi.clusteredServerChecked,
+            clusteredServer:
+              contents.iscsi?.clusteredServer || defaultSettings().iscsi.clusteredServer,
+            clusteredServerChecked:
+              contents.iscsi?.clusteredServerChecked ??
+              defaultSettings().iscsi.clusteredServerChecked,
             subnetMask: contents.iscsi?.subnetMask || defaultSettings().iscsi.subnetMask,
             tabVisibility: contents.iscsi?.tabVisibility || defaultSettings().iscsi.tabVisibility,
           },
           includeSystemAccounts:
             contents.includeSystemAccounts ?? defaultSettings().includeSystemAccounts,
+          includeDomainAccounts:
+            contents.includeDomainAccounts ?? defaultSettings().includeDomainAccounts,
         };
       }
       resolve(config);

@@ -6,6 +6,9 @@ import {
   globalProcessingWrapPromise,
   CardContainer,
   CenteredCardColumn,
+  pushNotification,
+  Notification,
+  useHint,
 } from "@45drives/houston-common-ui";
 import { SambaTabMain } from "@/tabs/samba/ui";
 import ISCSITabMain from "@/tabs/iSCSI/ui/ISCSITabMain.vue";
@@ -50,9 +53,51 @@ const iscsiConfigured = (): ResultAsync<boolean, never> => {
 let watchStopHandle: WatchStopHandle;
 
 globalProcessingWrapPromise(useUserSettings(true)).then((userSettings) => {
+  if (!userSettings.value.includeDomainAccounts && appVersion.startsWith("4.3.1")) {
+    getServer()
+      .andThen((s) => s.isServerDomainJoined())
+      .map((domainJoined) => {
+        if (domainJoined) {
+          useHint(
+            _("What's new"),
+            _(
+              "You can now turn on inclusion of Active Directory/Domain accounts in the settings menu.\nWarning: enabling can cause performance issues on large domains."
+            )
+          )?.addAction(_("Enable now"), () => {
+            globalProcessingWrapPromise(
+              new Promise<void>((resolve) => {
+                showUserSettings.value = true;
+                window.setTimeout(() => {
+                  userSettings.value = { ...userSettings.value, includeDomainAccounts: true };
+                  window.setTimeout(() => {
+                    showUserSettings.value = false;
+                    resolve();
+                  }, 1500);
+                }, 500);
+              })
+            );
+          });
+        }
+      });
+  }
   watchStopHandle = watch(
     userSettings,
     (userSettings) => {
+      if (userSettings.includeDomainAccounts) {
+        getServer()
+          .andThen((s) => s.isServerDomainJoined())
+          .map((isDomainJoined) => {
+            if (!isDomainJoined) {
+              pushNotification(
+                new Notification(
+                  _("Not Domain Joined"),
+                  "'Include Domain (Active Directory) Accounts' setting is True, but this server is not joined to a domain.",
+                  "warning"
+                )
+              );
+            }
+          });
+      }
       switch (userSettings.samba.tabVisibility) {
         case "always":
           showSambaTab.value = true;
@@ -161,7 +206,7 @@ const visibleTabs = computed<HoustonAppTabEntry[]>(() => [
       </button>
     </template>
   </HoustonAppContainer>
-  <Modal :show="showUserSettings">
+  <Modal :show="showUserSettings" appearFrom="bottom-right">
     <UserSettingsView @close="showUserSettings = false" />
   </Modal>
 </template>

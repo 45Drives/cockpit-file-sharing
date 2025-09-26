@@ -207,7 +207,7 @@ useHookCallback([Hooks.BeforeAddShare, Hooks.BeforeEditShare], (_, share) => {
   return ResultAsync.combine(results).map(() => {});
 });
 
-useHookCallback(Hooks.BeforeRemoveShare, (_server, share) => {
+useHookCallback(Hooks.AfterRemoveShare, (_server, share) => {
   if (
     share.path != path.value ||
     !(currentOptions.remounted && remountManagedByFileSharing.value)
