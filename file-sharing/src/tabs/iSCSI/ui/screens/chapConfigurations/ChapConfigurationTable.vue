@@ -90,5 +90,5 @@ const refreshTable = () => {
 
 const actions = wrapActions({ refreshTable: refreshTable });
 
-actions.refreshTable();
+//actions.refreshTable();
 </script>

@@ -66,7 +66,7 @@ const _ = cockpit.gettext;
 
 const props = defineProps<{ initiatorGroup: InitiatorGroup }>();
 
-const emit = defineEmits(["closeEditor"]);
+const emit = defineEmits(["closeEditor","created"]);
 
 defineExpose({populateNextNumber})
 
@@ -109,8 +109,6 @@ const createLun = () => {
   if (!dev) {
     return Result.err(new ProcessError(`Device ${tempLun.value.name} not found`));
   }
-
-  // mark assigned on the shared instance
   dev.assigned = true;
 
   const payload = {
@@ -123,9 +121,6 @@ const createLun = () => {
   .map((execServer ) => {
     if(execServer){
       dev.server = execServer;
-      console.log("Server assigned to device:", dev.server);
-
-      console.log("props after adding ",props.initiatorGroup.logicalUnitNumbers);
     }
   })
   
@@ -136,11 +131,9 @@ const createLun = () => {
       driver.andThen(d => d.getnode())
       )
       .map(() => {
-        console.log("changing  ",props.initiatorGroup.logicalUnitNumbers);
-        console.log("LUN created successfully");
+        emit("created")
         handleClose();
-
-});
+})
 };
 
 function populateNextNumber() {

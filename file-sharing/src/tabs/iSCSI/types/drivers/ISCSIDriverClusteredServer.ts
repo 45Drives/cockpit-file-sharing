@@ -723,9 +723,9 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
               };
       
               group.logicalUnitNumbers = yield* self
-                .getLogicalUnitNumbersOfInitiatorGroup({ devicePath: group.devicePath })
+                .getLogicalUnitNumbersOfInitiatorGroup(group)
                 .safeUnwrap();
-      
+              console.log("group.logicalUnitNumbers",group.logicalUnitNumbers);
               groups.push(group);
             }
       
@@ -750,7 +750,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         initiatorGroup: InitiatorGroup
       ): ResultAsync<LogicalUnitNumber[], ProcessError> {   
        const target = initiatorGroup.devicePath.split("iscsi_TARGET_")[1];  
-       
+       console.log("hellor from getLogicalUnitNumbersOfInitiatorGroup",initiatorGroup,target);
         return this.pcsResourceManager.fetchResources()
           .map(resources => resources.filter(r =>
             r.resourceType === PCSResourceType.LUN
@@ -901,8 +901,9 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         const blockDevice = lun.blockDevice! as RadosBlockDevice;
 
         return new ResultAsync(safeTry(async function* () {
-            yield* self.removeRBDResources([blockDevice]).safeUnwrap();
             yield* self.removeLUNResource(lun, targetIQN).safeUnwrap();
+            yield* self.removeRBDResources([blockDevice]).safeUnwrap();
+
 
             return ok(undefined);
         }))
@@ -969,22 +970,23 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
 
                 for (var rbdToRemove of rbdsToRemove) {
                     if (values.get("name") === rbdToRemove.deviceName && values.get("pool") === rbdToRemove.parentPool.name) {
-                        yield* self.pcsResourceManager.disableResource(resource).safeUnwrap();
-                        break;
-                    }
-                }
-            }
-
-            for (var resource of rbdResources.filter((resource) => resource.resourceType === PCSResourceType.RBD)) {
-                const values = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["name", "pool"]).safeUnwrap();
-
-                for (var rbdToRemove of rbdsToRemove) {
-                    if (values.get("name") === rbdToRemove.deviceName && values.get("pool") === rbdToRemove.parentPool.name) {
+               //         yield* self.pcsResourceManager.disableResource(resource).safeUnwrap();
                         yield* self.pcsResourceManager.deleteResource(resource).safeUnwrap();
                         break;
                     }
                 }
             }
+
+            // for (var resource of rbdResources.filter((resource) => resource.resourceType === PCSResourceType.RBD)) {
+            //     const values = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["name", "pool"]).safeUnwrap();
+
+            //     for (var rbdToRemove of rbdsToRemove) {
+            //         if (values.get("name") === rbdToRemove.deviceName && values.get("pool") === rbdToRemove.parentPool.name) {
+            //             yield* self.pcsResourceManager.deleteResource(resource).safeUnwrap();
+            //             break;
+            //         }
+            //     }
+            // }
 
             return ok(undefined);
         }));

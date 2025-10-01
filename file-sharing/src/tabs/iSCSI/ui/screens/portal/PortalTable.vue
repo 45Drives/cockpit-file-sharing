@@ -13,9 +13,10 @@
           @close-editor="
             () => {
               showAddPortal = false;
-              actions.refreshPortals();
             }
           "
+          @created='actions.refreshPortals()'
+
         />
       </div>
     </div>
@@ -80,5 +81,5 @@ const refreshPortals = () => {
 
 const actions = wrapActions({ refreshPortals: refreshPortals });
 
-actions.refreshPortals();
+//actions.refreshPortals();
 </script>

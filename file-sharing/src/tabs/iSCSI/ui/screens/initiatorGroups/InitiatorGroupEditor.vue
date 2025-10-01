@@ -54,7 +54,7 @@
     const props = defineProps<{target: Target
     }>();
 
-    const emit = defineEmits(['closeEditor']);
+    const emit = defineEmits(['closeEditor','created']);
 
     const newInitiatorGroup = ref<InitiatorGroup>(InitiatorGroup.empty());
     const norm = (s: string | undefined | null) => (s ?? "").trim()
@@ -69,7 +69,7 @@
 
     const createInitiatorGroup = () => {
         return driver.andThen((driver) => driver.addInitiatorGroupToTarget(props.target, tempInitiatorGroup.value))
-                        .map(() => handleClose())
+                        .map(() => {emit("created"),handleClose()})
                         .mapErr((error) => new ProcessError(`Unable to create group ${tempInitiatorGroup.value.name}: ${error.message}`))
     }
 

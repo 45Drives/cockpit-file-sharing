@@ -53,7 +53,7 @@ const _ = cockpit.gettext;
 
 const props = defineProps<{ initiatorGroup: InitiatorGroup }>();
 
-const emit = defineEmits(["closeEditor"]);
+const emit = defineEmits(["closeEditor","created"]);
 
 const newInitiator = ref<Initiator>(Initiator.empty());
 
@@ -69,7 +69,9 @@ const handleClose = () => {
 const createConfiguration = () => {
   return driver
     .andThen((driver) => driver.addInitiatorToGroup(props.initiatorGroup, tempInitiator.value))
-    .map(() => handleClose())
+    .map(() => {
+      emit("created")
+      handleClose()})
     .mapErr(
       (error) =>
         new ProcessError(

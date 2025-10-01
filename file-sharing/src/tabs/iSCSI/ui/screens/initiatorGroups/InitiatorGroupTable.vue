@@ -8,9 +8,10 @@
         <InitiatorGroupEditor :target="target" @close-editor="
             () => {
               showEditor = false;
-              actions.refreshTable();
             }
-          " />
+          "
+          @created='actions.refreshTable()'
+          />
       </div>
     </div>
     <div class="card">
@@ -69,6 +70,8 @@ if (driver === undefined) {
 const refreshTable = () => {
   return driver.andThen((driver) => {
     return driver.getInitatorGroupsOfTarget(props.target).map((groups) => {
+
+      console.log("Refreshing Initiator Groups Table", groups);
       props.target.initiatorGroups = groups;
     });
   });
@@ -76,5 +79,5 @@ const refreshTable = () => {
 
 const actions = wrapActions({ refreshTable: refreshTable });
 
-actions.refreshTable();
+//actions.refreshTable();
 </script>

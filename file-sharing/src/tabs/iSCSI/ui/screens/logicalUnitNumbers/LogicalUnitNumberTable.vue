@@ -15,9 +15,9 @@
           @close-editor="
             () => {
               showEditor = false;
-              actions.refreshTable();
             }
           "
+          @created="actions.refreshTable()"  
         />
       </div>
     </div>
@@ -102,6 +102,8 @@ const refreshTable = () => {
   return driver.andThen((driver) =>
     driver.getLogicalUnitNumbersOfInitiatorGroup(props.initiatorGroup)
       .map((luns) => {
+        console.log("Refreshing LUNs for", props.initiatorGroup.name) 
+
         props.initiatorGroup.logicalUnitNumbers.splice(
           0,
           props.initiatorGroup.logicalUnitNumbers.length,
@@ -123,5 +125,5 @@ const toggleEditor = () => {
 
 const actions = wrapActions({ refreshTable: refreshTable });
 
-actions.refreshTable();
+//actions.refreshTable();
 </script>

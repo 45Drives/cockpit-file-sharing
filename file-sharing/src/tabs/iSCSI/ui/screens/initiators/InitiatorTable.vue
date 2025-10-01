@@ -13,9 +13,9 @@
           @close-editor="
             () => {
               showEditor = false;
-              actions.refreshTable();
             }
           "
+          @created="actions.refreshTable()"
         />
       </div>
     </div>
@@ -81,5 +81,5 @@ const refreshTable = () => {
 
 const actions = wrapActions({ refreshTable: refreshTable });
 
-actions.refreshTable();
+//actions.refreshTable();
 </script>
