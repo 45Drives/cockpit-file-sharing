@@ -30,7 +30,6 @@ export class PCSResourceManager {
     }
 
     deleteResource(resource: Pick<PCSResource, "name">) {
-
         return this.server.execute(new BashCommand(`pcs resource delete '${resource.name}'`))
         .map(() => {
             this.currentResources = this.currentResources!.filter((existingResource) => existingResource.name !== resource.name);
@@ -39,7 +38,7 @@ export class PCSResourceManager {
     }
 
     disableResource(resource: Pick<PCSResource, "name">) {
-        return this.server.execute(new BashCommand(`pcs resource disable '${resource.name}'`))
+        return this.server.execute(new BashCommand(`pcs resource disable '${resource.name}' `))
         .map(() => undefined);
     }
 
@@ -79,13 +78,27 @@ export class PCSResourceManager {
         }))
     }
 
+    removeResourceFromGroup(resourceGroupName: string, resource: string) {
+        return this.server.execute(new BashCommand(`pcs resource ungroup ${resourceGroupName} '${resource}'`))
+        .map(() => undefined)
+
+    }
+
     constrainResourceToGroup(resource: PCSResource, resourceGroup: PCSResourceGroup,server: Server) {
         return server.execute(new BashCommand(`pcs constraint colocation add '${resource.name}' with '${resourceGroup.name}'`))
         .map(() => undefined)
     }
+    unconstainResourceFromGroup(resourceName:string,resourceGroupName:string) {
+        return this.server.execute(new BashCommand(`pcs constraint remove colocation-RBD_${resourceName}-${resourceGroupName}-INFINITY`))
+        .map(() => undefined);
+    }
 
     orderResourceBeforeGroup(resource: PCSResource, resourceGroup: PCSResourceGroup) {
         return this.server.execute(new BashCommand(`pcs constraint order start '${resource.name}' then '${resourceGroup.name}'`))
+        .map(() => undefined);
+    }
+    removeResourcefromOrderGroup(resourceName:string,resourceGroupName:string) {
+        return this.server.execute(new BashCommand(`pcs constraint remove order-RBD_${resourceName}-${resourceGroupName}-mandatory`))
         .map(() => undefined);
     }
 

@@ -102,8 +102,6 @@ const refreshTable = () => {
   return driver.andThen((driver) =>
     driver.getLogicalUnitNumbersOfInitiatorGroup(props.initiatorGroup)
       .map((luns) => {
-        console.log("Refreshing LUNs for", props.initiatorGroup.name) 
-
         props.initiatorGroup.logicalUnitNumbers.splice(
           0,
           props.initiatorGroup.logicalUnitNumbers.length,

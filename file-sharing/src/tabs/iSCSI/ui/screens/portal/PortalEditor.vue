@@ -78,7 +78,6 @@ useUserSettings(true).then((userSettings) => {
 });
 
 const handleClose = () => {
-
   emit("closeEditor");
   resetChanges();
 };

@@ -16,7 +16,6 @@
             }
           "
           @created='actions.refreshPortals()'
-
         />
       </div>
     </div>
