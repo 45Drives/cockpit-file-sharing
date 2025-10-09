@@ -3,6 +3,7 @@ import { ResultAsync } from 'neverthrow';
 import { PCSResource, PCSResourceType, PCSResourceTypeInfo } from "@/tabs/iSCSI/types/cluster/PCSResource";
 import { PCSResourceGroup } from '@/tabs/iSCSI/types/cluster/PCSResourceGroup';
 import { BashCommand, ProcessError, safeJsonParse, type Server } from "@45drives/houston-common-lib";
+import { group } from 'console';
 
 export class PCSResourceManager {
 
@@ -18,7 +19,7 @@ export class PCSResourceManager {
 
     createResource(name: string, creationArugments: string, type: PCSResourceType,server: Server) {
         const resourceName = name.replace(':', '_');
-
+        //console.log(`Add Lun to pcs, pcs resource create '${resourceName}' ${creationArugments}`)
         const creationCommand = new BashCommand(`pcs resource create '${resourceName}' ${creationArugments}`);
         return server.execute(creationCommand)
         .map(() => {
@@ -74,10 +75,27 @@ export class PCSResourceManager {
             }
 
             resource.resourceGroup = resourceGroup;
-            return self.server.execute(new BashCommand(`pcs resource group add '${resourceGroup.name}' ${positionArgument.join(" ")} '${resource.name}'`)).map(() => undefined);
+            console.log("adding LVM and LUN resource to group",`pcs resource group add '${resourceGroup.name}' '${resource.name}' ${positionArgument.join(" ")} `)
+            return self.server.execute(new BashCommand(`pcs resource group add ${resourceGroup.name} ${resource.name} ${positionArgument.join(" ")}  `)).map(() => undefined);
         }))
     }
 
+    // addLVResourceToGroup(resource: PCSResource, resourceGroup: PCSResourceGroup,nextResource: string): ResultAsync<void, ProcessError>  {
+    //     const self = this;
+    //     return new ResultAsync(safeTry(async function * () {
+    //         const currentResourceIndex = PCSResourceTypeInfo[resource.resourceType].orderInGroup;
+
+    //         const resources = yield * self.fetchResources().safeUnwrap();
+
+    //         let positionArgument: string[] = [];
+
+    //             positionArgument = [`--before`, nextResource];
+    //         resource.resourceGroup = resourceGroup;
+    //         console.log("adding LVM and LUN resource to group",`pcs resource group add '${resourceGroup.name}' '${resource.name}' ${positionArgument.join(" ")} `)
+    //         return self.server.execute(new BashCommand(`pcs resource group add ${resourceGroup.name} ${resource.name} ${positionArgument.join(" ")}  `)).map(() => undefined);
+    //     }))
+    // }
+    
     removeResourceFromGroup(resourceGroupName: string, resource: string) {
         return this.server.execute(new BashCommand(`pcs resource ungroup ${resourceGroupName} '${resource}'`))
         .map(() => undefined)
@@ -85,7 +103,8 @@ export class PCSResourceManager {
     }
 
     constrainResourceToGroup(resource: PCSResource, resourceGroup: PCSResourceGroup,server: Server) {
-        return server.execute(new BashCommand(`pcs constraint colocation add '${resource.name}' with '${resourceGroup.name}'`))
+       // console.log(`pcs constraint colocation add '${resource.name}' with '${resourceGroup.name}' INFINITY`)
+        return server.execute(new BashCommand(`pcs constraint colocation add '${resource.name}' with '${resourceGroup.name}' INFINITY`))
         .map(() => undefined)
     }
     unconstainResourceFromGroup(resourceName:string,resourceGroupName:string) {
@@ -94,6 +113,7 @@ export class PCSResourceManager {
     }
 
     orderResourceBeforeGroup(resource: PCSResource, resourceGroup: PCSResourceGroup) {
+      //  console.log(`pcs constraint order start '${resource.name}' then '${resourceGroup.name}'`)
         return this.server.execute(new BashCommand(`pcs constraint order start '${resource.name}' then '${resourceGroup.name}'`))
         .map(() => undefined);
     }
