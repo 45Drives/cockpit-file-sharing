@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.4.1-2bookworm) bookworm; urgency=medium
+
+  * changed the commands of addition groups
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 30 Oct 2025 14:00:03 -0300
+
 cockpit-file-sharing (4.4.1-1bookworm) bookworm; urgency=medium
 
   * improved speed of iscsi module + added functionality f adding multiple groups
