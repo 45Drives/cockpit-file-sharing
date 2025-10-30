@@ -356,58 +356,109 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
           });
       });
   }
-  
+  // Add to your class
+  private getPinNodeForGroup(group: PCSResourceGroup): ResultAsync<string, ProcessError> {
+    return this.pcsResourceManager.getGroupActiveNode(group);
+  }
 
-    addLogicalUnitNumberToGroup(
-        initiatorGroup: InitiatorGroup,
-        logicalUnitNumber: LogicalUnitNumber
-    ): ResultAsync< Server, ProcessError> {
-        const self = this;
-        return this.pcsResourceManager.fetchResourceByName(initiatorGroup.devicePath)
-            .andThen((targetResource) => {
-                if (targetResource !== undefined) {
-                    return new ResultAsync(safeTry(async function* () {
-                        const targetIQN = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValue(targetResource, "iqn").safeUnwrap();
-                        if( logicalUnitNumber.blockDevice?.vgName === undefined) {
-                            if(logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
-                                yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!,initiatorGroup.name).safeUnwrap();
-                            }
-                            else{
-                                const lvPath = logicalUnitNumber.blockDevice!.filePath;
-                                const pathParts = lvPath.split("/");
-                
-                               if (pathParts.length < 4) {
-                                 throw new Error(`Invalid block device path: ${lvPath}`);
-                                }
-       
-                                const vgname = pathParts[2];
-                                const lvname = pathParts[3];
-                                const server = logicalUnitNumber.blockDevice?.server;
-                               if (vgname && lvname && server) {
-                                   const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname,server).safeUnwrap();
-                                    logicalUnitNumber.blockDevice = logicalVolume;
-                                    }
-           
-                            yield* self.createAndConfigureLVResources(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!,initiatorGroup.name).safeUnwrap();
-                            if (logicalUnitNumber.blockDevice?.server) {
-                                logicalUnitNumber.blockDevice.server = self.rbdManager.allServers[0];
-                            }
-                        }
-                        }
-                       else  if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
-
-                            yield* self.createAndConfigureRBDResource(logicalUnitNumber, targetIQN!, targetResource.resourceGroup!,initiatorGroup.name).safeUnwrap();
-                        }
-                        const execServer =  self.rbdManager.allServers[0];
-                        console.log(self.rbdManager.allServers[0])
-                        return okAsync(execServer);
-                    }))
-                }
-
-                return errAsync(new ProcessError("Could not find Target resource."))
-            })
-    }
     
+    addLogicalUnitNumberToGroup(
+      initiatorGroup: InitiatorGroup,
+      logicalUnitNumber: LogicalUnitNumber,
+    ): ResultAsync<Server, ProcessError> {
+      const self = this;
+    
+      return this.pcsResourceManager
+        .fetchResourceByName(initiatorGroup.devicePath)
+        .andThen((targetResource) => {
+          if (!targetResource) {
+            return errAsync(new ProcessError("Could not find Target resource."));
+          }
+    
+          return new ResultAsync(
+            safeTry(async function* () {
+              const targetIQN = yield* self.pcsResourceManager
+                .fetchResourceInstanceAttributeValue(targetResource, "iqn")
+                .safeUnwrap();
+    
+              // Resolve the pin node for the group's active node
+              const pinNode = yield* self
+                .getPinNodeForGroup(targetResource.resourceGroup!)
+                .safeUnwrap();
+    
+              // NEW: derive anchors from PCS for this group
+              const anchors = yield* self.pcsResourceManager
+                .getAnchorsForGroup(targetResource.resourceGroup!)
+                .safeUnwrap();
+    
+              if (logicalUnitNumber.blockDevice?.vgName === undefined) {
+                if (logicalUnitNumber.blockDevice! instanceof LogicalVolume) {
+                  // LV already resolved
+                  yield* self
+                    .createAndConfigureLVResources(
+                      logicalUnitNumber,
+                      targetIQN!,
+                      targetResource.resourceGroup!,
+                      initiatorGroup.name,
+                      pinNode,
+                      anchors,        // <-- dynamic anchors from PCS
+                    )
+                    .safeUnwrap();
+    
+                } else {
+                  // Resolve LV from a raw /dev/<vg>/<lv> path
+                  const lvPath = logicalUnitNumber.blockDevice!.filePath;
+                  const parts  = lvPath.split("/");
+                  if (parts.length < 4) {
+                    throw new Error(`Invalid block device path: ${lvPath}`);
+                  }
+                  const vgname = parts[2];
+                  const lvname = parts[3];
+                  const server = logicalUnitNumber.blockDevice?.server;
+    
+                  if (vgname && lvname && server) {
+                    const logicalVolume = yield* self
+                      .resolveLogicalVolume(vgname, lvname, server)
+                      .safeUnwrap();
+                    logicalUnitNumber.blockDevice = logicalVolume;
+                  }
+    
+                  yield* self
+                    .createAndConfigureLVResources(
+                      logicalUnitNumber,
+                      targetIQN!,
+                      targetResource.resourceGroup!,
+                      initiatorGroup.name,
+                      pinNode,
+                      anchors,        // <-- dynamic anchors from PCS
+                    )
+                    .safeUnwrap();
+    
+                  if (logicalUnitNumber.blockDevice?.server) {
+                    logicalUnitNumber.blockDevice.server = self.rbdManager.allServers[0];
+                  }
+                }
+    
+              } else if (logicalUnitNumber.blockDevice! instanceof RadosBlockDevice) {
+                // RBD flow unchanged; adapt if you later want anchor-based placement here too
+                yield* self
+                  .createAndConfigureRBDResource(
+                    logicalUnitNumber,
+                    targetIQN!,
+                    targetResource.resourceGroup!,
+                    initiatorGroup.name
+                  )
+                  .safeUnwrap();
+              }
+    
+              const execServer = self.rbdManager.allServers[0];
+              console.log(self.rbdManager.allServers[0]);
+              return okAsync(execServer);
+            })
+          );
+        });
+    }
+        
     resolveLogicalVolume(vgname: string, lvname: string,server:Server): ResultAsync<LogicalVolume, Error> {
         const self = this;
         return server.execute(new BashCommand(`lvs --reportformat json --units B`))
@@ -482,10 +533,8 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                   yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetResource!).safeUnwrap();
                 }
               } else if (logicalUnitNumber.blockDevice instanceof RadosBlockDevice) {
-                console.log("Removing RBD LUN and related resources");
                 yield* self.removeRBDAndRelatedResource(logicalUnitNumber).safeUnwrap();
               } else {
-                console.log("Removing unknown LUN and related resources");
                 yield* self.removeLUNResource(logicalUnitNumber).safeUnwrap();
               }
               return ok(undefined);
@@ -892,7 +941,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
                 .andThen((resource) => this.pcsResourceManager.constrainResourceToGroup(resource, group,server)
                     .andThen(() => this.pcsResourceManager.orderResourceBeforeGroup(resource, group)))
             )
-            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit implementation=scst target_iqn=${targetIQN} path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
+            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat1:iSCSILogicalUnit implementation=scst target_iqn=${targetIQN} path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
             .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
     }
 
@@ -909,7 +958,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         }))
     }
 
-    //  createAndConfigureLVResources(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup,initiatorGroupName: string) {
+    //  createAndConfigureLVResources(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup,initiatorGroupName: string, pinNode: string,) {
     //     const self = this;
     //    const server = lun.blockDevice?.server;
     //     const blockDevice = (lun.blockDevice! as LogicalVolume);
@@ -917,137 +966,239 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
     //     if(!server){
     //         return errAsync(new ProcessError("Server is undefined for Logical Volume"));
     //     }
-    //     const rbdResources: PCSResource[] = [];
+    //     if (!pinNode) {
+    //       return errAsync(new ProcessError("pinNode is empty"));
+    //     }
     //     return server.execute(new BashCommand(`lvchange -an ${blockDevice!.volumeGroup.name}/${blockDevice!.deviceName}`))
     //         .andThen(() => new ResultAsync(safeTry(async function* () {
     //             for (let physicalVolume of blockDevice.volumeGroup.volumes) {
     //                 yield* server.execute(new BashCommand(`rbd unmap ${physicalVolume.rbd.parentPool.name}/${physicalVolume.rbd.deviceName}`)).safeUnwrap();
-                    
-    //                 const rbdResource = yield* self.pcsResourceManager.createResource(`RBD_${physicalVolume.rbd.deviceName}`, `ocf:ceph:rbd name=${physicalVolume.rbd.deviceName} pool=${physicalVolume.rbd.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD,server).safeUnwrap();
-    //                 rbdResources.push(rbdResource);
+    //                 const rbdName = physicalVolume.rbd.deviceName
+    //                 const pcsId   = `RBD_${rbdName}`;                            // e.g., RBD_group6_1_RBD_1
+    //                 const pinId   = `tmp-pin-${pcsId}`;   
+                                            
+    //                 const resource = yield* self.pcsResourceManager.createResource(`RBD_${physicalVolume.rbd.deviceName}`, `ocf:ceph:rbd name=${physicalVolume.rbd.deviceName} pool=${physicalVolume.rbd.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD,server).safeUnwrap();
+    //                        yield* server.execute(new BashCommand(
+    //       `pcs constraint location ${pcsId} rule id=${pinId} score=INFINITY '#uname' eq ${pinNode}`
+    //     )).safeUnwrap();
+    //                 yield* self.pcsResourceManager.constrainResourceToGroup(resource, group,server).safeUnwrap();
+    //                 yield* self.pcsResourceManager.orderResourceBeforeGroup(resource, group).safeUnwrap();
 
     //             }
-    //             const LvmResource = yield* self.pcsResourceManager.createResource(`${self.resourceNamePrefix}_LVM_${blockDevice.deviceName}_${blockDevice.volumeGroup.name}`, `ocf:heartbeat:LVM-activate lvname=${blockDevice.deviceName} vgname=${blockDevice.volumeGroup.name} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, PCSResourceType.LVM,server).safeUnwrap();
-    //             const LunResource = yield* self .pcsResourceManager.createResource(`${self.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN}  path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server).safeUnwrap();
-           
-    //             for(const rbd of rbdResources){
-    //             yield* self.pcsResourceManager.constrainResourceToGroup(rbd, group,server).safeUnwrap();
-    //             yield* self.pcsResourceManager.orderResourceBeforeGroup(rbd, group).safeUnwrap();
 
-    //            }
-    //            yield* self.pcsResourceManager.addLVResourceToGroup(LvmResource, group,).safeUnwrap();
-    //            yield* self.pcsResourceManager.addLVResourceToGroup(LunResource,group, "iscsi_PORTBLOCKOFF_192.168.207.10").safeUnwrap();
-
-
-    //            yield* self.server.execute(new BashCommand(`pcs resource cleanup`)).safeUnwrap();
-               
-    //            return ok(undefined);
+    //             return ok(undefined);
     //         })))
+    //         .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LVM_${blockDevice.deviceName}_${blockDevice.volumeGroup.name}`, `ocf:heartbeat1:LVM-activate lvname=${blockDevice.deviceName} vgname=${blockDevice.volumeGroup.name} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, PCSResourceType.LVM,server))
+    //         .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
+    //         .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat1:iSCSILogicalUnit target_iqn=${targetIQN}  path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
+    //         .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
+    //         .andThen(() => this.server.execute(new BashCommand(`pcs resource cleanup`)))
     // }
-
-    createAndConfigureLVResources(lun: LogicalUnitNumber, targetIQN: string, group: PCSResourceGroup,initiatorGroupName: string) {
-      const self = this;
-     const server = lun.blockDevice?.server;
-      const blockDevice = (lun.blockDevice! as LogicalVolume);
-      // const blockDevice = lun.blockDevice ?? await self.resolveLogicalVolume(lun);
-      if(!server){
-          return errAsync(new ProcessError("Server is undefined for Logical Volume"));
-      }
-      return server.execute(new BashCommand(`lvchange -an ${blockDevice!.volumeGroup.name}/${blockDevice!.deviceName}`))
-          .andThen(() => new ResultAsync(safeTry(async function* () {
-              for (let physicalVolume of blockDevice.volumeGroup.volumes) {
-                  yield* server.execute(new BashCommand(`rbd unmap ${physicalVolume.rbd.parentPool.name}/${physicalVolume.rbd.deviceName}`)).safeUnwrap();
-                  
-                  const resource = yield* self.pcsResourceManager.createResource(`RBD_${physicalVolume.rbd.deviceName}`, `ocf:ceph:rbd name=${physicalVolume.rbd.deviceName} pool=${physicalVolume.rbd.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD,server).safeUnwrap();
-                  yield* self.pcsResourceManager.constrainResourceToGroup(resource, group,server).safeUnwrap();
-                  yield* self.pcsResourceManager.orderResourceBeforeGroup(resource, group).safeUnwrap();
-
-              }
-
-              return ok(undefined);
-          })))
-          .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LVM_${blockDevice.deviceName}_${blockDevice.volumeGroup.name}`, `ocf:heartbeat:LVM-activate lvname=${blockDevice.deviceName} vgname=${blockDevice.volumeGroup.name} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, PCSResourceType.LVM,server))
-          .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
-          .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN}  path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
-          .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
-          .andThen(() => this.server.execute(new BashCommand(`pcs resource cleanup`)))
-  }
-
-    removeLVAndRelatedResources(lun: LogicalUnitNumber, targetResource: PCSResource) {
-      const self = this;
-      const blockDevice = lun.blockDevice! as LogicalVolume;
-      return new ResultAsync(
-        safeTry(async function* () {
-          const rbdsToRemove: RadosBlockDevice[] =
-            blockDevice.volumeGroup.volumes.map(pv => pv.rbd);
+    createAndConfigureLVResources(
+      lun: LogicalUnitNumber,
+      targetIQN: string,
+      group: PCSResourceGroup,
+      initiatorGroupName: string,
+      pinNode: string,
+      anchors: { targetPrimitiveId: string ; portBlockOffId: string },
+    ) {
+      console.log("pinNode ", pinNode);
+      const self   = this;
+      const server = lun.blockDevice?.server;
+      const blk    = lun.blockDevice as LogicalVolume;
     
-          self.pcsResourceManager.removeResourceFromGroup(
-            targetResource?.resourceGroup?.name!,
-            "iscsi_LUN_" + lun.name
-          );
+      if (!server)  return errAsync(new ProcessError("Server is undefined for Logical Volume"));
+      if (!pinNode) return errAsync(new ProcessError("pinNode is empty"));
     
-          const allResources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
-          const lvmResources = allResources.filter(r => r.resourceType === PCSResourceType.LVM);
-          const rbdResources = allResources.filter(r => r.resourceType === PCSResourceType.RBD);
+      const vgName = blk.volumeGroup.name;
+      const lvName = blk.deviceName;
+      const lvPath = blk.filePath;
     
-          let matchedLvm: PCSResource | undefined;
-          for (const resource of lvmResources) {
-            const values = yield* self.pcsResourceManager
-              .fetchResourceInstanceAttributeValues(resource, ["lvname", "vgname"])
-              .safeUnwrap();
+      // Track pins to remove if requested
+      const createdPinIds: string[] = [];
+      const rbdRes: PCSResource[] = [];
+      let   lvmRes: PCSResource | undefined;
+      let   lunRes: PCSResource | undefined;
     
-            if (
-              values.get("lvname") === blockDevice.deviceName &&
-              values.get("vgname") === blockDevice.volumeGroup.name
-            ) {
-              self.pcsResourceManager.removeResourceFromGroup(
-                targetResource?.resourceGroup?.name!,
-                "iscsi_LVM_" + lun.name + "_" + blockDevice.volumeGroup.name
-              );
-              matchedLvm = resource;
-              break;
+      const lvmRid = `${this.resourceNamePrefix}_LVM_${lvName}_${vgName}`;
+      const lunRid = `${this.resourceNamePrefix}_LUN_${lvName}`;
+    
+      const pinById = async (rid: string) => {
+        const pinId = `tmp-pin-${rid}`;
+        console.log(`pcs constraint location ${rid} rule id=${pinId} score=INFINITY '#uname' eq ${pinNode}`);
+        await server
+          .execute(new BashCommand(`pcs constraint location ${rid} rule id=${pinId} score=INFINITY '#uname' eq ${pinNode}`))
+          .map(() => undefined);
+        createdPinIds.push(pinId);
+      };
+    
+      const addToGroupWithOptionalAnchor = (res: PCSResource, resId: string, beforeId?: string) => {
+        if (beforeId) {
+          return server
+            .execute(new BashCommand(`pcs resource group add ${group.name} ${resId} --before ${beforeId}`))
+            .map(() => res);
+        }
+        return self.pcsResourceManager.addResourceToGroup(res, group).map(() => res);
+      };
+    
+      const removePinsBatch = async () => {
+        for (const pid of createdPinIds) {
+          console.log(`Removing pin constraint ${pid}`);
+          await server.execute(new BashCommand(`pcs constraint remove ${pid}`))
+            .then(() => undefined, () => undefined); // ignore if already gone
+        }
+      };
+    
+      // 1) Deactivate LV so agents control it
+      return server.execute(new BashCommand(`lvchange -an ${vgName}/${lvName}`))
+    
+        // 2) RBDs: unmap -> create (disabled) -> pin (do NOT enable yet)
+        .andThen(() =>
+          new ResultAsync(safeTry(async function* () {
+            for (const pv of blk.volumeGroup.volumes) {
+              const rbdName = pv.rbd.deviceName;
+              const pool    = pv.rbd.parentPool.name;
+              const rbdRid  = `RBD_${rbdName}`;
+    
+              yield* server.execute(new BashCommand(`rbd unmap ${pool}/${rbdName} || true`)).safeUnwrap();
+    
+              const r = yield* self.pcsResourceManager.createResource(
+                rbdRid,
+                `ocf:ceph:rbd name=${rbdName} pool=${pool} user=admin cephconf=/etc/ceph/ceph.conf ` +
+                `op start timeout=60 interval=0 op stop timeout=60 interval=0 op monitor timeout=30 interval=15 --disabled`,
+                PCSResourceType.RBD,
+                server
+              ).safeUnwrap();
+              rbdRes.push(r);
+    
+              yield* ResultAsync.fromPromise(pinById(rbdRid), (e) => new ProcessError(String(e))).safeUnwrap();
             }
-          }
+            return ok(undefined);
+          }))
+        )
     
-          const rbdMatches: { resource: PCSResource; rbd: RadosBlockDevice }[] = [];
-          for (const resource of rbdResources) {
-            const values = yield* self.pcsResourceManager
-              .fetchResourceInstanceAttributeValues(resource, ["name", "pool"])
-              .safeUnwrap();
+        // 3) LVM-activate: create (disabled) -> pin
+        .andThen(() =>
+          self.pcsResourceManager.createResource(
+            lvmRid,
+            `ocf:heartbeat1:LVM-activate lvname=${lvName} vgname=${vgName} activation_mode=exclusive vg_access_mode=system_id ` +
+            `op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60 --disabled`,
+            PCSResourceType.LVM,
+            server
+          ).andThen(res =>
+            new ResultAsync(safeTry(async function* () {
+              lvmRes = res;
+              yield* ResultAsync.fromPromise(pinById(lvmRid), (e) => new ProcessError(String(e))).safeUnwrap();
+              return ok(res);
+            }))
+          )
+        )
     
-            const name = values.get("name");
-            const pool = values.get("pool");
+        // 4) LUN: create (disabled) -> pin
+        .andThen(() =>
+          self.pcsResourceManager.createResource(
+            lunRid,
+            `ocf:heartbeat1:iSCSILogicalUnit target_iqn=${targetIQN} path=${lvPath} ` +
+            `lun=${lun.unitNumber} implementation=scst group=${initiatorGroupName} ` +
+            `op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100 --disabled`,
+            PCSResourceType.LUN,
+            server
+          ).andThen(res =>
+            new ResultAsync(safeTry(async function* () {
+              lunRes = res;
+              yield* ResultAsync.fromPromise(pinById(lunRid), (e) => new ProcessError(String(e))).safeUnwrap();
+              return ok(res);
+            }))
+          )
+        )
     
-            const match = rbdsToRemove.find(
-              rbd => rbd.deviceName === name && rbd.parentPool.name === pool
-            );
-            if (match) rbdMatches.push({ resource, rbd: match });
-          }
+        // 5) Enable in order: all RBDs -> LVM -> LUN
+        .andThen(() =>
+          new ResultAsync(safeTry(async function* () {
+            for (const r of rbdRes) {
+              yield* self.pcsResourceManager.enableResources(r.name).safeUnwrap();
+            }
+            yield* self.pcsResourceManager.enableResources(lvmRid).safeUnwrap();
+            yield* self.pcsResourceManager.enableResources(lunRid).safeUnwrap();
+            return ok(undefined);
+          }))
+        )
     
-          // Remove matched RBDs from order group (no delete yet)
-          for (const { rbd } of rbdMatches) {
-            self.pcsResourceManager.removeResourcefromOrderGroup(
-              rbd.deviceName,
-              targetResource.resourceGroup!.name!
-            );
-          }
+        // 6) Constrain & order each RBD with the target group
+        .andThen(() =>
+          new ResultAsync(safeTry(async function* () {
+            for (const r of rbdRes) {
+              yield* self.pcsResourceManager.constrainResourceToGroup(r, group, server).safeUnwrap();
+              yield* self.pcsResourceManager.orderResourceBeforeGroup(r, group).safeUnwrap();
+            }
+            return ok(undefined);
+          }))
+        )
     
-          // Remove the LUN resource
-          yield* self.removeLUNResource(lun).safeUnwrap();
-    
-          // Delete the matched LVM resource (no re-scan)
-          if (matchedLvm) {
-            yield* self.pcsResourceManager.deleteResource(matchedLvm).safeUnwrap();
-          }
-    
-          for (const { resource } of rbdMatches) {
-            yield* self.pcsResourceManager.deleteResource(resource).safeUnwrap();
-          }
-          return ok(undefined);
+        .andThen(() =>
+          new ResultAsync(safeTry(async function* () {
+            if (!lvmRes || !lunRes) return err(new ProcessError("Internal error: missing LVM or LUN resource"));
+            yield* addToGroupWithOptionalAnchor(lvmRes, lvmRid, anchors?.targetPrimitiveId).safeUnwrap();
+            yield* addToGroupWithOptionalAnchor(lunRes, lunRid, anchors?.portBlockOffId).safeUnwrap();
+            return ok(undefined);
+          }))
+        )
+            .andThen(() => {
+          return ResultAsync.fromPromise(removePinsBatch(), (e) => new ProcessError(String(e)));
         })
-      );
+        .andThen(() => self.server.execute(new BashCommand(`pcs resource cleanup`)));
     }
-removeRBDResources(rbdsToRemove: RadosBlockDevice[]) {
+    
+    
+    removeLVAndRelatedResources(lun: LogicalUnitNumber, targetResource: PCSResource) {
+        const self = this;
+
+        const blockDevice = lun.blockDevice! as LogicalVolume;
+        return new ResultAsync(safeTry(async function* () {
+            let rbdsToRemove = blockDevice.volumeGroup.volumes.map((physicalVolume) => physicalVolume.rbd);
+            self.pcsResourceManager.removeResourceFromGroup(targetResource?.resourceGroup?.name!,"iscsi_LUN_"+lun.name);
+         
+            const lvmResources11 = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
+
+            for (var resource of lvmResources11.filter((resource) => resource.resourceType === PCSResourceType.LVM)) {
+              const values = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["lvname", "vgname"]).safeUnwrap();
+              if (values.get("lvname") === blockDevice.deviceName && values.get("vgname") === blockDevice.volumeGroup.name) {
+                self.pcsResourceManager.removeResourceFromGroup(targetResource?.resourceGroup?.name!!,"iscsi_LVM_"+lun.name+"_"+blockDevice.volumeGroup.name)
+                break;
+              }
+          }
+            const rbdResources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
+
+            for (var resource of rbdResources.filter((resource) => resource.resourceType === PCSResourceType.RBD)) {
+              const values = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["name", "pool"]).safeUnwrap();
+
+              for (var rbdToRemove of rbdsToRemove) {
+                  if (values.get("name") === rbdToRemove.deviceName && values.get("pool") === rbdToRemove.parentPool.name) {
+             //         yield* self.pcsResourceManager.disableResource(resource).safeUnwrap();
+                       self.pcsResourceManager.removeResourcefromOrderGroup(rbdToRemove.deviceName,targetResource.resourceGroup!.name!)
+                      break;
+                  }
+              }
+          }
+
+            yield* self.removeLUNResource(lun).safeUnwrap();
+
+            const lvmResources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
+
+            for (var resource of lvmResources.filter((resource) => resource.resourceType === PCSResourceType.LVM)) {
+                const values = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["lvname", "vgname"]).safeUnwrap();
+                if (values.get("lvname") === blockDevice.deviceName && values.get("vgname") === blockDevice.volumeGroup.name) {
+                    yield* self.pcsResourceManager.deleteResource(resource).safeUnwrap();
+                    break;
+                }
+            }
+            yield* self.removeRBDResources(rbdsToRemove).safeUnwrap();
+
+            return ok(undefined);
+        }))
+    }
+
+    removeRBDResources(rbdsToRemove: RadosBlockDevice[]) {
         const self = this;
         return new ResultAsync(safeTry(async function* () {
             const rbdResources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
@@ -1078,7 +1229,7 @@ removeRBDResources(rbdsToRemove: RadosBlockDevice[]) {
               if(resource.name == lun.name)
                console.log("Removing LUN resource:",resource.name)
                     yield* self.pcsResourceManager.deleteResource(resource).safeUnwrap();
-                    break
+                    break               
             }
             return ok(undefined);
         }));
