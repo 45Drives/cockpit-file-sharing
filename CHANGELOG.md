@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.4.1-2
+## Cockpit File Sharing 4.4.1-3
 
-* changed the commands of addition groups
+* removed reference to heartbeat1

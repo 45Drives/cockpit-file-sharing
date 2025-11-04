@@ -941,7 +941,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
                 .andThen((resource) => this.pcsResourceManager.constrainResourceToGroup(resource, group,server)
                     .andThen(() => this.pcsResourceManager.orderResourceBeforeGroup(resource, group)))
             )
-            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat1:iSCSILogicalUnit implementation=scst target_iqn=${targetIQN} path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
+            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit implementation=scst target_iqn=${targetIQN} path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
             .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
     }
 
@@ -988,9 +988,9 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
 
     //             return ok(undefined);
     //         })))
-    //         .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LVM_${blockDevice.deviceName}_${blockDevice.volumeGroup.name}`, `ocf:heartbeat1:LVM-activate lvname=${blockDevice.deviceName} vgname=${blockDevice.volumeGroup.name} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, PCSResourceType.LVM,server))
+    //         .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LVM_${blockDevice.deviceName}_${blockDevice.volumeGroup.name}`, `ocf:heartbeat:LVM-activate lvname=${blockDevice.deviceName} vgname=${blockDevice.volumeGroup.name} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, PCSResourceType.LVM,server))
     //         .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
-    //         .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat1:iSCSILogicalUnit target_iqn=${targetIQN}  path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
+    //         .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN}  path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
     //         .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
     //         .andThen(() => this.server.execute(new BashCommand(`pcs resource cleanup`)))
     // }
@@ -1081,7 +1081,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         .andThen(() =>
           self.pcsResourceManager.createResource(
             lvmRid,
-            `ocf:heartbeat1:LVM-activate lvname=${lvName} vgname=${vgName} activation_mode=exclusive vg_access_mode=system_id ` +
+            `ocf:heartbeat:LVM-activate lvname=${lvName} vgname=${vgName} activation_mode=exclusive vg_access_mode=system_id ` +
             `op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60 --disabled`,
             PCSResourceType.LVM,
             server
@@ -1098,7 +1098,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         .andThen(() =>
           self.pcsResourceManager.createResource(
             lunRid,
-            `ocf:heartbeat1:iSCSILogicalUnit target_iqn=${targetIQN} path=${lvPath} ` +
+            `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN} path=${lvPath} ` +
             `lun=${lun.unitNumber} implementation=scst group=${initiatorGroupName} ` +
             `op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100 --disabled`,
             PCSResourceType.LUN,

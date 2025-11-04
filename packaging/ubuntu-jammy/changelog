@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.4.1-3jammy) jammy; urgency=medium
+
+  * removed reference to heartbeat1
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 04 Nov 2025 13:21:24 -0400
+
 cockpit-file-sharing (4.4.1-2jammy) jammy; urgency=medium
 
   * changed the commands of addition groups
