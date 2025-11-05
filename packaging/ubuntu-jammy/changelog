@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.4.1-4jammy) jammy; urgency=medium
+
+  * fixed deletion of incrorect lun
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 05 Nov 2025 15:31:48 -0400
+
 cockpit-file-sharing (4.4.1-3jammy) jammy; urgency=medium
 
   * removed reference to heartbeat1

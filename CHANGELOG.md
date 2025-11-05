@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.4.1-3
+## Cockpit File Sharing 4.4.1-4
 
-* removed reference to heartbeat1
+* fixed deletion of incrorect lun

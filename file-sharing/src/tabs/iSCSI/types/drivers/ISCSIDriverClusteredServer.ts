@@ -172,7 +172,24 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                 });
         });
     }
-
+    private findLunBy(path: string, groupName: string, targetIQN: string)
+    : ResultAsync<PCSResource | undefined, ProcessError> {
+    const self = this;
+    return new ResultAsync(safeTry(async function* () {
+      const all = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
+      for (const res of all.filter(r => r.resourceType === PCSResourceType.LUN)) {
+        const attrs = yield* self.pcsResourceManager
+          .fetchResourceInstanceAttributeValues(res, ["path","group","target_iqn"])
+          .safeUnwrap();
+        if ((attrs.get("path") ?? "") === path &&
+            (attrs.get("group") ?? "") === groupName &&
+            (attrs.get("target_iqn") ?? "") === targetIQN) {
+          return ok(res);
+        }
+      }
+      return ok(undefined);
+    }));
+  }
     deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<void, ProcessError> {
         return this.findTargetPCSResource(target)
             .andThen((targetResource) => {
@@ -467,6 +484,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             .map((lvData) => {
                 const lvs = lvData?.report?.flatMap((r) => r.lv) ?? [];
                 const match = lvs.find((lv) => lv.lv_name === lvname && lv.vg_name === vgname);
+                
                 if (!match) throw new Error(`Logical volume ${vgname}/${lvname} not found`);
                 return match;
             })
@@ -512,7 +530,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                 console.log("logicalUnitNumber",logicalUnitNumber)  
               if (logicalUnitNumber.blockDevice?.vgName === undefined) {
                 if (logicalUnitNumber.blockDevice instanceof LogicalVolume) {
-                  yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetResource!).safeUnwrap();
+                  yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetResource!,initiatorGroup.name,targetIQN!).safeUnwrap();
                 } else {
                   const lvPath = logicalUnitNumber.blockDevice!.filePath;
                   const pathParts = lvPath.split("/");
@@ -528,14 +546,16 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                   if (vgname && lvname && server) {
                     const logicalVolume = yield* self.resolveLogicalVolume(vgname, lvname,server).safeUnwrap();
                     logicalUnitNumber.blockDevice = logicalVolume;
+                    console.log("logicalUnitNumber after resolve",logicalUnitNumber)
                   }
       
-                  yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetResource!).safeUnwrap();
+                  yield* self.removeLVAndRelatedResources(logicalUnitNumber, targetResource!,initiatorGroup.name,targetIQN!).safeUnwrap();
                 }
               } else if (logicalUnitNumber.blockDevice instanceof RadosBlockDevice) {
-                yield* self.removeRBDAndRelatedResource(logicalUnitNumber).safeUnwrap();
+                yield* self.removeRBDAndRelatedResource(logicalUnitNumber,initiatorGroup.name,targetIQN!).safeUnwrap();
               } else {
-                yield* self.removeLUNResource(logicalUnitNumber).safeUnwrap();
+                yield* self.removeLUNResource(logicalUnitNumber, initiatorGroup.name, targetIQN!).safeUnwrap();
+
               }
               return ok(undefined);
             }))
@@ -945,12 +965,12 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
             .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
     }
 
-    removeRBDAndRelatedResource(lun: LogicalUnitNumber) {
+    removeRBDAndRelatedResource(lun: LogicalUnitNumber,groupName:string, targetIQN:string) {
         const self = this;
         const blockDevice = lun.blockDevice! as RadosBlockDevice;
 
         return new ResultAsync(safeTry(async function* () {
-            yield* self.removeLUNResource(lun).safeUnwrap();
+            yield* self.removeLUNResource(lun,groupName,targetIQN).safeUnwrap();
             yield* self.removeRBDResources([blockDevice]).safeUnwrap();
 
 
@@ -1150,14 +1170,15 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
     }
     
     
-    removeLVAndRelatedResources(lun: LogicalUnitNumber, targetResource: PCSResource) {
+    removeLVAndRelatedResources(lun: LogicalUnitNumber, targetResource: PCSResource,groupName: string,
+    targetIQN: string ){
         const self = this;
 
         const blockDevice = lun.blockDevice! as LogicalVolume;
         return new ResultAsync(safeTry(async function* () {
             let rbdsToRemove = blockDevice.volumeGroup.volumes.map((physicalVolume) => physicalVolume.rbd);
             self.pcsResourceManager.removeResourceFromGroup(targetResource?.resourceGroup?.name!,"iscsi_LUN_"+lun.name);
-         
+          console.log("Removing LV and related resources for LUN: iscsi_LUN_",lun.name)
             const lvmResources11 = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
 
             for (var resource of lvmResources11.filter((resource) => resource.resourceType === PCSResourceType.LVM)) {
@@ -1180,14 +1201,15 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
                   }
               }
           }
-
-            yield* self.removeLUNResource(lun).safeUnwrap();
+            console.log("Removing LUN resource:",lun.name)
+            yield* self.removeLUNResource(lun, groupName, targetIQN).safeUnwrap();
 
             const lvmResources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
 
             for (var resource of lvmResources.filter((resource) => resource.resourceType === PCSResourceType.LVM)) {
                 const values = yield* self.pcsResourceManager.fetchResourceInstanceAttributeValues(resource, ["lvname", "vgname"]).safeUnwrap();
                 if (values.get("lvname") === blockDevice.deviceName && values.get("vgname") === blockDevice.volumeGroup.name) {
+                  console.log("Removing LVM resource:",resource.name)
                     yield* self.pcsResourceManager.deleteResource(resource).safeUnwrap();
                     break;
                 }
@@ -1219,21 +1241,38 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         }));
     }
 
-    removeLUNResource(lun: LogicalUnitNumber) {
-        const self = this;
 
-        return new ResultAsync(safeTry(async function* () {
-            const lunResources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
 
-            for (var resource of lunResources.filter((resource) => resource.resourceType === PCSResourceType.LUN)) {
-              if(resource.name == lun.name)
-               console.log("Removing LUN resource:",resource.name)
-                    yield* self.pcsResourceManager.deleteResource(resource).safeUnwrap();
-                    break               
-            }
-            return ok(undefined);
-        }));
+    private countLunsReferencingPath(path: string): ResultAsync<number, ProcessError> {
+      const self = this;
+      return new ResultAsync(safeTry(async function* () {
+        const all = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
+        let n = 0;
+        for (const res of all.filter(r => r.resourceType === PCSResourceType.LUN)) {
+          const attrs = yield* self.pcsResourceManager
+            .fetchResourceInstanceAttributeValues(res, ["path"])
+            .safeUnwrap();
+          if ((attrs.get("path") ?? "") === path) n++;
+        }
+        return ok(n);
+      }));
     }
+
+     removeLUNResource(
+      lun: LogicalUnitNumber,
+      groupName: string,
+      targetIQN: string
+    ): ResultAsync<void, ProcessError> {
+      const self = this;
+      const path = lun.blockDevice!.filePath;
+      return this.findLunBy(path, groupName, targetIQN)
+        .andThen(res => {
+          if (!res) return okAsync(undefined); // already gone / nothing to do
+          return self.pcsResourceManager.deleteResource(res);
+        })
+        .map(() => undefined);
+    }
+    
 }
 
 

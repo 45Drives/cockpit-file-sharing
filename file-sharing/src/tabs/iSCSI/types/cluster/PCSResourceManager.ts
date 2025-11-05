@@ -28,6 +28,7 @@ export class PCSResourceManager {
       }
 
     deleteResource(resource: Pick<PCSResource, "name">) {
+      console.log(`pcs resource delete '${resource.name}'`);
         return this.server.execute(new BashCommand(`pcs resource delete '${resource.name}'`))
         .map(() => {
             this.currentResources = this.currentResources!.filter((existingResource) => existingResource.name !== resource.name);
