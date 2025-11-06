@@ -288,7 +288,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
                   const updated = this.serializeInitiatorGroups(map);
                   if (updated === existing) return okAsync(undefined);
                   return this.pcsResourceManager
-                    .updateResource(res, `initiator_groups=${updated}`)
+                    .updateResource(res, `initiator_groups=${this.shellQuoteSingle(updated)}`)
                     .map(() => undefined);
                 });
             })
@@ -759,6 +759,11 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
     }
     return out;
   }  
+  
+  shellQuoteSingle(s: string): string {
+    // Safely single-quote for POSIX shells: 'foo' -> 'foo', but "a'b" -> 'a'\''b'
+    return `'${s.replace(/'/g, `'\''`)}'`;
+  }
    serializeInitiatorGroups(groups: Map<string, string[]>): string {
     // Keep stable alphabetical order; change to original order if you prefer.
     return Array.from(groups.keys())
@@ -1241,22 +1246,6 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         }));
     }
 
-
-
-    private countLunsReferencingPath(path: string): ResultAsync<number, ProcessError> {
-      const self = this;
-      return new ResultAsync(safeTry(async function* () {
-        const all = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
-        let n = 0;
-        for (const res of all.filter(r => r.resourceType === PCSResourceType.LUN)) {
-          const attrs = yield* self.pcsResourceManager
-            .fetchResourceInstanceAttributeValues(res, ["path"])
-            .safeUnwrap();
-          if ((attrs.get("path") ?? "") === path) n++;
-        }
-        return ok(n);
-      }));
-    }
 
      removeLUNResource(
       lun: LogicalUnitNumber,

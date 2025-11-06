@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.4.1-4
+## Cockpit File Sharing 4.4.1-5
 
-* fixed deletion of incrorect lun
+* shell escaping colons
