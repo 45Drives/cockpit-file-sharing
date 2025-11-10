@@ -4,7 +4,7 @@
     "title": "Cockpit File Sharing",
     "description": "A cockpit module to make file sharing with Samba and NFS easier.",
     "version": "4.4.1",
-    "build_number": "6",
+    "build_number": "7",
     "stable": false,
     "author": "Josh Boudreau <jboudreau@45drives.com>",
     "git_url": "https://github.com/45Drives/cockpit-file-sharing",
@@ -76,11 +76,9 @@
     "changelog": {
         "urgency": "medium",
         "version": "4.4.1",
-        "build_number": "6",
-        "date": "2025-11-10T10:42:20.045259",
-        "packager": "Rachit Hans <rhans@45drives.com>",
-        "changes": [
-            "fixed deletion race condition causiong issue for multiple lun deletion"
-        ]
+        "build_number": "7",
+        "date": null,
+        "packager": "Josh Boudreau <jboudreau@45drives.com>",
+        "changes": []
     }
 }

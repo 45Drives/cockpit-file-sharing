@@ -28,6 +28,9 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el9 install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Nov 10 2025 Rachit Hans <rhans@45drives.com> 4.4.1-7
+- fixed deletion race condition causiong issue for multiple lun deletion
+- updated ip of lun added to group
 * Mon Nov 10 2025 Rachit Hans <rhans@45drives.com> 4.4.1-6
 - fixed deletion race condition causiong issue for multiple lun deletion
 * Thu Nov 06 2025 Rachit Hans <rhans@45drives.com> 4.4.1-5

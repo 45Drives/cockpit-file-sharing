@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.4.1-7focal) focal; urgency=medium
+
+  * fixed deletion race condition causiong issue for multiple lun deletion
+  * updated ip of lun added to group
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 10 Nov 2025 08:17:34 -0400
+
 cockpit-file-sharing (4.4.1-6focal) focal; urgency=medium
 
   * fixed deletion race condition causiong issue for multiple lun deletion

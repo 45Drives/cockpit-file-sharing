@@ -118,10 +118,12 @@ const createLun = () => {
 
   return driver
   .andThen(d => d.addLogicalUnitNumberToGroup(props.initiatorGroup, payload))
-  .map((execServer ) => {
-    if(execServer){
-      dev.server = execServer;
+  .map((pinnedNode ) => {
+    console.log("execServer:", pinnedNode);
+    if(pinnedNode){
+      dev.server = pinnedNode;
     }
+    console.log("dev server", dev.server)
   })
   
   .mapErr(error => new ProcessError(

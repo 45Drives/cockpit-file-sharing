@@ -110,7 +110,8 @@ const refreshTable = () => {
       })
       .andThen(() =>
         driver.getVirtualDevices().map((devices) => {
-          virtualDevices.value = devices; 
+          virtualDevices.value.splice(0, virtualDevices.value.length, ...devices);
+
         })
       )
   );

@@ -525,7 +525,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     
               const execServer = self.rbdManager.allServers[0];
               console.log(self.rbdManager.allServers[0]);
-              return okAsync(execServer);
+              return okAsync(new Server(pinNode));
             })
           );
         });
