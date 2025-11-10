@@ -258,44 +258,99 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
           });
       }
 
+      // deleteInitiatorGroupFromTarget(
+      //   _target: Target,
+      //   group: InitiatorGroup
+      // ): ResultAsync<void, ProcessError> {
+      //   const ensureLuns =
+      //     Array.isArray(group.logicalUnitNumbers) && group.logicalUnitNumbers.length > 0
+      //       ? okAsync(group.logicalUnitNumbers)
+      //       : this.getLogicalUnitNumbersOfInitiatorGroup(group).map(luns => {
+      //           group.logicalUnitNumbers = luns;
+      //           return luns;
+      //         });      
+      //   return ensureLuns
+      //     .andThen(luns =>
+      //       ResultAsync
+      //         .combine(luns.map(l => this.removeLogicalUnitNumberFromGroup(group, l).map(() => undefined)))
+      //         .map(() => undefined)
+      //     )
+      //     .andThen(() =>
+      //       this.pcsResourceManager.fetchResourceByName(group.devicePath).andThen(res => {
+      //         if (!res) return errAsync(new ProcessError("Could not find Target resource."));
+      //         return this.pcsResourceManager
+      //           .fetchResourceInstanceAttributeValues({ name: res.name }, ["initiator_groups"])
+      //           .andThen(attrs => {
+      //             const existing = attrs.get("initiator_groups") ?? "";
+      //             const map = this.parseInitiatorGroups(existing);
+      //             if (!map.has(group.name)) return okAsync(undefined);
+      //             map.delete(group.name);
+      //             const updated = this.serializeInitiatorGroups(map);
+      //             if (updated === existing) return okAsync(undefined);
+      //             return this.pcsResourceManager
+      //               .updateResource(res, `initiator_groups=${this.shellQuoteSingle(updated)}`)
+      //               .map(() => undefined);
+      //           });
+      //       })
+      //     );
+      // }
       deleteInitiatorGroupFromTarget(
         _target: Target,
         group: InitiatorGroup
       ): ResultAsync<void, ProcessError> {
+        const self = this;
+      
         const ensureLuns =
           Array.isArray(group.logicalUnitNumbers) && group.logicalUnitNumbers.length > 0
             ? okAsync(group.logicalUnitNumbers)
             : this.getLogicalUnitNumbersOfInitiatorGroup(group).map(luns => {
                 group.logicalUnitNumbers = luns;
                 return luns;
-              });      
+              });
+      
         return ensureLuns
-          .andThen(luns =>
-            ResultAsync
-              .combine(luns.map(l => this.removeLogicalUnitNumberFromGroup(group, l).map(() => undefined)))
-              .map(() => undefined)
+          .andThen((initial) =>
+            new ResultAsync(safeTry(async function* () {
+              // SERIAL deletion prevents PCS churn/races.
+              let remaining = initial.slice();
+              let passes = 0;
+      
+              while (remaining.length && passes < 5) {
+                for (const lun of remaining) {
+                  yield* self.removeLogicalUnitNumberFromGroup(group, lun).safeUnwrap();
+                }
+                // Refresh after the pass
+                remaining = yield* self.getLogicalUnitNumbersOfInitiatorGroup(group).safeUnwrap();
+                passes++;
+              }
+      
+              return ok(undefined);
+            }))
           )
           .andThen(() =>
-            this.pcsResourceManager.fetchResourceByName(group.devicePath).andThen(res => {
+            // After LUNs are gone, remove the group's reference on the Target
+            self.pcsResourceManager.fetchResourceByName(group.devicePath).andThen(res => {
               if (!res) return errAsync(new ProcessError("Could not find Target resource."));
-              return this.pcsResourceManager
+              return self.pcsResourceManager
                 .fetchResourceInstanceAttributeValues({ name: res.name }, ["initiator_groups"])
                 .andThen(attrs => {
                   const existing = attrs.get("initiator_groups") ?? "";
-                  const map = this.parseInitiatorGroups(existing);
+                  const map = self.parseInitiatorGroups(existing);
                   if (!map.has(group.name)) return okAsync(undefined);
                   map.delete(group.name);
-                  const updated = this.serializeInitiatorGroups(map);
+                  const updated = self.serializeInitiatorGroups(map);
                   if (updated === existing) return okAsync(undefined);
-                  return this.pcsResourceManager
-                    .updateResource(res, `initiator_groups=${this.shellQuoteSingle(updated)}`)
+                  return self.pcsResourceManager
+                    .updateResource(res, `initiator_groups=${self.shellQuoteSingle(updated)}`)
                     .map(() => undefined);
                 });
             })
+          )
+          .andThen(() =>
+            self.server.execute(new BashCommand(`pcs resource cleanup`)).map(() => undefined)
           );
       }
-      
-  
+        
     addInitiatorToGroup(
     group: InitiatorGroup,
     newInitiator:  Initiator
@@ -584,9 +639,17 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             .andThen((targetResource) => this.pcsResourceManager.updateResource(targetResource, `incoming_username='' incoming_password=''`))
     }
 
-    getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
-        return okAsync(this.virtualDevices);
-    }
+ // ISCSIDriverClusteredServer
+// getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
+//   return this.getExistingVirtualDevices()
+//     .map((devices) => {
+//       this.virtualDevices = devices; // keep cache in sync
+//       return devices;
+//     });
+// }
+getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
+  return okAsync(this.virtualDevices);
+}
 
     getExistingVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
         const self = this;

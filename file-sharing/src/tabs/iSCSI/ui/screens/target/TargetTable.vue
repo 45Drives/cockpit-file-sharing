@@ -65,10 +65,12 @@ import type { Target } from "@/tabs/iSCSI/types/Target";
 import TargetEditor from "../target/TargetEditor.vue";
 import type { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
+import type { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 
 const showAddTarget = ref(false);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
+  const virtualDevices = inject<Ref<VirtualDevice[]>>("virtualDevices")!;
 
 const targets = inject<Ref<Target[]>>("targets")!;
 
@@ -83,13 +85,18 @@ watch(forceRefreshRecords, () => {
 
 const refreshTargets = () => {
   return driver.andThen((driver) => {
-    return driver.getTargets().map((targetList) => {
-      console.debug("Fetched targets:", targetList);
-      targets.value = targetList;
-    });
+    return driver.getTargets()
+      .andThen((targetList) => {
+        console.debug("Fetched targets:", targetList);
+        targets.value = targetList;
+        // NEW: also refresh devices so Devices table reflects removed LUNs
+        return driver.getVirtualDevices();
+      })
+      .map((devices) => {
+        virtualDevices.value = devices;
+      });
   });
 };
-
 const actions = wrapActions({ refreshTargets: refreshTargets });
 
 actions.refreshTargets();
