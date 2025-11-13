@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.4.1-8bookworm) bookworm; urgency=medium
+
+  * fixed edge case of targetname having colon
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 13 Nov 2025 13:35:53 -0400
+
 cockpit-file-sharing (4.4.1-7bookworm) bookworm; urgency=medium
 
   * fixed deletion race condition causiong issue for multiple lun deletion

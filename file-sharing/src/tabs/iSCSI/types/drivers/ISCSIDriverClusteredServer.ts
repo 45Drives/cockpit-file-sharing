@@ -258,42 +258,6 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
           });
       }
 
-      // deleteInitiatorGroupFromTarget(
-      //   _target: Target,
-      //   group: InitiatorGroup
-      // ): ResultAsync<void, ProcessError> {
-      //   const ensureLuns =
-      //     Array.isArray(group.logicalUnitNumbers) && group.logicalUnitNumbers.length > 0
-      //       ? okAsync(group.logicalUnitNumbers)
-      //       : this.getLogicalUnitNumbersOfInitiatorGroup(group).map(luns => {
-      //           group.logicalUnitNumbers = luns;
-      //           return luns;
-      //         });      
-      //   return ensureLuns
-      //     .andThen(luns =>
-      //       ResultAsync
-      //         .combine(luns.map(l => this.removeLogicalUnitNumberFromGroup(group, l).map(() => undefined)))
-      //         .map(() => undefined)
-      //     )
-      //     .andThen(() =>
-      //       this.pcsResourceManager.fetchResourceByName(group.devicePath).andThen(res => {
-      //         if (!res) return errAsync(new ProcessError("Could not find Target resource."));
-      //         return this.pcsResourceManager
-      //           .fetchResourceInstanceAttributeValues({ name: res.name }, ["initiator_groups"])
-      //           .andThen(attrs => {
-      //             const existing = attrs.get("initiator_groups") ?? "";
-      //             const map = this.parseInitiatorGroups(existing);
-      //             if (!map.has(group.name)) return okAsync(undefined);
-      //             map.delete(group.name);
-      //             const updated = this.serializeInitiatorGroups(map);
-      //             if (updated === existing) return okAsync(undefined);
-      //             return this.pcsResourceManager
-      //               .updateResource(res, `initiator_groups=${this.shellQuoteSingle(updated)}`)
-      //               .map(() => undefined);
-      //           });
-      //       })
-      //     );
-      // }
       deleteInitiatorGroupFromTarget(
         _target: Target,
         group: InitiatorGroup
@@ -860,10 +824,11 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
                 logicalUnitNumbers: [],
                 initiators: toInitiators(iqns),
               };
-      
+              console.log("initiator group: of target",group)
               group.logicalUnitNumbers = yield* self
                 .getLogicalUnitNumbersOfInitiatorGroup(group)
                 .safeUnwrap();
+                console.log(" group group.logicalUnitNumbers: ",group.logicalUnitNumbers)
               groups.push(group);
             }
       
@@ -885,52 +850,132 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
     }
 
     getLogicalUnitNumbersOfInitiatorGroup(
-        initiatorGroup: InitiatorGroup
-      ): ResultAsync<LogicalUnitNumber[], ProcessError> {   
-       const target = initiatorGroup.devicePath.split("iscsi_TARGET_")[1];  
+      initiatorGroup: InitiatorGroup
+    ): ResultAsync<LogicalUnitNumber[], ProcessError> {
+      console.log("getLogicalUnitNumbersOfInitiatorGroup called for", initiatorGroup);
+    
+      const targetPart = initiatorGroup.devicePath.split("iscsi_TARGET_")[1];
+      console.log("derived target name part:", targetPart);
+    
+      // Step 1: get the target IQN as a string | undefined
+      const targetIqnResult: ResultAsync<string | undefined, ProcessError | SyntaxError> =
+        targetPart
+          ? this.pcsResourceManager
+              .fetchResourceInstanceAttributeValues(
+                { name: "iscsi_TARGET_" + targetPart },
+                ["iqn"]
+              )
+              .map(attrs => {
+                const iqn = attrs.get("iqn");
+                console.log("resolved target iqn attr for", targetPart, "=>", iqn);
+                return iqn;
+              })
+          : errAsync(new ProcessError("Target is undefined"));
+    
+      // Step 2: once we have target_iqn, run your existing LUN logic
+      return targetIqnResult.andThen(target_iqn => {
+        const targetIqnStr = target_iqn ?? "";
+        console.log("using targetIqnStr for comparison:", targetIqnStr);
+    
         return this.pcsResourceManager.fetchResources()
-          .map(resources => resources.filter(r =>
-            r.resourceType === PCSResourceType.LUN
-          ))
+          .map(resources => {
+            console.log("all fetched resources:", resources);
+            const lunResources = resources.filter(
+              r => r.resourceType === PCSResourceType.LUN
+            );
+            console.log("LUN resources:", lunResources);
+            return lunResources;
+          })
           .andThen(lunResources =>
             ResultAsync.combine(
               lunResources.map(res =>
                 this.pcsResourceManager
-                  .fetchResourceInstanceAttributeValues(res, ["group", "lun", "path","target_iqn"])
-                  .map(attrs => ({ attrs }))
+                  .fetchResourceInstanceAttributeValues(res, ["group", "lun", "path", "target_iqn"])
+                  .map(attrs => {
+                    console.log("attrs for resource", res, {
+                      group: attrs.get("group"),
+                      lun: attrs.get("lun"),
+                      path: attrs.get("path"),
+                      target_iqn: attrs.get("target_iqn"),
+                    });
+                    return { attrs };
+                  })
               )
             )
           )
-          .map(items => items.filter(({ attrs }) =>
-            (attrs.get("group") ?? "") === initiatorGroup.name &&
-           (attrs.get("target_iqn") ?? "") === target
-          
-          ))
+          .map(items => {
+            console.log("all items before filter:", items.map(i => i.attrs));
+    
+            const filtered = items.filter(({ attrs }) =>
+              (attrs.get("group") ?? "") == initiatorGroup.name &&
+              (attrs.get("target_iqn") ?? "") === targetIqnStr
+            );
+    
+            console.log(
+              "filter step - initiatorGroup name:",
+              initiatorGroup.name,
+              ", target IQN:",
+              targetIqnStr
+            );
+            console.log(
+              "filtered items (matching group & target_iqn):",
+              filtered.map(i => i.attrs)
+            );
+    
+            if (filtered.length === 0) {
+              console.warn(
+                "No LUNs matched for initiator group",
+                initiatorGroup.name,
+                "with target IQN",
+                targetIqnStr
+              );
+            }
+            return filtered;
+          })
           .andThen(items =>
             ResultAsync.combine(
               items.map(({ attrs }) => {
                 const lunStr  = attrs.get("lun")  ?? "";
                 const pathRaw = attrs.get("path") ?? "";
-                const parsed = StringToIntCaster()(lunStr);
-                
-                const dev = this.virtualDevices.find(d =>
-                d.filePath === pathRaw
-                );
-      
+                const parsed  = StringToIntCaster()(lunStr);
+    
+                const dev = this.virtualDevices.find(d => d.filePath === pathRaw);
+    
                 if (!dev) {
+                  console.warn(
+                    "No virtualDevice found for path",
+                    pathRaw,
+                    "in initiator group",
+                    initiatorGroup.name
+                  );
                   return okAsync<LogicalUnitNumber | undefined>(undefined);
                 }
-
+    
+                console.log("initiator group:", initiatorGroup.name, "device found:", dev);
+    
                 return okAsync<LogicalUnitNumber | undefined>(
                   new LogicalUnitNumber(dev.deviceName, parsed.some(), dev)
                 );
               })
             )
           )
-         .map((list) => list.filter((lun) => lun !== undefined)) as ResultAsync<LogicalUnitNumber[], ProcessError>;
-      }
-                  
-
+          .map(list => {
+            const filteredLuns = list.filter(
+              (lun): lun is LogicalUnitNumber => lun !== undefined
+            );
+            console.log(
+              "final LogicalUnitNumbers for initiator group",
+              initiatorGroup.name,
+              "and target IQN",
+              targetIqnStr,
+              ":",
+              filteredLuns
+            );
+            return filteredLuns;
+          }) as ResultAsync<LogicalUnitNumber[], ProcessError>;
+      });
+    }
+    
     getInitiatorsOfInitiatorGroup(
         initiatorGroup: Pick<InitiatorGroup, "name" | "devicePath">
       ): ResultAsync<Initiator[], ProcessError> {

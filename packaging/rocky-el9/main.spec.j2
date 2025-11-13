@@ -28,6 +28,8 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el9 install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu Nov 13 2025 Rachit Hans <rhans@45drives.com> 4.4.1-8
+- fixed edge case of targetname having colon
 * Mon Nov 10 2025 Rachit Hans <rhans@45drives.com> 4.4.1-7
 - fixed deletion race condition causiong issue for multiple lun deletion
 - updated ip of lun added to group
