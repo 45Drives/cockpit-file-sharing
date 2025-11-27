@@ -23,6 +23,10 @@ export type UserSettings = {
     confPath: string;
     tabVisibility: TabVisibility;
   };
+  s3: {
+
+    tabVisibility: TabVisibility;
+  };
   /**
    * iSCSI-specific settings
    */
@@ -36,6 +40,7 @@ export type UserSettings = {
     subnetMask: number;
     tabVisibility: TabVisibility;
   };
+ 
   /**
    * Include users and groups with uid and gid from 1 to 999
    */
@@ -53,6 +58,9 @@ const defaultSettings = (): UserSettings => ({
   },
   nfs: {
     confPath: "/etc/exports.d/cockpit-file-sharing.exports",
+    tabVisibility: "auto",
+  },
+  s3: {
     tabVisibility: "auto",
   },
   iscsi: {
@@ -88,6 +96,9 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
           nfs: {
             confPath: contents.nfs?.confPath || defaultSettings().nfs.confPath,
             tabVisibility: contents.nfs?.tabVisibility || defaultSettings().nfs.tabVisibility,
+          },
+          s3: {
+            tabVisibility: contents.s3?.tabVisibility || defaultSettings().s3.tabVisibility,
           },
           iscsi: {
             // confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
