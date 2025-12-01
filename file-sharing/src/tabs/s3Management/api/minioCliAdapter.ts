@@ -262,3 +262,112 @@ import type {
     }
   }
   
+  export interface CreateBucketInMinioOptions {
+    region?: string;         
+    withLock?: boolean;       
+    withVersioning?: boolean; 
+    quotaSize?: string;
+    quotaObjects?: number;
+    ignoreExisting?: boolean;
+  }
+  
+  export async function createBucketFromMinio(
+    bucketName: string,
+    options: CreateBucketInMinioOptions = {}
+  ): Promise<void> {
+    if (!bucketName) {
+      throw new Error("createBucketFromMinio: bucketName is required");
+    }
+  
+    const {
+      region,
+      withLock,
+      withVersioning,
+      quotaSize,
+      ignoreExisting,
+    } = options;
+  
+    const bucketPath = `${MINIO_ALIAS}/${bucketName}`;
+    const mbArgs = ["mc", "mb"];
+    if (ignoreExisting) {
+      mbArgs.push("--ignore-existing");
+    }
+    if (region && region.trim()) {
+      mbArgs.push(`--region=${region.trim()}`);
+    }
+    if (withLock) {
+      mbArgs.push("--with-lock");
+    }
+    if (withVersioning) {
+      mbArgs.push("--with-versioning");
+    }
+
+    mbArgs.push(bucketPath);
+  
+    {
+      const proc = useSpawn(mbArgs, {
+        superuser: "try",
+      });
+  
+      try {
+        const { stdout, stderr } = await proc.promise();
+        console.log("createBucketFromMinio mb args =", mbArgs.join(" "));
+        if (stdout) console.log("createBucketFromMinio mb stdout =", stdout.toString());
+        if (stderr) console.log("createBucketFromMinio mb stderr =", stderr.toString());
+      } catch (state: any) {
+        console.error("createBucketFromMinio mb error for", bucketPath, state);
+        throw new Error(errorString(state));
+      }
+    }
+  
+    //
+    // 2) Quota: mc quota set ...
+    //
+    const hasSizeQuota =
+      typeof quotaSize === "string" && quotaSize.trim().length > 0;
+
+  
+    if (hasSizeQuota ) {
+      const quotaArgs = ["mc", "quota", "set"];
+  
+      if (hasSizeQuota) {
+        quotaArgs.push("--size", quotaSize!.trim());
+      }
+
+  
+      quotaArgs.push(bucketPath);
+  
+      const proc = useSpawn(quotaArgs, {
+        superuser: "try",
+      });
+  
+      try {
+        const { stdout, stderr } = await proc.promise();
+        console.log("createBucketFromMinio quota args =", quotaArgs.join(" "));
+        if (stdout) {
+          console.log(
+            "createBucketFromMinio quota stdout =",
+            stdout.toString()
+          );
+        }
+        if (stderr) {
+          console.log(
+            "createBucketFromMinio quota stderr =",
+            stderr.toString()
+          );
+        }
+      } catch (state: any) {
+        console.error(
+          "createBucketFromMinio quota error for",
+          bucketPath,
+          state
+        );
+        throw new Error(
+          `Bucket "${bucketPath}" created, but failed to set quota: ${errorString(
+            state
+          )}`
+        );
+      }
+    }
+  }
+  

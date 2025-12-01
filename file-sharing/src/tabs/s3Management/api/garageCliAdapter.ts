@@ -82,14 +82,10 @@ export async function listBucketsFromGarage(): Promise<S3Bucket[]> {
   
       let stats;
       try {
-        stats = await getGarageBucketStats(displayName);
+        // Always use ID for stats; ID is stable and accepted by CLI.
+        stats = await getGarageBucketStats(id);
       } catch {
-        try {
-          // Fallback: query by ID if alias fails
-          stats = await getGarageBucketStats(id);
-        } catch {
-          stats = { objectCount: 0, sizeBytes: 0 };
-        }
+        stats = { objectCount: 0, sizeBytes: 0 };
       }
   
       buckets.push({
@@ -106,7 +102,8 @@ export async function listBucketsFromGarage(): Promise<S3Bucket[]> {
     }
   
     return buckets;
-  }  
+  }
+  
 export async function getGarageBucketStats(bucketName: string): Promise<{
   createdAt?: string;
   objectCount: number;
@@ -151,14 +148,6 @@ export async function getBucketObjectStatsFromGarage(
   };
 }
 
-/**
- * Health check using `garage status` text output.
- *
- * Example:
- *   ==== HEALTHY NODES ====
- *   ID                Hostname  Address             Tags  Zone  Capacity ...
- *   227165e9...       gw01      192.168.85.64:3901  ...
- */
 export async function isGarageHealthy(): Promise<boolean> {
   try {
     const text = await garageRaw(["status"]);
@@ -180,17 +169,62 @@ export async function isGarageHealthy(): Promise<boolean> {
 }
 
 
-export async function deleteBucketFromGarage(bucket: S3Bucket): Promise<void> {
-    const target = bucket.garageId || bucket.name;
+export async function deleteBucketFromGarage(bucketNameOrId: string): Promise<void> {
+    // First, ask Garage what aliases this bucket has
+    const aliases = await getGarageBucketAliases(bucketNameOrId);
+  
+    // Case 1: No aliases reported. Just try deleting exactly what we were given.
+    if (aliases.length === 0) {
+      try {
+        await garageRaw(["bucket", "delete", bucketNameOrId, "--yes"]);
+        return;
+      } catch (e: any) {
+        const msg = errorString(e);
+        console.error("Failed to delete Garage bucket (no aliases):", bucketNameOrId, msg);
+        throw new Error(`Failed to delete Garage bucket "${bucketNameOrId}": ${msg}`);
+      }
+    }
+  
+    // Case 2: Exactly one alias. Delete using that alias; Garage wants that.
+    if (aliases.length === 1) {
+      const alias = aliases[0];
+      try {
+        await garageRaw(["bucket", "delete", alias, "--yes"]);
+        return;
+      } catch (e: any) {
+        const msg = errorString(e);
+        console.error("Failed to delete Garage bucket (single alias):", alias, msg);
+        throw new Error(`Failed to delete Garage bucket "${alias}": ${msg}`);
+      }
+    }
+  
+    // Case 3: Multiple aliases. Unalias all but one, then delete via the last alias.
+    const keep = aliases[aliases.length - 1];
+    console.log("Multiple aliases, keeping:", keep, "removing:", aliases.filter(a => a !== keep));
+  
+    for (const alias of aliases) {
+      if (alias === keep) continue;
+  
+      try {
+        await garageRaw(["bucket", "unalias", alias]);
+      } catch (e: any) {
+        const msg = errorString(e);
+        console.error(`Failed to unalias "${alias}" for bucket "${bucketNameOrId}":`, msg);
+        throw new Error(
+          `Failed to unalias "${alias}" for Garage bucket "${bucketNameOrId}": ${msg}`
+        );
+      }
+    }
   
     try {
-      await garageRaw(["bucket", "delete", target, "--yes"]);
+      await garageRaw(["bucket", "delete", keep, "--yes"]);
     } catch (e: any) {
       const msg = errorString(e);
-      console.error("Failed to delete Garage bucket:", target, msg);
-      throw new Error(`Failed to delete Garage bucket "${target}": ${msg}`);
+      console.error("Delete after unalias failed:", keep, msg);
+      throw new Error(`Failed to delete Garage bucket "${keep}" after unaliasing: ${msg}`);
     }
   }
+        
   export async function createGarageBucket(
     bucketName: string,
     options: GarageBucketCreateOptions = {}
@@ -264,3 +298,59 @@ export async function deleteBucketFromGarage(bucket: S3Bucket): Promise<void> {
     }
   }
     
+  async function getGarageBucketAliases(idOrAlias: string): Promise<string[]> {
+    const text = await garageRaw(["bucket", "info", idOrAlias]);
+    const lines = text.split(/\r?\n/);
+  
+    const aliases: string[] = [];
+    let inBlock = false;
+  
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+  
+      // Look for either "Global alias:" or "Global aliases:"
+      if (line.includes("Global alias:")) {
+        inBlock = true;
+  
+        // Everything after the colon on this line
+        const rest = line.split("Global alias:")[1].trim();
+        if (rest) {
+          // Usually there's just one alias here, but be safe
+          for (const token of rest.split(/\s+/)) {
+            if (token) aliases.push(token);
+          }
+        }
+        continue;
+      }
+  
+      if (line.includes("Global aliases:")) {
+        inBlock = true;
+  
+        const rest = line.split("Global aliases:")[1].trim();
+        if (rest) {
+          for (const token of rest.split(/\s+/)) {
+            if (token) aliases.push(token);
+          }
+        }
+        continue;
+      }
+  
+      if (inBlock) {
+        // End of alias block when we hit a new section
+        if (line.startsWith("====") || /^[A-Z][a-z]+:/.test(line)) {
+          break;
+        }
+  
+        // Continuation lines are just aliases, one per line
+        const alias = line.split(/\s+/)[0].trim();
+        if (alias) {
+          aliases.push(alias);
+        }
+      }
+    }
+  
+    console.log("getGarageBucketAliases", { idOrAlias, aliases });
+    return aliases;
+  }
+  
