@@ -31,7 +31,7 @@
                 >{{ ("Cancel") }}</button>
                 <button
                     class="btn btn-primary"
-                    @click="actions.createInitiatorGroup"
+                    @click="promptCreateInitiatorGroup"
                     :disabled="!validationScope.isValid() || !modified"
                 >{{ ("Create") }}</button>
             </div>
@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, validationSuccess, validationError, ValidationResultView, ValidationScope } from '@45drives/houston-common-ui';
+    import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, validationSuccess, validationError, ValidationResultView, ValidationScope,confirmBeforeAction } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
     import { inject, ref,computed } from 'vue';
     import { ProcessError } from '@45drives/houston-common-lib';
@@ -74,6 +74,20 @@
     }
 
     const actions = wrapActions({createInitiatorGroup});
+
+    const promptCreateInitiatorGroup = confirmBeforeAction(
+  {
+    header: _("Confirm"),
+    body: _(
+      `Create this initiator group?
+      
+Changing iSCSI initiator group configuration can cause related targets or resources to restart and may disrupt active sessions using this target.
+It is recommended to perform this action during a planned maintenance window or other downtime if it could impact production workloads.`
+    ),
+    dangerous: true
+  },
+  actions.createInitiatorGroup
+);
 
     const validationScope = new ValidationScope();
 

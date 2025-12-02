@@ -21,7 +21,7 @@
         <button class="btn btn-secondary" @click="handleClose">{{ "Cancel" }}</button>
         <button
           class="btn btn-primary"
-          @click="actions.createPortal"
+          @click="promptCreatePortal"
           :disabled="!validationScope.isValid() || !modified"
         >
           {{ "Create" }}
@@ -41,7 +41,7 @@ import {
   ValidationResultView,
   validationError,
   validationSuccess,
-  ValidationScope,
+  ValidationScope,confirmBeforeAction
 } from "@45drives/houston-common-ui";
 import { ResultAsync } from "neverthrow";
 import { inject, ref } from "vue";
@@ -93,7 +93,17 @@ const createPortal = () => {
 };
 
 const actions = wrapActions({ createPortal });
+const promptCreatePortal = confirmBeforeAction(
+  {
+    header: "Confirm",
+    body: `Create this portal?
 
+Changing iSCSI portal configuration can cause related targets or resources to restart and may disrupt active sessions using this target. 
+It is strongly recommended to perform this action during a planned maintenance window or other\n downtime if there is any chance it could affect production workloads.`,
+dangerous: true
+  },
+  actions.createPortal
+);
 const validationScope = new ValidationScope();
 
 const { validationResult: portalAddressValidationResult } = validationScope.useValidator(() => {

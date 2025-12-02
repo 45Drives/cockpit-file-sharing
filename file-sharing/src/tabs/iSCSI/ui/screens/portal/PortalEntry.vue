@@ -40,7 +40,15 @@ const deletePortal = () => {
 const actions = wrapActions({ deletePortal });
 
 const promptDeletion = confirmBeforeAction(
-  { header: "Confirm", body: `Delete portal ${props.portal.address}?` },
+  {
+    header: "Confirm",
+    body: `Delete portal ${props.portal.address}?
+
+Deleting an iSCSI portal can cause related targets or resources to restart and may disrupt active sessions using this target. It is strongly recommended to perform this
+ action during a planned maintenance window or other downtime if there is any chance it could affect production workloads.`,
+ dangerous: true
+  },
   actions.deletePortal
 );
+
 </script>

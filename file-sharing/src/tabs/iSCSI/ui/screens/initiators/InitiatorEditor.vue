@@ -20,7 +20,7 @@
         <button class="btn btn-secondary" @click="handleClose">{{ "Cancel" }}</button>
         <button
           class="btn btn-primary"
-          @click="actions.createConfiguration"
+          @click="promptCreateInitiator"
           :disabled="!validationScope.isValid() || !modified"
         >
           {{ "Create" }}
@@ -40,7 +40,7 @@ import {
   validationSuccess,
   ValidationResultView,
   wrapActions,
-  ValidationScope,
+  ValidationScope,confirmBeforeAction
 } from "@45drives/houston-common-ui";
 import type { ResultAsync } from "neverthrow";
 import { inject, ref } from "vue";
@@ -81,6 +81,21 @@ const createConfiguration = () => {
 };
 
 const actions = wrapActions({ createConfiguration });
+
+const promptCreateInitiator = confirmBeforeAction(
+  {
+    header: _("Confirm"),
+    body: _(
+      `Add this initiator to the selected group?
+      
+Changing iSCSI initiator configuration can cause related targets or resources to restart and may disrupt active sessions using this target. 
+It is recommended to perform this action during a planned maintenance window or other downtime if it could impact production workloads.`,
+ 
+    ),
+    dangerous: true
+  },
+  actions.createConfiguration
+);
 
 const validationScope = new ValidationScope();
 

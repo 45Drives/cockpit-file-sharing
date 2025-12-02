@@ -78,7 +78,14 @@ const deleteEntry = () => {
 const actions = wrapActions({ deleteEntry });
 
 const promptDeletion = confirmBeforeAction(
-  { header: "Confirm", body: `Delete Initiator Group ${props.initiatorGroup.name}?` },
+  {
+    header: "Confirm Deletion",
+    body: `Delete initiator group "${props.initiatorGroup.name}"?
+
+Deleting an iSCSI initiator group can cause related targets or resources to  restart, which may impact other sessions using this target.
+It is strongly recommended to perform this action during a planned maintenance window or other downtime if it could affect production workloads.`,
+  dangerous: true},
   actions.deleteEntry
 );
+
 </script>
