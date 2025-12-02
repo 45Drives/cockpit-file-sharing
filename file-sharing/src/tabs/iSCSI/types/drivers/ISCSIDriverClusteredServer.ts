@@ -623,7 +623,7 @@ getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
             const foundDevices: VirtualDevice[] = [];
 
             const availableLogicalVolumes = yield* self.rbdManager.fetchAvaliableLogicalVolumes().safeUnwrap();
-            // console.log("availableLogicalVolumes", availableLogicalVolumes);
+             console.log("availableLogicalVolumes", availableLogicalVolumes);
           //  const availableRadosBlockDevices = yield* self.rbdManager.fetchAvaliableRadosBlockDevices().safeUnwrap();
             const resources = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
 
@@ -1384,7 +1384,8 @@ type LogicalVolumeInfoJson = {
             vg_name: string,
             lv_size: string,
             server: Server
-        }[]
+        }[];
+        log?: unknown[];
     }[]
 }
 
@@ -1394,5 +1395,6 @@ type VolumeGroupInfoJson = {
             pv_name: string,
             vg_name: string,
         }[]
+        log?: unknown[];
     }[]
 }
