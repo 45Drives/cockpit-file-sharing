@@ -33,6 +33,7 @@ import { PhysicalVolume } from '../cluster/PhysicalVolume';
 import { VolumeGroup } from '../cluster/VolumeGroup';
 
 const userSettingsResult = ResultAsync.fromSafePromise(useUserSettings(true));
+const hasVG = (path: string) => path.toUpperCase().includes("_VG");
 
 export class ISCSIDriverClusteredServer implements ISCSIDriver {
     server: Server;
@@ -111,7 +112,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
     createTarget(target: Target): ResultAsync<void, ProcessError> {
         const targetResourceName = `${this.resourceNamePrefix}_TARGET_${target.name}`;
-        const creationArugments = `ocf:heartbeat:iSCSITarget iqn=${target.name} op start timeout=20 op stop timeout=20 op monitor interval=20 timeout=40`;
+        const creationArugments = `ocf:45drives:iSCSITarget iqn=${target.name} op start timeout=20 op stop timeout=20 op monitor interval=20 timeout=40`;
         return this.pcsResourceManager.createResource(targetResourceName, creationArugments, PCSResourceType.TARGET,server)
             .andThen((resource) => {
                 target.devicePath = resource.name;
@@ -144,9 +145,9 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
 
             const updatedPortalList = [...target.portals.map((targetPortal) => targetPortal.address), portal.address + ":3260"].join(", ");
 
-            const vipCreationArugments = `ocf:heartbeat:IPaddr2 ip=${portal.address} cidr_netmask=${userSettings.value.iscsi.subnetMask.toString()} op start timeout=20 op stop timeout=20 op monitor interval=10`;
-            const portblockOnCreationArugments = `ocf:heartbeat:portblock ip=${portal.address} portno=3260 protocol=tcp action=block op start timeout=20 op stop timeout=20 op monitor timeout=20 interval=20`;
-            const portblockOffCreationArugments = `ocf:heartbeat:portblock ip=${portal.address} portno=3260 protocol=tcp action=unblock op start timeout=20 op stop timeout=20 op monitor timeout=20 interval=20`;
+            const vipCreationArugments = `ocf:45drives:IPaddr2 ip=${portal.address} cidr_netmask=${userSettings.value.iscsi.subnetMask.toString()} op start timeout=20 op stop timeout=20 op monitor interval=10`;
+            const portblockOnCreationArugments = `ocf:45drives:portblock ip=${portal.address} portno=3260 protocol=tcp action=block op start timeout=20 op stop timeout=20 op monitor timeout=20 interval=20`;
+            const portblockOffCreationArugments = `ocf:45drives:portblock ip=${portal.address} portno=3260 protocol=tcp action=unblock op start timeout=20 op stop timeout=20 op monitor timeout=20 interval=20`;
 
             return this.findTargetPCSResource(target)
                 .andThen((targetResource) => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_VIP_${portal.address}`, vipCreationArugments, PCSResourceType.VIP,server)
@@ -640,7 +641,9 @@ getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
                 // Try to match Logical Volume
                 const lv = availableLogicalVolumes.find((vol) => vol.filePath === path);
                 if (lv) {
+                  if (hasVG(lv.filePath)){
                     foundDevices.push(new VirtualDevice(lv.deviceName, lv.filePath, lv.blockSize, lv.deviceType,lv.maximumSize, true,undefined,lv.server));
+                  }
 
                     continue;
                 }
@@ -654,8 +657,10 @@ getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
                 // Fallback unknown BlockIO device
                 const blockSizeResult = await self.rbdManager.getBlockSizeFromDevicePath(path,server);
                 const blockSize = blockSizeResult.isOk() ? blockSizeResult.value : 0;
+               
+                  foundDevices.push(new VirtualDevice(path, path, blockSize, DeviceType.BlockIO,0,true,undefined,server));
 
-                foundDevices.push(new VirtualDevice(path, path, blockSize, DeviceType.BlockIO,0,true,undefined,server));
+                
 
             }
 
@@ -671,9 +676,8 @@ getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
 
             // === 3. Add all UNASSIGNED Logical Volumes ===
             for (let lv of availableLogicalVolumes) {
-                if (!assignedPaths.has(lv.filePath)) {
+                if (!assignedPaths.has(lv.filePath) && hasVG(lv.filePath)) {
                     foundDevices.push(new VirtualDevice(lv.deviceName, lv.filePath, lv.blockSize, lv.deviceType,lv.maximumSize, false,undefined,lv.server));
-
                 }
             }
             return ok(foundDevices);
@@ -1070,11 +1074,11 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         const blockDevice = (lun.blockDevice! as RadosBlockDevice);
         const server = blockDevice.server;
         return server.execute(new BashCommand(`rbd unmap ${blockDevice.parentPool.name}/${blockDevice.deviceName}`))
-            .andThen(() => this.pcsResourceManager.createResource(`RBD_${blockDevice.deviceName}`, `ocf:ceph:rbd name=${blockDevice.deviceName} pool=${blockDevice.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD,server)
+            .andThen(() => this.pcsResourceManager.createResource(`RBD_${blockDevice.deviceName}`, `ocf:45drives:rbd name=${blockDevice.deviceName} pool=${blockDevice.parentPool.name} user=admin cephconf=/etc/ceph/ceph.conf op start timeout=60s interval=0 op stop timeout=60s interval=0 op monitor timeout=30s interval=15s`, PCSResourceType.RBD,server)
                 .andThen((resource) => this.pcsResourceManager.constrainResourceToGroup(resource, group,server)
                     .andThen(() => this.pcsResourceManager.orderResourceBeforeGroup(resource, group)))
             )
-            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit implementation=scst target_iqn=${targetIQN} path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
+            .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:45drives:iSCSILogicalUnit implementation=scst target_iqn=${targetIQN} path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
             .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
     }
 
@@ -1121,7 +1125,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
 
     //             return ok(undefined);
     //         })))
-    //         .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LVM_${blockDevice.deviceName}_${blockDevice.volumeGroup.name}`, `ocf:heartbeat:LVM-activate lvname=${blockDevice.deviceName} vgname=${blockDevice.volumeGroup.name} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, PCSResourceType.LVM,server))
+    //         .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LVM_${blockDevice.deviceName}_${blockDevice.volumeGroup.name}`, `ocf::LVM-activate lvname=${blockDevice.deviceName} vgname=${blockDevice.volumeGroup.name} activation_mode=exclusive vg_access_mode=system_id op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60`, PCSResourceType.LVM,server))
     //         .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
     //         .andThen(() => this.pcsResourceManager.createResource(`${this.resourceNamePrefix}_LUN_${blockDevice.deviceName}`, `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN}  path=${blockDevice.filePath} lun=${lun.unitNumber} group=${initiatorGroupName} op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100`, PCSResourceType.LUN,server))
     //         .andThen((resource) => this.pcsResourceManager.addResourceToGroup(resource, group))
@@ -1197,7 +1201,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
     
               const r = yield* self.pcsResourceManager.createResource(
                 rbdRid,
-                `ocf:ceph:rbd name=${rbdName} pool=${pool} user=admin cephconf=/etc/ceph/ceph.conf ` +
+                `ocf:45drives:rbd name=${rbdName} pool=${pool} user=admin cephconf=/etc/ceph/ceph.conf ` +
                 `op start timeout=60 interval=0 op stop timeout=60 interval=0 op monitor timeout=30 interval=15 --disabled`,
                 PCSResourceType.RBD,
                 server
@@ -1214,7 +1218,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         .andThen(() =>
           self.pcsResourceManager.createResource(
             lvmRid,
-            `ocf:heartbeat:LVM-activate lvname=${lvName} vgname=${vgName} activation_mode=exclusive vg_access_mode=system_id ` +
+            `ocf:45drives:LVM-activate lvname=${lvName} vgname=${vgName} activation_mode=exclusive vg_access_mode=system_id ` +
             `op start timeout=30 op stop timeout=30 op monitor interval=10 timeout=60 --disabled`,
             PCSResourceType.LVM,
             server
@@ -1231,7 +1235,7 @@ parseInitiatorGroups(attr?: string): Map<string, string[]> {
         .andThen(() =>
           self.pcsResourceManager.createResource(
             lunRid,
-            `ocf:heartbeat:iSCSILogicalUnit target_iqn=${targetIQN} path=${lvPath} ` +
+            `ocf:45drives:iSCSILogicalUnit target_iqn=${targetIQN} path=${lvPath} ` +
             `lun=${lun.unitNumber} implementation=scst group=${initiatorGroupName} ` +
             `op start timeout=100 op stop timeout=100 op monitor interval=10 timeout=100 --disabled`,
             PCSResourceType.LUN,

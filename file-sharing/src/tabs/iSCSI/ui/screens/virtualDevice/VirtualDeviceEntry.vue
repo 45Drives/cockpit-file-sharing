@@ -1,7 +1,7 @@
 <template>
   <tr>
-    <td>{{ device.deviceName }}</td>
-    <td>{{ device.filePath }}</td>
+    <td class="max-w-40 truncate" :title="device.deviceName" >{{ device.deviceName }}</td>
+    <td class="max-w-40 truncate":title="device.filePath" >{{ device.filePath }}</td>
     <td>{{ `${_cockpit.format_bytes(device.maximumSize)} total` }}</td>
         <td>{{ getDeviceType() }}</td>
     <td v-if="useUserSettings().value.iscsi.clusteredServer">{{ device.assigned ? 'Yes' : 'No' }}</td>
