@@ -1,11 +1,9 @@
 <template>
     <div class="page">
       <h1>Bucket Management</h1>
-  
       <div v-if="loadingConfig">
         Detecting storage backends…
       </div>
-  
       <div v-else-if="availableBackends.length === 0">
         <p class="error">
           No storage backend is available. MinIO, Ceph RGW, and Garage appear to be
@@ -74,11 +72,13 @@
           </div>
         </div>
   
-        <S3BucketsView
+        <!-- <S3BucketsView
           v-if="selectedBackend"
           :backend="selectedBackend"
           :cephGateway="selectedGateway"
-        />
+        /> -->
+
+        <UsersView></UsersView>
       </div>
     </div>
 </template>
@@ -89,7 +89,7 @@
   import { isCephRgwHealthy, listRgwGateways } from "../api/s3CliAdapter";
   import { isMinioHealthy } from "../api/minioCliAdapter";
   import { isGarageHealthy } from "../api/garageCliAdapter";
-  
+  import UsersView from "./views/CephRgw/UsersView.vue";
   const loadingConfig = ref(false);
   const isMinioAvailable = ref(false);
   const isCephAvailable = ref(false);

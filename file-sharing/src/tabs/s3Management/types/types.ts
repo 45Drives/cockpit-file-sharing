@@ -98,9 +98,44 @@ export interface GarageBucketCreateOptions {
 export type RgwUser = {
     uid: string;
     displayName?: string;
-}  // cephRgwCliAdapter.ts
-
+    tenant?: string | null;
+    fullName?: string | null;  // Full name / display name
+    email?: string | null;
+    suspended?: boolean;
+    maxBuckets?: number | null;
+    capacityLimitPercent?: number | null;
+    objectLimitPercent?: number | null;
+}  
 export type RgwDashboardS3Creds = {
     accessKey: string;
     secretKey: string;
   };
+
+  export type CreateRgwUserOptions = {
+    uid: string;
+    tenant?: string;
+    displayName: string;
+    email?: string;
+    maxBuckets?: number;
+  
+    suspended?: boolean;
+    systemUser?: boolean;
+  
+    autoGenerateKey?: boolean;
+    accessKey?: string;
+    secretKey?: string;
+  
+    // User quota
+    userQuotaEnabled?: boolean;
+    userQuotaMaxSizeKb?: number;    // already converted to KB
+    userQuotaMaxObjects?: number;
+  
+    // Bucket quota defaults
+    bucketQuotaEnabled?: boolean;
+    bucketQuotaMaxSizeKb?: number;
+    bucketQuotaMaxObjects?: number;
+  }
+  export type CreatedRgwUserKeys = {
+    accessKey?: string;
+    secretKey?: string;
+  }

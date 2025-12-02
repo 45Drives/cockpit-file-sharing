@@ -5,7 +5,7 @@ import type {
   BucketVersioningStatus,
   BucketAcl,RgwGateway,
   RgwUser,
-  RgwDashboardS3Creds
+  RgwDashboardS3Creds, CreatedRgwUserKeys,CreateRgwUserOptions
 } from "../types/types";
 
 import { legacy } from "../../../../../houston-common/houston-common-lib";
@@ -221,30 +221,66 @@ async function cephJson(subArgs: string[]): Promise<any> {
   }
 }
 
-export async function listRgwUsers(): Promise<RgwUser[]> {
-  // radosgw-admin user list  ->  ["uid1","uid2",...]
-  const uids: string[] = await rgwJson(["user", "list"]);
+// export async function listRgwUsers(): Promise<RgwUser[]> {
+//   // radosgw-admin user list  ->  ["uid1","uid2",...]
+//   const uids: string[] = await rgwJson(["user", "list"]);
 
+//   const users: RgwUser[] = [];
+
+//   for (const uid of uids) {
+//     try {
+//       const info = await rgwJson(["user", "info", "--uid", uid]);
+
+//       users.push({
+//         uid,
+//         displayName: info.display_name || info.displayName,
+        
+//       });
+//     } catch (e) {
+//       console.warn("Failed to fetch info for RGW user", uid, e);
+//       // Fallback: at least expose the uid
+//       users.push({ uid });
+//     }
+//   }
+
+//   return users;
+// }
+
+export async function listRgwUsers(): Promise<RgwUser[]> {
+  const uids: string[] = await rgwJson(["user", "list"]);
   const users: RgwUser[] = [];
 
   for (const uid of uids) {
     try {
       const info = await rgwJson(["user", "info", "--uid", uid]);
+      const userQuota = info.user_quota || {};
 
       users.push({
         uid,
+        tenant: info.tenant ?? undefined,
         displayName: info.display_name || info.displayName,
-      });
+        email: info.email ?? undefined,
+        suspended: !!info.suspended,
+        maxBuckets:
+          typeof info.max_buckets === "number" ? info.max_buckets : undefined,
+        // These two are actually absolute values from Ceph, not real “%”
+        capacityLimitPercent:
+          typeof userQuota.max_size_kb === "number"
+            ? userQuota.max_size_kb
+            : undefined,
+        objectLimitPercent:
+          typeof userQuota.max_objects === "number"
+            ? userQuota.max_objects
+            : undefined,
+      } as RgwUser);
     } catch (e) {
       console.warn("Failed to fetch info for RGW user", uid, e);
-      // Fallback: at least expose the uid
-      users.push({ uid });
+      users.push({ uid } as RgwUser);
     }
   }
 
   return users;
 }
-
 
 export async function createRgwBucket(params: {
   name: string;
@@ -267,8 +303,6 @@ export async function createRgwBucket(params: {
  
   await rgwJson(args);
 }
-
-
 
 async function getDashboardS3Creds(): Promise<RgwDashboardS3Creds> {
   // Adjust uid if your dashboard user has a different name
@@ -551,4 +585,285 @@ export async function createCephBucketViaS3(
   if (params.owner && params.owner.trim()) {
     await changeRgwBucketOwner(params.bucketName, params.owner.trim());
   }
+}
+
+
+async function runRgwAdmin(args: string[]): Promise<{ stdout: string; stderr: string }> {
+  const proc = useSpawn(["radosgw-admin", ...args], { superuser: "try" });
+
+  try {
+    const { stdout, stderr } = await proc.promise();
+    const out = stdout ? stdout.toString() : "";
+    const err = stderr ? stderr.toString() : "";
+
+    console.log("runRgwAdmin args =", ["radosgw-admin", ...args].join(" "));
+    if (out) console.log("runRgwAdmin stdout =", out);
+    if (err) console.log("runRgwAdmin stderr =", err);
+
+    return { stdout: out, stderr: err };
+  } catch (state: any) {
+    console.error("runRgwAdmin error for", args.join(" "), state);
+    throw new Error(errorString(state));
+  }
+}
+
+/**
+ * 1) user create
+ */
+async function rgwUserCreateBase(opts: CreateRgwUserOptions): Promise<CreatedRgwUserKeys> {
+  const {uid, tenant,displayName,email,maxBuckets,systemUser,autoGenerateKey,accessKey,secretKey, suspended
+  } = opts;
+
+  if (!uid) throw new Error("rgwUserCreateBase: uid is required");
+  if (!displayName) throw new Error("rgwUserCreateBase: displayName is required");
+
+  if (!autoGenerateKey && (!accessKey || !secretKey)) {
+    throw new Error(
+      "rgwUserCreateBase: either enable autoGenerateKey or provide accessKey + secretKey"
+    );
+  }
+
+  const args: string[] = ["user", "create", `--uid=${uid}`, `--display-name=${displayName}`];
+
+  if (tenant) {
+    args.push(`--tenant=${tenant}`);
+  }
+  if (email) {
+    args.push(`--email=${email}`);
+  }
+  if (typeof maxBuckets === "number") {
+    args.push(`--max-buckets=${maxBuckets}`);
+  }
+  if (systemUser) {
+    args.push("--system");
+  }
+
+  if (!autoGenerateKey) {
+    args.push(`--access-key=${accessKey}`, `--secret=${secretKey}`);
+  }
+
+  const { stdout } = await runRgwAdmin(args);
+
+  if (typeof suspended === "boolean") {
+    if (suspended) {
+      await runRgwAdmin(["user", "suspend", `--uid=${uid}`]);
+    } else {
+      await runRgwAdmin(["user", "enable", `--uid=${uid}`]);
+    }
+  }  
+  let generatedAccessKey: string | undefined;
+  let generatedSecretKey: string | undefined;
+
+  if (stdout) {
+    try {
+      const json = JSON.parse(stdout);
+      const keys = json.keys?.[0];
+      if (keys) {
+        generatedAccessKey = keys.access_key;
+        generatedSecretKey = keys.secret_key;
+      }
+    } catch (e) {
+      console.warn("rgwUserCreateBase: failed to parse JSON from user create:", e);
+    }
+  }
+
+  return {
+    accessKey: autoGenerateKey ? generatedAccessKey : accessKey,
+    secretKey: autoGenerateKey ? generatedSecretKey : secretKey,
+  };
+}
+
+/**
+ * 2) user-level quota (quota-scope=user)
+ */
+async function rgwSetUserQuota(opts: {
+  uid: string;
+  tenant?: string;
+  enabled: boolean;
+  maxSizeKb?: number;
+  maxObjects?: number;
+}): Promise<void> {
+  const { uid, tenant, enabled, maxSizeKb, maxObjects } = opts;
+  if (!uid) throw new Error("rgwSetUserQuota: uid is required");
+  if (!enabled) return;
+
+  const setArgs: string[] = ["quota", "set", `--uid=${uid}`, "--quota-scope=user"];
+  if (tenant) setArgs.push(`--tenant=${tenant}`);
+
+  if (typeof maxSizeKb === "number") {
+    setArgs.push(`--max-size-kb=${maxSizeKb}`);
+  }
+  if (typeof maxObjects === "number") {
+    setArgs.push(`--max-objects=${maxObjects}`);
+  }
+
+  await runRgwAdmin(setArgs);
+
+  const enableArgs = ["quota", "enable", `--uid=${uid}`, "--quota-scope=user"];
+  if (tenant) enableArgs.push(`--tenant=${tenant}`);
+  await runRgwAdmin(enableArgs);
+}
+
+async function rgwSetBucketQuota(opts: {
+  uid: string;
+  tenant?: string;
+  enabled: boolean;
+  maxSizeKb?: number;
+  maxObjects?: number;
+}): Promise<void> {
+  const { uid, tenant, enabled, maxSizeKb, maxObjects } = opts;
+  if (!uid) throw new Error("rgwSetBucketQuota: uid is required");
+  if (!enabled) return;
+
+  const setArgs: string[] = ["quota", "set", `--uid=${uid}`, "--quota-scope=bucket"];
+  if (tenant) setArgs.push(`--tenant=${tenant}`);
+
+  if (typeof maxSizeKb === "number") {
+    setArgs.push(`--max-size-kb=${maxSizeKb}`);
+  }
+  if (typeof maxObjects === "number") {
+    setArgs.push(`--max-objects=${maxObjects}`);
+  }
+
+  await runRgwAdmin(setArgs);
+
+  const enableArgs = ["quota", "enable", `--uid=${uid}`, "--quota-scope=bucket"];
+  if (tenant) enableArgs.push(`--tenant=${tenant}`);
+  await runRgwAdmin(enableArgs);
+}
+
+export async function createRgwUser(
+  opts: CreateRgwUserOptions
+): Promise<CreatedRgwUserKeys> {
+  const {
+    uid,
+    tenant,
+    userQuotaEnabled,
+    userQuotaMaxSizeKb,
+    userQuotaMaxObjects,
+    bucketQuotaEnabled,
+    bucketQuotaMaxSizeKb,
+    bucketQuotaMaxObjects,
+  } = opts;
+
+  const keys = await rgwUserCreateBase(opts);
+
+  await rgwSetUserQuota({
+    uid,
+    tenant,
+    enabled: !!userQuotaEnabled,
+    maxSizeKb: userQuotaMaxSizeKb,
+    maxObjects: userQuotaMaxObjects,
+  });
+
+  await rgwSetBucketQuota({
+    uid,
+    tenant,
+    enabled: !!bucketQuotaEnabled,
+    maxSizeKb: bucketQuotaMaxSizeKb,
+    maxObjects: bucketQuotaMaxObjects,
+  });
+
+  return keys;
+}
+
+export async function deleteRgwUser(uid: string,opts?: {
+    purgeData?: boolean;
+    purgeKeys?: boolean;
+  }
+): Promise<void> {
+  if (!uid) {
+    throw new Error("deleteRgwUser: uid is required");
+  }
+
+  const args: string[] = ["user", "rm", `--uid=${uid}`];
+
+  if (opts?.purgeData) {
+    args.push("--purge-data");
+  }
+
+  if (opts?.purgeKeys) {
+    args.push("--purge-keys");
+  }
+
+  await runRgwAdmin(args);
+}
+
+
+export async function updateRgwUser(
+  opts: CreateRgwUserOptions
+): Promise<void> {
+  const {
+    uid,
+    tenant,
+    displayName,
+    email,
+    maxBuckets,
+    systemUser,
+    suspended,
+
+    userQuotaEnabled,
+    userQuotaMaxSizeKb,
+    userQuotaMaxObjects,
+
+    bucketQuotaEnabled,
+    bucketQuotaMaxSizeKb,
+    bucketQuotaMaxObjects,
+  } = opts;
+
+  if (!uid) {
+    throw new Error("updateRgwUser: uid is required");
+  }
+
+  // 1) Modify basic user attributes
+  const args: string[] = ["user", "modify", `--uid=${uid}`];
+
+  if (tenant) {
+    args.push(`--tenant=${tenant}`);
+  }
+  if (displayName) {
+    args.push(`--display-name=${displayName}`);
+  }
+  if (email) {
+    args.push(`--email=${email}`);
+  }
+  if (typeof maxBuckets === "number") {
+    args.push(`--max-buckets=${maxBuckets}`);
+  }
+  if (systemUser) {
+    args.push("--system");
+  }
+
+  await runRgwAdmin(args);
+
+  // 2) Suspended / enabled
+  if (typeof suspended === "boolean") {
+    const suspendArgs: string[] = [
+      "user",
+      suspended ? "suspend" : "enable",
+      `--uid=${uid}`,
+    ];
+    if (tenant) {
+      suspendArgs.push(`--tenant=${tenant}`);
+    }
+    await runRgwAdmin(suspendArgs);
+  }
+
+  // 3) User-level quota
+  await rgwSetUserQuota({
+    uid,
+    tenant,
+    enabled: !!userQuotaEnabled,
+    maxSizeKb: userQuotaMaxSizeKb,
+    maxObjects: userQuotaMaxObjects,
+  });
+
+  // 4) Bucket-level quota
+  await rgwSetBucketQuota({
+    uid,
+    tenant,
+    enabled: !!bucketQuotaEnabled,
+    maxSizeKb: bucketQuotaMaxSizeKb,
+    maxObjects: bucketQuotaMaxObjects,
+  });
 }
