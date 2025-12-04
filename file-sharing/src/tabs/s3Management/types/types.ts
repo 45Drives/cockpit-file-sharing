@@ -98,7 +98,7 @@ export interface GarageBucketCreateOptions {
 export type RgwUser = {
     uid: string;
     displayName?: string;
-    tenant?: string | null;
+    tenant?: string ;
     fullName?: string | null;  // Full name / display name
     email?: string | null;
     suspended?: boolean;
@@ -138,4 +138,63 @@ export type RgwDashboardS3Creds = {
   export type CreatedRgwUserKeys = {
     accessKey?: string;
     secretKey?: string;
+  }
+
+  export interface RgwUserKey {
+    accessKey: string;
+    secretKey?: string;
+    user?: string;
+  }
+  
+  export interface RgwUserCap {
+    type: string;
+    perm: string;
+  }
+  
+  export interface RgwUserDetails extends RgwUser {
+    keys?: RgwUserKey[];
+    caps?: RgwUserCap[];
+    raw?: any; 
+  }
+
+  export interface MinioUser {
+    username: string;
+    status: "enabled" | "disabled";
+    policies?: string[];
+    policyCount?: number;
+    createDate?: string;
+  }
+  
+  export interface MinioUserCreatePayload {
+    username: string;
+    secretKey: string;
+    status: "enabled" | "disabled";
+    policies: string[];
+  }
+  
+  export interface MinioUserGroupMembership {
+    name: string;
+    policies?: string[];
+  }
+  export interface MinioUserDetails extends MinioUser {
+    accessKey?: string;
+    authentication?: string;
+    memberOf?: MinioUserGroupMembership[];
+    raw?: any; // keep raw for debugging / future use
+  }
+
+  export interface MinioUserUpdatePayload {
+    username: string;
+    status?: "enabled" | "disabled";
+    policies?: string[];
+    resetSecret?: boolean;
+    newSecretKey?: string;
+    groups: string[];
+  }
+  
+  export interface MinioGroupInfo {
+    name: string;
+    members: string[];
+    policies: string[];
+    raw?: any;
   }

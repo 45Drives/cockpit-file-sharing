@@ -31,7 +31,7 @@
           {{ error }}
         </div>
   
-        <div v-if="loading" class="py-3 text-sm text-gray-600">
+        <div v-if="loading" class="py-3 text-sm ">
           Loading users...
         </div>
   
@@ -102,6 +102,13 @@
                   {{ user.objectLimitPercent ?? "-" }}
                 </td>
                 <td class="px-3 py-2 border-b border-gray-200 whitespace-nowrap">
+                    <button
+    class="inline-flex items-center border border-gray-300 text-xs font-medium rounded px-2 py-1 mr-1"
+    @click="viewUser(user)"
+  >
+    View
+  </button>
+
                   <button
                     class="inline-flex items-center border border-gray-300  text-xs font-medium rounded px-2 py-1 mr-1 "
                     @click="onEdit(user)"
@@ -120,7 +127,7 @@
           </table>
         </div>
   
-        <div v-else class="py-3 text-sm text-gray-500">
+        <div v-else class="py-3 text-sm ">
           No RGW users found.
         </div>
       </section>
@@ -198,14 +205,20 @@
   :initial-user="editingUser"
   @submit="handleUserSubmit"
 />
+<RgwUserDetailsModal
+  v-model="showDetailsDialog"
+  :loading="detailsLoading"
+  :error-message="detailsError"
+  :user="selectedUserDetails"
+/>
 </template>
   
   <script lang="ts" setup>
   import { ref, onMounted } from "vue";
-  import type { RgwUser, CreateRgwUserOptions } from "@/tabs/s3Management/types/types";
-  import { listRgwUsers, deleteRgwUser, createRgwUser, updateRgwUser } from "../../../api/s3CliAdapter";
+  import type { RgwUser, CreateRgwUserOptions, RgwUserDetails } from "@/tabs/s3Management/types/types";
+  import { listRgwUsers, deleteRgwUser, createRgwUser, updateRgwUser,getRgwUserInfo } from "../../../api/s3CliAdapter";
   import RgwUserCreateModal from "./RgwUserCreateModal.vue";
-  
+  import RgwUserDetailsModal from "./RgwUserDetailsModal.vue";
   const users = ref<RgwUser[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
@@ -220,7 +233,14 @@
 const showUserDialog = ref(false);
 const userDialogMode = ref<"create" | "edit">("create");
 const editingUser = ref<RgwUser | null>(null);
+
 const userDialogError = ref<string | null>(null);
+
+const showDetailsDialog = ref(false);
+const detailsLoading = ref(false);
+const detailsError = ref<string | null>(null);
+const selectedUserDetails = ref<RgwUserDetails | null>(null);
+
   async function loadUsers() {
     loading.value = true;
     error.value = null;
@@ -299,7 +319,20 @@ function onEdit(user: RgwUser) {
   userDialogError.value = null;
   showUserDialog.value = true;
 }
+async function viewUser(user: RgwUser) {
+  showDetailsDialog.value = true;
+  detailsLoading.value = true;
+  detailsError.value = null;
+  selectedUserDetails.value = null;
 
+  try {
+    selectedUserDetails.value = await getRgwUserInfo(user.uid, user.tenant);
+  } catch (e: any) {
+    detailsError.value = e?.message || "Failed to load user details.";
+  } finally {
+    detailsLoading.value = false;
+  }
+}
   onMounted(() => {
     loadUsers();
   });

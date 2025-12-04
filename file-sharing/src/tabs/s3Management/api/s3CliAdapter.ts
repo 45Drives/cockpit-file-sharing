@@ -5,7 +5,10 @@ import type {
   BucketVersioningStatus,
   BucketAcl,RgwGateway,
   RgwUser,
-  RgwDashboardS3Creds, CreatedRgwUserKeys,CreateRgwUserOptions
+  RgwDashboardS3Creds, CreatedRgwUserKeys,CreateRgwUserOptions,
+  RgwUserDetails,
+  RgwUserKey,
+  RgwUserCap
 } from "../types/types";
 
 import { legacy } from "../../../../../houston-common/houston-common-lib";
@@ -245,42 +248,58 @@ async function cephJson(subArgs: string[]): Promise<any> {
 
 //   return users;
 // }
-
 export async function listRgwUsers(): Promise<RgwUser[]> {
   const uids: string[] = await rgwJson(["user", "list"]);
+
+  const CONCURRENCY = 5;
   const users: RgwUser[] = [];
 
-  for (const uid of uids) {
-    try {
-      const info = await rgwJson(["user", "info", "--uid", uid]);
-      const userQuota = info.user_quota || {};
+  let index = 0;
 
-      users.push({
-        uid,
-        tenant: info.tenant ?? undefined,
-        displayName: info.display_name || info.displayName,
-        email: info.email ?? undefined,
-        suspended: !!info.suspended,
-        maxBuckets:
-          typeof info.max_buckets === "number" ? info.max_buckets : undefined,
-        // These two are actually absolute values from Ceph, not real “%”
-        capacityLimitPercent:
-          typeof userQuota.max_size_kb === "number"
-            ? userQuota.max_size_kb
-            : undefined,
-        objectLimitPercent:
-          typeof userQuota.max_objects === "number"
-            ? userQuota.max_objects
-            : undefined,
-      } as RgwUser);
-    } catch (e) {
-      console.warn("Failed to fetch info for RGW user", uid, e);
-      users.push({ uid } as RgwUser);
+  async function worker() {
+    while (index < uids.length) {
+      const uid = uids[index++];
+      try {
+        const info = await rgwJson(["user", "info", "--uid", uid]);
+        const userQuota = info.user_quota || {};
+
+        users.push({
+          uid,
+          tenant: info.tenant ?? undefined,
+          displayName: info.display_name || info.displayName,
+          email: info.email ?? undefined,
+          suspended: !!info.suspended,
+          maxBuckets:
+            typeof info.max_buckets === "number" ? info.max_buckets : undefined,
+          capacityLimitPercent:
+            typeof userQuota.max_size_kb === "number"
+              ? userQuota.max_size_kb
+              : undefined,
+          objectLimitPercent:
+            typeof userQuota.max_objects === "number"
+              ? userQuota.max_objects
+              : undefined,
+        } as RgwUser);
+      } catch (e) {
+        console.warn("Failed to fetch info for RGW user", uid, e);
+        users.push({ uid } as RgwUser);
+      }
     }
   }
 
+  // spin up a few workers
+  const workers = Array.from({ length: Math.min(CONCURRENCY, uids.length) }, () =>
+    worker()
+  );
+
+  await Promise.all(workers);
+
+  // you may want to re-sort to original UID order:
+  users.sort((a, b) => uids.indexOf(a.uid) - uids.indexOf(b.uid));
+
   return users;
 }
+
 
 export async function createRgwBucket(params: {
   name: string;
@@ -866,4 +885,63 @@ export async function updateRgwUser(
     maxSizeKb: bucketQuotaMaxSizeKb,
     maxObjects: bucketQuotaMaxObjects,
   });
+}
+
+
+export async function getRgwUserInfo(
+  uid: string,
+  tenant?: string
+): Promise<RgwUserDetails> {
+  if (!uid) {
+    throw new Error("getRgwUserInfo: uid is required");
+  }
+
+  const args: string[] = ["user", "info", `--uid=${uid}`];
+  if (tenant) {
+    args.push(`--tenant=${tenant}`);
+  }
+
+  const info = await rgwJson(args);
+
+  const userQuota = info.user_quota || {};
+  const keysRaw = info.keys || info.s3_keys || [];
+  const capsRaw = info.caps || [];
+
+  const keys: RgwUserKey[] = Array.isArray(keysRaw)
+    ? keysRaw.map((k: any) => ({
+        accessKey: k.access_key || k.accessKey,
+        secretKey: k.secret_key || k.secretKey,
+        user: k.user,
+      }))
+    : [];
+
+  const caps: RgwUserCap[] = Array.isArray(capsRaw)
+    ? capsRaw.map((c: any) => ({
+        type: c.type,
+        perm: c.perm,
+      }))
+    : [];
+
+  const details: RgwUserDetails = {
+    uid: info.user_id || info.uid,
+    tenant: info.tenant ?? undefined,
+    displayName: info.display_name || info.displayName,
+    email: info.email ?? undefined,
+    suspended: !!info.suspended,
+    maxBuckets:
+      typeof info.max_buckets === "number" ? info.max_buckets : undefined,
+    capacityLimitPercent:
+      typeof userQuota.max_size_kb === "number"
+        ? userQuota.max_size_kb
+        : undefined,
+    objectLimitPercent:
+      typeof userQuota.max_objects === "number"
+        ? userQuota.max_objects
+        : undefined,
+    keys,
+    caps,
+    raw: info,
+  };
+
+  return details;
 }
