@@ -78,8 +78,9 @@
           :cephGateway="selectedGateway"
         /> -->
 
-        <!-- <UsersView></UsersView> -->
-        <MinioAccessManagement></MinioAccessManagement>
+        <UsersView></UsersView>
+        <!-- <MinioAccessManagement></MinioAccessManagement> -->
+        <!-- <GarageKeysPage></GarageKeysPage> -->
       </div>
     </div>
 </template>
@@ -93,6 +94,7 @@
   import MinioUsersTable from "./views/minio/MinioUsersTable.vue";
   import UsersView from "./views/CephRgw/UsersView.vue";
   import MinioAccessManagement from "./views/minio/MinioAccessManagement.vue";
+  import GarageKeysPage from "./views/GarageHq/GarageKeysPage.vue";
   const loadingConfig = ref(false);
   const isMinioAvailable = ref(false);
   const isCephAvailable = ref(false);

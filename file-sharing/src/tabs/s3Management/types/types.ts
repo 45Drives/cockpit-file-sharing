@@ -198,3 +198,23 @@ export type RgwDashboardS3Creds = {
     policies: string[];
     raw?: any;
   }
+
+  export interface GarageKeyListEntry {
+    id: string;
+    created: string;
+    name: string;
+    expiration: string;
+  }
+  
+  export interface GarageKeyDetail {
+    id: string;
+    name: string;
+    created: string;
+    expiration: string;
+    validity?: string;
+    canCreateBuckets?: boolean;
+    secretKey?: string;
+  }
+  
+
+  
