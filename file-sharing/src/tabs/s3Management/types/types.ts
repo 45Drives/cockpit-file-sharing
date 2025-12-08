@@ -1,27 +1,36 @@
 export type S3BucketTagMap = Record<string, string>;
 export type S3Bucket = {
-    name: string;
-    region?: string;
-    owner?: string;
-    createdAt?: string;
-  
-    sizeBytes?: number;
-    objectCount?: number;
-    quotaBytes?: number;
-  
-    versioning?: BucketVersioningStatus;
-    versionCount?: number;      // total object versions (Ceph)
-    lastAccessed?: string;      // optional, if you ever fill it
-  
-    acl?: BucketAcl;
-    policy?: string;
-    tags?: S3BucketTagMap;
-  
-    garageId?: string;
-    placementTarget?: string;
-    zone?: string;
-    zonegroup?: string
-  };
+  name: string;
+  region?: string;
+  owner?: string;
+  createdAt?: string;
+
+  sizeBytes?: number;
+  objectCount?: number;
+  quotaBytes?: number;
+  objectLockEnabled?: boolean;
+  versioning?: BucketVersioningStatus;
+  versionCount?: number;
+  lastAccessed?: string;
+
+  acl?: BucketAcl;
+  policy?: string;
+  tags?: S3BucketTagMap;
+
+  garageId?: string;
+  placementTarget?: string;
+  zone?: string;
+  zonegroup?: string;
+  lastModifiedTime?: string;
+
+  // New Garage-specific optional fields
+  garageMaxObjects?: number;
+  garageWebsiteEnabled?: boolean;
+  garageWebsiteIndex?: string;
+  garageWebsiteError?: string;
+  garageAliases?: string[];
+};
+
 
 export type BucketAclPermission =
   | "FULL_CONTROL"
@@ -53,19 +62,18 @@ export interface Endpoint {
     useSSL: boolean;
 }
 
-export interface GarageBucketCreateOptions {
-    placement?: string;
-    quota?: string;           // already used for set-quotas
-    allow?: string[];
-    deny?: string[];
-    extraArgs?: string[];
-  
+export interface GarageBucketOptions {
+    quota?: string | null;           // already used for set-quotas
+    allow?: string[] | null; 
+    deny?: string[] | null;
+    extraArgs?: string[] | null;
+    maxObjects?: number | null;
     website?: {
       enable: boolean;
       indexDocument?: string;
       errorDocument?: string;
-    };
-    aliases?: string[];
+    } | null;
+    aliases?: string[] | null;
   }
   
   export interface CephBucketCreateOptions {
@@ -152,9 +160,15 @@ export type RgwDashboardS3Creds = {
   }
   
   export interface RgwUserDetails extends RgwUser {
-    keys?: RgwUserKey[];
-    caps?: RgwUserCap[];
-    raw?: any; 
+    userQuotaMaxSizeKb?: number;
+    userQuotaMaxObjects?: number;
+  
+    bucketQuotaMaxSizeKb?: number;
+    bucketQuotaMaxObjects?: number;
+  
+    keys: RgwUserKey[];
+    caps: RgwUserCap[];
+  
   }
 
   export interface MinioUser {
@@ -217,4 +231,9 @@ export type RgwDashboardS3Creds = {
   }
   
 
+  export interface MinioBucketUpdateOptions {
+    versioning?: boolean;
+    quotaSize?: string | null;
+    tags?: Record<string, string> | null;
+  }
   

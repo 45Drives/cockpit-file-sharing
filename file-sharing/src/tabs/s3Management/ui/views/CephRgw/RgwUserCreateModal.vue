@@ -249,7 +249,9 @@
               v-model="form.autoGenerateKey"
               class="h-4 w-4 rounded border-gray-300"
             />
-            <span>Auto-generate S3 access key/secret</span>
+            <span>
+    {{ isEdit ? "Rotate S3 access key/secret (auto-generate)" : "Auto-generate S3 access key/secret" }}
+  </span>
           </label>
   
           <div v-if="!form.autoGenerateKey" class="space-y-2 text-xs">
@@ -304,92 +306,91 @@
       </div>
     </div>
 </template>
-  
-  <script lang="ts" setup>
-  import { computed, ref, watch } from "vue";
-  import type { CreateRgwUserOptions,RgwUser } from "@/tabs/s3Management/types/types";
-  
-  const props = defineProps<{
-    modelValue: boolean;
-    loading?: boolean;
-    mode?: "create" | "edit";
-    errorMessage?: string | null;
-    initialUser?: RgwUser | null;
+<script lang="ts" setup>
+import { computed, ref, watch } from "vue";
+import type { CreateRgwUserOptions, RgwUser } from "@/tabs/s3Management/types/types";
 
-  }>();
-  
-  const emit = defineEmits<{
+const props = defineProps<{
+  modelValue: boolean;
+  loading?: boolean;
+  mode?: "create" | "edit";
+  errorMessage?: string | null;
+  initialUser?: RgwUser | null;
+}>();
+
+const emit = defineEmits<{
   (e: "update:modelValue", value: boolean): void;
   (e: "submit", payload: { mode: "create" | "edit"; data: CreateRgwUserOptions }): void;
 }>();
-  const isEdit = computed(() => props.mode === "edit");
 
-  const form = ref({
+const isEdit = computed(() => props.mode === "edit");
+
+const form = ref({
+  uid: "",
+  tenant: "",
+  fullName: "",
+  email: "",
+  maxBuckets: undefined as number | undefined,
+
+  suspended: false,
+  systemUser: false,
+
+  userQuotaEnabled: false,
+  userQuotaUnlimitedSize: true,
+  userQuotaMaxSizeKb: undefined as number | undefined,
+  userQuotaUnlimitedObjects: true,
+  userQuotaMaxObjects: undefined as number | undefined,
+
+  bucketQuotaEnabled: false,
+  bucketQuotaUnlimitedSize: true,
+  bucketQuotaMaxSizeKb: undefined as number | undefined,
+  bucketQuotaUnlimitedObjects: true,
+  bucketQuotaMaxObjects: undefined as number | undefined,
+
+  autoGenerateKey: true,
+  accessKey: "",
+  secretKey: "",
+
+  userQuotaSizeUnit: "GiB" as "KiB" | "MiB" | "GiB" | "TiB",
+  bucketQuotaSizeUnit: "GiB" as "KiB" | "MiB" | "GiB" | "TiB",
+});
+
+const localError = ref<string | null>(null);
+
+function resetForm() {
+  localError.value = null;
+  form.value = {
     uid: "",
     tenant: "",
     fullName: "",
     email: "",
-    maxBuckets: undefined as number | undefined,
-  
+    maxBuckets: undefined,
+
     suspended: false,
     systemUser: false,
-  
+
     userQuotaEnabled: false,
     userQuotaUnlimitedSize: true,
-    userQuotaMaxSizeKb: undefined as number | undefined,
+    userQuotaMaxSizeKb: undefined,
     userQuotaUnlimitedObjects: true,
-    userQuotaMaxObjects: undefined as number | undefined,
-  
+    userQuotaMaxObjects: undefined,
+
     bucketQuotaEnabled: false,
     bucketQuotaUnlimitedSize: true,
-    bucketQuotaMaxSizeKb: undefined as number | undefined,
+    bucketQuotaMaxSizeKb: undefined,
     bucketQuotaUnlimitedObjects: true,
-    bucketQuotaMaxObjects: undefined as number | undefined,
-  
+    bucketQuotaMaxObjects: undefined,
+
     autoGenerateKey: true,
     accessKey: "",
     secretKey: "",
-  
-    userQuotaSizeUnit: "GiB" as "KiB" | "MiB" | "GiB" | "TiB",
-    bucketQuotaSizeUnit: "GiB" as "KiB" | "MiB" | "GiB" | "TiB",
-  });
-  
-  const localError = ref<string | null>(null);
-  
-  function resetForm() {
-    localError.value = null;
-    form.value = {
-      uid: "",
-      tenant: "",
-      fullName: "",
-      email: "",
-      maxBuckets: undefined,
-  
-      suspended: false,
-      systemUser: false,
-  
-      userQuotaEnabled: false,
-      userQuotaUnlimitedSize: true,
-      userQuotaMaxSizeKb: undefined,
-      userQuotaUnlimitedObjects: true,
-      userQuotaMaxObjects: undefined,
-  
-      bucketQuotaEnabled: false,
-      bucketQuotaUnlimitedSize: true,
-      bucketQuotaMaxSizeKb: undefined,
-      bucketQuotaUnlimitedObjects: true,
-      bucketQuotaMaxObjects: undefined,
-  
-      autoGenerateKey: true,
-      accessKey: "",
-      secretKey: "",
-  
-      userQuotaSizeUnit: "GiB",
-      bucketQuotaSizeUnit: "GiB",
-    };
-  }
-  
-  watch(
+
+    userQuotaSizeUnit: "GiB",
+    bucketQuotaSizeUnit: "GiB",
+  };
+}
+
+watch(
   () => props.modelValue,
   (open) => {
     if (open) {
@@ -402,12 +403,80 @@
   }
 );
 
-  
-  function close() {
-    emit("update:modelValue", false);
+function close() {
+  emit("update:modelValue", false);
+}
+
+function sizeToKiB(
+  value: number | undefined,
+  unit: "KiB" | "MiB" | "GiB" | "TiB"
+): number | undefined {
+  if (value == null) return undefined;
+
+  const multipliers: Record<typeof unit, number> = {
+    KiB: 1,
+    MiB: 1024,
+    GiB: 1024 * 1024,
+    TiB: 1024 * 1024 * 1024,
+  };
+
+  return value * multipliers[unit];
+}
+
+function fromKiB(
+  kib: number | undefined
+): { value: number | undefined; unit: "KiB" | "MiB" | "GiB" | "TiB" } {
+  if (kib == null) return { value: undefined, unit: "GiB" };
+
+  const kibNum = kib;
+  const teb = 1024 * 1024 * 1024;
+  const gib = 1024 * 1024;
+  const mib = 1024;
+
+  if (kibNum >= teb) return { value: Math.round(kibNum / teb), unit: "TiB" };
+  if (kibNum >= gib) return { value: Math.round(kibNum / gib), unit: "GiB" };
+  if (kibNum >= mib) return { value: Math.round(kibNum / mib), unit: "MiB" };
+  return { value: kibNum, unit: "KiB" };
+}
+
+// Prefill form in edit mode
+function loadFromInitialUser(user: RgwUser) {
+  resetForm();
+
+  form.value.uid = user.uid;
+  form.value.tenant = user.tenant ?? "";
+  form.value.fullName = user.displayName ?? "";
+  form.value.email = user.email ?? "";
+  form.value.maxBuckets = user.maxBuckets!;
+
+  form.value.suspended = !!user.suspended;
+  // If you have a systemUser flag on RgwUser, map it here
+
+  // When editing, do NOT rotate keys by default
+  form.value.autoGenerateKey = false;
+  form.value.accessKey = "";
+  form.value.secretKey = "";
+
+  // Map user quota (you said these are actually absolute limits)
+  if (typeof user.capacityLimitPercent === "number") {
+    form.value.userQuotaEnabled = true;
+    form.value.userQuotaUnlimitedSize = false;
+    const { value, unit } = fromKiB(user.capacityLimitPercent);
+    form.value.userQuotaMaxSizeKb = value;
+    form.value.userQuotaSizeUnit = unit;
+  } else {
+    form.value.userQuotaEnabled = false;
   }
-  
-  function submit() {
+
+  if (typeof user.objectLimitPercent === "number") {
+    form.value.userQuotaEnabled = true;
+    form.value.userQuotaUnlimitedObjects = false;
+    form.value.userQuotaMaxObjects = user.objectLimitPercent;
+  }
+}
+
+// Single submit() with create vs edit + optional key rotation
+function submit() {
   localError.value = null;
 
   if (!form.value.uid || !form.value.fullName) {
@@ -415,11 +484,59 @@
     return;
   }
 
-  if (!form.value.autoGenerateKey) {
-    if (!form.value.accessKey || !form.value.secretKey) {
-      localError.value =
-        "Access key and secret key are required when auto-generate is disabled.";
-      return;
+  const editing = isEdit.value;
+
+  // Key validation:
+  if (!editing) {
+    // CREATE: either auto-generate or both keys provided
+    if (!form.value.autoGenerateKey) {
+      if (!form.value.accessKey || !form.value.secretKey) {
+        localError.value =
+          "Access key and secret key are required when auto-generate is disabled.";
+        return;
+      }
+    }
+  } else {
+    // EDIT: keys are optional; if user starts typing, both are required
+    const anyKeyTyped = !!form.value.accessKey || !!form.value.secretKey;
+    if (!form.value.autoGenerateKey && anyKeyTyped) {
+      if (!form.value.accessKey || !form.value.secretKey) {
+        localError.value =
+          "To rotate keys manually, both access key and secret key are required.";
+        return;
+      }
+    }
+  }
+
+  // Only send key fields when we actually want to touch keys
+  let autoGenerateKey: boolean | undefined;
+  let accessKey: string | undefined;
+  let secretKey: string | undefined;
+
+  if (!editing) {
+    // CREATE:
+    autoGenerateKey = form.value.autoGenerateKey;
+    if (!form.value.autoGenerateKey) {
+      accessKey = form.value.accessKey;
+      secretKey = form.value.secretKey;
+    }
+  } else {
+    // EDIT (rotation optional)
+    const anyKeyTyped = !!form.value.accessKey || !!form.value.secretKey;
+
+    if (form.value.autoGenerateKey) {
+      // rotate via --gen-access-key/--gen-secret
+      autoGenerateKey = true;
+    } else if (anyKeyTyped) {
+      // rotate to explicit keys
+      autoGenerateKey = false;
+      accessKey = form.value.accessKey || undefined;
+      secretKey = form.value.secretKey || undefined;
+    } else {
+      // no rotation -> leave undefined so backend ignores keys
+      autoGenerateKey = undefined;
+      accessKey = undefined;
+      secretKey = undefined;
     }
   }
 
@@ -431,9 +548,10 @@
     maxBuckets: form.value.maxBuckets,
 
     systemUser: form.value.systemUser,
-    autoGenerateKey: form.value.autoGenerateKey,
-    accessKey: form.value.autoGenerateKey ? undefined : form.value.accessKey,
-    secretKey: form.value.autoGenerateKey ? undefined : form.value.secretKey,
+
+    autoGenerateKey,
+    accessKey,
+    secretKey,
 
     suspended: form.value.suspended,
 
@@ -450,7 +568,10 @@
     bucketQuotaEnabled: form.value.bucketQuotaEnabled,
     bucketQuotaMaxSizeKb:
       form.value.bucketQuotaEnabled && !form.value.bucketQuotaUnlimitedSize
-        ? sizeToKiB(form.value.bucketQuotaMaxSizeKb, form.value.bucketQuotaSizeUnit)
+        ? sizeToKiB(
+            form.value.bucketQuotaMaxSizeKb,
+            form.value.bucketQuotaSizeUnit
+          )
         : undefined,
     bucketQuotaMaxObjects:
       form.value.bucketQuotaEnabled && !form.value.bucketQuotaUnlimitedObjects
@@ -459,76 +580,8 @@
   };
 
   emit("submit", {
-    mode: isEdit.value ? "edit" : "create",
+    mode: editing ? "edit" : "create",
     data: payload,
   });
 }
-
-  
-  function sizeToKiB(
-    value: number | undefined,
-    unit: "KiB" | "MiB" | "GiB" | "TiB"
-  ): number | undefined {
-    if (value == null) return undefined;
-  
-    const multipliers: Record<typeof unit, number> = {
-      KiB: 1,
-      MiB: 1024,
-      GiB: 1024 * 1024,
-      TiB: 1024 * 1024 * 1024,
-    };
-  
-    return value * multipliers[unit];
-  }
-
-  function fromKiB(
-  kib: number | undefined
-): { value: number | undefined; unit: "KiB" | "MiB" | "GiB" | "TiB" } {
-  if (kib == null) return { value: undefined, unit: "GiB" };
-
-  const kibNum = kib;
-  const teb = 1024 * 1024 * 1024;
-  const gib = 1024 * 1024;
-  const mib = 1024;
-
-  if (kibNum >= teb) return { value: Math.round(kibNum / teb), unit: "TiB" };
-  if (kibNum >= gib) return { value: Math.round(kibNum / gib), unit: "GiB" };
-  if (kibNum >= mib) return { value: Math.round(kibNum / mib), unit: "MiB" };
-  return { value: kibNum, unit: "KiB" };
-}
-
-// prefill form when opening in edit mode
-function loadFromInitialUser(user: RgwUser) {
-  resetForm();
-
-  form.value.uid = user.uid;
-  form.value.tenant = user.tenant ?? "";
-  form.value.fullName = user.displayName ?? "";
-  form.value.email = user.email ?? "";
-  form.value.maxBuckets = user.maxBuckets!;
-
-  form.value.suspended = !!user.suspended;
-  // systemUser flag if you have it on the type; if not, leave false
-
-  // For now we only know user-level quota from your adapter (capacityLimitPercent/objectLimitPercent)
-  // You mentioned they are actually absolute max_size_kb / max_objects, so we treat them as such.
-  if (typeof user.capacityLimitPercent === "number") {
-    form.value.userQuotaEnabled = true;
-    form.value.userQuotaUnlimitedSize = false;
-    const { value, unit } = fromKiB(user.capacityLimitPercent);
-    form.value.userQuotaMaxSizeKb = value;
-    form.value.userQuotaSizeUnit = unit;
-  } else {
-    form.value.userQuotaEnabled = false;
-  }
-
-  if (typeof user.objectLimitPercent === "number") {
-    form.value.userQuotaEnabled = true;
-    form.value.userQuotaUnlimitedObjects = false;
-    form.value.userQuotaMaxObjects = user.objectLimitPercent;
-  }
-
-}
-
-  </script>
-  
+</script>

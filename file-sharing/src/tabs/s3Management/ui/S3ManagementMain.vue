@@ -71,14 +71,13 @@
             </label>
           </div>
         </div>
-  
-        <!-- <S3BucketsView
+        <S3BucketsView
           v-if="selectedBackend"
           :backend="selectedBackend"
           :cephGateway="selectedGateway"
-        /> -->
+        /> 
 
-        <UsersView></UsersView>
+        <!-- <UsersView></UsersView> -->
         <!-- <MinioAccessManagement></MinioAccessManagement> -->
         <!-- <GarageKeysPage></GarageKeysPage> -->
       </div>

@@ -1,15 +1,6 @@
 
   // minioCliAdapter.ts
-import type {
-  S3Bucket,
-  Endpoint,
-  BucketVersioningStatus,
-  BucketAcl,
-  MinioUser,
-  MinioUserCreatePayload,
-  MinioUserDetails,
-  MinioUserGroupMembership,
-  MinioUserUpdatePayload,
+import type {S3Bucket,Endpoint,BucketVersioningStatus,BucketAcl, MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserGroupMembership, MinioUserUpdatePayload,
 
 } from "../types/types";
 
@@ -83,6 +74,8 @@ async function getMinioBucketStats(bucketName: string): Promise<{
   objectCount: number;
   sizeBytes: number;
   versionsCount?: number;
+  versioningStatus?: BucketVersioningStatus;
+  objectLockEnabled?: boolean;
 }> {
   const stat = await mcJsonSingle([
     "stat",
@@ -108,12 +101,18 @@ async function getMinioBucketStats(bucketName: string): Promise<{
   const versionsCount: number | undefined =
     usage.versionsCount ?? usage.versions ?? undefined;
 
-  return {
-    createdAt,
-    region,
-    objectCount,
-    sizeBytes,
-    versionsCount,
+  const rawVersioning = stat.Versioning || stat.versioning || {};
+  const versioningStatus: BucketVersioningStatus | undefined =
+    typeof rawVersioning.status === "string" && rawVersioning.status
+      ? (rawVersioning.status as BucketVersioningStatus)
+      : undefined;
+
+  const rawObjectLock = stat.ObjectLock || stat.objectLock || {};
+  const objectLockEnabled =
+    typeof rawObjectLock.enabled === "string" &&
+    rawObjectLock.enabled.toLowerCase() === "enabled";
+
+  return { createdAt, region, objectCount, sizeBytes, versionsCount, versioningStatus, objectLockEnabled,
   };
 }
 
@@ -123,15 +122,16 @@ async function getMinioBucketStats(bucketName: string): Promise<{
 async function getMinioBucketTags(
   bucketName: string
 ): Promise<Record<string, string> | undefined> {
+  const args = ["mc", "--json", "tag", "list", `${MINIO_ALIAS}/${bucketName}`];
+  const proc = useSpawn(args, { superuser: "try" });
+
   try {
-    const lines = await mcJsonLines([
-      "tag",
-      "list",
-      `${MINIO_ALIAS}/${bucketName}`,
-    ]);
+    const { stdout, stderr } = await proc.promise();
+    const out = stdout ? stdout.toString() : "";
 
-    if (!lines.length) return undefined;
+    if (!out.trim()) return undefined;
 
+    const lines = parseJsonLines(out);
     const aggregate: Record<string, string> = {};
 
     for (const entry of lines) {
@@ -142,12 +142,22 @@ async function getMinioBucketTags(
     }
 
     return Object.keys(aggregate).length ? aggregate : undefined;
-  } catch (err) {
-    // If bucket has no tags, mc exits non-zero; treat as "no tags"
-    console.warn("getMinioBucketTags error, treating as no tags:", err);
-    return undefined;
+  } catch (state: any) {
+    const out = state?.stdout ? state.stdout.toString() : "";
+
+    // If this is just "No tags found", treat it as no tags, not an error
+    if (out.includes("No tags found")) {
+      console.log(
+        `getMinioBucketTags: no tags for ${bucketName}, treating as empty`,
+      );
+      return undefined;
+    }
+
+    console.error("getMinioBucketTags: unexpected error", state);
+    throw new Error(errorString(state));
   }
 }
+
 
 /**
  * List buckets from MinIO and enrich them with usage, region, tags, etc.
@@ -172,25 +182,22 @@ export async function listBucketsFromMinio(): Promise<S3Bucket[]> {
         return undefined;
       }
 
-      const {
-        createdAt,
-        region,
-        objectCount,
-        sizeBytes,
-        versionsCount,
+      const {createdAt,region,objectCount,sizeBytes,versionsCount,versioningStatus,objectLockEnabled,
       } = await getMinioBucketStats(bucketName);
 
+      const quotaBytes = await getMinioBucketQuotaBytes(bucketName);
       const tags = await getMinioBucketTags(bucketName);
 
       const owner: string | undefined =
         (tags && (tags.owner || tags.Owner || tags.bucketOwner)) || undefined;
 
-      // If you ever want to use versioning info:
-      const _versioningStatus: BucketVersioningStatus | undefined =
-        versionsCount && versionsCount > 0 ? "Enabled" : "Suspended";
-
       const acl: BucketAcl | undefined = undefined;
       const policy: string | undefined = undefined;
+
+      // Fallback: if versioningStatus is missing, infer from versionsCount
+      const inferredVersioning: BucketVersioningStatus | undefined =
+        versioningStatus ??
+        (versionsCount && versionsCount > 0 ? "Enabled" : "Suspended");
 
       const bucket: S3Bucket = {
         name: bucketName,
@@ -201,6 +208,10 @@ export async function listBucketsFromMinio(): Promise<S3Bucket[]> {
         policy,
         objectCount,
         sizeBytes,
+        quotaBytes,              
+        versioning: inferredVersioning,
+        tags: tags || undefined,  
+        objectLockEnabled
       };
 
       return bucket;
@@ -209,7 +220,38 @@ export async function listBucketsFromMinio(): Promise<S3Bucket[]> {
 
   return detailed.filter((b): b is S3Bucket => Boolean(b));
 }
+async function getMinioBucketQuotaBytes(bucketName: string): Promise<number | undefined> {
+  try {
+    const entry = await mcJsonSingle([
+      "admin",
+      "bucket",
+      "quota",
+      `${MINIO_ALIAS}/${bucketName}`,
+    ]);
 
+    // This shape may vary a bit across mc versions; adjust if your output looks different
+    const quota = entry.quota || entry.Quota || entry;
+    if (!quota || typeof quota !== "object") {
+      return undefined;
+    }
+
+    // Prefer a numeric hard-limit field if present
+    if (typeof quota.hard === "number") {
+      return quota.hard;
+    }
+
+    // Sometimes size might be reported under another field name
+    if (typeof quota.size === "number") {
+      return quota.size;
+    }
+
+    return undefined;
+  } catch (err) {
+    // If quota is not configured or the command fails in a benign way, just treat as "no quota"
+    console.warn(`getMinioBucketQuotaBytes: quota not found for ${bucketName}`, err);
+    return undefined;
+  }
+}
 /**
  * Object-level stats for a single bucket using `mc stat --json`.
  */
@@ -289,12 +331,7 @@ export async function createBucketFromMinio(
     throw new Error("createBucketFromMinio: bucketName is required");
   }
 
-  const {
-    region,
-    withLock,
-    withVersioning,
-    quotaSize,
-    ignoreExisting,
+  const {region,withLock,withVersioning,quotaSize,ignoreExisting,
   } = options;
 
   const bucketPath = `${MINIO_ALIAS}/${bucketName}`;
@@ -446,14 +483,7 @@ export async function createMinioUser(
     for (const policyName of policies) {
       if (!policyName) continue;
 
-      await runMc([
-        "admin",
-        "policy",
-        "attach",
-        MINIO_ALIAS,
-        policyName,
-        "--user",
-        username,
+      await runMc(["admin","policy","attach",MINIO_ALIAS,policyName,"--user",username,
       ]);
     }
   }
@@ -466,11 +496,7 @@ export async function createMinioUser(
  *   mc --json admin policy list ALIAS
  */
 export async function listMinioPolicies(): Promise<string[]> {
-  const objs = await mcJsonLines([
-    "admin",
-    "policy",
-    "list",
-    MINIO_ALIAS,
+  const objs = await mcJsonLines(["admin","policy","list",MINIO_ALIAS,
   ]);
 
   const names = new Set<string>();
@@ -611,27 +637,11 @@ export async function updateMinioUser(payload: MinioUserUpdatePayload): Promise<
   );
 
   for (const p of policiesToDetach) {
-    await runMc([
-      "admin",
-      "policy",
-      "detach",
-      MINIO_ALIAS,
-      p,
-      "--user",
-      username,
-    ]);
+    await runMc([  "admin",  "policy",  "detach",  MINIO_ALIAS,  p,  "--user",  username,]);
   }
 
   for (const p of policiesToAttach) {
-    await runMc([
-      "admin",
-      "policy",
-      "attach",
-      MINIO_ALIAS,
-      p,
-      "--user",
-      username,
-    ]);
+    await runMc(["admin","policy","attach",MINIO_ALIAS,p,"--user",username,]);
   }
 
   // 4) Sync groups: remove missing, add new
@@ -643,25 +653,10 @@ export async function updateMinioUser(payload: MinioUserUpdatePayload): Promise<
   );
 
   for (const g of groupsToAdd) {
-    await runMc([
-      "admin",
-      "group",
-      "add",
-      MINIO_ALIAS,
-      g,
-      username,
-    ]);
+    await runMc(["admin","group","add",MINIO_ALIAS,g,username,]);
   }
 
-  for (const g of groupsToRemove) {
-    await runMc([
-      "admin",
-      "group",
-      "remove",
-      MINIO_ALIAS,
-      g,
-      username,
-    ]);
+  for (const g of groupsToRemove) {await runMc([  "admin",  "group",  "remove",  MINIO_ALIAS,  g,  username,]);
   }
 
   // 5) Secret handling
@@ -671,14 +666,7 @@ export async function updateMinioUser(payload: MinioUserUpdatePayload): Promise<
       // Prefer explicit accessKey from MinioUserDetails, fallback to username
       const accessKey = current.accessKey || username;
 
-      await runMc([
-        "admin",
-        "accesskey",
-        "edit",
-        MINIO_ALIAS,
-        accessKey,
-        "--secret-key",
-        newSecretKey,
+      await runMc([ "admin", "accesskey", "edit", MINIO_ALIAS, accessKey, "--secret-key", newSecretKey,
       ]);
     } else {
       await runMc(["admin", "user", "reset", MINIO_ALIAS, username]);
@@ -837,7 +825,6 @@ export async function createOrUpdateMinioPolicy(
   name: string,
   policyJson: string
 ): Promise<void> {
-  // Validate JSON first
   let parsed;
   try {
     parsed = JSON.parse(policyJson);
@@ -998,5 +985,87 @@ export async function updateMinioGroup(
       "--group",
       name,
     ]);
+  }
+}
+
+export interface UpdateMinioBucketOptions {
+  versioning?: boolean;
+  quotaSize?: string | null;
+  tags?: Record<string, string> | null;
+}
+
+export async function updateMinioBucket(
+  bucketName: string,
+  options: UpdateMinioBucketOptions,
+): Promise<void> {
+  if (!bucketName) {
+    throw new Error("updateMinioBucket: bucketName is required");
+  }
+
+  const bucketPath = `${MINIO_ALIAS}/${bucketName}`;
+  console.log("options ", options )
+  // Versioning
+  if (typeof options.versioning === "boolean") {
+    const cmd = options.versioning ? "enable" : "suspend";
+    await runMc(["version", cmd, bucketPath]);
+  }
+
+  // Quota
+if (options.quotaSize !== undefined) {
+  const bucketPath = `${MINIO_ALIAS}/${bucketName}`;
+
+  // If null/empty string => clear quota, otherwise set quota
+  if (options.quotaSize === null || options.quotaSize.trim() === "") {
+    // Clear quota
+    await runMc([
+      "quota",
+      "clear",
+      bucketPath,
+    ]);
+  } else {
+    // Set quota
+    await runMc([
+      "quota",
+      "set",
+      bucketPath,
+      "--size",
+      options.quotaSize.trim(), // e.g. "20GiB"
+    ]);
+  }
+}
+
+  console.log("quota set")
+
+  // Tags
+  if ("tags" in options) {
+    const { tags } = options;
+
+    if (tags === null) {
+      // Clear all tags. If there were none, it's ok – ignore that specific error.
+      try {
+        await runMc(["tag", "remove", bucketPath]);
+      } catch (state: any) {
+        const msg = errorString(state) || "";
+        if (!msg.toLowerCase().includes("no tags")) {
+          throw new Error(msg);
+        }
+      }
+    } else if (tags && Object.keys(tags).length > 0) {
+      const tagStr = Object.entries(tags)
+        .map(([k, v]) => `${k}=${v}`)
+        .join("&");
+
+      await runMc(["tag", "set", bucketPath, tagStr]);
+    } else {
+      // tags is {} -> treat like "clear"
+      try {
+        await runMc(["tag", "remove", bucketPath]);
+      } catch (state: any) {
+        const msg = errorString(state) || "";
+        if (!msg.toLowerCase().includes("no tags")) {
+          throw new Error(msg);
+        }
+      }
+    }
   }
 }

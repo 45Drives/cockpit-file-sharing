@@ -77,7 +77,7 @@
                   {{ user.tenant || "-" }}
                 </td>
                 <td class="px-3 py-2 border-b border-gray-200">
-                  {{ user.fullName || "-" }}
+                  {{ user.displayName || "-" }}
                 </td>
                 <td class="px-3 py-2 border-b border-gray-200">
                   {{ user.email || "-" }}
@@ -137,7 +137,7 @@
         v-if="showDeleteDialog && deleteTarget"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
       >
-        <div class="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
+        <div class=" rounded-lg shadow-lg max-w-md w-full mx-4">
           <div class="px-5 py-4 border-b border-gray-200">
             <h3 class="text-base font-semibold">
               Delete user "{{ deleteTarget.uid }}"
@@ -180,7 +180,7 @@
   
           <div class="px-5 py-3 border-t border-gray-200 flex justify-end space-x-2">
             <button
-              class="px-3 py-1.5 text-xs rounded border border-gray-300 bg-white"
+              class="px-3 py-1.5 text-xs rounded border border-gray-300 "
               @click="closeDeleteDialog"
               :disabled="loading"
             >
@@ -312,7 +312,12 @@ const selectedUserDetails = ref<RgwUserDetails | null>(null);
     loading.value = false;
   }
 }
-
+function openCreateDialog() {
+  userDialogMode.value = "create";
+  editingUser.value = null;      
+  userDialogError.value = null;  
+  showUserDialog.value = true;    
+}
 function onEdit(user: RgwUser) {
   userDialogMode.value = "edit";
   editingUser.value = user;
