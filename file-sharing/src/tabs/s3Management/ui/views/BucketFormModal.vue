@@ -39,7 +39,7 @@
               Owner
             </label>
   
-            <template v-if="backend === 'ceph' && mode === 'create'">
+            <template v-if="backend === 'ceph' ">
               <select
                 v-model="modalForm.owner"
                 class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
@@ -61,15 +61,6 @@
               <p v-else class="mt-1 text-[11px] text-slate-500">
                 Owner must be an existing RGW user (uid).
               </p>
-            </template>
-  
-            <template v-else>
-              <input
-                v-model="modalForm.owner"
-                type="text"
-                placeholder="optional"
-                class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-              />
             </template>
           </div>
   
@@ -129,7 +120,7 @@
               <div class="flex items-center gap-2">
                 <input
                   id="minioObjectLockEnabled"
-                  v-model="modalForm.minioObjectLockEnabled"
+                  v-model="modalForm.objectLockEnabled"
                   type="checkbox"
                   class="h-4 w-4 rounded border-slate-600 bg-default"
                 />
@@ -150,7 +141,7 @@
               <div class="flex items-center gap-2">
                 <input
                   id="minioVersioningEnabled"
-                  v-model="modalForm.minioVersioningEnabled"
+                  v-model="modalForm.versioningEnabled"
                   type="checkbox"
                   class="h-4 w-4 rounded border-slate-600 bg-default"
                 />
@@ -175,14 +166,14 @@
                   </label>
                   <div class="flex gap-2">
                     <input
-                      v-model="modalForm.minioQuotaMaxSize"
+                      v-model="modalForm.quotaMaxSize"
                       type="number"
                       min="0"
                       placeholder="e.g. 100"
                       class="w-full rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1"
                     />
                     <select
-                      v-model="modalForm.minioQuotaMaxSizeUnit"
+                      v-model="modalForm.quotaMaxSizeUnit"
                       class="w-24 rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1"
                     >
                       <option value="MiB">MiB</option>
@@ -207,7 +198,7 @@
                   Max size
                 </label>
                 <input
-                  v-model="modalForm.garageMaxSize"
+                  v-model="modalForm.quotaMaxSize"
                   type="number"
                   min="0"
                   placeholder="e.g. 30"
@@ -219,7 +210,7 @@
                   Unit
                 </label>
                 <select
-                  v-model="modalForm.garageMaxSizeUnit"
+                  v-model="modalForm.quotaMaxSizeUnit"
                   class="w-full rounded-md border border-default bg-default px-2 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
                 >
                   <option value="MiB">MiB</option>
@@ -308,7 +299,7 @@
                 <div class="flex items-center gap-2">
                   <input
                     id="cephObjectLockEnabled"
-                    v-model="modalForm.cephObjectLockEnabled"
+                    v-model="modalForm.objectLockEnabled"
                     type="checkbox"
                     :disabled="mode === 'edit'"
                     class="h-4 w-4 rounded border-slate-600 bg-default"
@@ -328,7 +319,7 @@
                   <span class="font-medium text-slate-300">Mode</span>
                   <select
                     v-model="modalForm.cephObjectLockMode"
-                    :disabled="!modalForm.cephObjectLockEnabled || mode === 'edit'"
+                    :disabled="!modalForm.objectLockEnabled || mode === 'edit'"
                     class="rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1 disabled:opacity-60"
                   >
                     <option value="GOVERNANCE">GOVERNANCE</option>
@@ -342,7 +333,7 @@
                     v-model="modalForm.cephObjectLockRetentionDays"
                     type="number"
                     min="1"
-                    :disabled="!modalForm.cephObjectLockEnabled || mode === 'edit'"
+                    :disabled="!modalForm.objectLockEnabled || mode === 'edit'"
                     placeholder="e.g. 30"
                     class="rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1 disabled:opacity-60"
                   />
@@ -359,7 +350,7 @@
                 <div class="flex items-center gap-2">
                   <input
                     id="cephVersioningEnabled"
-                    v-model="modalForm.cephVersioningEnabled"
+                    v-model="modalForm.versioningEnabled"
                     type="checkbox"
                     class="h-4 w-4 rounded border-slate-600 bg-default"
                   />
@@ -420,44 +411,50 @@
             </div>
   
             <!-- ACL -->
-            <div class="space-y-2">
-              <label class="block text-xs font-medium text-slate-300">
-                ACL
-              </label>
-  
-              <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-                <!-- Grantee type -->
-                <select
-                  v-model="modalForm.cephAclGranteeType"
-                  class="rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1"
-                >
-                  <option value="owner">Owner</option>
-                  <option value="authenticated">Authenticated users</option>
-                  <option value="everyone">Everyone (public)</option>
-                </select>
-  
-                <!-- Permission, options depend on grantee -->
-                <select
-                  v-model="modalForm.cephAclPermission"
-                  class="rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1"
-                  :disabled="availablePermissions.length === 1"
-                >
-                  <option
-                    v-for="p in availablePermissions"
-                    :key="p.value"
-                    :value="p.value"
-                  >
-                    {{ p.label }}
-                  </option>
-                </select>
-              </div>
-  
-              <p class="text-[11px] text-slate-500">
-                When the grantee is Owner, permission is always Full control.
-                Authenticated users can only have Read. Everyone can have Read or
-                Read and write.
-              </p>
-            </div>
+<!-- ACL -->
+<div class="space-y-2">
+  <label class="block text-xs font-medium text-slate-300">
+    ACL
+  </label>
+
+  <div class="grid grid-cols-1 gap-2 md:grid-cols-2 text-xs">
+    <!-- Scope select -->
+    <div class="flex flex-col gap-1">
+      <span class="font-medium text-slate-300">Who can access</span>
+      <select
+        v-model="modalForm.cephAclScope"
+        class="w-full rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1"
+      >
+        <option value="owner">Owner only (private)</option>
+        <option value="authenticated-users">Authenticated users</option>
+        <option value="all-users">Everyone (public)</option>
+      </select>
+    </div>
+
+    <!-- Permission select -->
+    <div class="flex flex-col gap-1">
+      <span class="font-medium text-slate-300">Permission</span>
+      <select
+        v-model="modalForm.cephAclPermission"
+        class="w-full rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1"
+      >
+        <option
+          v-for="p in cephAclPermissionOptions"
+          :key="p.value"
+          :value="p.value"
+        >
+          {{ p.label }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <p class="text-[11px] text-slate-500">
+    Select a single grantee scope and permission. This maps to one bucket ACL configuration.
+  </p>
+</div>
+
+
   
             <div class="space-y-1">
               <label class="block text-xs font-medium text-slate-300">
@@ -495,122 +492,119 @@
     </div>
 </template>
   
-  <script setup lang="ts">
-  import { reactive, watch, ref, computed } from "vue";
-  import type { RgwGateway, RgwUser, S3Bucket } from "../../types/types";
+<script setup lang="ts">
+import { reactive, watch, ref, computed } from "vue";
+import type { RgwGateway, RgwUser, S3Bucket, CephAclPermission, CephAclRule } from "../../types/types";
+
+const bucketPolicyError = ref<string | null>(null);
+
+const props = defineProps<{
+  visible: boolean;
+  mode: "create" | "edit";
+  backend: "minio" | "ceph" | "garage";
+  cephGateway?: RgwGateway | null;
+  cephUsers: RgwUser[];
+  loadingCephUsers: boolean;
+  cephUsersError: string | null;
+  bucketToEdit: S3Bucket | null;
+}>();
+
+const emit = defineEmits<{
+  (e: "close"): void;
+  (e: "submit", payload: { mode: "create" | "edit"; form: any }): void;
+}>();
+
+const modalForm = reactive({
+  name: "",
+  region: "",
+  owner: "",
+
+  // Tags...
+  tags: [] as { key: string; value: string }[],
   
-  const bucketPolicyError = ref<string | null>(null);
-  
-  const props = defineProps<{
-    visible: boolean;
-    mode: "create" | "edit";
-    backend: "minio" | "ceph" | "garage";
-    cephGateway?: RgwGateway | null;
-    cephUsers: RgwUser[];
-    loadingCephUsers: boolean;
-    cephUsersError: string | null;
-    bucketToEdit: S3Bucket | null;
-  }>();
-  
-  const emit = defineEmits<{
-    (e: "close"): void;
-    (e: "submit", payload: { mode: "create" | "edit"; form: any }): void;
-  }>();
-  
-  const modalForm = reactive({
-    name: "",
-    region: "",
-    owner: "",
-  
-    // Tags as key/value pairs for UI
-    tags: [] as { key: string; value: string }[],
-  
-    // Garage...
-    garageMaxSize: "",
-    garageMaxSizeUnit: "GiB" as "MiB" | "GiB" | "TiB",
-    garageMaxObjects: "",
-    garageAllowText: "",
-    garageDenyText: "",
-    garageExtraArgsText: "",
-    garageWebsiteEnabled: false,
-    garageWebsiteIndex: "index.html",
-    garageWebsiteError: "",
-    garageAliasesText: "",
-  
-    // Ceph RGW
-    cephObjectLockEnabled: false,
-    cephObjectLockMode: "COMPLIANCE" as "GOVERNANCE" | "COMPLIANCE",
-    cephObjectLockRetentionDays: "",
-    cephEncryptionMode: "none" as "none" | "sse-s3" | "kms",
-    cephKmsKeyId: "",
-    bucketPolicyText: "",
-  
-    cephVersioningEnabled: false,
-  
-    // Grantee UI + underlying ACL fields
-    cephAclGranteeType: "owner" as "owner" | "authenticated" | "everyone",
-    cephAclGrantee: "",
-    cephAclPermission: "FULL_CONTROL" as
-      | "READ"
-      | "WRITE"
-      | "READ_ACP"
-      | "WRITE_ACP"
-      | "FULL_CONTROL",
-  
-    cephPlacementTarget: "",
-  
-    // MinIO...
-    minioObjectLockEnabled: false,
-    minioVersioningEnabled: false,
-    minioQuotaMaxSize: "",
-    minioQuotaMaxSizeUnit: "GiB" as "MiB" | "GiB" | "TiB",
-  });
-  
-  function tagsObjectToArray(tags?: Record<string, string>): { key: string; value: string }[] {
-    if (!tags) return [{ key: "", value: "" }];
-    const entries = Object.entries(tags);
-    if (!entries.length) return [{ key: "", value: "" }];
-    return entries.map(([key, value]) => ({ key, value }));
-  }
-  
-  function resetForm() {
-    modalForm.name = "";
-    modalForm.region = "";
-    modalForm.owner = "";
-  
-    modalForm.tags = [{ key: "", value: "" }];
-      modalForm.garageMaxSize = "";
-    modalForm.garageMaxSizeUnit = "GiB";
-    modalForm.garageMaxObjects = "";
-    modalForm.garageAllowText = "";
-    modalForm.garageDenyText = "";
-    modalForm.garageExtraArgsText = "";
-    modalForm.garageWebsiteEnabled = false;
-    modalForm.garageWebsiteIndex = "index.html";
-    modalForm.garageWebsiteError = "";
-    modalForm.garageAliasesText = "";
-  
-    modalForm.cephObjectLockEnabled = false;
-    modalForm.cephObjectLockMode = "COMPLIANCE";
-    modalForm.cephObjectLockRetentionDays = "";
-    modalForm.cephEncryptionMode = "none";
-    modalForm.cephKmsKeyId = "";
-    modalForm.bucketPolicyText = "";
-    modalForm.cephVersioningEnabled = false;
-  
-    modalForm.cephAclGranteeType = "owner";
-    modalForm.cephAclGrantee = "";
-    modalForm.cephAclPermission = "FULL_CONTROL";
-    modalForm.cephPlacementTarget = "";
-  
-    modalForm.minioObjectLockEnabled = false;
-    modalForm.minioVersioningEnabled = false;
-    modalForm.minioQuotaMaxSize = "";
-    modalForm.minioQuotaMaxSizeUnit = "GiB";
-    bucketPolicyError.value = null;
-  }
-  
-  function initFromProps() {
+  objectLockEnabled: false, 
+  versioningEnabled: false, 
+  quotaMaxSize: "",
+  quotaMaxSizeUnit: "GiB" as "MiB" | "GiB" | "TiB",
+
+  // Garage...
+  garageMaxSize: "",
+  garageMaxObjects: "",
+  garageAllowText: "",
+  garageDenyText: "",
+  garageExtraArgsText: "",
+  garageWebsiteEnabled: false,
+  garageWebsiteIndex: "index.html",
+  garageWebsiteError: "",
+  garageAliasesText: "",
+
+  // Ceph RGW (object lock, encryption, etc)
+  cephObjectLockEnabled: false,
+  cephObjectLockMode: "COMPLIANCE" as "GOVERNANCE" | "COMPLIANCE",
+  cephObjectLockRetentionDays: "",
+  cephEncryptionMode: "none" as "none" | "sse-s3" | "kms",
+  cephKmsKeyId: "",
+  bucketPolicyText: "",
+  cephVersioningEnabled: false,
+  cephAclScope: "owner" as "owner" | "authenticated-users" | "all-users",
+  cephAclPermission: "READ" as CephAclPermission,
+  cephPlacementTarget: "",
+
+  // MinIO...
+  minioObjectLockEnabled: false,
+  minioVersioningEnabled: false,
+  minioQuotaMaxSize: "",
+  minioQuotaMaxSizeUnit: "GiB" as "MiB" | "GiB" | "TiB",
+});
+
+
+function tagsObjectToArray(
+  tags?: Record<string, string>
+): { key: string; value: string }[] {
+  if (!tags) return [{ key: "", value: "" }];
+  const entries = Object.entries(tags);
+  if (!entries.length) return [{ key: "", value: "" }];
+  return entries.map(([key, value]) => ({ key, value }));
+}
+
+function resetForm() {
+  modalForm.name = "";
+  modalForm.region = "";
+  modalForm.owner = "";
+
+  modalForm.tags = [{ key: "", value: "" }];
+
+  // generic
+  modalForm.objectLockEnabled = false;
+  modalForm.versioningEnabled = false;
+  modalForm.quotaMaxSize = "";
+  modalForm.quotaMaxSizeUnit = "GiB";
+
+  // garage
+  modalForm.garageMaxObjects = "";
+  modalForm.garageAllowText = "";
+  modalForm.garageDenyText = "";
+  modalForm.garageExtraArgsText = "";
+  modalForm.garageWebsiteEnabled = false;
+  modalForm.garageWebsiteIndex = "index.html";
+  modalForm.garageWebsiteError = "";
+  modalForm.garageAliasesText = "";
+
+  // ceph
+  modalForm.cephObjectLockMode = "COMPLIANCE";
+  modalForm.cephObjectLockRetentionDays = "";
+  modalForm.cephEncryptionMode = "none";
+  modalForm.cephKmsKeyId = "";
+  modalForm.bucketPolicyText = "";
+
+  modalForm.cephPlacementTarget = "";
+  modalForm.cephAclScope = "owner";
+  modalForm.cephAclPermission = "READ";
+
+  bucketPolicyError.value = null;
+}
+
+function initFromProps() {
   if (!props.visible) return;
 
   if (props.mode === "create") {
@@ -624,12 +618,12 @@
     modalForm.region = props.bucketToEdit.region ?? "";
     modalForm.owner = props.bucketToEdit.owner ?? "";
     modalForm.tags = tagsObjectToArray(props.bucketToEdit.tags);
-
+    modalForm.bucketPolicyText = props.bucketToEdit.policy ?? "";
     // MinIO edit defaults
     if (props.backend === "minio") {
-      modalForm.minioVersioningEnabled =
+      modalForm.versioningEnabled =
         props.bucketToEdit.versioning === "Enabled";
-      modalForm.minioObjectLockEnabled =
+      modalForm.objectLockEnabled =
         !!props.bucketToEdit.objectLockEnabled;
 
       const quotaBytes = props.bucketToEdit.quotaBytes;
@@ -652,17 +646,16 @@
           value = quotaBytes / MiB;
         }
 
-        modalForm.minioQuotaMaxSize = String(value);
-        modalForm.minioQuotaMaxSizeUnit = unit;
+        modalForm.quotaMaxSize = String(value);
+        modalForm.quotaMaxSizeUnit = unit;
       } else {
-        modalForm.minioQuotaMaxSize = "";
-        modalForm.minioQuotaMaxSizeUnit = "GiB";
+        modalForm.quotaMaxSize = "";
+        modalForm.quotaMaxSizeUnit = "GiB";
       }
     }
 
-    // Garage edit defaults (this is the missing part)
+    // Garage edit defaults
     if (props.backend === "garage") {
-      // placement / max objects if you have them on S3Bucket
       modalForm.garageMaxObjects =
         (props.bucketToEdit as any).garageMaxObjects != null
           ? String((props.bucketToEdit as any).garageMaxObjects)
@@ -689,122 +682,128 @@
           value = quotaBytes / MiB;
         }
 
-        modalForm.garageMaxSize = String(value);
-        modalForm.garageMaxSizeUnit = unit;
+        modalForm.quotaMaxSize = String(value);
+        modalForm.quotaMaxSizeUnit = unit;
       } else {
-        modalForm.garageMaxSize = "";
-        modalForm.garageMaxSizeUnit = "GiB";
+        modalForm.quotaMaxSize = "";
+        modalForm.quotaMaxSizeUnit = "GiB";
       }
 
-      // website fields if you expose them on S3Bucket
-      modalForm.garageWebsiteEnabled = !!(props.bucketToEdit as any).garageWebsiteEnabled;
+      modalForm.garageWebsiteEnabled = !!(props.bucketToEdit as any)
+        .garageWebsiteEnabled;
       modalForm.garageWebsiteIndex =
         (props.bucketToEdit as any).garageWebsiteIndex || "index.html";
       modalForm.garageWebsiteError =
         (props.bucketToEdit as any).garageWebsiteError || "";
 
-      // aliases as comma-separated
-      const aliases = (props.bucketToEdit as any).garageAliases as string[] | undefined;
-      modalForm.garageAliasesText = aliases && aliases.length ? aliases.join(",") : "";
+      const aliases = (props.bucketToEdit as any)
+        .garageAliases as string[] | undefined;
+      modalForm.garageAliasesText =
+        aliases && aliases.length ? aliases.join(",") : "";
     }
+    if (props.backend === "ceph" && props.bucketToEdit.acl) {
+      const aclRules = props.bucketToEdit.acl as CephAclRule[];
 
-    // ACL defaults on edit
-    modalForm.cephAclGranteeType = "owner";
-    modalForm.cephAclGrantee = "";
-    modalForm.cephAclPermission = "FULL_CONTROL";
-  }
+      // Prefer public > authenticated > owner, if multiple entries exist
+      const publicRule = aclRules.find((r) => r.grantee === "all-users");
+      const authRule = aclRules.find((r) => r.grantee === "authenticated-users");
+      const ownerRule = aclRules.find((r) => r.grantee === "owner");
+
+      const chosen =
+        publicRule || authRule || ownerRule || {
+          grantee: "owner",
+          permission: "READ" as CephAclPermission,
+        };
+
+      modalForm.cephAclScope = chosen.grantee as
+        | "owner"
+        | "authenticated-users"
+        | "all-users";
+      modalForm.cephAclPermission = chosen.permission;
+    } else {
+      // sensible default if no ACL info
+      modalForm.cephAclScope = "owner";
+      modalForm.cephAclPermission = "READ";
+    }
+    }
 }
-  
-  watch(
-    () => [props.visible, props.mode, props.bucketToEdit, props.backend],
-    initFromProps,
-    { immediate: true },
-  );
-  
-  watch(
-    () => modalForm.bucketPolicyText,
-    (val) => {
-      const text = (val ?? "").trim();
-      if (!text) {
-        bucketPolicyError.value = null;
-        return;
-      }
-      try {
-        JSON.parse(text);
-        bucketPolicyError.value = null;
-      } catch {
-        bucketPolicyError.value = "Bucket policy must be valid JSON.";
-      }
-    },
-  );
-  
-  watch(
-    () => modalForm.cephAclGranteeType,
-    (type) => {
-      if (type === "owner") {
-        modalForm.cephAclGrantee = "owner";
-        modalForm.cephAclPermission = "FULL_CONTROL";
-      } else if (type === "authenticated") {
-        modalForm.cephAclGrantee = "authenticated-users";
-        modalForm.cephAclPermission = "READ";
-      } else if (type === "everyone") {
-        modalForm.cephAclGrantee = "all-users";
-        if (!["READ", "WRITE"].includes(modalForm.cephAclPermission)) {
-          modalForm.cephAclPermission = "READ";
-        }
-      }
-    },
-    { immediate: true },
-  );
-  
-  const availablePermissions = computed(() => {
-    switch (modalForm.cephAclGranteeType) {
-      case "owner":
-        return [{ value: "FULL_CONTROL" as const, label: "Full control" }];
-      case "authenticated":
-        return [{ value: "READ" as const, label: "Read" }];
-      case "everyone":
-        return [
-          { value: "READ" as const, label: "Read" },
-          { value: "WRITE" as const, label: "Read and write" },
-        ];
-      default:
-        return [];
+
+watch(
+  () => [props.visible, props.mode, props.bucketToEdit, props.backend],
+  initFromProps,
+  { immediate: true }
+);
+
+watch(
+  () => modalForm.bucketPolicyText,
+  (val) => {
+    const text = (val ?? "").trim();
+    if (!text) {
+      bucketPolicyError.value = null;
+      return;
     }
+    try {
+      JSON.parse(text);
+      bucketPolicyError.value = null;
+    } catch {
+      bucketPolicyError.value = "Bucket policy must be valid JSON.";
+    }
+  }
+);
+
+
+const cephAclPermissionOptions: { value: CephAclPermission; label: string }[] = [
+  { value: "FULL_CONTROL", label: "Full control" },
+  { value: "READ",         label: "Read" },
+  { value: "READ_WRITE",   label: "Read and write" },
+];
+
+
+function addTagRow() {
+  modalForm.tags.push({ key: "", value: "" });
+}
+
+function removeTagRow(index: number) {
+  if (modalForm.tags.length <= 1) return;
+  modalForm.tags.splice(index, 1);
+}
+
+function onSubmit() {
+  const policyText = modalForm.bucketPolicyText?.trim();
+  if (policyText) {
+    try {
+      JSON.parse(policyText);
+    } catch {
+      bucketPolicyError.value = "Bucket policy must be valid JSON.";
+      return;
+    }
+  }
+
+  const tagsText = modalForm.tags
+    .filter((t) => t.key.trim() && t.value.trim())
+    .map((t) => `${t.key.trim()}=${t.value.trim()}`)
+    .join(",");
+
+  // Build explicit ACL rules for Ceph RGW from the three rows
+  const cephAclRules: Array<{
+    grantee: "owner" | "authenticated-users" | "all-users";
+    permission: CephAclPermission;
+  }> = [];
+
+  cephAclRules.push({
+    grantee: modalForm.cephAclScope,
+    permission: modalForm.cephAclPermission,
   });
-  
-  function addTagRow() {
-    modalForm.tags.push({ key: "", value: "" });
-  }
-  
-  function removeTagRow(index: number) {
-    if (modalForm.tags.length <= 1) return;
-    modalForm.tags.splice(index, 1);
-  }
-  
-  function onSubmit() {
-    const policyText = modalForm.bucketPolicyText?.trim();
-    if (policyText) {
-      try {
-        JSON.parse(policyText);
-      } catch {
-        bucketPolicyError.value = "Bucket policy must be valid JSON.";
-        return;
-      }
-    }
-  
-    const tagsText = modalForm.tags
-      .filter((t) => t.key.trim() && t.value.trim())
-      .map((t) => `${t.key.trim()}=${t.value.trim()}`)
-      .join(",");
-  
-    emit("submit", {
-      mode: props.mode,
-      form: {
-        ...modalForm,
-        tagsText, 
-      },
-    });
-  }
-  </script>
-  
+ 
+
+  emit("submit", {
+    mode: props.mode,
+    form: {
+      ...modalForm,
+      tagsText,
+      cephAclRules, // new structured ACL payload
+    },
+  });
+}
+
+</script>

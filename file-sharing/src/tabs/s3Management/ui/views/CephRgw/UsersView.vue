@@ -1,8 +1,20 @@
 <template>
     <div class="px-6 py-6 mx-auto box-border">
-      <header class="mb-4">
-        <h1 class="text-2xl font-semibold">Ceph RGW Users</h1>
-      </header>
+      <header class="mb-4 flex items-center justify-between">
+  <div class="flex items-center gap-2">
+    <button
+      v-if="showBackButton"
+      type="button"
+      class="inline-flex items-center border border-gray-300 text-xs font-medium rounded px-2 py-1"
+      @click="emit('backToViewSelection')"
+    >
+      Back
+    </button>
+    <h1 class="text-2xl font-semibold">
+      Ceph RGW Users
+    </h1>
+  </div>
+</header>
   
       <section class="bg-default rounded-lg border border-gray-200 px-5 py-4 shadow-sm">
         <div class="flex items-center justify-between mb-3">
@@ -240,6 +252,13 @@ const showDetailsDialog = ref(false);
 const detailsLoading = ref(false);
 const detailsError = ref<string | null>(null);
 const selectedUserDetails = ref<RgwUserDetails | null>(null);
+
+  const props = defineProps<{
+  showBackButton?: boolean;
+  }>();
+  const emit = defineEmits<{
+  (e: "backToViewSelection"): void;
+}>();
 
   async function loadUsers() {
     loading.value = true;

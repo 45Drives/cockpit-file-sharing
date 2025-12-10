@@ -1,9 +1,16 @@
 // cephRgwCliAdapter.ts
-import type {S3Bucket,Endpoint,BucketAcl,RgwGateway,RgwUser,RgwDashboardS3Creds, CreatedRgwUserKeys,CreateRgwUserOptions,
-  RgwUserDetails,RgwUserKey,RgwUserCap} from "../types/types";
+import type {S3Bucket,Endpoint,CephAclRule,RgwGateway,RgwUser,RgwDashboardS3Creds, CreatedRgwUserKeys,CreateRgwUserOptions,
+  RgwUserDetails,RgwUserKey,RgwUserCap, CephBucketUpdatePayload,
+  CephAclPermission,} from "../types/types";
   import { legacy, server, Command, unwrap } from "../../../../../houston-common/houston-common-lib";
   const { errorString } = legacy;
+  type CephS3Connection = {
+    endpointUrl: string;
+    region: string;
 
+  };
+  let cachedCephS3Conn: CephS3Connection | null = null;
+let cachedDashboardCreds: RgwDashboardS3Creds | null = null;
   async function rgwJson(subArgs: string[]): Promise<any> {
     const cmd = new Command(["radosgw-admin", ...subArgs, "--format", "json"], {
       superuser: "try", // same intent as before
@@ -28,55 +35,14 @@ import type {S3Bucket,Endpoint,BucketAcl,RgwGateway,RgwUser,RgwDashboardS3Creds,
       throw new Error(errorString(state));
     }
   }
-  
-
   export async function listBucketsFromCeph(): Promise<S3Bucket[]> {
     const bucketNames: string[] = await rgwJson(["bucket", "list"]);
+    const { region: defaultRegion } = await getCephS3Connection();
   
     const detailed = await Promise.all(
-      bucketNames.map(async (bucketName) => {
-        const stats = await rgwJson([
-          "bucket",
-          "stats",
-          "--bucket",
-          bucketName,
-        ]);
-  
-        const owner: string | undefined = stats.owner;
-        const creationTime: string | undefined = stats.creation_time;
-        const lastModifiedTime: string | undefined = stats.mtime;
-  
-        const usage = stats.usage || {};
-        const usageKey = "rgw.main" in usage ? "rgw.main" : Object.keys(usage)[0];
-        const usageMain = usageKey ? usage[usageKey] || {} : {};
-  
-        const sizeBytes: number = usageMain.size ?? 0;
-        const objectCount: number = usageMain.num_objects ?? 0;
-        const versionCount: number | undefined = usageMain.num_object_versions;
-  
-        const region: string =
-          stats.zone || stats.zonegroup || "ceph-default-zone";
-  
-        const acl: BucketAcl | undefined = undefined;
-        const policy: string | undefined = undefined;
-        const tags: Record<string, string> | undefined = undefined;
-  
-        const bucket: S3Bucket = {
-          name: bucketName,
-          createdAt: creationTime,
-          lastModifiedTime: lastModifiedTime, // <- mtime from RGW
-          region,
-          owner,
-          objectCount,
-          sizeBytes,
-          versionCount,
-          acl,
-          policy,
-          tags,
-        };
-  
-        return bucket;
-      })
+      bucketNames.map((bucketName) =>
+        buildS3BucketFromRgwStats(bucketName, defaultRegion)
+      )
     );
   
     return detailed;
@@ -267,25 +233,9 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
 }
 
 
-export async function createRgwBucket(params: {name: string;ownerUid?: string;placementTarget?: string;zone?: string;zonegroup?: string;
-}): Promise<void> {
-  const args: string[] = ["bucket", "create", "--bucket", params.name];
-
-  if (params.ownerUid) {
-    args.push("--uid", params.ownerUid);
-  }
-
-  // Placement / location constraint (Ceph RGW uses placement-id)
-  if (params.placementTarget) {
-    args.push("--placement-id", params.placementTarget);
-  }
-
- 
-  await rgwJson(args);
-}
-
 async function getDashboardS3Creds(): Promise<RgwDashboardS3Creds> {
-  // Adjust uid if your dashboard user has a different name
+  if (cachedDashboardCreds) return cachedDashboardCreds;
+
   const info = await rgwJson(["user", "info", "--uid", "dashboard"]);
 
   const keys = info.keys || info.s3_keys || [];
@@ -302,24 +252,24 @@ async function getDashboardS3Creds(): Promise<RgwDashboardS3Creds> {
     throw new Error("Dashboard user S3 keys are missing access/secret key fields");
   }
 
-  return { accessKey, secretKey };
+  cachedDashboardCreds = { accessKey, secretKey };
+  return cachedDashboardCreds;
 }
-
 async function runAwsWithDashboardCreds(
   args: string[],
-  endpointUrl: string,
-  region: string
-): Promise<void> {
+  endpointUrl: string
+): Promise<any> {
   const { accessKey, secretKey } = await getDashboardS3Creds();
 
   const cmdLine =
     `AWS_ACCESS_KEY_ID='${accessKey}' ` +
     `AWS_SECRET_ACCESS_KEY='${secretKey}' ` +
-    `AWS_DEFAULT_REGION='${region}' ` +
+    `AWS_DEFAULT_REGION='default' ` +
     `aws --endpoint-url '${endpointUrl}' ` +
     args.map((a) => `'${a}'`).join(" ");
 
   const cmd = new Command(["bash", "-lc", cmdLine], { superuser: "try" });
+  console.log("cmd ", cmd);
 
   try {
     const proc = await unwrap(server.execute(cmd));
@@ -329,26 +279,58 @@ async function runAwsWithDashboardCreds(
         : ((proc as any).stdout ?? "").toString();
 
     const text = (stdout ?? "").toString().trim();
-    console.log("runAwsWithDashboardCreds stdout =", text);
+    if (text) {
+      console.log("runAwsWithDashboardCreds stdout =", text);
+      return text; // most s3api calls: JSON or text
+    }
+    return;
   } catch (state: any) {
     const stderr =
       typeof state?.getStderr === "function"
         ? state.getStderr()
         : String(state.stderr ?? "");
 
-    // Special-case the "invalid XML" + bucket_info JSON thing for create-bucket only.
-    if (
+    const isCreateBucket =
+      args.length >= 2 &&
       args[0] === "s3api" &&
-      args[1] === "create-bucket" &&
+      args[1] === "create-bucket";
+
+    if (
+      isCreateBucket &&
       stderr.includes("Unable to parse response (not well-formed (invalid token)") &&
       stderr.includes('"bucket_info"')
     ) {
-      console.warn("AWS CLI parse error, but RGW reports bucket created:", stderr);
-      return;
+      console.warn(
+        "Ignoring aws XML parse error for create-bucket; RGW returned bucket_info JSON",
+      );
+      return; // soft success, verification will be done via head-bucket
     }
 
     console.error("runAwsWithDashboardCreds error", state);
+    console.error("runAwsWithDashboardCreds stderr =", stderr);
     throw new Error(errorString(state));
+  }
+}
+
+
+
+async function ensureBucketExists(
+  bucketName: string,
+  endpointUrl: string,
+): Promise<void> {
+  try {
+    await runAwsWithDashboardCreds(
+      ["s3api", "head-bucket", "--bucket", bucketName],
+      endpointUrl,
+    );
+  } catch (err) {
+    // If head-bucket fails, treat this as a real failure:
+    // either create-bucket genuinely failed, or there is a connectivity/perm issue.
+    throw new Error(
+      `Bucket "${bucketName}" does not appear to exist after create-bucket: ${String(
+        err,
+      )}`,
+    );
   }
 }
 
@@ -381,21 +363,17 @@ export async function changeRgwBucketOwner(
   await rgwJson(args);
 }
 
-
-
 export async function createCephBucketViaS3(
   params: {
     bucketName: string;
     endpoint: string;
-    region?: string;
 
     // extra config
     tags?: Record<string, string>;
     encryptionMode?: "none" | "sse-s3" | "kms";
     kmsKeyId?: string;
     bucketPolicyJson?: string;
-    aclGrantee?: string;
-    aclPermission?: "READ" | "WRITE" | "READ_ACP" | "WRITE_ACP" | "FULL_CONTROL";
+    aclRules?: CephAclRule[];
 
     objectLockEnabled?: boolean;
     objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
@@ -407,28 +385,24 @@ export async function createCephBucketViaS3(
     ? params.endpoint
     : `http://${params.endpoint}`;
 
-  const region = params.region || "us-east-1";
 
-  // 1) create bucket (optionally with object-lock flag)
-  const createArgs = [
-    "s3api",
-    "create-bucket",
-    "--bucket",
-    params.bucketName,
-  ];
+  const cannedAcl = deriveCannedAclFromRules(params.aclRules);
 
-  if (region && region !== "us-east-1") {
-    createArgs.push(
-      "--create-bucket-configuration",
-      `LocationConstraint=${region}`
-    );
+  // 1) create bucket (optionally with object-lock flag and canned ACL)
+  const createArgs = ["s3api", "create-bucket", "--bucket", params.bucketName];
+
+  if (cannedAcl && cannedAcl !== "private") {
+    // private is the default; only send if we actually want public/authenticated
+    createArgs.push("--acl", cannedAcl);
   }
 
   if (params.objectLockEnabled) {
     createArgs.push("--object-lock-enabled-for-bucket");
   }
 
-  await runAwsWithDashboardCreds(createArgs, endpointUrl, region);
+  await runAwsWithDashboardCreds(createArgs, endpointUrl);
+  await ensureBucketExists(params.bucketName, endpointUrl);
+
 
   // 2) tags
   if (params.tags && Object.keys(params.tags).length) {
@@ -440,16 +414,10 @@ export async function createCephBucketViaS3(
     const taggingJson = JSON.stringify({ TagSet });
 
     await runAwsWithDashboardCreds(
-      [
-        "s3api",
-        "put-bucket-tagging",
-        "--bucket",
-        params.bucketName,
-        "--tagging",
-        taggingJson,
+      ["s3api","put-bucket-tagging","--bucket",params.bucketName,"--tagging",taggingJson,
       ],
       endpointUrl,
-      region
+      
     );
   }
 
@@ -480,61 +448,20 @@ export async function createCephBucketViaS3(
     });
 
     await runAwsWithDashboardCreds(
-      [
-        "s3api",
-        "put-bucket-encryption",
-        "--bucket",
-        params.bucketName,
-        "--server-side-encryption-configuration",
-        encryptionJson,
+      ["s3api","put-bucket-encryption","--bucket",params.bucketName,"--server-side-encryption-configuration",encryptionJson,
       ],
       endpointUrl,
-      region
+      
     );
   }
-
-  // 4) ACL
-  if (params.aclGrantee && params.aclPermission) {
-    const grantJson = JSON.stringify({
-      Grants: [
-        {
-          Grantee: {
-            Type: "CanonicalUser",
-            ID: params.aclGrantee,
-          },
-          Permission: params.aclPermission,
-        },
-      ],
-      Owner: {},
-    });
-
-    await runAwsWithDashboardCreds(
-      [
-        "s3api",
-        "put-bucket-acl",
-        "--bucket",
-        params.bucketName,
-        "--access-control-policy",
-        grantJson,
-      ],
-      endpointUrl,
-      region
-    );
-  }
-
+  
   // 5) bucket policy
   if (params.bucketPolicyJson && params.bucketPolicyJson.trim()) {
     await runAwsWithDashboardCreds(
-      [
-        "s3api",
-        "put-bucket-policy",
-        "--bucket",
-        params.bucketName,
-        "--policy",
-        params.bucketPolicyJson,
+      ["s3api","put-bucket-policy","--bucket",params.bucketName,"--policy",params.bucketPolicyJson,
       ],
       endpointUrl,
-      region
+      
     );
   }
 
@@ -555,16 +482,10 @@ export async function createCephBucketViaS3(
     });
 
     await runAwsWithDashboardCreds(
-      [
-        "s3api",
-        "put-object-lock-configuration",
-        "--bucket",
-        params.bucketName,
-        "--object-lock-configuration",
-        lockConfig,
+      ["s3api","put-object-lock-configuration","--bucket",params.bucketName,"--object-lock-configuration",lockConfig,
       ],
       endpointUrl,
-      region
+      
     );
   }
 
@@ -618,11 +539,7 @@ async function rgwUserCreateBase(opts: CreateRgwUserOptions): Promise<CreatedRgw
     );
   }
 
-  const args: string[] = [
-    "user",
-    "create",
-    `--uid=${uid}`,
-    `--display-name=${displayName}`,
+  const args: string[] = ["user","create",`--uid=${uid}`,`--display-name=${displayName}`,
   ];
 
   if (tenant) {
@@ -690,11 +607,7 @@ async function rgwSetUserQuota(opts: {uid: string;tenant?: string;enabled: boole
   if (!uid) throw new Error("rgwSetUserQuota: uid is required");
   if (!enabled) return;
 
-  const setArgs: string[] = [
-    "quota",
-    "set",
-    `--uid=${uid}`,
-    "--quota-scope=user",
+  const setArgs: string[] = ["quota","set",`--uid=${uid}`,"--quota-scope=user",
   ];
   if (tenant) setArgs.push(`--tenant=${tenant}`);
 
@@ -708,11 +621,7 @@ async function rgwSetUserQuota(opts: {uid: string;tenant?: string;enabled: boole
 
   await runRgwAdmin(setArgs);
 
-  const enableArgs: string[] = [
-    "quota",
-    "enable",
-    `--uid=${uid}`,
-    "--quota-scope=user",
+  const enableArgs: string[] = ["quota","enable",`--uid=${uid}`,"--quota-scope=user",
   ];
   if (tenant) enableArgs.push(`--tenant=${tenant}`);
 
@@ -725,11 +634,7 @@ async function rgwSetBucketQuota(opts: {uid: string;tenant?: string;enabled: boo
   if (!uid) throw new Error("rgwSetBucketQuota: uid is required");
   if (!enabled) return;
 
-  const setArgs: string[] = [
-    "quota",
-    "set",
-    `--uid=${uid}`,
-    "--quota-scope=bucket",
+  const setArgs: string[] = ["quota","set",`--uid=${uid}`,"--quota-scope=bucket",
   ];
   if (tenant) setArgs.push(`--tenant=${tenant}`);
 
@@ -743,24 +648,11 @@ async function rgwSetBucketQuota(opts: {uid: string;tenant?: string;enabled: boo
 
   await runRgwAdmin(setArgs);
 
-  const enableArgs: string[] = [
-    "quota",
-    "enable",
-    `--uid=${uid}`,
-    "--quota-scope=bucket",
+  const enableArgs: string[] = ["quota","enable",`--uid=${uid}`,"--quota-scope=bucket",
   ];
   if (tenant) enableArgs.push(`--tenant=${tenant}`);
 
   await runRgwAdmin(enableArgs);
-}
-
-
-
-
-
-// Helper: canonical RGW uid
-function buildRgwUid(uid: string, tenant?: string): string {
-  return tenant ? `${tenant}$${uid}` : uid;
 }
 
 export async function createRgwUser(
@@ -870,8 +762,6 @@ export async function getRgwUserInfo(
     throw new Error("getRgwUserInfo: uid is required");
   }
 
-  // If you still use buildRgwUid for calls, keep this.
-  // If you now pass full uid directly, you can just use uid here.
   const fullUid = tenant ? `${tenant}$${uid}` : uid;
 
   const args: string[] = ["user", "info", `--uid=${fullUid}`];
@@ -935,6 +825,60 @@ function splitTenantFromUid(fullUid: string): { tenant?: string; uid: string } {
 }
 
 
+export async function updateCephBucketFromForm(
+  form: CephBucketUpdatePayload,
+  gateway: RgwGateway
+): Promise<void> {
+  const endpointUrl = gateway.endpoint;
+  const region = form.region || "us-east-1";
+  const tags = parseTagsText(form.tagsText) ?? {};
+
+  const objectLockMode = form.cephObjectLockMode;
+  const objectLockRetentionDays =
+    form.cephObjectLockRetentionDays != null &&
+    form.cephObjectLockRetentionDays !== ""
+      ? Number(form.cephObjectLockRetentionDays)
+      : undefined;
+
+  await updateCephBucketViaS3({
+    bucketName: form.name,
+    endpoint: endpointUrl,
+    region,
+    versioningEnabled: form.cephVersioningEnabled,
+    tags,
+    encryptionMode: form.cephEncryptionMode,
+    kmsKeyId: form.cephKmsKeyId,
+
+    bucketPolicyJson: form.bucketPolicyText ?? null,
+    aclRules: form.cephAclRules,
+    objectLockMode,
+    objectLockRetentionDays,
+    owner: form.owner,
+  });
+}
+
+function parseTagsText(tagsText?: string): Record<string, string> | undefined {
+  const text = (tagsText || "").trim();
+  if (!text) return undefined;
+
+  const tags: Record<string, string> = {};
+
+  for (const pair of text.split(",")) {
+    const trimmed = pair.trim();
+    if (!trimmed) continue;
+
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+
+    if (!key || !value) continue;
+    tags[key] = value;
+  }
+
+  return Object.keys(tags).length ? tags : undefined;
+}
 export async function updateCephBucketViaS3(
   params: {
     bucketName: string;
@@ -950,9 +894,7 @@ export async function updateCephBucketViaS3(
     kmsKeyId?: string;
 
     bucketPolicyJson?: string | null;
-
-    aclGrantee?: string;
-    aclPermission?:| "READ"| "WRITE"| "READ_ACP"| "WRITE_ACP"| "FULL_CONTROL";
+    aclRules?: CephAclRule[];
 
     objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
     objectLockRetentionDays?: number;
@@ -976,7 +918,6 @@ export async function updateCephBucketViaS3(
       ["s3api","put-bucket-versioning","--bucket",params.bucketName,"--versioning-configuration",versioningJson,
       ],
       endpointUrl,
-      region
     );
   }
 
@@ -994,14 +935,13 @@ export async function updateCephBucketViaS3(
         ["s3api","put-bucket-tagging","--bucket",params.bucketName,"--tagging",taggingJson,
         ],
         endpointUrl,
-        region
       );
     } else {
       // explicit "clear tags"
       await runAwsWithDashboardCreds(
         ["s3api", "delete-bucket-tagging", "--bucket", params.bucketName],
         endpointUrl,
-        region
+        
       );
     }
   }
@@ -1012,7 +952,6 @@ export async function updateCephBucketViaS3(
       await runAwsWithDashboardCreds(
         ["s3api", "delete-bucket-encryption", "--bucket", params.bucketName],
         endpointUrl,
-        region
       );
     } else {
       const rules: any[] = [];
@@ -1041,32 +980,19 @@ export async function updateCephBucketViaS3(
         ["s3api","put-bucket-encryption","--bucket",params.bucketName,"--server-side-encryption-configuration",encryptionJson,
         ],
         endpointUrl,
-        region
       );
     }
   }
 
   // 4) ACL
-  if (params.aclGrantee && params.aclPermission) {
-    const grantJson = JSON.stringify({
-      Grants: [
-        {
-          Grantee: {
-            Type: "CanonicalUser",
-            ID: params.aclGrantee,
-          },
-          Permission: params.aclPermission,
-        },
-      ],
-      Owner: {},
-    });
-
-    await runAwsWithDashboardCreds(
-      ["s3api","put-bucket-acl","--bucket",params.bucketName,"--access-control-policy",grantJson,
-      ],
-      endpointUrl,
-      region
-    );
+  if (params.aclRules && params.aclRules.length > 0) {
+    const cannedAcl = deriveCannedAclFromRules(params.aclRules);
+    if (cannedAcl) {
+      await runAwsWithDashboardCreds(
+        ["s3api", "put-bucket-acl", "--bucket", params.bucketName, "--acl", cannedAcl],
+        endpointUrl,
+      );
+    }
   }
 
   // 5) Bucket policy
@@ -1075,17 +1001,16 @@ export async function updateCephBucketViaS3(
 
     if (text) {
       await runAwsWithDashboardCreds(
-        ["s3api","put-bucket-policy","--bucket",params.bucketName,"--policy",
-          text,
+        ["s3api","put-bucket-policy","--bucket",params.bucketName,"--policy",text,
         ],
         endpointUrl,
-        region
+        
       );
     } else {
       await runAwsWithDashboardCreds(
         ["s3api", "delete-bucket-policy", "--bucket", params.bucketName],
         endpointUrl,
-        region
+        
       );
     }
   }
@@ -1109,7 +1034,7 @@ export async function updateCephBucketViaS3(
       ["s3api","put-object-lock-configuration","--bucket",params.bucketName,"--object-lock-configuration",lockConfig,
       ],
       endpointUrl,
-      region
+      
     );
   }
 
@@ -1117,4 +1042,262 @@ export async function updateCephBucketViaS3(
   if (params.owner && params.owner.trim()) {
     await changeRgwBucketOwner(params.bucketName, params.owner.trim());
   }
+}
+
+
+async function awsJsonOrNullWithDashboardCreds(
+  args: string[],
+  endpointOverride?: string,
+  regionOverride?: string
+): Promise<any | null> {
+  const { endpointUrl: defaultEndpoint, region: defaultRegion } =
+    await getCephS3Connection();
+
+  const endpointUrl =
+    endpointOverride && endpointOverride.length
+      ? endpointOverride.startsWith("http")
+        ? endpointOverride
+        : `http://${endpointOverride}`
+      : defaultEndpoint;
+
+  const region = regionOverride || defaultRegion;
+
+  const { accessKey, secretKey } = await getDashboardS3Creds();
+
+  const cmdLine =
+  `AWS_ACCESS_KEY_ID='${accessKey}' ` +
+  `AWS_SECRET_ACCESS_KEY='${secretKey}' ` +
+  `AWS_DEFAULT_REGION='${region}' ` +
+  `AWS_DEFAULT_OUTPUT='json' ` + // override bad config (xml)
+  `aws --output json --endpoint-url '${endpointUrl}' ` + // force json output
+  args.map((a) => `'${a}'`).join(" ");
+
+  const cmd = new Command(["bash", "-lc", cmdLine], { superuser: "try" });
+
+  try {
+    const proc = await unwrap(server.execute(cmd));
+    const stdout =
+      typeof (proc as any).getStdout === "function"
+        ? (proc as any).getStdout()
+        : ((proc as any).stdout ?? "").toString();
+
+    const text = (stdout ?? "").toString().trim();
+    console.log("awsJsonOrNullWithDashboardCreds stdout =", text);
+    if (!text) return {};
+    return JSON.parse(text);
+  } catch (state: any) {
+    const stderr =
+      typeof state?.getStderr === "function"
+        ? state.getStderr()
+        : String(state.stderr ?? "");
+    console.warn(
+      "awsJsonOrNullWithDashboardCreds error for",
+      args.join(" "),
+      "stderr=",
+      stderr
+    );
+    return null;
+  }
+}
+async function getCephS3Connection(): Promise<CephS3Connection> {
+  if (cachedCephS3Conn) return cachedCephS3Conn;
+
+  // 1) Optional env overrides
+  const envEndpoint = process.env.CEPH_S3_ENDPOINT;
+  const envRegion = process.env.CEPH_S3_REGION;
+
+  if (envEndpoint) {
+    const endpointUrl = envEndpoint.startsWith("http")
+      ? envEndpoint
+      : `http://${envEndpoint}`;
+
+    cachedCephS3Conn = {
+      endpointUrl,
+      region: envRegion || "us-east-1",
+    };
+    return cachedCephS3Conn;
+  }
+
+  // 2) Derive from RGW servicemap
+  const gateways = await listRgwGateways();
+  const gw = gateways.find((g) => g.isDefault) || gateways[0];
+
+  if (!gw) {
+    throw new Error("No RGW gateways found to derive Ceph S3 endpoint");
+  }
+
+  const endpointUrl = gw.endpoint.startsWith("http")
+    ? gw.endpoint
+    : `http://${gw.endpoint}`;
+
+  const region = gw.zone || gw.zonegroup || "us-east-1";
+
+  cachedCephS3Conn = { endpointUrl, region };
+  return cachedCephS3Conn;
+}
+
+
+async function buildS3BucketFromRgwStats(
+  bucketName: string,
+  defaultRegion: string
+): Promise<S3Bucket> {
+  const stats = await rgwJson([
+    "bucket",
+    "stats",
+    "--bucket",
+    bucketName,
+  ]);
+
+  const owner: string | undefined = stats.owner;
+  const creationTime: string | undefined = stats.creation_time;
+  const lastModifiedTime: string | undefined = stats.mtime;
+
+  const usage = stats.usage || {};
+  const usageKey =
+    "rgw.main" in usage ? "rgw.main" : Object.keys(usage)[0];
+  const usageMain = usageKey ? usage[usageKey] || {} : {};
+
+  const sizeBytes: number = usageMain.size ?? 0;
+  const objectCount: number = usageMain.num_objects ?? 0;
+  const versionCount: number | undefined = usageMain.num_object_versions;
+
+  const region: string =
+    stats.zone || stats.zonegroup || "ceph-default-zone";
+
+  // Enrich with S3 metadata
+  let tags: Record<string, string> | undefined;
+  let versioning: "Enabled" | "Suspended" | "Disabled" = "Disabled";
+  let objectLockEnabled = false;
+  let acl: CephAclRule[] | undefined;
+
+  const regionForAws = region || defaultRegion;
+
+  // Tags
+  const taggingJson = await awsJsonOrNullWithDashboardCreds(
+    ["s3api", "get-bucket-tagging", "--bucket", bucketName],
+    undefined,
+    regionForAws
+  );
+  if (taggingJson && Array.isArray(taggingJson.TagSet)) {
+    tags = {};
+    for (const t of taggingJson.TagSet as Array<{ Key: string; Value: string }>) {
+      if (t.Key) {
+        tags[t.Key] = t.Value ?? "";
+      }
+    }
+  }
+
+  // Versioning
+  const versioningJson = await awsJsonOrNullWithDashboardCreds(
+    ["s3api", "get-bucket-versioning", "--bucket", bucketName],
+    undefined,
+    regionForAws
+  );
+  if (versioningJson && typeof versioningJson.Status === "string") {
+    if (
+      versioningJson.Status === "Enabled" ||
+      versioningJson.Status === "Suspended"
+    ) {
+      versioning = versioningJson.Status;
+    }
+  }
+
+  // Object lock
+  const lockJson = await awsJsonOrNullWithDashboardCreds(
+    ["s3api", "get-object-lock-configuration", "--bucket", bucketName],
+    undefined,
+    regionForAws
+  );
+  if (
+    lockJson &&
+    lockJson.ObjectLockConfiguration &&
+    lockJson.ObjectLockConfiguration.ObjectLockEnabled === "Enabled"
+  ) {
+    objectLockEnabled = true;
+  }
+  const aclJson = await awsJsonOrNullWithDashboardCreds(
+    ["s3api", "get-bucket-acl", "--bucket", bucketName],
+    undefined,
+    regionForAws
+  );
+
+  if (aclJson && Array.isArray(aclJson.Grants)) {
+    const rules: CephAclRule[] = [];
+
+    for (const g of aclJson.Grants as any[]) {
+      if (!g || !g.Grantee || !g.Permission) continue;
+      const perm = g.Permission as CephAclPermission;
+
+      if (g.Grantee.Type === "Group" && typeof g.Grantee.URI === "string") {
+        if (g.Grantee.URI.endsWith("/AllUsers")) {
+          rules.push({ grantee: "all-users", permission: perm });
+        } else if (g.Grantee.URI.endsWith("/AuthenticatedUsers")) {
+          rules.push({ grantee: "authenticated-users", permission: perm });
+        }
+      } else if (g.Grantee.Type === "CanonicalUser") {
+        // Treat canonical user as "owner"
+        rules.push({ grantee: "owner", permission: perm });
+      }
+    }
+
+    if (rules.length) {
+      acl = rules;
+    }
+  }
+
+  let policy: string | undefined;
+
+  const policyJson = await awsJsonOrNullWithDashboardCreds(
+    ["s3api", "get-bucket-policy", "--bucket", bucketName],
+    undefined,
+    regionForAws
+  );
+
+  console.log("policjson ", policyJson)
+  if (policyJson && typeof policyJson.Policy === "string") {
+    try {
+      // Pretty-print it for the textarea
+      const parsed = JSON.parse(policyJson.Policy);
+      policy = JSON.stringify(parsed, null, 2);
+    } catch {
+      // If parsing fails, just store the raw string
+      policy = policyJson.Policy;
+    }
+  }
+  return {name: bucketName,createdAt: creationTime,lastModifiedTime,region,owner,objectCount,sizeBytes,versionCount,acl,policy,tags,versioning,objectLockEnabled,
+  };
+}
+
+
+function deriveCannedAclFromRules(
+  rules?: CephAclRule[],
+):
+  | "private"
+  | "public-read"
+  | "public-read-write"
+  | "authenticated-read"
+  | null {
+  if (!rules || rules.length === 0) return null;
+
+  const auth = rules.find((r) => r.grantee === "authenticated-users");
+  const all  = rules.find((r) => r.grantee === "all-users");
+  if (all) {
+    if (all.permission === "READ") {
+      return "public-read";
+    }
+    if (all.permission === "READ_WRITE" || all.permission === "FULL_CONTROL") {
+      return "public-read-write";
+    }
+  }
+
+  if (auth) {
+    if (
+      auth.permission === "READ" ||
+      auth.permission === "READ_WRITE" ||
+      auth.permission === "FULL_CONTROL"
+    ) {
+      return "authenticated-read";
+    }
+  }
+  return "private";
 }

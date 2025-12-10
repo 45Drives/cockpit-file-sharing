@@ -3,10 +3,18 @@
   <div class="space-y-4 sm:px-4 lg:px-6 sm:rounded-lg bg-accent rounded-md border border-default">
     <!-- Header -->
     <div
-      class="grid grid-cols-[auto_1fr_auto] items-center gap-2 bg-well rounded-md shadow text-default my-2 rounded-b-md ring-1 ring-black ring-opacity-5 p-4 m-4"
-    >
-      <div></div>
+      class="grid grid-cols-[auto_1fr_auto] items-center gap-2 bg-well rounded-md shadow text-default my-2 ring-1 ring-black ring-opacity-5 p-4 m-4">
+      <!-- Left: back button -->
+      <div>
+        <button v-if="showBackButton" type="button"
+          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
+          @click="emit('backToViewSelection')">
+          <ArrowUturnLeftIcon class="size-icon" />
+          Back
+        </button>
+      </div>
 
+      <!-- Center: title -->
       <div class="flex items-baseline justify-center gap-2">
         <h2 class="text-xl font-semibold text-slate-100">
           S3 Bucket Management
@@ -16,41 +24,32 @@
         </span>
       </div>
 
-      <button
-        type="button"
-        @click="openCreateModal"
-        class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
-      >
+      <!-- Right: new bucket -->
+      <button type="button" @click="openCreateModal"
+        class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950">
         <ArchiveBoxIcon class="size-icon" />
         New bucket
       </button>
     </div>
 
+
     <!-- Filters / sort controls -->
-    <div
-      class="flex flex-col gap-3 rounded-lg border-default bg-plugin-header p-4 text-sm text-slate-200 m-4"
-    >
+    <div class="flex flex-col gap-3 rounded-lg border-default bg-plugin-header p-4 text-sm text-slate-200 m-4">
       <div class="flex flex-wrap gap-4">
         <label class="flex min-w-[180px] flex-1 flex-col gap-1">
           <span class="text-xs font-medium uppercase tracking-wide text-slate-400">
             Name
           </span>
-          <input
-            v-model="nameFilter"
-            type="text"
-            placeholder="Filter by name"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:ring-1"
-          />
+          <input v-model="nameFilter" type="text" placeholder="Filter by name"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:ring-1" />
         </label>
 
         <label class="flex min-w-[180px] flex-1 flex-col gap-1">
           <span class="text-xs font-medium uppercase tracking-wide text-slate-400">
             Region / Zone
           </span>
-          <select
-            v-model="regionFilter"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-          >
+          <select v-model="regionFilter"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1">
             <option value="all">All regions</option>
             <option v-for="r in regions" :key="r || 'none'" :value="r || 'none'">
               {{ r || "Unknown" }}
@@ -62,12 +61,8 @@
           <span class="text-xs font-medium uppercase tracking-wide text-slate-400">
             Tags
           </span>
-          <input
-            v-model="tagFilter"
-            type="text"
-            placeholder="Filter by tag key/value"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:ring-1"
-          />
+          <input v-model="tagFilter" type="text" placeholder="Filter by tag key/value"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:ring-1" />
         </label>
       </div>
 
@@ -76,10 +71,8 @@
           <span class="text-xs font-medium uppercase tracking-wide text-slate-400">
             Sort by
           </span>
-          <select
-            v-model="sortKey"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-          >
+          <select v-model="sortKey"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1">
             <option value="name">Name</option>
             <option value="region">Region / Zone</option>
             <option value="objects">Objects</option>
@@ -91,10 +84,8 @@
           <span class="text-xs font-medium uppercase tracking-wide text-slate-400">
             Direction
           </span>
-          <select
-            v-model="sortDir"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-          >
+          <select v-model="sortDir"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1">
             <option value="asc">Ascending</option>
             <option value="desc">Descending</option>
           </select>
@@ -103,31 +94,20 @@
     </div>
 
     <!-- Loading / error -->
-    <div
-      v-if="loadingBuckets"
-      class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-slate-300"
-    >
+    <div v-if="loadingBuckets"
+      class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-slate-300">
       Loading buckets…
     </div>
 
-    <div
-      v-else-if="error"
-      class="rounded-lg border border-red-900/60 bg-red-950/60 px-4 py-3 text-sm text-red-200"
-    >
+    <div v-else-if="error" class="rounded-lg border border-red-900/60 bg-red-950/60 px-4 py-3 text-sm text-red-200">
       {{ error }}
     </div>
 
     <!-- Buckets -->
     <div v-else>
-      <div
-        v-if="filteredSortedBuckets.length"
-        class="grid gap-4 md:grid-cols-2 xl:grid-cols-3 bg-accent m-4"
-      >
-        <article
-          v-for="bucket in filteredSortedBuckets"
-          :key="bucket.name"
-          class="flex flex-col gap-3 rounded-lg border border-default bg-default p-4 shadow transition hover:shadow-md"
-        >
+      <div v-if="filteredSortedBuckets.length" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3 bg-accent m-4">
+        <article v-for="bucket in filteredSortedBuckets" :key="bucket.name"
+          class="flex flex-col gap-3 rounded-lg border border-default bg-default p-4 shadow transition hover:shadow-md">
           <!-- Header with bucket logo -->
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-start gap-2">
@@ -151,13 +131,8 @@
             <label class="mb-1 block text-xs font-medium text-slate-300">
               Owner
             </label>
-            <input
-              v-model="bucket.owner"
-              type="text"
-              placeholder="optional / best-effort"
-              disabled
-              class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-            />
+            <input v-model="bucket.owner" type="text" placeholder="optional / best-effort" disabled
+              class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1" />
           </div>
 
           <!-- Stats -->
@@ -200,19 +175,13 @@
           </div>
 
           <!-- Tags -->
-          <div
-            v-if="bucket.tags && Object.keys(bucket.tags).length"
-            class="mt-1 space-y-1 text-xs"
-          >
+          <div v-if="bucket.tags && Object.keys(bucket.tags).length" class="mt-1 space-y-1 text-xs">
             <p class="text-[11px] font-medium uppercase tracking-wide text-slate-500">
               Tags
             </p>
             <div class="flex flex-wrap gap-1.5">
-              <span
-                v-for="(value, key) in bucket.tags"
-                :key="key"
-                class="inline-flex items-center rounded-full border border-default bg-default px-2 py-0.5 text-[11px] text-slate-200"
-              >
+              <span v-for="(value, key) in bucket.tags" :key="key"
+                class="inline-flex items-center rounded-full border border-default bg-default px-2 py-0.5 text-[11px] text-slate-200">
                 {{ key }}={{ value }}
               </span>
             </div>
@@ -220,68 +189,51 @@
 
           <!-- Actions -->
           <div class="mt-3 flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
-            <button
-              type="button"
-              @click="openEditModal(bucket)"
-              class="rounded-md border border-default bg-default px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800"
-            >
+            <button type="button" @click="openEditModal(bucket)"
+              class="rounded-md border border-default bg-default px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800">
               Edit
             </button>
-            <button
-              type="button"
-              @click="confirmDelete(bucket)"
-              class="rounded-md bg-red-600/90 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-500"
-            >
+            <button type="button" @click="confirmDelete(bucket)"
+              class="rounded-md bg-red-600/90 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-500">
               Delete
             </button>
           </div>
         </article>
       </div>
 
-      <p
-        v-else
-        class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-6 text-center text-sm text-slate-400"
-      >
+      <p v-else class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-6 text-center text-sm text-slate-400">
         No buckets found.
       </p>
     </div>
 
     <!-- Create/Edit modal -->
-    <BucketFormModal
-      :visible="showModal"
-      :mode="modalMode"
-      :backend="backend"
-      :cephGateway="cephGateway || null"
-      :cephUsers="cephUsers"
-      :loadingCephUsers="loadingCephUsers"
-      :cephUsersError="cephUsersError"
-      :bucketToEdit="editingBucket"
-      @close="closeModal"
-      @submit="handleFormSubmit"
-    />
+    <BucketFormModal :visible="showModal" :mode="modalMode" :backend="backend" :cephGateway="cephGateway || null"
+      :cephUsers="cephUsers" :loadingCephUsers="loadingCephUsers" :cephUsersError="cephUsersError"
+      :bucketToEdit="editingBucket" @close="closeModal" @submit="handleFormSubmit" />
 
     <!-- Delete confirm modal -->
-    <BucketDeleteModal
-      :bucket="bucketToDelete"
-      @cancel="bucketToDelete = null"
-      @confirm="performDelete"
-    />
+    <BucketDeleteModal :bucket="bucketToDelete" @cancel="bucketToDelete = null" @confirm="performDelete" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
-import {listBucketsFromCeph,deleteBucketFromCeph,createCephBucketViaS3,listRgwUsers,} from "../../api/s3CliAdapter";
-import {listBucketsFromMinio,createBucketFromMinio,deleteBucketFromMinio,updateMinioBucket,type UpdateMinioBucketOptions} from "../../api/minioCliAdapter";
-import {listBucketsFromGarage,deleteBucketFromGarage,createGarageBucket,updateGarageBucket,} from "../../api/garageCliAdapter";
+import { listBucketsFromCeph, deleteBucketFromCeph, createCephBucketViaS3, listRgwUsers, updateCephBucketViaS3 } from "../../api/s3CliAdapter";
+import { listBucketsFromMinio, createBucketFromMinio, deleteBucketFromMinio, updateMinioBucket, type UpdateMinioBucketOptions } from "../../api/minioCliAdapter";
+import { listBucketsFromGarage, deleteBucketFromGarage, createGarageBucket, updateGarageBucket, } from "../../api/garageCliAdapter";
 import type { RgwGateway, S3Bucket, RgwUser } from "../../types/types";
-import { ArchiveBoxIcon } from "@heroicons/vue/20/solid";
+import { ArchiveBoxIcon,ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 import BucketFormModal from "./BucketFormModal.vue";
 import BucketDeleteModal from "./BucketDeleteModal.vue";
 
 const props = defineProps<{
   backend: "minio" | "ceph" | "garage";
   cephGateway?: RgwGateway | null;
+  showBackButton?: boolean;
+
+}>();
+const emit = defineEmits<{
+  (e: "backToViewSelection"): void;
 }>();
 
 const buckets = ref<S3Bucket[]>([]);
@@ -302,7 +254,7 @@ const sortDir = ref<"asc" | "desc">("asc");
 // modal state
 const showModal = ref(false);
 const modalMode = ref<"create" | "edit">("create");
-const editingBucket =  ref<S3Bucket | null>(null);
+const editingBucket = ref<S3Bucket | null>(null);
 
 // delete state
 const bucketToDelete = ref<S3Bucket | null>(null);
@@ -437,10 +389,13 @@ async function openCreateModal() {
   showModal.value = true;
 }
 
-function openEditModal(bucket: S3Bucket) {
+async function openEditModal(bucket: S3Bucket) {
   modalMode.value = "edit";
   editingBucket.value = bucket;
   showModal.value = true;
+  if (props.backend === "ceph") {
+    await loadCephUsersIfNeeded();
+  }
 }
 
 function closeModal() {
@@ -482,10 +437,10 @@ async function createBucketFromForm(form: any) {
       extraArgs: extraArgs.length ? extraArgs : undefined,
       website: form.garageWebsiteEnabled
         ? {
-            enable: true,
-            indexDocument: form.garageWebsiteIndex || undefined,
-            errorDocument: form.garageWebsiteError || undefined,
-          }
+          enable: true,
+          indexDocument: form.garageWebsiteIndex || undefined,
+          errorDocument: form.garageWebsiteError || undefined,
+        }
         : undefined,
       aliases: aliases.length ? aliases : undefined,
     });
@@ -498,14 +453,12 @@ async function createBucketFromForm(form: any) {
     await createCephBucketViaS3({
       bucketName: form.name,
       endpoint: props.cephGateway?.endpoint ?? "http://192.168.85.64:8080",
-      region,
       tags: Object.keys(tags).length ? tags : undefined,
       encryptionMode: form.cephEncryptionMode,
       kmsKeyId: form.cephKmsKeyId || undefined,
       bucketPolicyJson: form.bucketPolicyText || undefined,
-      aclGrantee: form.cephAclGrantee || undefined,
-      aclPermission: form.cephAclPermission,
       owner: form.owner,
+      aclRules: form.cephAclRules,
       objectLockEnabled: form.cephObjectLockEnabled,
       objectLockMode: form.cephObjectLockMode,
       objectLockRetentionDays: form.cephObjectLockRetentionDays
@@ -526,8 +479,8 @@ async function createBucketFromForm(form: any) {
       ignoreExisting: false,
     });
     if (Object.keys(tags).length) {
-    await updateMinioBucket(form.name, { tags });
-  }
+      await updateMinioBucket(form.name, { tags });
+    }
   }
 }
 
@@ -575,18 +528,12 @@ async function updateBucketFromForm(bucket: S3Bucket, form: any) {
 
     const oldQuotaBytes: number | null = bucket.quotaBytes ?? null;
 
-    // Decide what to send to updateGarageBucket:
-    // - undefined => do not touch quota
-    // - null      => clear quota (max-size 0)
-    // - string    => new "--max-size XGiB" etc.
     let quotaOption: string | null | undefined = undefined;
     if (newQuotaBytes !== oldQuotaBytes) {
       quotaOption = newQuotaString; // may be null to clear
     }
 
-    //
-    // 2) MAX OBJECTS
-    //
+
     const maxObjectsRaw = String(form.garageMaxObjects ?? "").trim();
 
     let newMaxObjects: number | null = null;
@@ -600,18 +547,11 @@ async function updateBucketFromForm(bucket: S3Bucket, form: any) {
     const oldMaxObjects: number | null =
       (bucket as any).garageMaxObjects ?? null;
 
-    // Same semantics:
-    // - undefined => don’t touch
-    // - null      => clear (--max-objects 0)
-    // - number    => set new value
     let maxObjectsOption: number | null | undefined = undefined;
     if (newMaxObjects !== oldMaxObjects) {
       maxObjectsOption = newMaxObjects;
     }
 
-    //
-    // 3) Call updateGarageBucket
-    //
     await updateGarageBucket(bucket.garageId!, {
       quota: quotaOption,
       maxObjects: maxObjectsOption,
@@ -620,21 +560,92 @@ async function updateBucketFromForm(bucket: S3Bucket, form: any) {
       extraArgs: extraArgs.length ? extraArgs : undefined,
       website: form.garageWebsiteEnabled
         ? {
-            enable: true,
-            indexDocument: form.garageWebsiteIndex || undefined,
-            errorDocument: form.garageWebsiteError || undefined,
-          }
+          enable: true,
+          indexDocument: form.garageWebsiteIndex || undefined,
+          errorDocument: form.garageWebsiteError || undefined,
+        }
         : { enable: false },
       aliases: aliases.length ? aliases : null,
     });
 
-    // Optionally update local bucket object so UI reflects new values without refetch:
     if (maxObjectsOption !== undefined) {
       (bucket as any).garageMaxObjects =
         maxObjectsOption === null ? undefined : maxObjectsOption;
     }
     if (quotaOption !== undefined) {
       bucket.quotaBytes = newQuotaBytes ?? undefined;
+    }
+
+    return;
+  }
+  if (props.backend === "ceph") {
+    const region =
+      form.cephPlacementTarget ||
+      form.region ||
+      props.cephGateway?.zone ||
+      "us-east-1";
+
+
+    const newVersioningEnabled = !!form.versioningEnabled; // from modalForm.versioningEnabled
+    const oldVersioningEnabled = bucket.versioning === "Enabled";
+    const versioningChanged = newVersioningEnabled !== oldVersioningEnabled;
+
+
+    const oldTags: Record<string, string> | null =
+      bucket.tags && Object.keys(bucket.tags).length ? bucket.tags : null;
+
+    const tagsChanged =
+      (oldTags === null && newTags !== null) ||
+      (oldTags !== null && newTags === null) ||
+      (oldTags !== null &&
+        newTags !== null &&
+        (Object.keys(oldTags).length !== Object.keys(newTags).length ||
+          Object.entries(oldTags).some(([k, v]) => newTags[k] !== v)));
+
+    let tagsOption: Record<string, string> | null | undefined = undefined;
+    if (tagsChanged) {
+      tagsOption = newTags === null ? {} : newTags;
+    }
+
+
+    const policyText = (form.bucketPolicyText ?? "").trim();
+    let bucketPolicyOption: string | null | undefined = undefined;
+    if (policyText) {
+      bucketPolicyOption = policyText;
+    }
+
+
+    const newOwner = (form.owner || "").trim();
+    const oldOwner = bucket.owner || "";
+    const ownerChanged = newOwner && newOwner !== oldOwner;
+
+    const params: any = {
+      bucketName: bucket.name,
+      endpoint: props.cephGateway?.endpoint ?? "http://192.168.85.64:8080",
+      region,
+    };
+
+    if (versioningChanged) {
+      params.versioningEnabled = newVersioningEnabled;
+    }
+    if (tagsOption !== undefined) {
+      params.tags = tagsOption;
+    }
+    if (bucketPolicyOption !== undefined) {
+      params.bucketPolicyJson = bucketPolicyOption;
+    }
+    if (ownerChanged) {
+      params.owner = newOwner;
+    }
+    await updateCephBucketViaS3(params);
+    if (versioningChanged) {
+      bucket.versioning = newVersioningEnabled ? "Enabled" : "Suspended";
+    }
+    if (tagsChanged) {
+      bucket.tags = newTags ?? undefined;
+    }
+    if (ownerChanged) {
+      bucket.owner = newOwner;
     }
 
     return;
@@ -713,7 +724,6 @@ async function updateBucketFromForm(bucket: S3Bucket, form: any) {
     return;
   }
 
-  // You can later add a Ceph branch here if needed
 }
 
 
@@ -721,15 +731,17 @@ async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any })
   try {
     if (payload.mode === "create") {
       await createBucketFromForm(payload.form);
-    } else if (payload.mode === "edit" && editingBucket) {
-      await updateBucketFromForm(editingBucket.value!, payload.form);
+      await loadBuckets();
+    } else if (payload.mode === "edit" && editingBucket.value) {
+      await updateBucketFromForm(editingBucket.value, payload.form);
     }
+
     closeModal();
-    await loadBuckets();
   } catch (e: any) {
     error.value = e?.message ?? "Failed to save bucket";
   }
 }
+
 
 // delete flow
 function confirmDelete(bucket: S3Bucket) {
@@ -748,14 +760,19 @@ async function deleteBucket(bucket: S3Bucket) {
 
 async function performDelete() {
   if (!bucketToDelete.value) return;
+
   try {
-    await deleteBucket(bucketToDelete.value);
+    const toDelete = bucketToDelete.value;
+
+    await deleteBucket(toDelete);
+    buckets.value = buckets.value.filter((b) => b.name !== toDelete.name);
+
     bucketToDelete.value = null;
-    await loadBuckets();
   } catch (e: any) {
     error.value = e?.message ?? "Failed to delete bucket";
   }
 }
+
 
 // Ceph users for owner dropdown
 async function loadCephUsersIfNeeded() {
@@ -774,7 +791,6 @@ async function loadCephUsersIfNeeded() {
   }
 }
 
-// reload on backend change
 watch(
   () => props.backend,
   async (backend) => {

@@ -13,7 +13,7 @@ export type S3Bucket = {
   versionCount?: number;
   lastAccessed?: string;
 
-  acl?: BucketAcl;
+  acl?: CephAclRule[];
   policy?: string;
   tags?: S3BucketTagMap;
 
@@ -44,10 +44,7 @@ export type BucketAclGrant = {
   permission: BucketAclPermission | string; // keep string for safety if unsure
 };
 
-export type BucketAcl = {
-  owner: string;
-  grants: BucketAclGrant[];
-};
+
 
 export type BucketVersioningStatus = "Enabled" | "Suspended" | "Disabled";
 
@@ -90,7 +87,8 @@ export interface GarageBucketOptions {
     kmsKeyId?: string;
   
     bucketPolicyJson?: string;
-    acl?: BucketAcl;
+    aclRules?: CephAclRule[];
+
   }
   
   export type RgwGateway = {
@@ -237,3 +235,33 @@ export type RgwDashboardS3Creds = {
     tags?: Record<string, string> | null;
   }
   
+  export interface CephBucketUpdatePayload {
+    cephAclRules: CephAclRule[] | undefined;
+    name: string;          
+    region?: string;
+    owner?: string;       
+    tagsText?: string;     
+    cephVersioningEnabled?: boolean;
+    cephEncryptionMode?: "none" | "sse-s3" | "kms";
+    cephKmsKeyId?: string;
+
+    bucketPolicyText?: string | null;
+  
+    cephObjectLockMode?: "GOVERNANCE" | "COMPLIANCE";
+    cephObjectLockRetentionDays?: string;
+  
+    cephAclGrantee?: string;
+    cephAclPermission?:
+      | "READ"
+      | "WRITE"
+      | "READ_ACP"
+      | "WRITE_ACP"
+      | "FULL_CONTROL";
+  }
+  
+  export type CephAclRule = {
+    grantee: "owner" | "authenticated-users" | "all-users";
+    permission: CephAclPermission;
+  };
+  
+  export type CephAclPermission = "FULL_CONTROL" | "READ" | "READ_WRITE";
