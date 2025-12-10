@@ -30,7 +30,7 @@ export type S3Bucket = {
   garageWebsiteError?: string;
   garageAliases?: string[];
 };
-
+export type BackendKind = "minio" | "ceph" | "garage"; 
 
 export type BucketAclPermission =
   | "FULL_CONTROL"

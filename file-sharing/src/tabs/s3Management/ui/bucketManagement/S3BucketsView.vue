@@ -218,13 +218,13 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
-import { listBucketsFromCeph, deleteBucketFromCeph, createCephBucketViaS3, listRgwUsers, updateCephBucketViaS3 } from "../../api/s3CliAdapter";
-import { listBucketsFromMinio, createBucketFromMinio, deleteBucketFromMinio, updateMinioBucket, type UpdateMinioBucketOptions } from "../../api/minioCliAdapter";
-import { listBucketsFromGarage, deleteBucketFromGarage, createGarageBucket, updateGarageBucket, } from "../../api/garageCliAdapter";
-import type { RgwGateway, S3Bucket, RgwUser } from "../../types/types";
-import { ArchiveBoxIcon,ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
+import { listRgwUsers } from "../../api/s3CliAdapter";
+import type { RgwGateway, S3Bucket, RgwUser,BackendKind } from "../../types/types";
+import { ArchiveBoxIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 import BucketFormModal from "./BucketFormModal.vue";
 import BucketDeleteModal from "./BucketDeleteModal.vue";
+import {useBucketBackend} from "../../composables/useBucketBackend"
+
 
 const props = defineProps<{
   backend: "minio" | "ceph" | "garage";
@@ -236,9 +236,15 @@ const emit = defineEmits<{
   (e: "backToViewSelection"): void;
 }>();
 
-const buckets = ref<S3Bucket[]>([]);
-const loadingBuckets = ref(false);
-const error = ref<string | null>(null);
+const backendKind = computed<BackendKind>(() => props.backend);
+const backendCtx = computed(() => ({
+  cephGateway: props.cephGateway ?? null,
+}));
+
+const {
+  buckets,
+  loading: loadingBuckets,error,loadBuckets,createBucketFromForm,updateBucketFromForm,deleteBucket,
+} = useBucketBackend(backendKind, backendCtx);
 
 const cephUsers = ref<RgwUser[]>([]);
 const loadingCephUsers = ref(false);
@@ -273,50 +279,12 @@ const regions = computed(() => {
   return Array.from(set);
 });
 
-async function loadBuckets() {
-  loadingBuckets.value = true;
-  error.value = null;
-
-  try {
-    let fn: () => Promise<S3Bucket[]>;
-    if (props.backend === "minio") {
-      fn = listBucketsFromMinio;
-    } else if (props.backend === "ceph") {
-      fn = listBucketsFromCeph;
-    } else {
-      fn = listBucketsFromGarage;
-    }
-
-    const basic = await fn();
-    buckets.value = basic;
-  } catch (e: any) {
-    error.value = e?.message ?? "Failed to list buckets";
-    buckets.value = [];
-  } finally {
-    loadingBuckets.value = false;
-  }
-}
-
 function formatDate(value?: string): string {
   if (!value) return "—";
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
 }
 
-function parseTags(text: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  text
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .forEach((pair) => {
-      const [k, v] = pair.split("=");
-      if (k && v) {
-        out[k.trim()] = v.trim();
-      }
-    });
-  return out;
-}
 
 // filter + sort
 const filteredSortedBuckets = computed(() => {
@@ -403,330 +371,6 @@ function closeModal() {
   editingBucket.value = null;
 }
 
-// main create logic (uses form emitted by modal)
-function parseList(text: string): string[] {
-  return text
-    .split(/[,\s]+/)
-    .map((x) => x.trim())
-    .filter(Boolean);
-}
-
-async function createBucketFromForm(form: any) {
-  if (props.backend === "garage") {
-    const allow = parseList(form.garageAllowText || "");
-    const deny = parseList(form.garageDenyText || "");
-    const extraArgs = parseList(form.garageExtraArgsText || "");
-    const aliases = parseList(form.garageAliasesText || "");
-
-    const quotaParts: string[] = [];
-    const maxSizeRaw = String(form.garageMaxSize ?? "").trim();
-    const maxObjectsRaw = String(form.garageMaxObjects ?? "").trim();
-
-    if (maxSizeRaw) {
-      quotaParts.push("--max-size", `${maxSizeRaw}${form.garageMaxSizeUnit}`);
-    }
-
-    const quota = quotaParts.length ? quotaParts.join(" ") : undefined;
-    const maxObjects = maxObjectsRaw ? Number(maxObjectsRaw) : undefined;
-
-    await createGarageBucket(form.name, {
-      quota,
-      maxObjects,
-      allow: allow.length ? allow : undefined,
-      deny: deny.length ? deny : undefined,
-      extraArgs: extraArgs.length ? extraArgs : undefined,
-      website: form.garageWebsiteEnabled
-        ? {
-          enable: true,
-          indexDocument: form.garageWebsiteIndex || undefined,
-          errorDocument: form.garageWebsiteError || undefined,
-        }
-        : undefined,
-      aliases: aliases.length ? aliases : undefined,
-    });
-  } else if (props.backend === "ceph") {
-    const region =
-      form.cephPlacementTarget || props.cephGateway?.zone || "us-east-1";
-
-    const tags = parseTags(form.tagsText || "");
-
-    await createCephBucketViaS3({
-      bucketName: form.name,
-      endpoint: props.cephGateway?.endpoint ?? "http://192.168.85.64:8080",
-      tags: Object.keys(tags).length ? tags : undefined,
-      encryptionMode: form.cephEncryptionMode,
-      kmsKeyId: form.cephKmsKeyId || undefined,
-      bucketPolicyJson: form.bucketPolicyText || undefined,
-      owner: form.owner,
-      aclRules: form.cephAclRules,
-      objectLockEnabled: form.cephObjectLockEnabled,
-      objectLockMode: form.cephObjectLockMode,
-      objectLockRetentionDays: form.cephObjectLockRetentionDays
-        ? Number(form.cephObjectLockRetentionDays)
-        : undefined,
-    });
-  } else if (props.backend === "minio") {
-    const maxSizeRaw = String(form.minioQuotaMaxSize ?? "").trim();
-    const tags = parseTags(form.tagsText || "");
-
-    await createBucketFromMinio(form.name, {
-      region: form.region || undefined,
-      withLock: form.minioObjectLockEnabled,
-      withVersioning: form.minioVersioningEnabled,
-      quotaSize: maxSizeRaw
-        ? `${maxSizeRaw}${form.minioQuotaMaxSizeUnit}`
-        : undefined,
-      ignoreExisting: false,
-    });
-    if (Object.keys(tags).length) {
-      await updateMinioBucket(form.name, { tags });
-    }
-  }
-}
-
-async function updateBucketFromForm(bucket: S3Bucket, form: any) {
-  const parsedTags = parseTags(form.tagsText || "");
-  const newTags: Record<string, string> | null =
-    Object.keys(parsedTags).length ? parsedTags : null;
-
-  if (props.backend === "garage") {
-    const allow = parseList(form.garageAllowText || "");
-    const deny = parseList(form.garageDenyText || "");
-    const extraArgs = parseList(form.garageExtraArgsText || "");
-    const aliases = parseList(form.garageAliasesText || "");
-
-    //
-    // 1) QUOTA (max size)
-    //
-    const maxSizeRaw = String(form.garageMaxSize ?? "").trim();
-
-    const sizeMultipliers: Record<string, number> = {
-      MiB: 1024 ** 2,
-      GiB: 1024 ** 3,
-      TiB: 1024 ** 4,
-    };
-
-    let newQuotaBytes: number | null = null;
-    let newQuotaString: string | null = null;
-
-    if (maxSizeRaw === "") {
-      // User left field empty -> interpret as "no quota"
-      newQuotaBytes = null;
-      newQuotaString = null;
-    } else {
-      const numeric = Number(maxSizeRaw);
-      if (!Number.isFinite(numeric) || numeric <= 0) {
-        newQuotaBytes = null;
-        newQuotaString = null;
-      } else {
-        const unit = form.garageMaxSizeUnit as "MiB" | "GiB" | "TiB";
-        const factor = sizeMultipliers[unit] ?? sizeMultipliers["GiB"];
-        newQuotaBytes = Math.round(numeric * factor);
-        newQuotaString = `--max-size ${maxSizeRaw}${unit}`;
-      }
-    }
-
-    const oldQuotaBytes: number | null = bucket.quotaBytes ?? null;
-
-    let quotaOption: string | null | undefined = undefined;
-    if (newQuotaBytes !== oldQuotaBytes) {
-      quotaOption = newQuotaString; // may be null to clear
-    }
-
-
-    const maxObjectsRaw = String(form.garageMaxObjects ?? "").trim();
-
-    let newMaxObjects: number | null = null;
-    if (maxObjectsRaw === "") {
-      newMaxObjects = null; // interpret empty as "no max-objects"
-    } else {
-      const n = Number(maxObjectsRaw);
-      newMaxObjects = Number.isFinite(n) && n > 0 ? n : null;
-    }
-
-    const oldMaxObjects: number | null =
-      (bucket as any).garageMaxObjects ?? null;
-
-    let maxObjectsOption: number | null | undefined = undefined;
-    if (newMaxObjects !== oldMaxObjects) {
-      maxObjectsOption = newMaxObjects;
-    }
-
-    await updateGarageBucket(bucket.garageId!, {
-      quota: quotaOption,
-      maxObjects: maxObjectsOption,
-      allow: allow.length ? allow : null,
-      deny: deny.length ? deny : null,
-      extraArgs: extraArgs.length ? extraArgs : undefined,
-      website: form.garageWebsiteEnabled
-        ? {
-          enable: true,
-          indexDocument: form.garageWebsiteIndex || undefined,
-          errorDocument: form.garageWebsiteError || undefined,
-        }
-        : { enable: false },
-      aliases: aliases.length ? aliases : null,
-    });
-
-    if (maxObjectsOption !== undefined) {
-      (bucket as any).garageMaxObjects =
-        maxObjectsOption === null ? undefined : maxObjectsOption;
-    }
-    if (quotaOption !== undefined) {
-      bucket.quotaBytes = newQuotaBytes ?? undefined;
-    }
-
-    return;
-  }
-  if (props.backend === "ceph") {
-    const region =
-      form.cephPlacementTarget ||
-      form.region ||
-      props.cephGateway?.zone ||
-      "us-east-1";
-
-
-    const newVersioningEnabled = !!form.versioningEnabled; // from modalForm.versioningEnabled
-    const oldVersioningEnabled = bucket.versioning === "Enabled";
-    const versioningChanged = newVersioningEnabled !== oldVersioningEnabled;
-
-
-    const oldTags: Record<string, string> | null =
-      bucket.tags && Object.keys(bucket.tags).length ? bucket.tags : null;
-
-    const tagsChanged =
-      (oldTags === null && newTags !== null) ||
-      (oldTags !== null && newTags === null) ||
-      (oldTags !== null &&
-        newTags !== null &&
-        (Object.keys(oldTags).length !== Object.keys(newTags).length ||
-          Object.entries(oldTags).some(([k, v]) => newTags[k] !== v)));
-
-    let tagsOption: Record<string, string> | null | undefined = undefined;
-    if (tagsChanged) {
-      tagsOption = newTags === null ? {} : newTags;
-    }
-
-
-    const policyText = (form.bucketPolicyText ?? "").trim();
-    let bucketPolicyOption: string | null | undefined = undefined;
-    if (policyText) {
-      bucketPolicyOption = policyText;
-    }
-
-
-    const newOwner = (form.owner || "").trim();
-    const oldOwner = bucket.owner || "";
-    const ownerChanged = newOwner && newOwner !== oldOwner;
-
-    const params: any = {
-      bucketName: bucket.name,
-      endpoint: props.cephGateway?.endpoint ?? "http://192.168.85.64:8080",
-      region,
-    };
-
-    if (versioningChanged) {
-      params.versioningEnabled = newVersioningEnabled;
-    }
-    if (tagsOption !== undefined) {
-      params.tags = tagsOption;
-    }
-    if (bucketPolicyOption !== undefined) {
-      params.bucketPolicyJson = bucketPolicyOption;
-    }
-    if (ownerChanged) {
-      params.owner = newOwner;
-    }
-    await updateCephBucketViaS3(params);
-    if (versioningChanged) {
-      bucket.versioning = newVersioningEnabled ? "Enabled" : "Suspended";
-    }
-    if (tagsChanged) {
-      bucket.tags = newTags ?? undefined;
-    }
-    if (ownerChanged) {
-      bucket.owner = newOwner;
-    }
-
-    return;
-  }
-
-  if (props.backend === "minio") {
-    const options: UpdateMinioBucketOptions = {};
-    const newVersioningEnabled = !!form.minioVersioningEnabled;
-    const oldVersioningEnabled = bucket.versioning === "Enabled";
-
-    if (newVersioningEnabled !== oldVersioningEnabled) {
-      options.versioning = newVersioningEnabled;
-    }
-
-    const maxSizeRaw = String(form.minioQuotaMaxSize ?? "").trim();
-    let newQuotaString: string | null;
-    let newQuotaBytes: number | null;
-
-    if (maxSizeRaw === "") {
-      newQuotaString = null;
-      newQuotaBytes = null;
-    } else {
-      const numeric = Number(maxSizeRaw);
-      if (!Number.isFinite(numeric) || numeric <= 0) {
-        newQuotaString = null;
-        newQuotaBytes = null;
-      } else {
-        const unit = form.minioQuotaMaxSizeUnit;
-
-        const multipliers: Record<string, number> = {
-          KiB: 1024,
-          MiB: 1024 ** 2,
-          GiB: 1024 ** 3,
-          TiB: 1024 ** 4,
-          KB: 1000,
-          MB: 1000 ** 2,
-          GB: 1000 ** 3,
-          TB: 1000 ** 4,
-        };
-
-        const factor = multipliers[unit] ?? 1;
-        newQuotaBytes = Math.round(numeric * factor);
-        newQuotaString = `${maxSizeRaw}${unit}`;
-      }
-    }
-
-    const oldQuotaBytes: number | null = bucket.quotaBytes ?? null;
-
-    if (newQuotaBytes !== oldQuotaBytes) {
-      options.quotaSize = newQuotaString;
-    }
-
-    const oldTags: Record<string, string> | null =
-      bucket.tags && Object.keys(bucket.tags).length ? bucket.tags : null;
-
-    const tagsChanged =
-      (oldTags === null && newTags !== null) ||
-      (oldTags !== null && newTags === null) ||
-      (oldTags !== null &&
-        newTags !== null &&
-        (Object.keys(oldTags).length !== Object.keys(newTags).length ||
-          Object.entries(oldTags).some(([k, v]) => newTags[k] !== v)));
-
-    if (tagsChanged) {
-      options.tags = newTags;
-    }
-
-    if ("versioning" in options || "quotaSize" in options || "tags" in options) {
-      await updateMinioBucket(bucket.name, options);
-    }
-
-    bucket.versioning = newVersioningEnabled ? "Enabled" : "Suspended";
-    bucket.quotaBytes = newQuotaBytes ?? undefined;
-    bucket.tags = newTags ?? undefined;
-
-    return;
-  }
-
-}
-
-
 async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any }) {
   try {
     if (payload.mode === "create") {
@@ -746,16 +390,6 @@ async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any })
 // delete flow
 function confirmDelete(bucket: S3Bucket) {
   bucketToDelete.value = bucket;
-}
-
-async function deleteBucket(bucket: S3Bucket) {
-  if (props.backend === "ceph") {
-    await deleteBucketFromCeph(bucket.name, { purgeObjects: true });
-  } else if (props.backend === "garage") {
-    await deleteBucketFromGarage(bucket.garageId!);
-  } else if (props.backend === "minio") {
-    await deleteBucketFromMinio(bucket.name);
-  }
 }
 
 async function performDelete() {

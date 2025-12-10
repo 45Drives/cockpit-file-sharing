@@ -1,6 +1,6 @@
 
   // minioCliAdapter.ts
-import type {S3Bucket,Endpoint,BucketVersioningStatus,BucketAcl, MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserGroupMembership, MinioUserUpdatePayload,
+import type {S3Bucket,Endpoint,BucketVersioningStatus, MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserGroupMembership, MinioUserUpdatePayload,
 
 } from "../types/types";
 

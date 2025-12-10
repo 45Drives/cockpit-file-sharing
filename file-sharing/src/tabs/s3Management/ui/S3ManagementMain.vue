@@ -155,14 +155,13 @@
 
 <script setup lang="ts">
   import { ref, computed, onMounted } from "vue";
-  import S3BucketsView from "./views/S3BucketsView.vue";
+  import S3BucketsView from "./bucketManagement/S3BucketsView.vue";
   import { isCephRgwHealthy, listRgwGateways } from "../api/s3CliAdapter";
   import { isMinioHealthy } from "../api/minioCliAdapter";
   import { isGarageHealthy } from "../api/garageCliAdapter";
-  import MinioUsersTable from "./views/minio/MinioUsersTable.vue";
-  import UsersView from "./views/CephRgw/UsersView.vue";
-  import MinioAccessManagement from "./views/minio/MinioAccessManagement.vue";
-  import GarageKeysPage from "./views/GarageHq/GarageKeysPage.vue";
+  import UsersView from "./accessManagementViews/CephRgw/UsersView.vue"
+  import MinioAccessManagement from "./accessManagementViews/minio/MinioAccessManagement.vue";
+  import GarageKeysPage from "./accessManagementViews/GarageHq/GarageKeysPage.vue";
   import { CardContainer } from "@45drives/houston-common-ui";
   import { ArchiveBoxIcon } from "@heroicons/vue/20/solid";
   import AccIcon from "../images/AccIcon.vue";
