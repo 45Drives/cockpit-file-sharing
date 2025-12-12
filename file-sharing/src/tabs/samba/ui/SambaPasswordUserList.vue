@@ -134,11 +134,4 @@ function onKeyPress(e: KeyboardEvent) {
   }
   focusRefs.value[focusIndex]?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
-
-// onMounted(() => {
-//   window.addEventListener("keypress", onKeyPress);
-// });
-// onUnmounted(() => {
-//   window.removeEventListener("keypress", onKeyPress);
-// });
 </script>
