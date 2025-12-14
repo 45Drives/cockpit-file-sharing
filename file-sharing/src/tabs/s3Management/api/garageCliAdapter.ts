@@ -1,13 +1,8 @@
 // garageCliAdapter.ts
-import type { ResultAsync } from "neverthrow";
-import type {
-  S3Bucket,
-  Endpoint,
-  GarageBucketOptions,
-  GarageKeyListEntry,
-  GarageKeyDetail,
+// import type {S3Bucket,Endpoint,GarageBucketOptions,GarageKeyListEntry,GarageKeyDetail,GarageBucketDashboardStats,GarageBucketKeyAccess,
+// } from "../types/types";
+import type { GarageBucket, GarageBucketOptions, GarageKeyListEntry, GarageKeyDetail, GarageBucketDashboardStats, GarageBucketKeyAccess,
 } from "../types/types";
-
 const { errorString } = legacy; // useSpawn no longer needed
 import { legacy, server, Command, unwrap } from "@45drives/houston-common-lib";
 
@@ -33,20 +28,11 @@ export async function runGarage(subArgs: string[]): Promise<string> {
 
   return stdout.trim();
 }
-/**
- * List buckets from Garage by parsing `garage bucket list` output.
- *
- * Typical output example (simplified):
- *
- *   ==== BUCKETS ====
- *   ID                Created     Global aliases  Local aliases
- *   2faf6a78fe2766a8  2025-11-26  backups
- */
-export async function listBucketsFromGarage(): Promise<S3Bucket[]> {
+export async function listBucketsFromGarage(): Promise<GarageBucket[]> {
   const text = await runGarage(["bucket", "list"]);
   const lines = text.split(/\r?\n/);
 
-  const buckets: S3Bucket[] = [];
+  const buckets: GarageBucket[] = [];
 
   const headerIndex = lines.findIndex((l) => l.trim().startsWith("ID"));
   if (headerIndex === -1) return buckets;
@@ -73,49 +59,39 @@ export async function listBucketsFromGarage(): Promise<S3Bucket[]> {
         ? line.slice(globalStart).trim()
         : line.slice(globalStart, localStart).trim();
 
+    // Display name = first global alias if present, else bucket id
     let displayName = globalAliasesSlice.trim();
     if (displayName.includes(",")) {
       displayName = displayName.split(",")[0].trim();
     }
-    if (!displayName) {
-      displayName = id;
-    }
+    if (!displayName) displayName = id;
 
-    let stats: Awaited<ReturnType<typeof getGarageBucketStats>>;
+    let info: GarageBucketDashboardStats | null = null;
     try {
-      stats = await getGarageBucketStats(id);
+      info = await getGarageBucketDashboardStats(id);
     } catch {
-      stats = {
-        createdAt: createdAtColumn,
-        objectCount: 0,
-        sizeBytes: 0,
-      };
+      info = null;
     }
 
-    let aliases: string[] = [];
-    try {
-      aliases = await getGarageBucketAliases(id);
-    } catch {
-      aliases = [];
-    }
-
-    const bucket: S3Bucket = {
-      name: displayName,
-      createdAt: stats.createdAt ?? createdAtColumn,
-      region: "garage",
-      objectCount: stats.objectCount,
-      sizeBytes: stats.sizeBytes,
-      quotaBytes: stats.quotaBytes,        // key for max size
+    const bucket: GarageBucket = {
+      backendKind: "garage",
       garageId: id,
 
-      // new fields
-      garageMaxObjects: stats.maxObjects,
-      garageWebsiteEnabled: stats.websiteEnabled,
-      garageWebsiteIndex: stats.websiteIndex,
-      garageWebsiteError: stats.websiteError,
-      garageAliases: aliases,
+      name: displayName,
+      createdAt: info?.createdAt ?? createdAtColumn,
+      region: "garage",
+
+      objectCount: info?.objectCount ?? 0,
+      sizeBytes: info?.totalSizeBytes ?? 0,
+      quotaBytes: info?.quotaBytes,
+
+      garageMaxObjects: info?.maxObjects,
+      garageWebsiteEnabled: info?.websiteEnabled,
+
+      // Use parsed aliases from the info output
+      garageAliases: info?.globalAliases ?? [],
     };
-    console.log("garage bucket ", bucket)
+
     buckets.push(bucket);
   }
 
@@ -125,14 +101,14 @@ export async function listBucketsFromGarage(): Promise<S3Bucket[]> {
 export async function getGarageBucketStats(
   bucketName: string
 ): Promise<{
-  createdAt?: string;
-  objectCount: number;
-  sizeBytes: number;
-  quotaBytes?: number;
-  maxObjects?: number;
-  websiteEnabled?: boolean;
-  websiteIndex?: string;
-  websiteError?: string;
+createdAt?: string;
+objectCount: number;
+sizeBytes: number;
+quotaBytes?: number;
+maxObjects?: number;
+websiteEnabled?: boolean;
+websiteIndex?: string;
+websiteError?: string;
 }> {
   const text = await runGarage(["bucket", "info", bucketName]);
   console.log("garage bucket info raw:\n", text);
@@ -228,33 +204,10 @@ export async function getGarageBucketStats(
     }
   }
 
-  return {
-    createdAt,
-    objectCount,
-    sizeBytes,
-    quotaBytes,
-    maxObjects,
-    websiteEnabled,
-    websiteIndex,
-    websiteError,
+  return {createdAt,objectCount,sizeBytes,quotaBytes,maxObjects,websiteEnabled,websiteIndex,websiteError,
   };
 }
 
-/**
- * Object-level stats is the same as bucket usage in Garage.
- */
-export async function getBucketObjectStatsFromGarage(
-   
-  _endpoint: Endpoint,
-  bucketName: string
-): Promise<{ objectCount: number; sizeBytes: number }> {
-  const info = await getGarageBucketStats( bucketName);
-  console.log("bucket info ", info)
-  return {
-    objectCount: info.objectCount,
-    sizeBytes: info.sizeBytes,
-  };
-}
 
 export async function isGarageHealthy(): Promise<boolean> {
   try {
@@ -359,10 +312,7 @@ export async function createGarageBucket(
 
     // 2) quotas: size + max-objects
     if (options.quota || options.maxObjects != null) {
-      const quotaArgs: string[] = [
-        "bucket",
-        "set-quotas",
-        bucketName,
+      const quotaArgs: string[] = ["bucket","set-quotas",bucketName,
       ];
 
       if (options.quota) {
@@ -380,11 +330,7 @@ export async function createGarageBucket(
 
     // 3) website
     if (options.website?.enable) {
-      const websiteArgs: string[] = [
-        "bucket",
-        "website",
-        "--allow",
-        bucketName,
+      const websiteArgs: string[] = ["bucket","website","--allow",bucketName,
       ];
 
       if (options.website.indexDocument) {
@@ -599,13 +545,7 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
       else if (v === "false") canCreateBuckets = false;
     }
   
-    return {
-      id,
-      name,
-      created,
-      expiration,
-      validity,
-      canCreateBuckets,
+    return {id,name,created,expiration,validity,canCreateBuckets,
       // NEW: only present on `key create` output
       secretKey: fields["Secret key"] || undefined,
     };
@@ -777,3 +717,236 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
       }
     }
     
+
+// Shared unit multipliers + helper (drop in near top of file, above functions)
+const GARAGE_UNIT_MULTIPLIERS: Record<string, number> = {
+  B: 1,
+  KIB: 1024,
+  MIB: 1024 ** 2,
+  GIB: 1024 ** 3,
+  TIB: 1024 ** 4,
+  PIB: 1024 ** 5,
+
+  KB: 1000,
+  MB: 1000 ** 2,
+  GB: 1000 ** 3,
+  TB: 1000 ** 4,
+  PB: 1000 ** 5,
+};
+
+function garageToBytes(numStr: string, unitStr?: string): number | undefined {
+  const num = Number(numStr);
+  if (!Number.isFinite(num)) return undefined;
+
+  const unitRaw = (unitStr || "B").toUpperCase();
+  const factor = GARAGE_UNIT_MULTIPLIERS[unitRaw] ?? 1;
+  return Math.round(num * factor);
+}
+
+/**
+ * Parse `garage bucket info` output into a typed stats object.
+ * This is the single source of truth for bucket info parsing.
+ */
+function parseGarageBucketInfo(output: string): GarageBucketDashboardStats {
+  const lines = output.split(/\r?\n/);
+
+  let bucketId: string | undefined;
+  let createdAt: string | undefined;
+
+  let totalSizeBytes = 0;
+  let objectCount = 0;
+
+  let quotaBytes: number | undefined;
+  let maxObjects: number | undefined;
+
+  let websiteEnabled: boolean | undefined;
+
+  const keys: GarageBucketKeyAccess[] = [];
+
+  // Global aliases parsing (supports both inline and multi-line blocks)
+  let globalAliases: string[] = [];
+  let inGlobalAliasesBlock = false;
+
+  // Keys table parsing
+  let inKeysSection = false;
+  let sawKeysHeader = false;
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    const t = line.trim();
+    if (!t) continue;
+
+    // If we enter a new section, end any previous "block" parsing
+    if (t.startsWith("====")) {
+      inGlobalAliasesBlock = false;
+
+      if (t.startsWith("==== KEYS FOR THIS BUCKET")) {
+        inKeysSection = true;
+        sawKeysHeader = false;
+        continue;
+      }
+
+      // Any other section header ends keys parsing
+      inKeysSection = false;
+      continue;
+    }
+
+    // If we are in the KEYS section, parse the table rows
+    if (inKeysSection) {
+      if (!sawKeysHeader) {
+        // "Permissions  Access key    Local aliases"
+        if (/^Permissions\s+Access key\s+Local aliases/i.test(t)) {
+          sawKeysHeader = true;
+        }
+        continue;
+      }
+
+      // Data rows:
+      // RW           GK3...  backups-user
+      const parts = t.split(/\s+/);
+      if (parts.length >= 2) {
+        const permissions = parts[0];
+        const accessKey = parts[1];
+        const localAliases = parts.slice(2);
+        keys.push({ permissions, accessKey, localAliases });
+      }
+      continue;
+    }
+
+    // Handle continuation lines for Global aliases block (multi-line listing)
+    if (inGlobalAliasesBlock) {
+      // A line that looks like a new field ends the aliases block
+      if (/^[A-Z][a-z]+:/.test(t)) {
+        inGlobalAliasesBlock = false;
+        // fall through to parse the field normally
+      } else {
+        const alias = t.split(/\s+/)[0];
+        if (alias) globalAliases.push(alias);
+        continue;
+      }
+    }
+
+    // Bucket: <id>
+    {
+      const m = /^Bucket:\s*(.+)$/i.exec(t);
+      if (m) {
+        bucketId = m[1].trim();
+        continue;
+      }
+    }
+
+    // Created: <timestamp>
+    {
+      const m = /^Created:\s*(.+)$/i.exec(t);
+      if (m) {
+        createdAt = m[1].trim();
+        continue;
+      }
+    }
+
+    // Size: 0 B (0 B)
+    {
+      const m = /^Size:\s*([\d.]+)\s*([A-Za-z]+)/i.exec(t);
+      if (m) {
+        const bytes = garageToBytes(m[1], m[2]);
+        if (bytes !== undefined) totalSizeBytes = bytes;
+        continue;
+      }
+    }
+
+    // Objects: 0
+    {
+      const m = /^Objects:\s*(\d+)/i.exec(t);
+      if (m) {
+        objectCount = Number(m[1]);
+        continue;
+      }
+    }
+
+    // Website access: false
+    {
+      const m = /^Website access:\s*(\w+)/i.exec(t);
+      if (m) {
+        websiteEnabled = m[1].toLowerCase() === "true";
+        continue;
+      }
+    }
+
+    // maximum size:  50.0 GiB (53.7 GB)
+    {
+      const m = /maximum size:\s*([\d.]+)\s*([A-Za-z]+)\b/i.exec(t);
+      if (m) {
+        const bytes = garageToBytes(m[1], m[2]);
+        if (bytes !== undefined) quotaBytes = bytes;
+        continue;
+      }
+    }
+
+    // maximum number of objects:  100
+    {
+      const m = /maximum (?:number of )?objects:\s*([\d,]+)/i.exec(t);
+      if (m) {
+        const n = Number(m[1].replace(/,/g, ""));
+        if (Number.isFinite(n)) maxObjects = n;
+        continue;
+      }
+    }
+
+    // Global alias: foo
+    {
+      const m = /^Global alias:\s*(.*)$/i.exec(t);
+      if (m) {
+        const rest = m[1].trim();
+        globalAliases = rest ? rest.split(/\s+/).filter(Boolean) : [];
+        inGlobalAliasesBlock = true;
+        continue;
+      }
+    }
+
+    // Global aliases: foo bar
+    {
+      const m = /^Global aliases:\s*(.*)$/i.exec(t);
+      if (m) {
+        const rest = m[1].trim();
+        globalAliases = rest ? rest.split(/\s+/).filter(Boolean) : [];
+        inGlobalAliasesBlock = true;
+        continue;
+      }
+    }
+  }
+
+  return {
+    bucketId,
+    createdAt,
+    totalSizeBytes,
+    objectCount,
+    quotaBytes,
+    maxObjects,
+    websiteEnabled,
+    globalAliases: globalAliases.length ? globalAliases : undefined,
+    keys,
+    raw: output,
+  };
+}
+
+export async function getGarageBucketDashboardStats(
+  bucketNameOrId: string
+): Promise<GarageBucketDashboardStats> {
+  const out = await runGarage(["bucket", "info", bucketNameOrId]);
+  return parseGarageBucketInfo(out);
+}
+
+
+
+/**
+ * Object-level stats is the same as bucket usage in Garage.
+ */
+export async function getBucketObjectStatsFromGarage(
+  bucketNameOrId: string
+): Promise<{ objectCount: number; sizeBytes: number }> {
+  const info = await getGarageBucketDashboardStats(bucketNameOrId);
+  return {
+    objectCount: info.objectCount,
+    sizeBytes: info.totalSizeBytes,
+  };
+}

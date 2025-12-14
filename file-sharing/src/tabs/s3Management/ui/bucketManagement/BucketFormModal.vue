@@ -113,166 +113,183 @@
   
           <!-- MinIO-specific fields -->
           <div v-if="backend === 'minio'" class="mt-2 border-t border-slate-800 pt-3 space-y-4">
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-medium text-slate-300">
-                Object locking (--with-lock)
-              </label>
-              <div class="flex items-center gap-2">
-                <input
-                  id="minioObjectLockEnabled"
-                  v-model="modalForm.objectLockEnabled"
-                  type="checkbox"
-                  class="h-4 w-4 rounded border-slate-600 bg-default"
-                />
-                <label for="minioObjectLockEnabled" class="text-xs text-slate-300">
-                  Enable
-                </label>
-              </div>
-            </div>
-            <p class="text-[11px] text-slate-500">
-              Enables object locking on the bucket at creation time (equivalent to
-              mc mb --with-lock).
-            </p>
-  
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-medium text-slate-300">
-                Versioning (--with-versioning)
-              </label>
-              <div class="flex items-center gap-2">
-                <input
-                  id="minioVersioningEnabled"
-                  v-model="modalForm.versioningEnabled"
-                  type="checkbox"
-                  class="h-4 w-4 rounded border-slate-600 bg-default"
-                />
-                <label for="minioVersioningEnabled" class="text-xs text-slate-300">
-                  Enable
-                </label>
-              </div>
-            </div>
-            <p class="text-[11px] text-slate-500">
-              Enables object versioning on the bucket at creation time.
-            </p>
-  
-            <div class="space-y-2">
-              <label class="block text-xs font-medium text-slate-300">
-                Quota
-              </label>
-  
-              <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-                <div>
-                  <label class="mb-1 block text-[11px] font-medium text-slate-400">
-                    Max size
-                  </label>
-                  <div class="flex gap-2">
-                    <input
-                      v-model="modalForm.quotaMaxSize"
-                      type="number"
-                      min="0"
-                      placeholder="e.g. 100"
-                      class="w-full rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1"
-                    />
-                    <select
-                      v-model="modalForm.quotaMaxSizeUnit"
-                      class="w-24 rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1"
-                    >
-                      <option value="MiB">MiB</option>
-                      <option value="GiB">GiB</option>
-                      <option value="TiB">TiB</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-  
-              <p class="text-[11px] text-slate-500">
-                Optional quota limits for the bucket. Leave fields empty for no quota.
-              </p>
-            </div>
-          </div>
+  <div class="flex items-center justify-between">
+    <label class="text-xs font-medium text-slate-300">
+      Object locking (--with-lock)
+    </label>
+    <div class="flex items-center gap-2">
+      <input
+        id="minioObjectLockEnabled"
+        v-model="modalForm.minioObjectLockEnabled"
+        type="checkbox"
+        class="h-4 w-4 rounded border-slate-600 bg-default"
+      />
+      <label for="minioObjectLockEnabled" class="text-xs text-slate-300">
+        Enable
+      </label>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <label class="text-xs font-medium text-slate-300">
+      Versioning (--with-versioning)
+    </label>
+    <div class="flex items-center gap-2">
+      <input
+        id="minioVersioningEnabled"
+        v-model="modalForm.minioVersioningEnabled"
+        type="checkbox"
+        class="h-4 w-4 rounded border-slate-600 bg-default"
+      />
+      <label for="minioVersioningEnabled" class="text-xs text-slate-300">
+        Enable
+      </label>
+    </div>
+  </div>
+
+  <div class="space-y-2">
+    <label class="block text-xs font-medium text-slate-300">
+      Quota
+    </label>
+
+    <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+      <div>
+        <label class="mb-1 block text-[11px] font-medium text-slate-400">
+          Max size
+        </label>
+        <div class="flex gap-2">
+          <input
+            v-model="modalForm.minioQuotaMaxSize"
+            type="number"
+            min="0"
+            placeholder="e.g. 100"
+            class="w-full rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1"
+          />
+          <select
+            v-model="modalForm.minioQuotaMaxSizeUnit"
+            class="w-24 rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1"
+          >
+            <option value="MiB">MiB</option>
+            <option value="GiB">GiB</option>
+            <option value="TiB">TiB</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
   
           <!-- Garage-specific fields -->
-          <div v-if="backend === 'garage'" class="mt-2 border-t border-slate-800 pt-3 space-y-3">  
-            <div class="flex gap-2">
-              <div class="flex-1">
-                <label class="mb-1 block text-xs font-medium text-slate-300">
-                  Max size
-                </label>
-                <input
-                  v-model="modalForm.quotaMaxSize"
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 30"
-                  class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-                />
-              </div>
-              <div class="w-24">
-                <label class="mb-1 block text-xs font-medium text-slate-300">
-                  Unit
-                </label>
-                <select
-                  v-model="modalForm.quotaMaxSizeUnit"
-                  class="w-full rounded-md border border-default bg-default px-2 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-                >
-                  <option value="MiB">MiB</option>
-                  <option value="GiB">GiB</option>
-                  <option value="TiB">TiB</option>
-                </select>
-              </div>
-            </div>
-  
-            <div>
-              <label class="mb-1 block text-xs font-medium text-slate-300">
-                Max objects
-              </label>
-              <input
-                v-model="modalForm.garageMaxObjects"
-                type="number"
-                min="0"
-                placeholder="e.g. 100000"
-                class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-              />
-            </div>
-  
-            <div class="mt-1 flex items-center gap-2">
-              <input
-                id="garageWebsiteEnabled"
-                v-model="modalForm.garageWebsiteEnabled"
-                type="checkbox"
-                class="h-4 w-4 rounded border-slate-600 bg-default"
-              />
-              <label for="garageWebsiteEnabled" class="text-xs font-medium text-slate-300">
-                Enable website access (public via Garage web endpoint)
-              </label>
-            </div>
-  
-            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <div>
-                <label class="mb-1 block text-xs font-medium text-slate-300">
-                  Index document
-                </label>
-                <input
-                  v-model="modalForm.garageWebsiteIndex"
-                  type="text"
-                  :disabled="!modalForm.garageWebsiteEnabled"
-                  placeholder="index.html"
-                  class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1 disabled:opacity-60"
-                />
-              </div>
-              <div>
-                <label class="mb-1 block text-xs font-medium text-slate-300">
-                  Error document (optional)
-                </label>
-                <input
-                  v-model="modalForm.garageWebsiteError"
-                  type="text"
-                  :disabled="!modalForm.garageWebsiteEnabled"
-                  placeholder="404.html"
-                  class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1 disabled:opacity-60"
-                />
-              </div>
-            </div>
+          <div v-if="backend === 'garage'" class="mt-2 border-t border-slate-800 pt-3 space-y-3">
+  <div class="flex gap-2">
+    <div class="flex-1">
+      <label class="mb-1 block text-xs font-medium text-slate-300">
+        Max size
+      </label>
+      <input
+        v-model="modalForm.garageMaxSize"
+        type="number"
+        min="0"
+        placeholder="e.g. 30"
+        class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
+      />
+    </div>
+    <div class="w-24">
+      <label class="mb-1 block text-xs font-medium text-slate-300">
+        Unit
+      </label>
+      <select
+        v-model="modalForm.garageMaxSizeUnit"
+        class="w-full rounded-md border border-default bg-default px-2 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
+      >
+        <option value="MiB">MiB</option>
+        <option value="GiB">GiB</option>
+        <option value="TiB">TiB</option>
+      </select>
+    </div>
+  </div>
+
+  <div>
+    <label class="mb-1 block text-xs font-medium text-slate-300">
+      Max objects
+    </label>
+    <input
+      v-model="modalForm.garageMaxObjects"
+      type="number"
+      min="0"
+      placeholder="e.g. 100000"
+      class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
+    />
+  </div>
+
+  <div class="space-y-2">
+    <label class="block text-xs font-medium text-slate-300">Grant access keys</label>
+
+    <p v-if="loadingGarageKeys" class="text-[11px] text-slate-500">
+      Loading Garage keys…
+    </p>
+    <p v-else-if="garageKeysError" class="text-[11px] text-red-400">
+      {{ garageKeysError }}
+    </p>
+
+    <div v-else class="space-y-2">
+      <div class="text-[11px] text-slate-500">
+        Select keys that should access this bucket, then set permissions.
+      </div>
+
+      <div
+        v-for="k in (garageKeys || [])"
+        :key="k.id"
+        class="flex items-center justify-between gap-3 rounded-md border border-default bg-default px-3 py-2"
+      >
+        <div class="min-w-0">
+          <div class="text-xs font-medium text-slate-200 truncate">
+            {{ k.name || k.id }}
           </div>
-  
+          <div class="text-[11px] text-slate-500 font-mono truncate">
+            {{ k.id }}
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <input
+            type="checkbox"
+            class="h-4 w-4 rounded border-slate-600 bg-default"
+            :checked="isGranted(k.id, k.name)"
+            @change="toggleGrant(k.id, k.name, ($event.target as HTMLInputElement).checked)"
+          />
+
+          <div v-if="isGranted(k.id, k.name)" class="flex items-center gap-2 text-xs">
+            <label class="flex items-center gap-1">
+              <input type="checkbox" class="h-4 w-4 rounded border-slate-600 bg-default"
+                v-model="grantFor(k.id, k.name).read" />
+              <span>Read</span>
+            </label>
+
+            <label class="flex items-center gap-1">
+              <input type="checkbox" class="h-4 w-4 rounded border-slate-600 bg-default"
+                v-model="grantFor(k.id, k.name).write" />
+              <span>Write</span>
+            </label>
+
+            <label class="flex items-center gap-1">
+              <input type="checkbox" class="h-4 w-4 rounded border-slate-600 bg-default"
+                v-model="grantFor(k.id, k.name).owner" />
+              <span>Owner</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-[11px] text-slate-500">
+      Owner is required for some bucket admin actions (example: website config via S3 APIs).
+    </p>
+  </div>
+  <!-- website + aliases as you already have, still using garageWebsite* and garageAliasesText -->
+</div>
+
           <div>
             <label class="mb-1 block text-xs font-medium text-slate-300">
               Aliases
@@ -319,7 +336,7 @@
                   <span class="font-medium text-slate-300">Mode</span>
                   <select
                     v-model="modalForm.cephObjectLockMode"
-                    :disabled="!modalForm.objectLockEnabled || mode === 'edit'"
+                    :disabled="!modalForm.cephObjectLockEnabled || mode === 'edit'"
                     class="rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1 disabled:opacity-60"
                   >
                     <option value="GOVERNANCE">GOVERNANCE</option>
@@ -333,7 +350,7 @@
                     v-model="modalForm.cephObjectLockRetentionDays"
                     type="number"
                     min="1"
-                    :disabled="!modalForm.objectLockEnabled || mode === 'edit'"
+                    :disabled="!modalForm.cephObjectLockRetentionDays || mode === 'edit'"
                     placeholder="e.g. 30"
                     class="rounded-md border border-default bg-default px-2 py-1.5 text-xs text-slate-100 outline-none focus:ring-1 disabled:opacity-60"
                   />
@@ -350,7 +367,7 @@
                 <div class="flex items-center gap-2">
                   <input
                     id="cephVersioningEnabled"
-                    v-model="modalForm.versioningEnabled"
+                    v-model="modalForm.cephVersioningEnabled"
                     type="checkbox"
                     class="h-4 w-4 rounded border-slate-600 bg-default"
                   />
@@ -494,7 +511,7 @@
   
 <script setup lang="ts">
 import { reactive, watch, ref, computed } from "vue";
-import type { RgwGateway, RgwUser, S3Bucket, CephAclPermission, CephAclRule } from "../../types/types";
+import type { RgwGateway, RgwUser, S3Bucket, CephAclPermission, CephAclRule, GarageKeyDetail } from "../../types/types";
 
 const bucketPolicyError = ref<string | null>(null);
 
@@ -507,6 +524,10 @@ const props = defineProps<{
   loadingCephUsers: boolean;
   cephUsersError: string | null;
   bucketToEdit: S3Bucket | null;
+  garageKeys?: GarageKeyDetail[];
+  loadingGarageKeys?: boolean;
+  garageKeysError?: string | null;
+
 }>();
 
 const emit = defineEmits<{
@@ -519,16 +540,18 @@ const modalForm = reactive({
   region: "",
   owner: "",
 
-  // Tags...
+  // tags (generic)
   tags: [] as { key: string; value: string }[],
-  
-  objectLockEnabled: false, 
-  versioningEnabled: false, 
-  quotaMaxSize: "",
-  quotaMaxSizeUnit: "GiB" as "MiB" | "GiB" | "TiB",
 
-  // Garage...
+  // MinIO
+  minioObjectLockEnabled: false,
+  minioVersioningEnabled: false,
+  minioQuotaMaxSize: "",
+  minioQuotaMaxSizeUnit: "GiB" as "MiB" | "GiB" | "TiB",
+
+  // Garage
   garageMaxSize: "",
+  garageMaxSizeUnit: "GiB" as "MiB" | "GiB" | "TiB",
   garageMaxObjects: "",
   garageAllowText: "",
   garageDenyText: "",
@@ -537,8 +560,15 @@ const modalForm = reactive({
   garageWebsiteIndex: "index.html",
   garageWebsiteError: "",
   garageAliasesText: "",
+  garageGrants: [] as Array<{
+  keyIdOrName: string;
+  read: boolean;
+  write: boolean;
+  owner: boolean;
+}>,
 
-  // Ceph RGW (object lock, encryption, etc)
+
+  // Ceph RGW
   cephObjectLockEnabled: false,
   cephObjectLockMode: "COMPLIANCE" as "GOVERNANCE" | "COMPLIANCE",
   cephObjectLockRetentionDays: "",
@@ -549,13 +579,8 @@ const modalForm = reactive({
   cephAclScope: "owner" as "owner" | "authenticated-users" | "all-users",
   cephAclPermission: "READ" as CephAclPermission,
   cephPlacementTarget: "",
-
-  // MinIO...
-  minioObjectLockEnabled: false,
-  minioVersioningEnabled: false,
-  minioQuotaMaxSize: "",
-  minioQuotaMaxSizeUnit: "GiB" as "MiB" | "GiB" | "TiB",
 });
+
 
 
 function tagsObjectToArray(
@@ -574,13 +599,15 @@ function resetForm() {
 
   modalForm.tags = [{ key: "", value: "" }];
 
-  // generic
-  modalForm.objectLockEnabled = false;
-  modalForm.versioningEnabled = false;
-  modalForm.quotaMaxSize = "";
-  modalForm.quotaMaxSizeUnit = "GiB";
+  // MinIO
+  modalForm.minioObjectLockEnabled = false;
+  modalForm.minioVersioningEnabled = false;
+  modalForm.minioQuotaMaxSize = "";
+  modalForm.minioQuotaMaxSizeUnit = "GiB";
 
-  // garage
+  // Garage
+  modalForm.garageMaxSize = "";
+  modalForm.garageMaxSizeUnit = "GiB";
   modalForm.garageMaxObjects = "";
   modalForm.garageAllowText = "";
   modalForm.garageDenyText = "";
@@ -589,14 +616,17 @@ function resetForm() {
   modalForm.garageWebsiteIndex = "index.html";
   modalForm.garageWebsiteError = "";
   modalForm.garageAliasesText = "";
+  modalForm.garageGrants = [];
 
-  // ceph
+
+  // Ceph
+  modalForm.cephObjectLockEnabled = false;
   modalForm.cephObjectLockMode = "COMPLIANCE";
   modalForm.cephObjectLockRetentionDays = "";
   modalForm.cephEncryptionMode = "none";
   modalForm.cephKmsKeyId = "";
   modalForm.bucketPolicyText = "";
-
+  modalForm.cephVersioningEnabled = false;
   modalForm.cephPlacementTarget = "";
   modalForm.cephAclScope = "owner";
   modalForm.cephAclPermission = "READ";
@@ -621,86 +651,87 @@ function initFromProps() {
     modalForm.bucketPolicyText = props.bucketToEdit.policy ?? "";
     // MinIO edit defaults
     if (props.backend === "minio") {
-      modalForm.versioningEnabled =
-        props.bucketToEdit.versioning === "Enabled";
-      modalForm.objectLockEnabled =
-        !!props.bucketToEdit.objectLockEnabled;
+  modalForm.minioVersioningEnabled =
+    props.bucketToEdit.versioning === "Enabled";
+  modalForm.minioObjectLockEnabled =
+    !!props.bucketToEdit.objectLockEnabled;
 
-      const quotaBytes = props.bucketToEdit.quotaBytes;
-      if (typeof quotaBytes === "number" && quotaBytes > 0) {
-        const MiB = 1024 * 1024;
-        const GiB = 1024 * MiB;
-        const TiB = 1024 * GiB;
+  const quotaBytes = props.bucketToEdit.quotaBytes;
+  if (typeof quotaBytes === "number" && quotaBytes > 0) {
+    const MiB = 1024 * 1024;
+    const GiB = 1024 * MiB;
+    const TiB = 1024 * GiB;
 
-        let unit: "MiB" | "GiB" | "TiB" = "GiB";
-        let value: number;
+    let unit: "MiB" | "GiB" | "TiB" = "GiB";
+    let value: number;
 
-        if (quotaBytes % TiB === 0) {
-          unit = "TiB";
-          value = quotaBytes / TiB;
-        } else if (quotaBytes % GiB === 0) {
-          unit = "GiB";
-          value = quotaBytes / GiB;
-        } else {
-          unit = "MiB";
-          value = quotaBytes / MiB;
-        }
-
-        modalForm.quotaMaxSize = String(value);
-        modalForm.quotaMaxSizeUnit = unit;
-      } else {
-        modalForm.quotaMaxSize = "";
-        modalForm.quotaMaxSizeUnit = "GiB";
-      }
+    if (quotaBytes % TiB === 0) {
+      unit = "TiB";
+      value = quotaBytes / TiB;
+    } else if (quotaBytes % GiB === 0) {
+      unit = "GiB";
+      value = quotaBytes / GiB;
+    } else {
+      unit = "MiB";
+      value = quotaBytes / MiB;
     }
+
+    modalForm.minioQuotaMaxSize = String(value);
+    modalForm.minioQuotaMaxSizeUnit = unit;
+  } else {
+    modalForm.minioQuotaMaxSize = "";
+    modalForm.minioQuotaMaxSizeUnit = "GiB";
+  }
+}
+
 
     // Garage edit defaults
     if (props.backend === "garage") {
-      modalForm.garageMaxObjects =
-        (props.bucketToEdit as any).garageMaxObjects != null
-          ? String((props.bucketToEdit as any).garageMaxObjects)
-          : "";
+  modalForm.garageMaxObjects =
+    (props.bucketToEdit as any).garageMaxObjects != null
+      ? String((props.bucketToEdit as any).garageMaxObjects)
+      : "";
 
-      // quotaBytes -> size + unit
-      const quotaBytes = props.bucketToEdit.quotaBytes;
-      if (typeof quotaBytes === "number" && quotaBytes > 0) {
-        const MiB = 1024 * 1024;
-        const GiB = 1024 * MiB;
-        const TiB = 1024 * GiB;
+  const quotaBytes = props.bucketToEdit.quotaBytes;
+  if (typeof quotaBytes === "number" && quotaBytes > 0) {
+    const MiB = 1024 * 1024;
+    const GiB = 1024 * MiB;
+    const TiB = 1024 * GiB;
 
-        let unit: "MiB" | "GiB" | "TiB" = "GiB";
-        let value: number;
+    let unit: "MiB" | "GiB" | "TiB" = "GiB";
+    let value: number;
 
-        if (quotaBytes % TiB === 0) {
-          unit = "TiB";
-          value = quotaBytes / TiB;
-        } else if (quotaBytes % GiB === 0) {
-          unit = "GiB";
-          value = quotaBytes / GiB;
-        } else {
-          unit = "MiB";
-          value = quotaBytes / MiB;
-        }
-
-        modalForm.quotaMaxSize = String(value);
-        modalForm.quotaMaxSizeUnit = unit;
-      } else {
-        modalForm.quotaMaxSize = "";
-        modalForm.quotaMaxSizeUnit = "GiB";
-      }
-
-      modalForm.garageWebsiteEnabled = !!(props.bucketToEdit as any)
-        .garageWebsiteEnabled;
-      modalForm.garageWebsiteIndex =
-        (props.bucketToEdit as any).garageWebsiteIndex || "index.html";
-      modalForm.garageWebsiteError =
-        (props.bucketToEdit as any).garageWebsiteError || "";
-
-      const aliases = (props.bucketToEdit as any)
-        .garageAliases as string[] | undefined;
-      modalForm.garageAliasesText =
-        aliases && aliases.length ? aliases.join(",") : "";
+    if (quotaBytes % TiB === 0) {
+      unit = "TiB";
+      value = quotaBytes / TiB;
+    } else if (quotaBytes % GiB === 0) {
+      unit = "GiB";
+      value = quotaBytes / GiB;
+    } else {
+      unit = "MiB";
+      value = quotaBytes / MiB;
     }
+
+    modalForm.garageMaxSize = String(value);
+    modalForm.garageMaxSizeUnit = unit;
+  } else {
+    modalForm.garageMaxSize = "";
+    modalForm.garageMaxSizeUnit = "GiB";
+  }
+
+  modalForm.garageWebsiteEnabled = !!(props.bucketToEdit as any)
+    .garageWebsiteEnabled;
+  modalForm.garageWebsiteIndex =
+    (props.bucketToEdit as any).garageWebsiteIndex || "index.html";
+  modalForm.garageWebsiteError =
+    (props.bucketToEdit as any).garageWebsiteError || "";
+
+  const aliases = (props.bucketToEdit as any)
+    .garageAliases as string[] | undefined;
+  modalForm.garageAliasesText =
+    aliases && aliases.length ? aliases.join(",") : "";
+}
+
     if (props.backend === "ceph" && props.bucketToEdit.acl) {
       const aclRules = props.bucketToEdit.acl as CephAclRule[];
 
@@ -796,14 +827,46 @@ function onSubmit() {
   });
  
 
-  emit("submit", {
-    mode: props.mode,
-    form: {
-      ...modalForm,
-      tagsText,
-      cephAclRules, // new structured ACL payload
-    },
-  });
+emit("submit", {
+  mode: props.mode,
+  form: {
+    ...modalForm,
+    tagsText,
+    cephAclRules,
+    garageGrants: modalForm.garageGrants,
+  },
+});
+
 }
+function keyHandle(id: string, name?: string) {
+  return name?.trim() ? name.trim() : id;
+}
+
+function isGranted(id: string, name?: string) {
+  const h = keyHandle(id, name);
+  return modalForm.garageGrants.some(g => g.keyIdOrName === h);
+}
+
+function grantFor(id: string, name?: string) {
+  const h = keyHandle(id, name);
+  let g = modalForm.garageGrants.find(x => x.keyIdOrName === h);
+  if (!g) {
+    g = { keyIdOrName: h, read: true, write: false, owner: false };
+    modalForm.garageGrants.push(g);
+  }
+  return g;
+}
+
+function toggleGrant(id: string, name: string | undefined, checked: boolean) {
+  const h = keyHandle(id, name);
+  if (checked) {
+    if (!modalForm.garageGrants.some(g => g.keyIdOrName === h)) {
+      modalForm.garageGrants.push({ keyIdOrName: h, read: true, write: false, owner: false });
+    }
+  } else {
+    modalForm.garageGrants = modalForm.garageGrants.filter(g => g.keyIdOrName !== h);
+  }
+}
+
 
 </script>

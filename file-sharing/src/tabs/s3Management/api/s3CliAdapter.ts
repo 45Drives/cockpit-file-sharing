@@ -1,7 +1,7 @@
 // cephRgwCliAdapter.ts
-import type {S3Bucket,Endpoint,CephAclRule,RgwGateway,RgwUser,RgwDashboardS3Creds, CreatedRgwUserKeys,CreateRgwUserOptions,
-  RgwUserDetails,RgwUserKey,RgwUserCap, CephBucketUpdatePayload,
-  CephAclPermission,} from "../types/types";
+import type {S3Bucket,CephAclRule,RgwGateway,RgwUser,RgwDashboardS3Creds, CreatedRgwUserKeys,CreateRgwUserOptions,
+  RgwUserDetails,RgwUserKey,RgwUserCap, CephBucketUpdatePayload,CephAclPermission,BucketDashboardStats,BucketUserUsage,BucketDashboardOptions,
+  BucketVersioningStatus,CephBucket,} from "../types/types";
   import { legacy, server, Command, unwrap } from "../../../../../houston-common/houston-common-lib";
   const { errorString } = legacy;
   type CephS3Connection = {
@@ -35,22 +35,17 @@ let cachedDashboardCreds: RgwDashboardS3Creds | null = null;
       throw new Error(errorString(state));
     }
   }
-  export async function listBucketsFromCeph(): Promise<S3Bucket[]> {
-    const bucketNames: string[] = await rgwJson(["bucket", "list"]);
+  export async function listBucketsFromCeph(): Promise<CephBucket[]> {
+    // RGW returns an array of bucket stats; we treat it as unknown/any here
+    const statsList: any[] = await rgwJson(["bucket", "stats"]);
     const { region: defaultRegion } = await getCephS3Connection();
   
-    const detailed = await Promise.all(
-      bucketNames.map((bucketName) =>
-        buildS3BucketFromRgwStats(bucketName, defaultRegion)
-      )
+    return statsList.map((stats) =>
+      buildS3BucketFromRgwStats(stats, defaultRegion),
     );
-  
-    return detailed;
   }
-  
 
 export async function getBucketObjectStats(
-  _endpoint: Endpoint,
   bucketName: string
 ): Promise<{ objectCount: number; sizeBytes: number }> {
   const stats = await rgwJson(["bucket", "stats", "--bucket", bucketName]);
@@ -312,8 +307,6 @@ async function runAwsWithDashboardCreds(
   }
 }
 
-
-
 async function ensureBucketExists(
   bucketName: string,
   endpointUrl: string,
@@ -334,7 +327,6 @@ async function ensureBucketExists(
   }
 }
 
-
 export async function changeRgwBucketOwner(
   bucketName: string,
   newOwnerUid: string
@@ -347,13 +339,7 @@ export async function changeRgwBucketOwner(
     stats.bucket_id ||
     stats.bucket?.id;
 
-  const args: string[] = [
-    "bucket",
-    "link",
-    "--bucket",
-    bucketName,
-    "--uid",
-    newOwnerUid,
+  const args: string[] = ["bucket","link","--bucket",bucketName,"--uid",newOwnerUid,
   ];
 
   if (bucketId) {
@@ -1136,22 +1122,24 @@ async function getCephS3Connection(): Promise<CephS3Connection> {
   return cachedCephS3Conn;
 }
 
+function mapCephVersioning(
+  stats: any,
+): BucketVersioningStatus {
+  // Ceph exposes several hints; map them into S3-style states
+  if (stats.versioning === "enabled" || stats.versioning_enabled) {
+    return "Enabled";
+  }
+  if (stats.versioning === "suspended") {
+    return "Suspended";
+  }
+  return "Disabled";
+}
 
-async function buildS3BucketFromRgwStats(
-  bucketName: string,
-  defaultRegion: string
-): Promise<S3Bucket> {
-  const stats = await rgwJson([
-    "bucket",
-    "stats",
-    "--bucket",
-    bucketName,
-  ]);
-
-  const owner: string | undefined = stats.owner;
-  const creationTime: string | undefined = stats.creation_time;
-  const lastModifiedTime: string | undefined = stats.mtime;
-
+function buildS3BucketFromRgwStats(
+  stats: any,
+  defaultRegion: string,
+): CephBucket {
+  // usage
   const usage = stats.usage || {};
   const usageKey =
     "rgw.main" in usage ? "rgw.main" : Object.keys(usage)[0];
@@ -1161,113 +1149,33 @@ async function buildS3BucketFromRgwStats(
   const objectCount: number = usageMain.num_objects ?? 0;
   const versionCount: number | undefined = usageMain.num_object_versions;
 
+  // region / zone
   const region: string =
-    stats.zone || stats.zonegroup || "ceph-default-zone";
+    stats.zone || stats.zonegroup || defaultRegion || "ceph-default-zone";
 
-  // Enrich with S3 metadata
-  let tags: Record<string, string> | undefined;
-  let versioning: "Enabled" | "Suspended" | "Disabled" = "Disabled";
-  let objectLockEnabled = false;
-  let acl: CephAclRule[] | undefined;
+  // tags from tagset
+  const tags =
+    stats.tagset && Object.keys(stats.tagset).length
+      ? { ...stats.tagset }
+      : undefined;
 
-  const regionForAws = region || defaultRegion;
+  // versioning + object lock
+  const versioning = mapCephVersioning(stats);
+  const objectLockEnabled = !!stats.object_lock_enabled;
 
-  // Tags
-  const taggingJson = await awsJsonOrNullWithDashboardCreds(
-    ["s3api", "get-bucket-tagging", "--bucket", bucketName],
-    undefined,
-    regionForAws
-  );
-  if (taggingJson && Array.isArray(taggingJson.TagSet)) {
-    tags = {};
-    for (const t of taggingJson.TagSet as Array<{ Key: string; Value: string }>) {
-      if (t.Key) {
-        tags[t.Key] = t.Value ?? "";
-      }
-    }
-  }
+  // optional: quota, zone, zonegroup, etc.
+  const quotaBytes =
+    stats.bucket_quota && typeof stats.bucket_quota.max_size_kb === "number"
+      && stats.bucket_quota.max_size_kb > 0
+      ? stats.bucket_quota.max_size_kb * 1024
+      : undefined;
 
-  // Versioning
-  const versioningJson = await awsJsonOrNullWithDashboardCreds(
-    ["s3api", "get-bucket-versioning", "--bucket", bucketName],
-    undefined,
-    regionForAws
-  );
-  if (versioningJson && typeof versioningJson.Status === "string") {
-    if (
-      versioningJson.Status === "Enabled" ||
-      versioningJson.Status === "Suspended"
-    ) {
-      versioning = versioningJson.Status;
-    }
-  }
-
-  // Object lock
-  const lockJson = await awsJsonOrNullWithDashboardCreds(
-    ["s3api", "get-object-lock-configuration", "--bucket", bucketName],
-    undefined,
-    regionForAws
-  );
-  if (
-    lockJson &&
-    lockJson.ObjectLockConfiguration &&
-    lockJson.ObjectLockConfiguration.ObjectLockEnabled === "Enabled"
-  ) {
-    objectLockEnabled = true;
-  }
-  const aclJson = await awsJsonOrNullWithDashboardCreds(
-    ["s3api", "get-bucket-acl", "--bucket", bucketName],
-    undefined,
-    regionForAws
-  );
-
-  if (aclJson && Array.isArray(aclJson.Grants)) {
-    const rules: CephAclRule[] = [];
-
-    for (const g of aclJson.Grants as any[]) {
-      if (!g || !g.Grantee || !g.Permission) continue;
-      const perm = g.Permission as CephAclPermission;
-
-      if (g.Grantee.Type === "Group" && typeof g.Grantee.URI === "string") {
-        if (g.Grantee.URI.endsWith("/AllUsers")) {
-          rules.push({ grantee: "all-users", permission: perm });
-        } else if (g.Grantee.URI.endsWith("/AuthenticatedUsers")) {
-          rules.push({ grantee: "authenticated-users", permission: perm });
-        }
-      } else if (g.Grantee.Type === "CanonicalUser") {
-        // Treat canonical user as "owner"
-        rules.push({ grantee: "owner", permission: perm });
-      }
-    }
-
-    if (rules.length) {
-      acl = rules;
-    }
-  }
-
-  let policy: string | undefined;
-
-  const policyJson = await awsJsonOrNullWithDashboardCreds(
-    ["s3api", "get-bucket-policy", "--bucket", bucketName],
-    undefined,
-    regionForAws
-  );
-
-  console.log("policjson ", policyJson)
-  if (policyJson && typeof policyJson.Policy === "string") {
-    try {
-      // Pretty-print it for the textarea
-      const parsed = JSON.parse(policyJson.Policy);
-      policy = JSON.stringify(parsed, null, 2);
-    } catch {
-      // If parsing fails, just store the raw string
-      policy = policyJson.Policy;
-    }
-  }
-  return {name: bucketName,createdAt: creationTime,lastModifiedTime,region,owner,objectCount,sizeBytes,versionCount,acl,policy,tags,versioning,objectLockEnabled,
+  return {backendKind: "ceph",name: stats.bucket,region,owner: stats.owner,createdAt: stats.creation_time,lastModifiedTime: stats.mtime, sizeBytes,objectCount,versionCount,
+    quotaBytes,objectLockEnabled,versioning,tags,zone: stats.zone,zonegroup: stats.zonegroup, 
+    // leave these undefined for now; you can fill them in later
+    acl: undefined,policy: undefined,lastAccessed: undefined,placementTarget: stats.placement_rule,
   };
 }
-
 
 function deriveCannedAclFromRules(
   rules?: CephAclRule[],
@@ -1300,4 +1208,171 @@ function deriveCannedAclFromRules(
     }
   }
   return "private";
+}
+export async function getBucketDashboardStats(
+  opts: BucketDashboardOptions
+): Promise<{ stats: BucketDashboardStats; perUser: BucketUserUsage[] }> {
+  const { bucket, uid, startDate, endDate, showLog } = opts;
+  console.log("getBucketDashboardStats ", opts);
+
+  if (!bucket) {
+    throw new Error("getBucketDashboardStats: bucket is required");
+  }
+  const normalizeDate = (value: string, kind: "start" | "end") => {
+    if (!value) return value;
+
+    // Already a full timestamp, don't touch it
+    if (value.includes("T")) {
+      return value;
+    }
+
+    // Date-only
+    if (kind === "start") {
+      return `${value}T00:00:00`;
+    }
+
+    // kind === "end": move to next day (exclusive bound)
+    const d = new Date(`${value}T00:00:00Z`);
+    if (Number.isNaN(d.getTime())) {
+      // If parsing fails for some reason, just pass raw value through
+      return value;
+    }
+    d.setUTCDate(d.getUTCDate() + 1);
+    // Ceph expects naive ISO without timezone; keep just YYYY-MM-DD
+    return d.toISOString().slice(0, 10);
+  };
+
+  const args: string[] = ["usage", "show"];
+
+  args.push("--bucket", bucket);
+
+  if (uid) {
+    args.push("--uid", uid);
+  }
+
+  if (startDate) {
+    args.push("--start-date", normalizeDate(startDate, "start"));
+  }
+
+  if (endDate) {
+    args.push("--end-date", normalizeDate(endDate, "end"));
+  }
+
+  // For per-bucket stats we need bucket-level entries
+  if (showLog) {
+    args.push("--show-log-entries");
+  }
+
+  const raw = await rgwJson(args);
+
+  const entries: any[] = Array.isArray(raw.entries) ? raw.entries : [];
+
+  const perUser: BucketUserUsage[] = [];
+
+  for (const userEntry of entries) {
+    const userId = userEntry.user || userEntry.owner || "";
+
+    const buckets: any[] = Array.isArray(userEntry.buckets)
+      ? userEntry.buckets
+      : [];
+
+    for (const b of buckets) {
+      if (b.bucket !== bucket) continue;
+
+      const categories: any[] = Array.isArray(b.categories)
+        ? b.categories
+        : [];
+
+      const totals = categories.reduce(
+        (acc, cat) => {
+          acc.bytesSent += cat.bytes_sent ?? 0;
+          acc.bytesReceived += cat.bytes_received ?? 0;
+          acc.ops += cat.ops ?? 0;
+          acc.successfulOps += cat.successful_ops ?? 0;
+          return acc;
+        },
+        { bytesSent: 0, bytesReceived: 0, ops: 0, successfulOps: 0 }
+      );
+
+      perUser.push({
+        bucket: b.bucket,
+        owner: b.owner || userId,
+        bytesSent: totals.bytesSent,
+        bytesReceived: totals.bytesReceived,
+        ops: totals.ops,
+        successfulOps: totals.successfulOps,
+      });
+    }
+  }
+
+  const aggregate = perUser.reduce(
+    (acc, u) => {
+      acc.bytesSent += u.bytesSent;
+      acc.bytesReceived += u.bytesReceived;
+      acc.ops += u.ops;
+      acc.successfulOps += u.successfulOps;
+      return acc;
+    },
+    { bytesSent: 0, bytesReceived: 0, ops: 0, successfulOps: 0 }
+  );
+
+  const stats: BucketDashboardStats = {
+    bucket,
+    totalBytesSent: aggregate.bytesSent,
+    totalBytesReceived: aggregate.bytesReceived,
+    totalOps: aggregate.ops,
+    totalSuccessfulOps: aggregate.successfulOps,
+    raw,
+  };
+
+  return { stats, perUser };
+}
+
+
+export async function getCephBucketSecurity(
+  bucketName: string,
+): Promise<{ acl?: CephAclRule[]; policy?: string }> {
+  const [aclJson, policyJson] = await Promise.all([
+    awsJsonOrNullWithDashboardCreds(
+      ["s3api", "get-bucket-acl", "--bucket", bucketName],
+    ),
+    awsJsonOrNullWithDashboardCreds(
+      ["s3api", "get-bucket-policy", "--bucket", bucketName],
+    ),
+  ]);
+
+  let acl: CephAclRule[] | undefined;
+  let policy: string | undefined;
+
+  if (aclJson && Array.isArray(aclJson.Grants)) {
+    const rules: CephAclRule[] = [];
+
+    for (const g of aclJson.Grants as any[]) {
+      if (!g || !g.Grantee || !g.Permission) continue;
+      const perm = g.Permission as any;
+
+      if (g.Grantee.Type === "Group" && typeof g.Grantee.URI === "string") {
+        if (g.Grantee.URI.endsWith("/AllUsers")) {
+          rules.push({ grantee: "all-users", permission: perm });
+        } else if (g.Grantee.URI.endsWith("/AuthenticatedUsers")) {
+          rules.push({ grantee: "authenticated-users", permission: perm });
+        }
+      } else if (g.Grantee.Type === "CanonicalUser") {
+        rules.push({ grantee: "owner", permission: perm });
+      }
+    }
+
+    if (rules.length) acl = rules;
+  }
+
+  if (policyJson && typeof policyJson.Policy === "string") {
+    try {
+      const parsed = JSON.parse(policyJson.Policy);
+      policy = JSON.stringify(parsed, null, 2);
+    } catch {
+      policy = policyJson.Policy;
+    }
+  }
+
+  return { acl, policy };
 }

@@ -1,16 +1,17 @@
 // composables/useBucketBackend.ts
 import { ref, computed } from "vue";
 import type { Ref } from "vue";
-import type { S3Bucket, RgwGateway } from "../types/types";
-import type {  BackendContext, BucketFormData } from "../bucketBackends/bucketBackend";
-import { getBucketBackend } from "../bucketBackends/bucketBackendRegistry";
-import type { BackendKind } from "../types/types"
 
-export function useBucketBackend(
-  backend: Ref<BackendKind>,
-  ctx: Ref<{ cephGateway?: RgwGateway | null }>,
+import type { BucketByKind, BackendKind } from "../types/types";
+import type { BackendContext, BucketFormData } from "../bucketBackends/bucketBackend";
+import type { BucketBackend } from "../bucketBackends/bucketBackend";
+import { getBucketBackend } from "../bucketBackends/bucketBackendRegistry";
+
+export function useBucketBackend<K extends BackendKind>(
+  backend: Ref<K>,
+  ctx: Ref<BackendContext>,
 ) {
-  const buckets = ref<S3Bucket[]>([]);
+  const buckets = ref<BucketByKind<K>[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
 
@@ -18,7 +19,9 @@ export function useBucketBackend(
     cephGateway: ctx.value.cephGateway ?? null,
   }));
 
-  const backendImpl = computed(() => getBucketBackend(backend.value));
+  const backendImpl = computed<BucketBackend<BucketByKind<K>>>(() => {
+    return getBucketBackend(backend.value);
+  });
 
   async function loadBuckets() {
     loading.value = true;
@@ -37,21 +40,14 @@ export function useBucketBackend(
     await backendImpl.value.createBucket(form, context.value);
   }
 
-  async function updateBucketFromForm(bucket: S3Bucket, form: BucketFormData) {
+  async function updateBucketFromForm(bucket: BucketByKind<K>, form: BucketFormData) {
     await backendImpl.value.updateBucket(bucket, form, context.value);
   }
 
-  async function deleteBucket(bucket: S3Bucket) {
+  async function deleteBucket(bucket: BucketByKind<K>) {
     await backendImpl.value.deleteBucket(bucket, context.value);
   }
 
-  return {
-    buckets,
-    loading,
-    error,
-    loadBuckets,
-    createBucketFromForm,
-    updateBucketFromForm,
-    deleteBucket,
+  return {buckets,loading,error,loadBuckets,createBucketFromForm,updateBucketFromForm,deleteBucket,
   };
 }

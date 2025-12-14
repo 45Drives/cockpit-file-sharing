@@ -1,14 +1,14 @@
 // backends/garageBucketBackend.ts
 import type { BucketBackend, BucketFormData, BackendContext } from "./bucketBackend";
-import type { S3Bucket } from "../types/types";
+import type { GarageBucket } from "../types/types";
 import {listBucketsFromGarage,deleteBucketFromGarage,createGarageBucket,updateGarageBucket,
 } from "../api/garageCliAdapter";
 import { parseList, parseQuotaSize, BINARY_MULTIPLIERS } from "./bucketUtils";
 
-export const garageBucketBackend: BucketBackend = {
+export const garageBucketBackend: BucketBackend<GarageBucket> = {
   label: "Garage",
 
-  async listBuckets(_ctx: BackendContext): Promise<S3Bucket[]> {
+  async listBuckets(_ctx: BackendContext): Promise<GarageBucket[]> {
     return listBucketsFromGarage();
   },
 
@@ -51,7 +51,7 @@ export const garageBucketBackend: BucketBackend = {
     });
   },
 
-  async updateBucket(bucket: S3Bucket, form: BucketFormData): Promise<void> {
+  async updateBucket(bucket: GarageBucket, form: BucketFormData): Promise<void> {
     const allow = parseList(form.garageAllowText || "");
     const deny = parseList(form.garageDenyText || "");
     const extraArgs = parseList(form.garageExtraArgsText || "");
@@ -132,7 +132,7 @@ export const garageBucketBackend: BucketBackend = {
     }
   },
 
-  async deleteBucket(bucket: S3Bucket): Promise<void> {
+  async deleteBucket(bucket: GarageBucket): Promise<void> {
     await deleteBucketFromGarage(bucket.garageId!);
   },
 };

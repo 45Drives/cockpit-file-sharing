@@ -1,19 +1,15 @@
 // backends/cephBucketBackend.ts
 import type { BucketBackend, BucketFormData, BackendContext } from "./bucketBackend";
-import type { S3Bucket } from "../types/types";
+import type { CephBucket } from "../types/types";
 import { parseTags } from "./bucketUtils";
 
-import {
-  listBucketsFromCeph,
-  createCephBucketViaS3,
-  updateCephBucketViaS3,
-  deleteBucketFromCeph,
+import {listBucketsFromCeph,createCephBucketViaS3,updateCephBucketViaS3,deleteBucketFromCeph,getCephBucketSecurity
 } from "../api/s3CliAdapter";
 
-export const cephBucketBackend: BucketBackend = {
+export const cephBucketBackend: BucketBackend<CephBucket> = {
   label: "Ceph RGW",
 
-  async listBuckets(_ctx: BackendContext): Promise<S3Bucket[]> {
+  async listBuckets(_ctx: BackendContext): Promise<CephBucket[]> {
     return listBucketsFromCeph();
   },
 
@@ -41,7 +37,7 @@ export const cephBucketBackend: BucketBackend = {
   },
 
   async updateBucket(
-    bucket: S3Bucket,
+    bucket: CephBucket,
     form: BucketFormData,
     ctx: BackendContext,
   ): Promise<void> {
@@ -118,7 +114,19 @@ export const cephBucketBackend: BucketBackend = {
     }
   },
 
-  async deleteBucket(bucket: S3Bucket): Promise<void> {
+  async deleteBucket(bucket: CephBucket): Promise<void> {
     await deleteBucketFromCeph(bucket.name, { purgeObjects: true });
   },
 };
+export async function hydrateCephBucketForEdit(
+  bucket: CephBucket,
+  _ctx: BackendContext,
+): Promise<CephBucket> {
+  const { acl, policy } = await getCephBucketSecurity(bucket.name);
+
+  return {
+    ...bucket,
+    acl,
+    policy,
+  };
+}

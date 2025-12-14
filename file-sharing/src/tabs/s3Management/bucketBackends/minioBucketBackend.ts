@@ -1,16 +1,16 @@
 // backends/minioBucketBackend.ts
 import type {BucketBackend,BucketFormData,BackendContext} from "./bucketBackend";
-  import type { S3Bucket } from "../types/types";
+  import type { MinioBucket } from "../types/types";
   
   import {parseTags,parseQuotaSize,BINARY_MULTIPLIERS,DECIMAL_MULTIPLIERS,} from "./bucketUtils";
   
   import {listBucketsFromMinio,createBucketFromMinio,deleteBucketFromMinio,updateMinioBucket,type UpdateMinioBucketOptions,
   } from "../api/minioCliAdapter";
   
-  export const minioBucketBackend: BucketBackend = {
+  export const minioBucketBackend: BucketBackend<MinioBucket> = {
     label: "MinIO",
   
-    async listBuckets(_ctx: BackendContext): Promise<S3Bucket[]> {
+    async listBuckets(_ctx: BackendContext): Promise<MinioBucket[]> {
       return listBucketsFromMinio();
     },
   
@@ -51,7 +51,7 @@ import type {BucketBackend,BucketFormData,BackendContext} from "./bucketBackend"
       }
     },
   
-    async updateBucket(bucket: S3Bucket, form: BucketFormData): Promise<void> {
+    async updateBucket(bucket: MinioBucket, form: BucketFormData): Promise<void> {
       const parsedTags = parseTags(form.tagsText || "");
       const newTags: Record<string, string> | null =
         Object.keys(parsedTags).length ? parsedTags : null;
@@ -135,7 +135,7 @@ import type {BucketBackend,BucketFormData,BackendContext} from "./bucketBackend"
       bucket.tags = newTags ?? undefined;
     },
   
-    async deleteBucket(bucket: S3Bucket): Promise<void> {
+    async deleteBucket(bucket: MinioBucket): Promise<void> {
       await deleteBucketFromMinio(bucket.name);
     },
   };

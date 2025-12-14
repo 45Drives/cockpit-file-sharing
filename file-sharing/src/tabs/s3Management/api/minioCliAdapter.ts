@@ -1,7 +1,8 @@
 
   // minioCliAdapter.ts
-import type {S3Bucket,Endpoint,BucketVersioningStatus, MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserGroupMembership, MinioUserUpdatePayload,
-
+import type {MinioBucket,BucketVersioningStatus, MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserGroupMembership, MinioUserUpdatePayload,
+  MinioBucketDashboardStats,
+  MinioReplicationUsage
 } from "../types/types";
 
 import { legacy } from "../../../../../houston-common/houston-common-lib";
@@ -162,7 +163,7 @@ async function getMinioBucketTags(
 /**
  * List buckets from MinIO and enrich them with usage, region, tags, etc.
  */
-export async function listBucketsFromMinio(): Promise<S3Bucket[]> {
+export async function listBucketsFromMinio(): Promise<MinioBucket[]> {
   // `mc --json ls ALIAS`
   const entries = await mcJsonLines(["ls", MINIO_ALIAS]);
 
@@ -191,7 +192,6 @@ export async function listBucketsFromMinio(): Promise<S3Bucket[]> {
       const owner: string | undefined =
         (tags && (tags.owner || tags.Owner || tags.bucketOwner)) || undefined;
 
-      const acl: BucketAcl | undefined = undefined;
       const policy: string | undefined = undefined;
 
       // Fallback: if versioningStatus is missing, infer from versionsCount
@@ -199,12 +199,12 @@ export async function listBucketsFromMinio(): Promise<S3Bucket[]> {
         versioningStatus ??
         (versionsCount && versionsCount > 0 ? "Enabled" : "Suspended");
 
-      const bucket: S3Bucket = {
+      const bucket: MinioBucket = {
+        backendKind: "minio",
         name: bucketName,
         createdAt,
         region: region || "minio-default-region",
         owner,
-        acl,
         policy,
         objectCount,
         sizeBytes,
@@ -218,14 +218,13 @@ export async function listBucketsFromMinio(): Promise<S3Bucket[]> {
     })
   );
 
-  return detailed.filter((b): b is S3Bucket => Boolean(b));
+  return detailed.filter((b): b is MinioBucket => Boolean(b));
 }
 async function getMinioBucketQuotaBytes(bucketName: string): Promise<number | undefined> {
   try {
     const entry = await mcJsonSingle([
-      "admin",
-      "bucket",
       "quota",
+      "info",
       `${MINIO_ALIAS}/${bucketName}`,
     ]);
 
@@ -256,7 +255,6 @@ async function getMinioBucketQuotaBytes(bucketName: string): Promise<number | un
  * Object-level stats for a single bucket using `mc stat --json`.
  */
 export async function getBucketObjectStatsFromMinio(
-  _endpoint: Endpoint,
   bucketName: string
 ): Promise<{ objectCount: number; sizeBytes: number }> {
   const stat = await mcJsonSingle([
@@ -938,24 +936,12 @@ export async function updateMinioGroup(
   const membersToRemove = currentMembers.filter(m => !wantMembers.includes(m));
 
   for (const m of membersToAdd) {
-    await runMc([
-      "admin",
-      "group",
-      "add",
-      MINIO_ALIAS,
-      name,
-      m,
+    await runMc(["admin","group","add",MINIO_ALIAS,name,m,
     ]);
   }
 
   for (const m of membersToRemove) {
-    await runMc([
-      "admin",
-      "group",
-      "remove",
-      MINIO_ALIAS,
-      name,
-      m,
+    await runMc(["admin","group","remove",MINIO_ALIAS,name,m,
     ]);
   }
 
@@ -964,26 +950,12 @@ export async function updateMinioGroup(
   const policiesToDetach = currentPolicies.filter(p => !wantPolicies.includes(p));
 
   for (const p of policiesToDetach) {
-    await runMc([
-      "admin",
-      "policy",
-      "detach",
-      MINIO_ALIAS,
-      p,
-      "--group",
-      name,
+    await runMc(["admin","policy","detach",MINIO_ALIAS,p,"--group",name,
     ]);
   }
 
   for (const p of policiesToAttach) {
-    await runMc([
-      "admin",
-      "policy",
-      "attach",
-      MINIO_ALIAS,
-      p,
-      "--group",
-      name,
+    await runMc(["admin","policy","attach",MINIO_ALIAS,p,"--group",name,
     ]);
   }
 }
@@ -1024,12 +996,7 @@ if (options.quotaSize !== undefined) {
     ]);
   } else {
     // Set quota
-    await runMc([
-      "quota",
-      "set",
-      bucketPath,
-      "--size",
-      options.quotaSize.trim(), // e.g. "20GiB"
+    await runMc(["quota","set",bucketPath,"--size",options.quotaSize.trim(), // e.g. "20GiB"
     ]);
   }
 }
@@ -1068,4 +1035,143 @@ if (options.quotaSize !== undefined) {
       }
     }
   }
+}
+
+export async function getMinioBucketDashboardStats(
+  bucketName: string
+): Promise<MinioBucketDashboardStats> {
+  if (!bucketName) {
+    throw new Error("getMinioBucketDashboardStats: bucketName is required");
+  }
+
+  const stat = await mcJsonSingle(["stat", `${MINIO_ALIAS}/${bucketName}`]);
+
+  const usage = stat.Usage || stat.usage || {};
+  const totalSizeBytes: number = Number(usage.size ?? usage.totalSize ?? 0) || 0;
+  const objectCount: number = Number(usage.objectsCount ?? usage.objects ?? 0) || 0;
+
+  const versionCount: number | undefined =
+    typeof usage.versionsCount === "number"
+      ? usage.versionsCount
+      : typeof usage.versions === "number"
+      ? usage.versions
+      : undefined;
+
+  const deleteMarkersCount: number | undefined =
+    typeof usage.deleteMarkersCount === "number" ? usage.deleteMarkersCount : undefined;
+
+  const lastModified: string | undefined =
+    stat.lastModified || stat.LastModified || stat.time || undefined;
+
+  const location: string | undefined =
+    stat.location ||
+    stat.Location ||
+    (stat.Properties && (stat.Properties.location || stat.Properties.Location)) ||
+    undefined;
+
+  const rawVersioning = stat.Versioning || stat.versioning || {};
+  const versioningStatus: BucketVersioningStatus | undefined =
+    typeof rawVersioning.status === "string" && rawVersioning.status
+      ? (rawVersioning.status as BucketVersioningStatus)
+      : undefined;
+
+  const rawObjectLock = stat.ObjectLock || stat.objectLock || {};
+  const objectLockEnabled =
+    typeof rawObjectLock.enabled === "string"
+      ? rawObjectLock.enabled.toLowerCase() === "enabled"
+      : undefined;
+
+  const objectLockMode: string | undefined =
+    typeof rawObjectLock.mode === "string" && rawObjectLock.mode ? rawObjectLock.mode : undefined;
+
+  const objectLockValidity: string | undefined =
+    typeof rawObjectLock.validity === "string" && rawObjectLock.validity
+      ? rawObjectLock.validity
+      : undefined;
+
+  const policy = stat.Policy || stat.policy || {};
+  const policyType: string | undefined =
+    typeof policy.type === "string" ? policy.type : undefined;
+
+  const replication = stat.Replication || stat.replication || {};
+  const replicationEnabled: boolean | undefined =
+    typeof replication.enabled === "boolean" ? replication.enabled : undefined;
+
+  const replicationRole: string | undefined =
+    replication?.config && typeof replication.config.Role === "string"
+      ? replication.config.Role
+      : undefined;
+
+  const encryption = stat.Encryption || stat.encryption || {};
+  const encryptionConfigured: boolean | undefined =
+    encryption && typeof encryption === "object" ? (Object.keys(encryption).length > 0) : undefined;
+
+  const ilm = stat.ilm || stat.ILM || stat.ILMConfig || {};
+  const ilmConfigured: boolean | undefined =
+    ilm && typeof ilm === "object" ? (Object.keys(ilm).length > 0) : undefined;
+
+  // Histograms (these keys match your JSON output)
+  const sizeHistogramSrc =
+    usage.objectsSizesHistogram || usage.ObjectSizesHistogram || usage.objectSizesHistogram || null;
+
+  const versionsHistogramSrc =
+    usage.objectsVersionsHistogram || usage.ObjectVersionsHistogram || usage.objectVersionsHistogram || null;
+
+  const sizeHistogram: Record<string, number> | undefined =
+    sizeHistogramSrc && typeof sizeHistogramSrc === "object"
+      ? Object.fromEntries(Object.entries(sizeHistogramSrc).map(([k, v]) => [k, Number(v) || 0]))
+      : undefined;
+
+  const versionsHistogram: Record<string, number> | undefined =
+    versionsHistogramSrc && typeof versionsHistogramSrc === "object"
+      ? Object.fromEntries(Object.entries(versionsHistogramSrc).map(([k, v]) => [k, Number(v) || 0]))
+      : undefined;
+
+  const replicationUsage: MinioReplicationUsage | undefined =
+    replicationEnabled
+      ? {
+          objectsPendingReplicationCount: usage.objectsPendingReplicationCount,
+          objectsPendingReplicationTotalSize: usage.objectsPendingReplicationTotalSize,
+          objectsFailedReplicationCount: usage.objectsFailedReplicationCount,
+          objectsFailedReplicationTotalSize: usage.objectsFailedReplicationTotalSize,
+          objectsReplicatedTotalSize: usage.objectsReplicatedTotalSize,
+          objectReplicaTotalSize: usage.objectReplicaTotalSize,
+        }
+      : undefined;
+
+  const quotaBytes = await getMinioBucketQuotaBytes(bucketName);
+
+  return {
+    bucket: bucketName,
+    totalSizeBytes,
+    objectCount,
+    versionCount,
+    deleteMarkersCount,
+
+    lastModified,
+    location,
+
+    versioningStatus,
+
+    objectLockEnabled,
+    objectLockMode,
+    objectLockValidity,
+
+    policyType,
+
+    replicationEnabled,
+    replicationRole,
+
+    encryptionConfigured,
+    ilmConfigured,
+
+    quotaBytes,
+
+    sizeHistogram,
+    versionsHistogram,
+
+    replicationUsage,
+
+    raw: stat,
+  };
 }

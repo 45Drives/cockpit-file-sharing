@@ -165,6 +165,7 @@
   import { CardContainer } from "@45drives/houston-common-ui";
   import { ArchiveBoxIcon } from "@heroicons/vue/20/solid";
   import AccIcon from "../images/AccIcon.vue";
+import type { RgwGateway } from "../types/types";
 
   const loadingConfig = ref(false);
   const isMinioAvailable = ref(false);
@@ -179,17 +180,9 @@
   const selectedBackend = ref<"minio" | "ceph" | "garage" | null>(null);
   const selectedView = ref<"buckets" | "users" | null>(null);
   
-  // ----- Ceph gateways -----
-  type RgwGateway = {
-    id: string;
-    hostname: string;
-    zonegroup: string;
-    zone: string;
-    endpoint: string;
-    isDefault: boolean;
-  };
+
   
-  const gateways = ref<RgwGateway[]>([]);
+   const gateways = ref<RgwGateway[]>([]);
   const loadingGateways = ref(false);
   const gatewayError = ref<string | null>(null);
   const selectedGatewayId = ref<string | null>(null);
