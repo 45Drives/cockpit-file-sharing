@@ -63,3 +63,33 @@ export function parseTags(text: string): Record<string, string> {
   
     return { bytes, sizeString };
   }
+
+  export function formatBytes(bytes: number): string {
+    if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  
+    const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
+    let value = bytes;
+    let idx = 0;
+  
+    while (value >= 1024 && idx < units.length - 1) {
+      value /= 1024;
+      idx += 1;
+    }
+  
+    return `${value.toFixed(value >= 10 ? 1 : 2)} ${units[idx]}`;
+  }
+  export function splitBytesBinary(
+    bytes?: number | null,
+  ): { value: string; unit: "MiB" | "GiB" | "TiB" } {
+    if (!Number.isFinite(bytes) || !bytes || bytes <= 0) {
+      return { value: "", unit: "GiB" };
+    }
+  
+    const MiB = 1024 ** 2;
+    const GiB = 1024 ** 3;
+    const TiB = 1024 ** 4;
+  
+    if (bytes % TiB === 0) return { value: String(bytes / TiB), unit: "TiB" };
+    if (bytes % GiB === 0) return { value: String(bytes / GiB), unit: "GiB" };
+    return { value: String(Math.round(bytes / MiB)), unit: "MiB" };
+  }

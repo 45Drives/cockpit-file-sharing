@@ -1,10 +1,20 @@
 // backends/bucketBackend.ts
 import type { S3Bucket, RgwGateway } from "../types/types";
+import type { CephBucketCreateOptions, CephBucketUpdatePayload, GarageBucketOptions, GarageBucketKeyGrant, MinioBucketUpdateOptions,
+} from "../types/types";
 
-export interface BucketFormData {
-  [key: string]: any;
-}
 
+export type BucketCreateForm =
+  | ({ backend: "ceph";  } & CephBucketCreateOptions)
+  | ({ backend: "garage"; name: string } & { garage: GarageBucketOptions; grants?: GarageBucketKeyGrant[] })
+  | ({ backend: "minio"; name: string } & { minio: MinioBucketUpdateOptions });
+
+export type BucketEditForm =
+  | ({ backend: "ceph" } & CephBucketUpdatePayload)
+  | ({ backend: "garage"; name: string } & { garage: GarageBucketOptions; grants?: GarageBucketKeyGrant[] })
+  | ({ backend: "minio"; name: string } & { minio: MinioBucketUpdateOptions });
+
+export type BucketFormData = BucketCreateForm | BucketEditForm;
 export interface BackendContext {
   cephGateway?: RgwGateway | null;
 }
@@ -14,9 +24,12 @@ export interface BucketBackend<B extends S3Bucket = S3Bucket> {
 
   listBuckets(ctx: BackendContext): Promise<B[]>;
 
-  createBucket(form: BucketFormData, ctx: BackendContext): Promise<void>;
+  createBucket(form: BucketCreateForm, ctx: BackendContext): Promise<void>;
 
-  updateBucket(bucket: B, form: BucketFormData, ctx: BackendContext): Promise<void>;
-
+  updateBucket(bucket: B, form: BucketEditForm, ctx: BackendContext): Promise<void>;
+  
   deleteBucket(bucket: B, ctx: BackendContext): Promise<void>;
+
+  listBucketsProgressive?( ctx: BackendContext, onUpdate: (bucket: B) => void,): Promise<B[]>;
+
 }

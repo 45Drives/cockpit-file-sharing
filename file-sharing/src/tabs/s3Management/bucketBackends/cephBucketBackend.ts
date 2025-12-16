@@ -1,10 +1,12 @@
 // backends/cephBucketBackend.ts
-import type { BucketBackend, BucketFormData, BackendContext } from "./bucketBackend";
+import type { BucketBackend, BackendContext, BucketCreateForm, BucketEditForm } from "./bucketBackend";
 import type { CephBucket } from "../types/types";
 import { parseTags } from "./bucketUtils";
 
-import {listBucketsFromCeph,createCephBucketViaS3,updateCephBucketViaS3,deleteBucketFromCeph,getCephBucketSecurity
+import {listBucketsFromCeph,createCephBucketViaS3,updateCephBucketViaS3,deleteBucketFromCeph,getCephBucketSecurity,rgwJson,getCephS3Connection,buildS3BucketFromRgwStats,
 } from "../api/s3CliAdapter";
+
+
 
 export const cephBucketBackend: BucketBackend<CephBucket> = {
   label: "Ceph RGW",
@@ -13,9 +15,12 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     return listBucketsFromCeph();
   },
 
-  async createBucket(form: BucketFormData, ctx: BackendContext): Promise<void> {
+  async createBucket(form: BucketCreateForm, ctx: BackendContext): Promise<void> {
+      if (form.backend !== "ceph") {
+    throw new Error("Ceph backend received non-ceph form");
+  }
     const region =
-      form.cephPlacementTarget || ctx.cephGateway?.zone || "us-east-1";
+      form.placementTarget || ctx.cephGateway?.zone || "us-east-1";
 
     const tags = parseTags(form.tagsText || "");
 
@@ -23,35 +28,32 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
       bucketName: form.name,
       endpoint: ctx.cephGateway?.endpoint ?? "http://192.168.85.64:8080",
       tags: Object.keys(tags).length ? tags : undefined,
-      encryptionMode: form.cephEncryptionMode,
-      kmsKeyId: form.cephKmsKeyId || undefined,
-      bucketPolicyJson: form.bucketPolicyText || undefined,
-      owner: form.owner,
-      aclRules: form.cephAclRules,
-      objectLockEnabled: form.cephObjectLockEnabled,
-      objectLockMode: form.cephObjectLockMode,
-      objectLockRetentionDays: form.cephObjectLockRetentionDays
-        ? Number(form.cephObjectLockRetentionDays)
-        : undefined,
+      encryptionMode: form.encryptionMode,
+      kmsKeyId: form.kmsKeyId || undefined,
+      bucketPolicyJson: form.bucketPolicyJson || undefined,
+      owner: form.ownerUid,
+      aclRules: form.aclRules,
+      objectLockEnabled: form.objectLockEnabled,
+      objectLockMode: form.objectLockMode,
+      objectLockRetentionDays: form.objectLockRetentionDays
     });
   },
 
-  async updateBucket(
-    bucket: CephBucket,
-    form: BucketFormData,
-    ctx: BackendContext,
-  ): Promise<void> {
-    const region =
-      form.cephPlacementTarget ||
-      form.region ||
-      ctx.cephGateway?.zone ||
-      "us-east-1";
+  async updateBucket(bucket: CephBucket, form: BucketEditForm, ctx: BackendContext): Promise<void> {
+    if (form.backend !== "ceph") {
+      throw new Error("Ceph backend received non-ceph form");
+    }
+    // const region =
+    //   form.placementTarget ||
+    //   form.region ||
+    //   ctx.cephGateway?.zone ||
+    //   "us-east-1";
 
     const parsedTags = parseTags(form.tagsText || "");
     const newTags: Record<string, string> | null =
       Object.keys(parsedTags).length ? parsedTags : null;
 
-    const newVersioningEnabled = !!form.versioningEnabled;
+    const newVersioningEnabled = !!form.cephVersioningEnabled;
     const oldVersioningEnabled = bucket.versioning === "Enabled";
     const versioningChanged = newVersioningEnabled !== oldVersioningEnabled;
 
@@ -84,7 +86,7 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     const params: any = {
       bucketName: bucket.name,
       endpoint: ctx.cephGateway?.endpoint ?? "http://192.168.85.64:8080",
-      region,
+      // region,
     };
 
     if (versioningChanged) {
@@ -117,16 +119,69 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
   async deleteBucket(bucket: CephBucket): Promise<void> {
     await deleteBucketFromCeph(bucket.name, { purgeObjects: true });
   },
+  async listBucketsProgressive(
+    _ctx: BackendContext,
+    onUpdate: (bucket: CephBucket) => void,
+  ): Promise<CephBucket[]> {
+    const { region: defaultRegion } = await getCephS3Connection();
+  
+    const names: string[] = await rgwJson(["bucket", "list"]);
+    const shells = names.map((n) => shellCephBucket(n, defaultRegion));
+  
+    // Fire-and-forget: rgwJson itself is globally concurrency-limited now
+    void Promise.all(
+      shells.map(async (b) => {
+        try {
+          const stats = await rgwJson(["bucket", "stats", "--bucket", b.name]);
+          const full = buildS3BucketFromRgwStats(stats, defaultRegion);
+          onUpdate({ ...b, ...full });
+        } catch {
+          // leave shell
+        }
+      }),
+    );
+  
+    return shells;
+  },
 };
-export async function hydrateCephBucketForEdit(
+export async function hydrateCephBucket(
   bucket: CephBucket,
-  _ctx: BackendContext,
 ): Promise<CephBucket> {
   const { acl, policy } = await getCephBucketSecurity(bucket.name);
-
   return {
     ...bucket,
     acl,
     policy,
   };
 }
+
+function shellCephBucket(name: string, defaultRegion: string): CephBucket {
+  return {
+    backendKind: "ceph",
+    name,
+    region: defaultRegion || "ceph-default-zone",
+
+    owner: undefined,
+    createdAt: undefined,
+    lastModifiedTime: undefined,
+
+    sizeBytes: undefined,
+    objectCount: undefined,
+    versionCount: undefined,
+
+    quotaBytes: undefined,
+    objectLockEnabled: false,
+    versioning: undefined,
+    tags: undefined,
+
+    zone: undefined,
+    zonegroup: undefined,
+    placementTarget: undefined,
+
+    acl: undefined,
+    policy: undefined,
+    lastAccessed: undefined,
+  };
+}
+
+

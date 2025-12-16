@@ -5,10 +5,10 @@
         class="flex items-center justify-between bg-well rounded-md shadow text-default my-2 ring-1 ring-black ring-opacity-5 p-4 m-4"
       >
         <div>
-          <h2 class="text-xl font-semibold text-slate-100">
+          <h2 class="text-xl font-semibold text-default">
             Bucket usage dashboard
           </h2>
-          <p class="text-sm text-slate-400">
+          <p class="text-sm text-muted">
             {{ bucketName }} (Ceph RGW)
           </p>
         </div>
@@ -26,36 +26,36 @@
       </div>
   
       <!-- Filters -->
-      <div class="m-4 rounded-lg border-default bg-plugin-header p-4 text-sm text-slate-200 space-y-3">
+      <div class="m-4 rounded-lg border-default bg-plugin-header p-4 text-sm text-default space-y-3">
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <!-- Bucket (read-only) -->
           <div class="flex flex-col gap-1">
-            <span class="text-xs font-medium uppercase tracking-wide text-slate-400">
+            <label class="text-label">
               Bucket
-            </span>
+            </label>
             <input
               :value="bucketName"
               disabled
-              class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-400 outline-none"
+              class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-default outline-none"
             />
           </div>
   
           <!-- UID filter -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium uppercase tracking-wide text-slate-400">
+            <label class="text-label">
               Owner / UID filter
             </label>
             <input
               v-model="uidFilter"
               type="text"
               placeholder="Optional UID, leave empty for all users"
-              class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:ring-1"
+              class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-default placeholder:text-muted outline-none focus:ring-1"
             />
           </div>
   
           <!-- Start date -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium uppercase tracking-wide text-slate-400">
+            <label class="text-label">
               Start date
             </label>
             <input
@@ -67,7 +67,7 @@
   
           <!-- End date -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium uppercase tracking-wide text-slate-400">
+            <label class="text-label">
               End date
             </label>
             <input
@@ -78,7 +78,7 @@
           </div>
         </div>
   
-        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800 mt-3">
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-default mt-3">
   
           <div class="flex gap-2">
             <button
@@ -124,16 +124,16 @@
   <!-- Summary cards (traffic / ops) -->
   <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
     <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-      <p class="text-[11px] uppercase tracking-wide text-slate-500">
+      <label class="text-label">
         Total bytes sent
-      </p>
+      </label>
       <p class="mt-1 text-lg font-semibold">
         {{ formatBytes(stats.totalBytesSent) }}
       </p>
     </div>
 
     <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-      <p class="text-[11px] uppercase tracking-wide text-slate-500">
+      <p class="text-label">
         Total bytes received
       </p>
       <p class="mt-1 text-lg font-semibold">
@@ -142,22 +142,22 @@
     </div>
 
     <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-      <p class="text-[11px] uppercase tracking-wide text-slate-500">
+      <label class="text-label">
         Total operations
-      </p>
+      </label>
       <p class="mt-1 text-lg font-semibold">
         {{ stats.totalOps.toLocaleString() }}
       </p>
     </div>
 
     <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-      <p class="text-[11px] uppercase tracking-wide text-slate-500">
+      <label class="text-label">
         Successful operations
-      </p>
+      </label>
       <p class="mt-1 text-lg font-semibold">
         {{ stats.totalSuccessfulOps.toLocaleString() }}
       </p>
-      <p class="text-[11px] text-slate-500 mt-0.5">
+      <p class="text-xs text-default mt-0.5">
         Success ratio:
         <span v-if="stats.totalOps > 0">
           {{ ((stats.totalSuccessfulOps / stats.totalOps) * 100).toFixed(1) }}%
@@ -171,21 +171,21 @@
   <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
     <!-- Objects / size / shards -->
     <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-      <p class="text-[11px] uppercase tracking-wide text-slate-500">
+      <label class="text-label">
         Bucket data
-      </p>
-      <p class="mt-1 text-xs">
-        Objects:
+      </label>
+      <div class="mt-1 text-xs flex">
+       <div class="w-[30%]"> Objects:</div>
         <span class="font-semibold">
           {{ bucket.objectCount != null ? bucket.objectCount.toLocaleString() : "Unknown" }}
         </span>
-      </p>
-      <p class="text-xs">
-        Total size:
+      </div>
+      <div class="text-xs flex">
+       <div class="w-[30%]"> Total size:</div>
         <span class="font-semibold">
           {{ formatBytes(bucket.sizeBytes ?? 0) }}
         </span>
-      </p>
+      </div>
       <!-- <p class="text-xs mt-1">
         Shards:
         <span class="font-semibold">
@@ -196,34 +196,34 @@
 
     <!-- Versioning / object lock -->
     <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-      <p class="text-[11px] uppercase tracking-wide text-slate-500">
+      <label class="text-label">
         Versioning / Object lock
-      </p>
-      <p class="mt-1 text-xs">
-        Versioning:
+      </label>
+      <div class="mt-1 text-xs flex">
+       <div class="w-[30%] "> Versioning:</div>
         <span class="font-semibold">
           {{ bucket.versioning || "Disabled" }}
         </span>
-      </p>
-      <p class="text-xs">
-        Object lock:
+      </div>
+      <div class="text-xs flex">
+        <div class="w-[30%] "> Object lock:</div>
         <span class="font-semibold">
           {{ bucket.objectLockEnabled ? "Enabled" : "Disabled" }}
         </span>
-      </p>
+      </div>
     </div>
 
     <!-- Zonegroup / placement / quota -->
     <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-      <p class="text-[11px] uppercase tracking-wide text-slate-500">
+      <label class="text-label">
         Layout & quota
-      </p>
-      <p class="mt-1 text-xs">
-        Zonegroup:
+      </label>
+      <div class="mt-1 text-xs flex">
+       <div class="w-[30%]"> Zonegroup:</div>
         <span class="font-semibold">
           {{ bucket.zonegroup || "Unknown" }}
         </span>
-      </p>
+      </div>
       <!-- <p class="text-xs">
         Placement rule:
         <span class="font-semibold">
@@ -258,51 +258,51 @@
   <!-- Per-user table (unchanged) -->
   <div class="rounded-lg border border-default bg-default overflow-hidden">
     <div class="border-b border-slate-800 px-4 py-2 text-sm font-medium text-slate-100">
-      Per-user usage
+     <label class="text-label"> Per-user usage</label>
     </div>
-    <div v-if="perUser.length === 0" class="px-4 py-4 text-sm text-slate-400">
+    <div v-if="perUser.length === 0" class="px-4 py-4 text-sm text-muted">
       No usage records for this bucket in the selected range.
     </div>
     <div v-else class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-slate-800 text-sm">
-        <thead class="bg-slate-950/60">
+      <table class="w-full divide-y divide-default houston-table">
+        <thead >
           <tr>
-            <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-400">
+            <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-default">
               Owner / UID
             </th>
-            <th class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-400">
+            <th class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-default">
               Bytes sent
             </th>
-            <th class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-400">
+            <th class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-default">
               Bytes received
             </th>
-            <th class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-400">
+            <th class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-default">
               Ops
             </th>
-            <th class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-400">
+            <th class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-default">
               Successful ops
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-800">
+        <tbody class="bg-default w-full">
           <tr
             v-for="row in perUser"
             :key="row.bucket + ':' + row.owner"
-            class="hover:bg-slate-900/60"
+            class="hover:bg-accent"
           >
-            <td class="px-4 py-2 text-xs text-slate-200">
+            <td class="px-4 py-2 text-xs text-default">
               {{ row.owner || "Unknown" }}
             </td>
-            <td class="px-4 py-2 text-right text-xs text-slate-200">
+            <td class="px-4 py-2 text-right text-xs text-default">
               {{ formatBytes(row.bytesSent) }}
             </td>
-            <td class="px-4 py-2 text-right text-xs text-slate-200">
+            <td class="px-4 py-2 text-right text-xs text-default">
               {{ formatBytes(row.bytesReceived) }}
             </td>
-            <td class="px-4 py-2 text-right text-xs text-slate-200">
+            <td class="px-4 py-2 text-right text-xs text-default">
               {{ row.ops.toLocaleString() }}
             </td>
-            <td class="px-4 py-2 text-right text-xs text-slate-200">
+            <td class="px-4 py-2 text-right text-xs text-default">
               {{ row.successfulOps.toLocaleString() }}
             </td>
           </tr>
@@ -314,7 +314,7 @@
 </div>
 
   
-      <div v-else class="mx-4 rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-slate-400">
+      <div v-else class="mx-4 rounded-lg border border-default bg-default px-4 py-3 text-sm text-muted">
         No data loaded yet. Adjust filters and click Refresh.
       </div>
       <!-- Bucket configuration -->
@@ -322,81 +322,64 @@
   v-if="bucket"
   class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 m-4"
 >
-  <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-    <p class="text-[11px] uppercase tracking-wide text-slate-500">
+  <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
+    <label class="text-label">
       Owner / Region
-    </p>
-    <p class="mt-1 text-xs">
-      Owner:
-      <span class="font-semibold">
+    </label>
+    <div class="mt-1 text-xs flex">
+      <div class="w-[30%]">Owner:</div>
+      <div class="font-semibold">
         {{ bucket.owner || "Unknown" }}
-      </span>
-    </p>
-    <p class="text-xs">
-      Region / Zone:
-      <span class="font-semibold">
+      </div>
+    </div>
+    <div class="mt-1 text-xs flex">
+        <div class="w-[30%]"> Region / Zone:</div>
+      <div class="font-semibold">
         {{ bucket.region || bucket.zone || bucket.zonegroup || "Unknown" }}
-      </span>
-    </p>
-    <p class="text-xs mt-1">
-      Created:
+      </div>
+    </div>
+    <div class="mt-1 text-xs flex">
+        <span class="w-[30%]"> Created:</span>
+      <div class="font-semibold">
+
       {{ bucket.createdAt ? new Date(bucket.createdAt).toLocaleString() : "Unknown" }}
-    </p>
-    <p class="text-xs">
-      Last modified:
+      </div>
+    </div>
+    <div class="mt-1 text-xs flex">
+      <div class="w-[30%]">  Last modified: </div>
+      <div class="font-semibold">
+
       {{ bucket.lastModifiedTime ? new Date(bucket.lastModifiedTime).toLocaleString() : "Unknown" }}
-    </p>
+      </div>
+    </div>
   </div>
 
-  <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-    <p class="text-[11px] uppercase tracking-wide text-slate-500">
-      Versioning / Object Lock
-    </p>
-    <p class="mt-1 text-xs">
-      Versioning:
-      <span class="font-semibold">
-        {{ bucket.versioning || "Disabled" }}
-      </span>
-    </p>
-    <p class="text-xs">
-      Object lock:
-      <span class="font-semibold">
-        {{ bucket.objectLockEnabled ? "Enabled" : "Disabled" }}
-      </span>
-    </p>
-    <p v-if="typeof bucket.quotaBytes === 'number'" class="text-xs mt-1">
-      Bucket quota:
-      <span class="font-semibold">
-        {{ formatBytes(bucket.quotaBytes) }}
-      </span>
-    </p>
-  </div>
 
-  <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-    <p class="text-[11px] uppercase tracking-wide text-slate-500">
+  <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
+    <label class="text-label">
       Tags
-    </p>
+    </label>
     <div v-if="bucket.tags && Object.keys(bucket.tags).length" class="mt-1 flex flex-wrap gap-1.5">
       <span
         v-for="(value, key) in bucket.tags"
         :key="key"
-        class="inline-flex items-center rounded-full border border-default bg-slate-900 px-2 py-0.5 text-[11px] text-slate-200"
+        class="inline-flex items-center rounded-full border border-default bg-default px-2 py-0.5  text-default"
       >
         {{ key }}={{ value }}
       </span>
     </div>
-    <p v-else class="mt-1 text-xs text-slate-500">
+    <p v-else class="mt-1 text-xs text-muted">
       No tags set on this bucket.
     </p>
   </div>
 </div>
 <!-- Security / access -->
-<div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200 space-y-2">
+<div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default space-y-2 mb-[5rem]">
   <div class="flex items-center justify-between">
-    <p class="text-[11px] uppercase tracking-wide text-slate-500">
+    <label class="text-label">
       Security & access
-    </p>
-    <span v-if="securityLoading" class="text-xs text-slate-400">
+    </label>
+    <span v-if="securityLoading" class="text-xs text-default">
       Loading security…
     </span>
   </div>
@@ -406,7 +389,7 @@
   </p>
 
   <div v-else>
-    <p class="text-xs">
+    <p >
       Public access:
       <span class="font-semibold">
         <template v-if="isPublic">Yes (AllUsers has READ or more)</template>
@@ -415,33 +398,33 @@
       </span>
     </p>
 
-    <details class="mt-1 text-xs text-slate-300">
-      <summary class="cursor-pointer text-[11px] font-medium uppercase tracking-wide text-slate-500">
+    <details class="mt-1 text-xs text-default">
+      <summary class="cursor-pointer font-medium uppercase tracking-wide text-default hover:bg-accent">
         View ACL rules
       </summary>
-      <div v-if="bucketAcl && bucketAcl.length" class="mt-1 space-y-1">
+      <div v-if="bucketAcl && bucketAcl.length" class="mt-1 space-y-1 p-2 bg-accent">
         <div
           v-for="(rule, idx) in bucketAcl"
           :key="idx"
-          class="flex justify-between text-[11px]"
+          class="flex"
         >
-          <span>{{ rule.grantee }}</span>
-          <span class="font-mono">{{ rule.permission }}</span>
+          <div class="w-[10%]">{{ rule.grantee }}: </div>
+          <span class="font-semibold">{{ rule.permission }}</span>
         </div>
       </div>
-      <p v-else class="mt-1 text-[11px] text-slate-500">
+      <p v-else class="mt-1 text-default bg-accent">
         No ACL rules loaded.
       </p>
     </details>
 
-    <details class="mt-2 text-xs text-slate-300">
-      <summary class="cursor-pointer text-[11px] font-medium uppercase tracking-wide text-slate-500">
+    <details class="mt-2 text-xs text-default">
+      <summary class="cursor-pointer  font-medium uppercase tracking-wide text-default hover:bg-accent" >
         Bucket policy JSON
       </summary>
-      <pre v-if="bucketPolicy" class="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all text-[11px] text-slate-400">
+      <pre v-if="bucketPolicy" class="mt-1 p-2 overflow-auto whitespace-pre-wrap break-all  text-default bg-accent">
 {{ bucketPolicy }}
       </pre>
-      <p v-else class="mt-1 text-[11px] text-slate-500">
+      <p v-else class="mt-1  text-muted bg-accent">
         No bucket policy set.
       </p>
     </details>
@@ -454,14 +437,16 @@
   <script setup lang="ts">
   import { computed, onMounted, ref } from "vue";
   // Adjust import paths to your project layout:
-  import type { BucketDashboardStats, BucketUserUsage, BucketDashboardOptions, CephAclRule, S3Bucket } from "../../types/types";
-  import { getBucketDashboardStats, getCephBucketSecurity } from "../../api/s3CliAdapter";
+  import type { BucketDashboardStats, BucketUserUsage, BucketDashboardOptions, CephAclRule, S3Bucket, CephBucket } from "../../types/types";
+  import { getBucketDashboardStats, getCephBucketSecurity,getCephBucketTags } from "../../api/s3CliAdapter";
+  import { hydrateCephBucket } from "../../bucketBackends/cephBucketBackend";
+  import { formatBytes } from "../../bucketBackends/bucketUtils";
   
   const props = defineProps<{
     bucketName: string;
     // optional default uid filter
     defaultUid?: string | null;
-    bucket: S3Bucket;
+    bucket: CephBucket;
 
     showBackButton?: boolean;
   }>();
@@ -522,21 +507,7 @@
     }
   }
   
-  function formatBytes(bytes: number): string {
-    if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-  
-    const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
-    let value = bytes;
-    let idx = 0;
-  
-    while (value >= 1024 && idx < units.length - 1) {
-      value /= 1024;
-      idx += 1;
-    }
-  
-    return `${value.toFixed(value >= 10 ? 1 : 2)} ${units[idx]}`;
-  }
-  const securityLoading = ref(false);
+const securityLoading = ref(false);
 const securityError = ref<string | null>(null);
 const bucketPolicy = ref<string | null>(null);
 const bucketAcl = ref<CephAclRule[] | null>(null);
@@ -567,7 +538,7 @@ async function loadSecurity() {
   securityLoading.value = true;
   securityError.value = null;
   try {
-    const { acl, policy } = await getCephBucketSecurity(props.bucketName);
+    const { acl, policy } = await hydrateCephBucket(props.bucket);
     bucketAcl.value = acl ?? null;
     bucketPolicy.value = policy ?? null;
   } catch (e: any) {
@@ -580,7 +551,6 @@ async function loadSecurity() {
 }
 
   onMounted(() => {
-    // Sensible default: last 7 days
     setLastDays(7);
     load();
     loadSecurity();

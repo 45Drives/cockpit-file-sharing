@@ -3,16 +3,12 @@
   <div class="space-y-4 sm:px-4 lg:px-6 sm:rounded-lg bg-accent rounded-md border border-default">
     <!-- Header -->
     <div
-      class="grid grid-cols-[auto_1fr_auto] items-center gap-2 bg-well rounded-md shadow text-default my-2 ring-1 ring-black ring-opacity-5 p-4 m-4"
-    >
+      class="grid grid-cols-[auto_1fr_auto] items-center gap-2 bg-well rounded-md shadow text-default my-2 ring-1 ring-black ring-opacity-5 p-4 m-4">
       <!-- Left: back button -->
       <div>
-        <button
-          v-if="showBackButton"
-          type="button"
+        <button v-if="showBackButton" type="button"
           class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
-          @click="emit('backToViewSelection')"
-        >
+          @click="emit('backToViewSelection')">
           <ArrowUturnLeftIcon class="size-icon" />
           Back
         </button>
@@ -30,42 +26,35 @@
 
       <!-- Right: new bucket -->
       <button
-        type="button"
-        @click="openCreateModal"
-        class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
-      >
-        <ArchiveBoxIcon class="size-icon" />
-        New bucket
-      </button>
+  type="button"
+  @click="openCreateModal"
+  :disabled="openingModal"
+  class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-60"
+>
+  <LoadingSpinner v-if="openingModal" />
+  <ArchiveBoxIcon v-else class="size-icon" />
+  New bucket
+</button>
     </div>
 
     <!-- Filters / sort controls -->
-    <div
-    v-if="!showUsageDashboard"
-
-      class="flex flex-col gap-3 rounded-lg border-default bg-plugin-header p-4 text-sm text-slate-200 m-4"
-    >
+    <div v-if="!showUsageDashboard"
+      class="flex flex-col gap-3 rounded-lg border-default bg-plugin-header p-4 text-sm text-default m-4">
       <div class="flex flex-wrap gap-4">
         <label class="flex min-w-[180px] flex-1 flex-col gap-1">
-          <span class="text-xs font-medium uppercase tracking-wide text-slate-400">
+          <span class="text-xs font-medium uppercase tracking-wide text-label">
             Name
           </span>
-          <input
-            v-model="nameFilter"
-            type="text"
-            placeholder="Filter by name"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:ring-1"
-          />
+          <input v-model="nameFilter" type="text" placeholder="Filter by name"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:ring-1" />
         </label>
 
         <label class="flex min-w-[180px] flex-1 flex-col gap-1">
-          <span class="text-xs font-medium uppercase tracking-wide text-slate-400">
+          <span class="text-xs font-medium uppercase tracking-wide text-label">
             Region / Zone
           </span>
-          <select
-            v-model="regionFilter"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-          >
+          <select v-model="regionFilter"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1">
             <option value="all">All regions</option>
             <option v-for="r in regions" :key="r || 'none'" :value="r || 'none'">
               {{ r || "Unknown" }}
@@ -76,13 +65,11 @@
 
       <div class="flex flex-wrap gap-4">
         <label class="flex min-w-[180px] flex-1 flex-col gap-1">
-          <span class="text-xs font-medium uppercase tracking-wide text-slate-400">
+          <span class="text-xs font-medium uppercase tracking-wide text-label">
             Sort by
           </span>
-          <select
-            v-model="sortKey"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-          >
+          <select v-model="sortKey"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-label outline-none focus:ring-1">
             <option value="name">Name</option>
             <option value="region">Region / Zone</option>
             <option value="objects">Objects</option>
@@ -91,13 +78,11 @@
         </label>
 
         <label class="flex min-w-[160px] flex-1 flex-col gap-1">
-          <span class="text-xs font-medium uppercase tracking-wide text-slate-400">
+          <span class="text-xs font-medium uppercase tracking-wide text-label">
             Direction
           </span>
-          <select
-            v-model="sortDir"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-          >
+          <select v-model="sortDir"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1">
             <option value="asc">Ascending</option>
             <option value="desc">Descending</option>
           </select>
@@ -106,17 +91,12 @@
     </div>
 
     <!-- Loading / error -->
-    <div
-      v-if="loadingBuckets"
-      class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-slate-300"
-    >
+    <div v-if="loadingBuckets"
+      class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-slate-300">
       Loading buckets…
     </div>
 
-    <div
-      v-else-if="error"
-      class="rounded-lg border border-red-900/60 bg-red-950/60 px-4 py-3 text-sm text-red-200"
-    >
+    <div v-else-if="error" class="rounded-lg border border-red-900/60 bg-red-950/60 px-4 py-3 text-sm text-red-200">
       {{ error }}
     </div>
 
@@ -124,43 +104,77 @@
     <div v-else>
       <!-- When Usage dashboard is open, show that instead of the grid -->
       <div v-if="showUsageDashboard && usageBucketName && usageBucket">
-  <CephBucketDashboardView
-    v-if="backend === 'ceph'"
-    :bucket-name="usageBucketName"
-    :bucket="usageBucket!"
-    :ceph-gateway="cephGateway || null"
-    :show-back-button="true"
-    @back="closeUsageDashboard"
-  />
+        <CephBucketDashboardView v-if="backend === 'ceph' && cephUsageBucket" :bucket-name="usageBucketName" :bucket="cephUsageBucket!"
+          :ceph-gateway="cephGateway || null" :show-back-button="true" @back="closeUsageDashboard" />
 
-  <MinioBucketDashboardView
-    v-else-if="backend === 'minio'"
-    :bucket-name="usageBucketName"
-    :bucket="usageBucket!"
-    :show-back-button="true"
-    @back="closeUsageDashboard"
-  />
-  <GarageBucketDashboardView
-    v-else-if="backend === 'garage'"
-    :bucket-name="usageBucketName"
-    :bucket="usageBucket!"
-    :show-back-button="true"
-    @back="closeUsageDashboard"
-  />
-</div>
+        <MinioBucketDashboardView v-else-if="backend === 'minio'" :bucket-name="usageBucketName" :bucket="minioUsageBucket!"
+          :show-back-button="true" @back="closeUsageDashboard" />
+        <GarageBucketDashboardView v-else-if="backend === 'garage'" :bucket-name="garageUsageBucket"
+          :bucket="usageBucket!" :show-back-button="true" @back="closeUsageDashboard" />
+      </div>
 
       <!-- Otherwise show buckets grid -->
       <template v-else>
-        <div
-          v-if="filteredSortedBuckets.length"
-          class="grid gap-4 md:grid-cols-2 xl:grid-cols-3 bg-accent m-4"
-        >
+        <div class="mx-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default bg-plugin-header p-3 text-sm">
+  <div class="text-slate-300">
+    Showing
+    <span class="font-semibold">{{ totalItems ? pageStart + 1 : 0 }}</span>
+    –
+    <span class="font-semibold">{{ Math.min(totalItems, pageEnd) }}</span>
+    of
+    <span class="font-semibold">{{ totalItems }}</span>
+    buckets
+  </div>
+
+  <div class="flex items-center gap-3">
+    <label class="flex items-center gap-2 text-slate-300">
+  <span>Per page</span>
+
+  <input
+    v-model="pageSizeInput"
+    type="number"
+    min="1"
+    step="1"
+    class="w-28 rounded-md border border-default bg-default px-2 py-1 text-sm text-slate-100 outline-none focus:ring-1"
+    @keydown.enter.prevent="commitPageSize()"
+    @blur="commitPageSize()"
+    placeholder="30"
+  />
+</label>
+
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="rounded-md border border-default bg-secondary px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800 disabled:opacity-50"
+        :disabled="page <= 1"
+        @click="page = Math.max(1, page - 1)"
+      >
+        Prev
+      </button>
+
+      <span class="text-slate-300">
+        Page <span class="font-semibold">{{ page }}</span> /
+        <span class="font-semibold">{{ totalPages }}</span>
+      </span>
+
+      <button
+        type="button"
+        class="rounded-md border border-default bg-secondary px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800 disabled:opacity-50"
+        :disabled="page >= totalPages"
+        @click="page = Math.min(totalPages, page + 1)"
+      >
+        Next
+      </button>
+    </div>
+  </div>
+</div>
+
+        <div v-if="pagedBuckets.length" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3 bg-accent m-4">
           <article
-            v-for="bucket in filteredSortedBuckets"
-            :key="bucket.name"
-            class="flex flex-col gap-3 rounded-lg border border-default bg-default p-4 shadow transition hover:shadow-md"
-          >
-            <!-- Header with bucket logo -->
+  v-for="bucket in pagedBuckets"
+  :key="bucket.name"
+  class="flex flex-col gap-3 rounded-lg border border-default bg-default p-4 shadow transition hover:shadow-md"
+>            <!-- Header with bucket logo -->
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-start gap-2">
                 <div class="flex h-7 w-7 items-center justify-center">
@@ -183,48 +197,48 @@
               <label class="mb-1 block text-xs font-medium text-slate-300">
                 Owner
               </label>
-              <input
-                v-model="bucket.owner"
-                type="text"
-                placeholder="optional / best-effort"
-                disabled
-                class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1"
-              />
+              <input v-model="bucket.owner" type="text" placeholder="optional / best-effort" disabled
+                class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1" />
             </div>
 
             <!-- Stats -->
-            <div class="mt-1 grid grid-cols-2 gap-3 text-xs text-slate-300">
+            <div class="mt-1 grid grid-cols-2 gap-3 text-xs text-default">
               <div>
-                <p class="text-[11px] uppercase tracking-wide text-slate-500">
+                <p class=" uppercase tracking-wide text-default">
                   Objects
                 </p>
                 <p class="text-sm font-semibold">
-                  {{ bucket.objectCount ?? "—" }}
+                  <LoadingSpinner v-if="bucket.objectCount === undefined" />
+                  {{ bucket.objectCount}}
                 </p>
               </div>
 
               <div>
-                <p class="text-[11px] uppercase tracking-wide text-slate-500">
+                <p class=" uppercase tracking-wide text-default">
                   Size (bytes)
                 </p>
                 <p class="text-sm font-semibold">
-                  {{ bucket.sizeBytes ?? "—" }}
+                  <LoadingSpinner v-if="bucket.sizeBytes === undefined" />
+                  {{ bucket.sizeBytes }}
                 </p>
               </div>
 
               <div v-if="backend === 'ceph'">
-                <p class="text-[11px] uppercase tracking-wide text-slate-500">
+                <p class=" uppercase tracking-wide text-default">
                   Created
                 </p>
                 <p class="text-xs">
+                  <LoadingSpinner v-if="bucket.createdAt === undefined" />
                   {{ formatDate(bucket.createdAt) }}
                 </p>
               </div>
 
               <div v-if="backend === 'ceph'">
-                <p class="text-[11px] uppercase tracking-wide text-slate-500">
+                <p class=" uppercase tracking-wide text-default">
                   Last modified
                 </p>
+                <LoadingSpinner v-if="bucket.lastModifiedTime === undefined " />
+
                 <p class="text-xs">
                   {{ formatDate(bucket.lastModifiedTime) }}
                 </p>
@@ -232,19 +246,13 @@
             </div>
 
             <!-- Tags -->
-            <div
-              v-if="bucket.tags && Object.keys(bucket.tags).length"
-              class="mt-1 space-y-1 text-xs"
-            >
+            <div v-if="bucket.tags && Object.keys(bucket.tags).length" class="mt-1 space-y-1 text-xs">
               <p class="text-[11px] font-medium uppercase tracking-wide text-slate-500">
                 Tags
               </p>
               <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="(value, key) in bucket.tags"
-                  :key="key"
-                  class="inline-flex items-center rounded-full border border-default bg-default px-2 py-0.5 text-[11px] text-slate-200"
-                >
+                <span v-for="(value, key) in bucket.tags" :key="key"
+                  class="inline-flex items-center rounded-full border border-default bg-default px-2 py-0.5 text-default">
                   {{ key }}={{ value }}
                 </span>
               </div>
@@ -253,82 +261,62 @@
             <!-- Actions -->
             <div class="mt-3 flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
               <button
-                type="button"
-                @click="openEditModal(bucket)"
-                class="rounded-md border border-default bg-default px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800"
-              >
-                Edit
-              </button>
-
-              <button
-  v-if="backend === 'ceph' || backend === 'minio' || backend === 'garage'"
-  type="button"
-  class="rounded-md border border-default bg-default px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800"
-  @click="openUsageDashboard(bucket)"
+type="button"
+@click="openEditModal(bucket)"
+:disabled="openingModal"
+class="rounded-md border border-default bg-primary px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800 disabled:opacity-60"
 >
-  Usage
+  <LoadingSpinner v-if="openingModal" />
+  <span v-else>Edit</span>
 </button>
-              <button
-                type="button"
-                @click="confirmDelete(bucket)"
-                class="rounded-md bg-red-600/90 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-500"
-              >
+
+              <button v-if="backend === 'ceph' || backend === 'minio' || backend === 'garage'" type="button"
+                class="rounded-md border border-default bg-secondary px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800"
+                @click="openUsageDashboard(bucket)">
+                Usage
+              </button>
+              <button type="button" @click="confirmDelete(bucket)"
+                class="rounded-md bg-red-600/90 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-500">
                 Delete
               </button>
             </div>
           </article>
         </div>
 
-        <p
-          v-else
-          class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-6 text-center text-sm text-slate-400"
-        >
+        <p v-else
+          class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-6 text-center text-sm text-slate-400">
           No buckets found.
         </p>
       </template>
     </div>
 
     <!-- Create/Edit modal -->
-    <BucketFormModal
-      :visible="showModal"
-      :mode="modalMode"
-      :backend="backend"
-      :cephGateway="cephGateway || null"
-      :cephUsers="cephUsers"
-      :loadingCephUsers="loadingCephUsers"
-      :cephUsersError="cephUsersError"
-      :bucketToEdit="editingBucket"
-      :garageKeys="garageKeys"
-  :loadingGarageKeys="loadingGarageKeys"
-  :garageKeysError="garageKeysError"
-      @close="closeModal"
-      @submit="handleFormSubmit"
-    />
+    <BucketFormModal :visible="showModal" :mode="modalMode" :backend="backend" :cephGateway="cephGateway || null"
+      :cephUsers="cephUsers" :loadingCephUsers="loadingCephUsers" :cephUsersError="cephUsersError"
+      :bucketToEdit="editingBucket" :garageKeys="garageKeys" :loadingGarageKeys="loadingGarageKeys"
+      :garageKeysError="garageKeysError" @close="closeModal" @submit="handleFormSubmit" />
 
     <!-- Delete confirm modal -->
-    <BucketDeleteModal
-      :bucket="bucketToDelete"
-      @cancel="bucketToDelete = null"
-      @confirm="performDelete"
-    />
+    <BucketDeleteModal :bucket="bucketToDelete" @cancel="bucketToDelete = null" @confirm="performDelete" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
-import { listRgwUsers } from "../../api/s3CliAdapter";
-import type { RgwGateway, RgwUser,CephBucket,MinioBucket,GarageBucket } from "../../types/types";
+import { listRGWUserNames } from "../../api/s3CliAdapter";
+import type { RgwGateway, CephBucket, MinioBucket, GarageBucket } from "../../types/types";
 import { ArchiveBoxIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 import BucketFormModal from "./BucketFormModal.vue";
 import BucketDeleteModal from "./BucketDeleteModal.vue";
 import CephBucketDashboardView from "./CephBucketDashboardView.vue";
 import { useBucketBackend, type BackendKind } from "../../composables/useBucketBackend";
-import { hydrateCephBucketForEdit } from "../../bucketBackends/cephBucketBackend";
+import { hydrateCephBucket } from "../../bucketBackends/cephBucketBackend";
 import MinioBucketDashboardView from "./MinioBucketDashboard.vue";
 import GarageBucketDashboardView from "./GarageBucketDashboard.vue";
 import { listGarageKeysWithInfo } from "../../api/garageCliAdapter";
 import type { GarageKeyDetail } from "../../types/types";
 import type { BackendContext } from "../../bucketBackends/bucketBackend";
+import { LoadingSpinner } from "@45drives/houston-common-ui";
 
 
 const props = defineProps<{
@@ -342,7 +330,7 @@ const emit = defineEmits<{
 }>();
 
 const backendKind = computed<BackendKind>(() => props.backend);
-  const backendCtx = computed<BackendContext>(() => ({
+const backendCtx = computed<BackendContext>(() => ({
   cephGateway: props.cephGateway ?? null,
 }));
 type BucketType = CephBucket | MinioBucket | GarageBucket;
@@ -352,9 +340,14 @@ const { buckets, loading: loadingBuckets, error, loadBuckets, createBucketFromFo
 const showUsageDashboard = ref(false);
 const usageBucketName = ref<string | null>(null);
 const usageBucket = ref<BucketType | null>(null);
+const openingModal = ref(false);
 
 
-const cephUsers = ref<RgwUser[]>([]);
+const pageSize = ref<number>(30);
+const page = ref<number>(1);
+const pageSizeInput = ref<string>(String(pageSize.value));
+
+const cephUsers = ref<string[]>([]);
 const loadingCephUsers = ref(false);
 const cephUsersError = ref<string | null>(null);
 
@@ -382,6 +375,26 @@ const backendLabel = computed(() => {
   if (props.backend === "ceph") return "Ceph RGW";
   return "Garage";
 });
+const totalItems = computed(() => filteredSortedBuckets.value.length);
+
+const totalPages = computed(() => {
+  const ps = Math.max(1, pageSize.value);
+  return Math.max(1, Math.ceil(totalItems.value / ps));
+});
+
+const clampedPage = computed(() => {
+  if (page.value < 1) return 1;
+  if (page.value > totalPages.value) return totalPages.value;
+  return page.value;
+});
+
+const pageStart = computed(() => (clampedPage.value - 1) * pageSize.value);
+const pageEnd = computed(() => pageStart.value + pageSize.value);
+
+const pagedBuckets = computed(() => {
+  return filteredSortedBuckets.value.slice(pageStart.value, pageEnd.value);
+});
+
 
 const regions = computed(() => {
   const set = new Set<string | undefined>();
@@ -392,7 +405,7 @@ const regions = computed(() => {
 });
 
 function formatDate(value?: string): string {
-  if (!value) return "—";
+  if (!value) return "";
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
 }
@@ -448,11 +461,11 @@ const filteredSortedBuckets = computed(() => {
       av = a.region || "";
       bv = b.region || "";
     } else if (sortKey.value === "objects") {
-      av = a.objectCount ?? 0;
-      bv = b.objectCount ?? 0;
+      av = a.objectCount ?? -1;
+      bv = b.objectCount ?? -1;
     } else if (sortKey.value === "size") {
-      av = a.sizeBytes ?? 0;
-      bv = b.sizeBytes ?? 0;
+      av = a.sizeBytes ?? -1;
+      bv = b.sizeBytes ?? -1;
     }
 
     let cmp: number;
@@ -468,41 +481,24 @@ const filteredSortedBuckets = computed(() => {
   return result;
 });
 
-// modal open/close
-async function openCreateModal() {
-  modalMode.value = "create";
-  editingBucket.value = null;
-
-  if (props.backend === "ceph") {
-    await loadCephUsersIfNeeded();
-  }
-  if (props.backend === "garage") {
-  await loadGarageKeysIfNeeded();
-}
+const cephUsageBucket = computed<CephBucket | null>(() => {
+  const b = usageBucket.value;
+  return b && b.backendKind === "ceph" ? (b as CephBucket) : null;
+});
 
 
-  showModal.value = true;
-}
+const minioUsageBucket = computed<MinioBucket | null>(() => {
+  const b = usageBucket.value;
+  return b && b.backendKind === "minio" ? (b as MinioBucket) : null;
+});
 
-async function openEditModal(bucket: BucketType) {
-  modalMode.value = "edit";
+const garageUsageBucket = computed<GarageBucket | null>(() => {
+  const b = usageBucket.value;
+  return b && b.backendKind === "garage" ? (b as GarageBucket) : null;
+});
 
-  let enriched = bucket;
-
-  if (backendKind.value === "ceph") {
-    // fetch ACL + policy
-    enriched = await hydrateCephBucketForEdit(bucket, {
-      cephGateway: props.cephGateway ?? null,
-    });
-
-    await loadCephUsersIfNeeded();
-  }
-  if (props.backend === "garage") {
-  await loadGarageKeysIfNeeded();
-}
-
-  editingBucket.value = enriched;
-  showModal.value = true;
+function isCephBucket(b: BucketType): b is CephBucket {
+  return b.backendKind === "ceph";
 }
 
 function closeModal() {
@@ -517,6 +513,7 @@ async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any })
       await loadBuckets();
     } else if (payload.mode === "edit" && editingBucket.value) {
       await updateBucketFromForm(editingBucket.value, payload.form);
+      await loadBuckets();
     }
 
     closeModal();
@@ -565,7 +562,7 @@ async function loadCephUsersIfNeeded() {
   cephUsersError.value = null;
 
   try {
-    cephUsers.value = await listRgwUsers();
+    cephUsers.value = await listRGWUserNames();
   } catch (e: any) {
     cephUsersError.value = e?.message ?? "Failed to list Ceph users";
     cephUsers.value = [];
@@ -585,14 +582,80 @@ watch(
 
     await loadBuckets();
 
-    if (backend === "ceph") {
-      await loadCephUsersIfNeeded();
-    }
-
     if (backend === "garage") {
       await loadGarageKeysIfNeeded();
     }
   },
   { immediate: true },
 );
+
+watch([nameFilter, regionFilter, tagFilter, sortKey, sortDir], () => {
+  page.value = 1;
+});
+
+watch(
+  () => props.backend,
+  () => {
+    page.value = 1;
+  },
+);
+watch(pageSize, () => {
+  page.value = 1;
+});
+watch(pageSize, (v) => {
+  pageSizeInput.value = String(v);
+});
+
+function commitPageSize() {
+  const n = Number(pageSizeInput.value);
+  if (!Number.isFinite(n)) {
+    pageSizeInput.value = String(pageSize.value);
+    return;
+  }
+
+  const v = Math.max(1, Math.floor(n));
+  if (v !== pageSize.value) pageSize.value = v;
+}
+
+async function openCreateModal() {
+  openingModal.value = true;
+  try {
+    modalMode.value = "create";
+    editingBucket.value = null;
+
+    if (props.backend === "ceph") {
+      await loadCephUsersIfNeeded();
+    }
+    if (props.backend === "garage") {
+      await loadGarageKeysIfNeeded();
+    }
+
+    showModal.value = true;
+  } finally {
+    openingModal.value = false;
+  }
+}
+
+async function openEditModal(bucket: BucketType) {
+  openingModal.value = true;
+  try {
+    modalMode.value = "edit";
+
+    if (backendKind.value === "ceph" && isCephBucket(bucket)) {
+      bucket = await hydrateCephBucket(bucket);
+      await loadCephUsersIfNeeded();
+    } else if (props.backend === "ceph") {
+      await loadCephUsersIfNeeded();
+    }
+
+    if (props.backend === "garage") {
+      await loadGarageKeysIfNeeded();
+    }
+
+    editingBucket.value = bucket;
+    showModal.value = true;
+  } finally {
+    openingModal.value = false;
+  }
+}
 </script>

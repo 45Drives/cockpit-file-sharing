@@ -3,8 +3,8 @@
       <!-- Header -->
       <div class="flex items-center justify-between bg-well rounded-md shadow text-default my-2 ring-1 ring-black ring-opacity-5 p-4 m-4">
         <div>
-          <h2 class="text-xl font-semibold text-slate-100">Bucket usage dashboard</h2>
-          <p class="text-sm text-slate-400">{{ bucketName }} (Garage)</p>
+          <h2 class="text-xl font-semibold">Bucket usage dashboard</h2>
+          <p class="text-sm text-muted">{{ bucketName }} (Garage)</p>
         </div>
   
         <div class="flex items-center gap-2">
@@ -38,33 +38,33 @@
       <div v-else-if="stats" class="space-y-4 m-4">
         <!-- Summary cards -->
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-            <p class="text-[11px] uppercase tracking-wide text-slate-500">Total size</p>
+          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm ">
+            <label class="text-label">Total size</label>
             <p class="mt-1 text-lg font-semibold">{{ formatBytes(stats.totalSizeBytes) }}</p>
-            <p v-if="stats.quotaBytes" class="text-[11px] text-slate-500 mt-0.5">
+            <p v-if="stats.quotaBytes" class="text-xs text-default mt-0.5">
               Quota: {{ formatBytes(stats.quotaBytes) }}
             </p>
           </div>
   
-          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-            <p class="text-[11px] uppercase tracking-wide text-slate-500">Objects</p>
+          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm ">
+            <label class="text-label">Objects</label>
             <p class="mt-1 text-lg font-semibold">{{ stats.objectCount.toLocaleString() }}</p>
-            <p v-if="stats.maxObjects != null" class="text-[11px] text-slate-500 mt-0.5">
+            <p v-if="stats.maxObjects != null" class="text-xs text-default mt-0.5">
               Max: {{ stats.maxObjects.toLocaleString() }}
             </p>
           </div>
   
-          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-            <p class="text-[11px] uppercase tracking-wide text-slate-500">Website</p>
+          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm ">
+            <label class="text-label">Website</label>
             <p class="mt-1 text-lg font-semibold">
               {{ stats.websiteEnabled ? "Enabled" : "Disabled" }}
             </p>
           </div>
   
-          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-            <p class="text-[11px] uppercase tracking-wide text-slate-500">Access keys</p>
+          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm">
+            <label class="text-label">Access keys</label>
             <p class="mt-1 text-lg font-semibold">{{ stats.keys.length.toLocaleString() }}</p>
-            <p class="text-[11px] text-slate-500 mt-0.5">
+            <p class="text-xs text-default mt-0.5">
               RW: {{ rwKeyCount.toLocaleString() }} • R-only: {{ roKeyCount.toLocaleString() }}
             </p>
           </div>
@@ -72,24 +72,24 @@
   
         <!-- Config + Quotas -->
         <div class="grid gap-4 md:grid-cols-2">
-          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-            <p class="text-[11px] uppercase tracking-wide text-slate-500 mb-2">Bucket configuration</p>
+          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm ">
+            <label class="text-label">Bucket configuration</label>
   
-            <dl class="space-y-1 text-xs text-slate-200">
+            <dl class="space-y-1 text-sm mt-1">
               <div class="flex justify-between gap-2">
-                <dt class="text-slate-500">Created</dt>
+                <dt class="text-default">Created</dt>
                 <dd class="font-medium">{{ formatDate(stats.createdAt) }}</dd>
               </div>
   
               <div class="flex justify-between gap-2">
-                <dt class="text-slate-500">Garage bucket ID</dt>
+                <dt class="text-default">Garage bucket ID</dt>
                 <dd class="font-medium truncate max-w-[240px]" :title="stats.garageId || ''">
                   {{ stats.garageId || "—" }}
                 </dd>
               </div>
   
               <div class="flex justify-between gap-2">
-                <dt class="text-slate-500">Aliases</dt>
+                <dt class="text-default">Aliases</dt>
                 <dd class="font-medium text-right">
                   <span v-if="aliases.length">{{ aliases.join(", ") }}</span>
                   <span v-else>—</span>
@@ -97,37 +97,37 @@
               </div>
   
               <div class="flex justify-between gap-2">
-                <dt class="text-slate-500">Region</dt>
+                <dt class="text-default">Region</dt>
                 <dd class="font-medium">{{ bucket.region || "garage" }}</dd>
               </div>
             </dl>
           </div>
   
-          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-            <p class="text-[11px] uppercase tracking-wide text-slate-500 mb-2">Quotas</p>
+          <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm">
+            <label class="text-label">Quotas</label>
   
-            <dl class="space-y-1 text-xs text-slate-200">
+            <dl class="space-y-1 text-sm text-default mt-1">
               <div class="flex justify-between gap-2">
-                <dt class="text-slate-500">Max size</dt>
+                <dt class="text-default">Max size</dt>
                 <dd class="font-medium">
                   {{ stats.quotaBytes != null ? formatBytes(stats.quotaBytes) : "—" }}
                 </dd>
               </div>
   
               <div class="flex justify-between gap-2">
-                <dt class="text-slate-500">Max objects</dt>
+                <dt class="text-default">Max objects</dt>
                 <dd class="font-medium">
                   {{ stats.maxObjects != null ? stats.maxObjects.toLocaleString() : "—" }}
                 </dd>
               </div>
   
               <div class="flex justify-between gap-2" v-if="stats.quotaBytes != null">
-                <dt class="text-slate-500">Remaining size</dt>
+                <dt class="text-default">Remaining size</dt>
                 <dd class="font-medium">{{ formatBytes(remainingSizeBytes) }}</dd>
               </div>
   
               <div class="flex justify-between gap-2" v-if="stats.maxObjects != null">
-                <dt class="text-slate-500">Remaining objects</dt>
+                <dt class="text-default">Remaining objects</dt>
                 <dd class="font-medium">{{ remainingObjects.toLocaleString() }}</dd>
               </div>
             </dl>
@@ -135,46 +135,46 @@
         </div>
   
         <!-- Keys table -->
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
-          <p class="text-[11px] uppercase tracking-wide text-slate-500 mb-2">Keys with access</p>
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
+          <label class="text-label">Keys with access</label>
   
           <div v-if="stats.keys.length" class="overflow-auto">
             <table class="min-w-full text-xs">
-              <thead class="text-slate-400">
-                <tr class="border-b border-slate-800">
-                  <th class="text-left font-medium py-2 pr-3">Permissions</th>
-                  <th class="text-left font-medium py-2 pr-3">Access key</th>
-                  <th class="text-left font-medium py-2 pr-3">Local aliases</th>
+              <thead class="text-default">
+                <tr class="border-b border-default">
+                  <th class="text-left  py-2 pr-3">Permissions</th>
+                  <th class="text-left  py-2 pr-3">Access key</th>
+                  <th class="text-left  py-2 pr-3">Local aliases</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="k in stats.keys" :key="k.accessKey" class="border-b border-slate-900/60">
+                <tr v-for="k in stats.keys" :key="k.accessKey" class="border-b border-default">
                   <td class="py-2 pr-3 font-medium">{{ k.permissions }}</td>
-                  <td class="py-2 pr-3 font-mono">{{ maskKey(k.accessKey) }}</td>
+                  <td class="py-2 pr-3 font-mono">{{ k.accessKey }}</td>
                   <td class="py-2 pr-3">
                     <span v-if="k.localAliases.length">{{ k.localAliases.join(", ") }}</span>
-                    <span v-else class="text-slate-500">—</span>
+                    <span v-else class="text-default">—</span>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
   
-          <p v-else class="text-xs text-slate-400">No keys granted access to this bucket.</p>
+          <p v-else class="text-xs text-default">No keys granted access to this bucket.</p>
         </div>
   
         <!-- Raw JSON (debug) -->
-        <details class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-300">
-          <summary class="cursor-pointer text-[11px] font-medium uppercase tracking-wide text-slate-500">
+        <details class="rounded-lg border border-default bg-default px-4 py-3 text-xs text-default">
+          <summary class="cursor-pointer text-[11px] font-medium uppercase tracking-wide text-default">
             Raw Garage bucket info (debug)
           </summary>
-          <pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all text-[11px] text-slate-400">{{ stats.raw }}</pre>
+          <pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all text-[11px] text-default">{{ stats.raw }}</pre>
         </details>
       </div>
   
       <div
         v-else
-        class="mx-4 rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-slate-400"
+        class="mx-4 rounded-lg border border-default bg-default px-4 py-3 text-sm text-default"
       >
         No data loaded yet.
       </div>
@@ -186,6 +186,7 @@
   import type { S3Bucket } from "../../types/types";
   import type { GarageBucketDashboardStats } from "../../types/types";
   import { getGarageBucketDashboardStats } from "../../api/garageCliAdapter";
+  import { formatBytes } from "../../bucketBackends/bucketUtils";
   
   const props = defineProps<{
     bucketName: string;
@@ -226,26 +227,8 @@
     return Math.max(0, stats.value.maxObjects - stats.value.objectCount);
   });
   
-  function maskKey(key: string): string {
-    const s = String(key || "");
-    if (s.length <= 8) return s;
-    return `${s.slice(0, 4)}…${s.slice(-4)}`;
-  }
   
-  function formatBytes(bytes: number): string {
-    if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-  
-    const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
-    let value = bytes;
-    let idx = 0;
-  
-    while (value >= 1024 && idx < units.length - 1) {
-      value /= 1024;
-      idx += 1;
-    }
-  
-    return `${value.toFixed(value >= 10 ? 1 : 2)} ${units[idx]}`;
-  }
+
   
   function formatDate(value?: string): string {
     if (!value) return "—";

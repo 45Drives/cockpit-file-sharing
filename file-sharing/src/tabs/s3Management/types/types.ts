@@ -78,21 +78,19 @@ export interface GarageBucketOptions {
   }
   
   export interface CephBucketCreateOptions {
+
+    name: string;  
+    tagsText?: string
     ownerUid?: string;
-  
     region?: string;
     placementTarget?: string;   
-  
     objectLockEnabled?: boolean;
     objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
     objectLockRetentionDays?: number;
-  
     encryptionMode?: "none" | "sse-s3" | "kms";
     kmsKeyId?: string;
-  
     bucketPolicyJson?: string;
     aclRules?: CephAclRule[];
-
   }
   
   export type RgwGateway = {

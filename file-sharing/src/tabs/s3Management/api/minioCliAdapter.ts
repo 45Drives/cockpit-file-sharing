@@ -7,9 +7,7 @@ import type {MinioBucket,BucketVersioningStatus, MinioUser, MinioUserCreatePaylo
 
 import { legacy } from "../../../../../houston-common/houston-common-lib";
 
-
 const { errorString, useSpawn } = legacy;
-
 const MINIO_ALIAS = process.env.MINIO_MC_ALIAS || "gw01";
 
 async function runMc(args: string[]): Promise<{ stdout: string; stderr: string }> {
@@ -32,9 +30,7 @@ async function runMc(args: string[]): Promise<{ stdout: string; stderr: string }
   }
 }
 
-/**
- * Parse multi-line JSON output (one JSON object per line).
- */
+
 function parseJsonLines(text: string): any[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
@@ -46,12 +42,6 @@ function parseJsonLines(text: string): any[] {
     .map((line) => JSON.parse(line));
 }
 
-/**
- * Run `mc --json ...` and parse JSON-lines output.
- *
- * We call:
- *   mc --json <subArgs...>
- */
 async function mcJsonLines(subArgs: string[]): Promise<any[]> {
   const { stdout } = await runMc(["--json", ...subArgs]);
   return parseJsonLines(stdout);
@@ -420,12 +410,7 @@ export async function listMinioUsers(): Promise<MinioUser[]> {
     const createDate: string | undefined =
       obj.createDate || obj.createdAt || obj.creationDate;
 
-    users.push({
-      username,
-      status,
-      policies,
-      policyCount,
-      createDate,
+    users.push({ username, status, policies, policyCount, createDate,
     });
   }
 
@@ -716,13 +701,7 @@ export async function createMinioGroup(
 
   // mc admin group add TARGET GROUPNAME MEMBERS...
   // e.g. mc admin group add gw01 testgroup user1 user2
-  await runMc([
-    "admin",
-    "group",
-    "add",
-    MINIO_ALIAS,
-    name,
-    ...members,
+  await runMc(["admin","group","add",MINIO_ALIAS,name,...members,
   ]);
 }
 
@@ -734,12 +713,7 @@ export async function deleteMinioGroup(name: string): Promise<void> {
 
   // mc --json admin group info ALIAS GROUP
   // Reuse the existing JSON-lines helper instead of calling runMc directly.
-  const entries = await mcJsonLines([
-    "admin",
-    "group",
-    "info",
-    MINIO_ALIAS,
-    name,
+  const entries = await mcJsonLines(["admin","group","info",MINIO_ALIAS,name,
   ]);
 
   // Collect all members from the JSON output
@@ -763,26 +737,14 @@ export async function deleteMinioGroup(name: string): Promise<void> {
 
   // Remove each member from the group
   for (const user of members) {
-    await runMc([
-      "admin",
-      "group",
-      "remove",
-      MINIO_ALIAS,
-      name,
-      "--user",
-      `${user}`,
+    await runMc([ "admin", "group", "remove", MINIO_ALIAS, name, "--user", `${user}`,
     ]);
   }
 
 }
 
 export async function getMinioPolicy(name: string): Promise<string> {
-  const { stdout } = await runMc([
-    "admin",
-    "policy",
-    "info",
-    MINIO_ALIAS,
-    name,
+  const { stdout } = await runMc([ "admin", "policy", "info", MINIO_ALIAS, name,
   ]);
 
   const trimmed = stdout.trim();
@@ -854,13 +816,7 @@ EOF
     await runCmd(["sh", "-c", script]);
 
     // 3) Create/update policy
-    await runMc([
-      "admin",
-      "policy",
-      "create",
-      MINIO_ALIAS,
-      name,
-      tmpFile,
+    await runMc(["admin","policy","create",MINIO_ALIAS,name,tmpFile,
     ]);
   } finally {
     // 4) Clean up temp file
@@ -876,23 +832,13 @@ EOF
 }
 
 export async function deleteMinioPolicy(name: string): Promise<void> {
-  await runMc([
-    "admin",
-    "policy",
-    "remove",
-    MINIO_ALIAS,
-    name,
+  await runMc([ "admin", "policy", "remove", MINIO_ALIAS, name,
   ]);
 }
 
 
 export async function getMinioGroupInfo(name: string): Promise<MinioGroupInfo> {
-  const info = await mcJsonSingle([
-    "admin",
-    "group",
-    "info",
-    MINIO_ALIAS,
-    name,
+  const info = await mcJsonSingle(["admin","group","info",MINIO_ALIAS,name,
   ]);
 
   const members: string[] =
@@ -1147,31 +1093,21 @@ export async function getMinioBucketDashboardStats(
     objectCount,
     versionCount,
     deleteMarkersCount,
-
     lastModified,
     location,
-
     versioningStatus,
-
     objectLockEnabled,
     objectLockMode,
     objectLockValidity,
-
     policyType,
-
     replicationEnabled,
     replicationRole,
-
     encryptionConfigured,
     ilmConfigured,
-
     quotaBytes,
-
     sizeHistogram,
     versionsHistogram,
-
     replicationUsage,
-
     raw: stat,
   };
 }

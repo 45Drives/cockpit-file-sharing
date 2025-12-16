@@ -97,7 +97,7 @@ export async function listBucketsFromGarage(): Promise<GarageBucket[]> {
 
   return buckets;
 }
-  
+
 export async function getGarageBucketStats(
   bucketName: string
 ): Promise<{
@@ -935,8 +935,6 @@ export async function getGarageBucketDashboardStats(
   const out = await runGarage(["bucket", "info", bucketNameOrId]);
   return parseGarageBucketInfo(out);
 }
-
-
 
 /**
  * Object-level stats is the same as bucket usage in Garage.

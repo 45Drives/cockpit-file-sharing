@@ -31,12 +31,12 @@
       <!-- STEP 2: choose view (after backend) -->
       <div v-else-if="step === 2 && selectedBackend">
         <div class="flex items-center justify-between mb-4">
-    <h2>
+    <!-- <h2>
       Backend:
       {{
         availableBackends.find((b) => b.value === selectedBackend)?.label
       }}
-    </h2>
+    </h2> -->
     <button type="button" class="primary-button" @click="goBackToBackendSelection">
       Back
     </button>
@@ -53,7 +53,7 @@
           </div>
 
           <div v-else-if="gateways.length === 0" class="error">
-            No Ceph gateways found for the selected cluster.
+            <!-- No Ceph gateways found for the selected cluster. -->
           </div>
 
           <div v-else-if="gateways.length === 1" class="backend-indicator">
@@ -87,7 +87,7 @@
           <template #footer>
             <button
             type="button"
-            class="btn btn-secondary w-full h-20 text-6xl"
+            class="btn btn-secondary w-full  text-6xl"
             @click="chooseView('buckets')"
           >
             Bucket Management
@@ -104,7 +104,7 @@
           <template #footer>
             <button 
             type="button" 
-            class="btn btn-secondary w-full h-20 text-6xl" 
+            class="btn btn-secondary w-full  text-6xl" 
             @click="chooseView('users')"
           >
             Access Management
@@ -231,9 +231,9 @@ import type { RgwGateway } from "../types/types";
       isGarageAvailable.value = garageOk;
   
       // Do NOT auto-select backend here: user chooses in step 1
-      selectedBackend.value = null;
+      selectedBackend.value = "ceph";
       selectedView.value = null;
-      step.value = 1;
+      step.value = 2;
     } finally {
       loadingConfig.value = false;
     }

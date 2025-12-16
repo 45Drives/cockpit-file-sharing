@@ -3,7 +3,7 @@ import { ref, computed } from "vue";
 import type { Ref } from "vue";
 
 import type { BucketByKind, BackendKind } from "../types/types";
-import type { BackendContext, BucketFormData } from "../bucketBackends/bucketBackend";
+import type { BackendContext, BucketEditForm, BucketFormData } from "../bucketBackends/bucketBackend";
 import type { BucketBackend } from "../bucketBackends/bucketBackend";
 import { getBucketBackend } from "../bucketBackends/bucketBackendRegistry";
 
@@ -26,8 +26,37 @@ export function useBucketBackend<K extends BackendKind>(
   async function loadBuckets() {
     loading.value = true;
     error.value = null;
+  
     try {
-      buckets.value = await backendImpl.value.listBuckets(context.value);
+      const impl = backendImpl.value;
+  
+      // micro-batch updates to avoid 2000 reactive thrashes
+      let pending: BucketByKind<K>[] = [];
+      let flushScheduled = false;
+  
+      const updateOne = (updated: BucketByKind<K>) => {
+        pending.push(updated);
+        if (flushScheduled) return;
+        flushScheduled = true;
+  
+        queueMicrotask(() => {
+          flushScheduled = false;
+  
+          for (const u of pending) {
+            const i = buckets.value.findIndex(
+              (b: any) => (b as any).name === (u as any).name,
+            );
+            if (i >= 0) buckets.value[i] = u;
+          }
+          pending = [];
+        });
+      };
+  
+      if (impl.listBucketsProgressive) {
+        buckets.value = await impl.listBucketsProgressive(context.value, updateOne);
+      } else {
+        buckets.value = await impl.listBuckets(context.value);
+      }
     } catch (e: any) {
       error.value = e?.message ?? "Failed to list buckets";
       buckets.value = [];
@@ -35,12 +64,13 @@ export function useBucketBackend<K extends BackendKind>(
       loading.value = false;
     }
   }
+  
 
   async function createBucketFromForm(form: BucketFormData) {
     await backendImpl.value.createBucket(form, context.value);
   }
 
-  async function updateBucketFromForm(bucket: BucketByKind<K>, form: BucketFormData) {
+  async function updateBucketFromForm(bucket: BucketByKind<K>, form: BucketEditForm) {
     await backendImpl.value.updateBucket(bucket, form, context.value);
   }
 
@@ -50,4 +80,5 @@ export function useBucketBackend<K extends BackendKind>(
 
   return {buckets,loading,error,loadBuckets,createBucketFromForm,updateBucketFromForm,deleteBucket,
   };
+  
 }

@@ -1,8 +1,12 @@
 // cephRgwCliAdapter.ts
-import type {S3Bucket,CephAclRule,RgwGateway,RgwUser,RgwDashboardS3Creds, CreatedRgwUserKeys,CreateRgwUserOptions,
+import type {CephAclRule,RgwGateway,RgwUser,RgwDashboardS3Creds, CreatedRgwUserKeys,CreateRgwUserOptions,
   RgwUserDetails,RgwUserKey,RgwUserCap, CephBucketUpdatePayload,CephAclPermission,BucketDashboardStats,BucketUserUsage,BucketDashboardOptions,
   BucketVersioningStatus,CephBucket,} from "../types/types";
   import { legacy, server, Command, unwrap } from "../../../../../houston-common/houston-common-lib";
+  import pLimit from "p-limit";
+  
+  
+  const rgwLimit = pLimit(6);
   const { errorString } = legacy;
   type CephS3Connection = {
     endpointUrl: string;
@@ -11,30 +15,30 @@ import type {S3Bucket,CephAclRule,RgwGateway,RgwUser,RgwDashboardS3Creds, Create
   };
   let cachedCephS3Conn: CephS3Connection | null = null;
 let cachedDashboardCreds: RgwDashboardS3Creds | null = null;
-  async function rgwJson(subArgs: string[]): Promise<any> {
+
+export async function rgwJson(subArgs: string[]): Promise<any> {
+  return rgwLimit(async () => {
     const cmd = new Command(["radosgw-admin", ...subArgs, "--format", "json"], {
-      superuser: "try", // same intent as before
+      superuser: "try",
     });
-  
+
     try {
       const proc = await unwrap(server.execute(cmd));
       const stdout =
         typeof (proc as any).getStdout === "function"
           ? (proc as any).getStdout()
           : ((proc as any).stdout ?? "").toString();
-  
+
       const text = (stdout ?? "").toString().trim();
-  
-      console.log("rgwJson args =", ["radosgw-admin", ...subArgs, "--format", "json"].join(" "));
-      console.log("rgwJson stdout =", text);
-  
+
       if (!text) return {};
       return JSON.parse(text);
     } catch (state: any) {
-      console.error("rgwJson error for", subArgs, state);
       throw new Error(errorString(state));
     }
-  }
+  });
+}
+
   export async function listBucketsFromCeph(): Promise<CephBucket[]> {
     // RGW returns an array of bucket stats; we treat it as unknown/any here
     const statsList: any[] = await rgwJson(["bucket", "stats"]);
@@ -177,7 +181,6 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
 
   const CONCURRENCY = 5;
   const users: RgwUser[] = [];
-
   let index = 0;
 
   async function worker() {
@@ -186,7 +189,10 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
       const { tenant, uid } = splitTenantFromUid(fullUid);
 
       try {
-        const info = await rgwJson(["user", "info", "--uid", fullUid]);
+        const args = ["user", "info", "--uid", uid];
+        if (tenant) args.push("--tenant", tenant);
+
+        const info = await rgwJson(args);
         const userQuota = info.user_quota || {};
 
         users.push({
@@ -198,14 +204,10 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
           maxBuckets:
             typeof info.max_buckets === "number" ? info.max_buckets : undefined,
           capacityLimitPercent:
-            typeof userQuota.max_size_kb === "number"
-              ? userQuota.max_size_kb
-              : undefined,
+            typeof userQuota.max_size_kb === "number" ? userQuota.max_size_kb : undefined,
           objectLimitPercent:
-            typeof userQuota.max_objects === "number"
-              ? userQuota.max_objects
-              : undefined,
-        } as RgwUser);
+            typeof userQuota.max_objects === "number" ? userQuota.max_objects : undefined,
+        });
       } catch (e) {
         console.warn("Failed to fetch info for RGW user", fullUid, e);
         users.push({ uid, tenant } as RgwUser);
@@ -213,18 +215,21 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
     }
   }
 
-  const workers = Array.from({ length: Math.min(CONCURRENCY, uids.length) }, () =>
-    worker()
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, uids.length) }, () => worker())
   );
 
-  await Promise.all(workers);
-
-  users.sort(
-    (a, b) => uids.indexOf((a.tenant ? `${a.tenant}$` : "") + a.uid) -
-              uids.indexOf((b.tenant ? `${b.tenant}$` : "") + b.uid)
-  );
+  // keep original list order
+  const key = (u: RgwUser) => (u.tenant ? `${u.tenant}$${u.uid}` : u.uid);
+  users.sort((a, b) => uids.indexOf(key(a)) - uids.indexOf(key(b)));
 
   return users;
+}
+
+export async function listRGWUserNames(): Promise<string[]> {
+  const users: string[] = await rgwJson(["user", "list"]);
+  return users;
+
 }
 
 
@@ -252,7 +257,11 @@ async function getDashboardS3Creds(): Promise<RgwDashboardS3Creds> {
 }
 async function runAwsWithDashboardCreds(
   args: string[],
-  endpointUrl: string
+  endpointUrl: string,
+  opts?: {
+    // Use for cases like RGW create-bucket returning non-XML where awscli fails to parse
+    verifyAfterError?: () => Promise<void>;
+  },
 ): Promise<any> {
   const { accessKey, secretKey } = await getDashboardS3Creds();
 
@@ -260,7 +269,8 @@ async function runAwsWithDashboardCreds(
     `AWS_ACCESS_KEY_ID='${accessKey}' ` +
     `AWS_SECRET_ACCESS_KEY='${secretKey}' ` +
     `AWS_DEFAULT_REGION='default' ` +
-    `aws --endpoint-url '${endpointUrl}' ` +
+    `AWS_DEFAULT_OUTPUT='json' ` +
+    `aws --output json --endpoint-url '${endpointUrl}' ` +
     args.map((a) => `'${a}'`).join(" ");
 
   const cmd = new Command(["bash", "-lc", cmdLine], { superuser: "try" });
@@ -276,7 +286,7 @@ async function runAwsWithDashboardCreds(
     const text = (stdout ?? "").toString().trim();
     if (text) {
       console.log("runAwsWithDashboardCreds stdout =", text);
-      return text; // most s3api calls: JSON or text
+      return text;
     }
     return;
   } catch (state: any) {
@@ -286,19 +296,30 @@ async function runAwsWithDashboardCreds(
         : String(state.stderr ?? "");
 
     const isCreateBucket =
-      args.length >= 2 &&
-      args[0] === "s3api" &&
-      args[1] === "create-bucket";
+      args.length >= 2 && args[0] === "s3api" && args[1] === "create-bucket";
 
-    if (
-      isCreateBucket &&
-      stderr.includes("Unable to parse response (not well-formed (invalid token)") &&
-      stderr.includes('"bucket_info"')
-    ) {
-      console.warn(
-        "Ignoring aws XML parse error for create-bucket; RGW returned bucket_info JSON",
-      );
-      return; // soft success, verification will be done via head-bucket
+    const looksLikeXmlParseIssue =
+      typeof stderr === "string" &&
+      stderr.includes("Unable to parse response") &&
+      (stderr.includes("invalid XML received") ||
+        stderr.includes("not well-formed") ||
+        stderr.includes("invalid token"));
+
+    // For create-bucket, RGW can succeed but return a body awscli can't parse.
+    // If we have a verifier and it succeeds, treat as success.
+    if (isCreateBucket && looksLikeXmlParseIssue && opts?.verifyAfterError) {
+      try {
+        console.warn(
+          "runAwsWithDashboardCreds: awscli parse error on create-bucket; verifying via head-bucket",
+        );
+        await opts.verifyAfterError();
+        return; // soft success
+      } catch (verifyErr) {
+        console.error(
+          "runAwsWithDashboardCreds: verification failed after parse error",
+          verifyErr,
+        );
+      }
     }
 
     console.error("runAwsWithDashboardCreds error", state);
@@ -329,25 +350,30 @@ async function ensureBucketExists(
 
 export async function changeRgwBucketOwner(
   bucketName: string,
-  newOwnerUid: string
+  newOwnerFromList: string, // "uid" or "tenant$uid"
 ): Promise<void> {
-  // First, get the bucket-id to be explicit
+  // 1) bucket context
   const stats = await rgwJson(["bucket", "stats", "--bucket", bucketName]);
+  const bucketId: string | undefined = stats.id || stats.bucket_id || stats.bucket?.id;
+  const bucketTenant: string | undefined = (stats.tenant ?? "").trim() || undefined;
 
-  const bucketId: string | undefined =
-    stats.id ||
-    stats.bucket_id ||
-    stats.bucket?.id;
+  // 2) user context
+  const { tenant: userTenant, uid } = splitTenantFromUid(newOwnerFromList);
 
-  const args: string[] = ["bucket","link","--bucket",bucketName,"--uid",newOwnerUid,
-  ];
+  // 3) validate user exists (tenant-aware)
+  const userInfoArgs = ["user", "info", "--uid", uid];
+  if (userTenant) userInfoArgs.push("--tenant", userTenant);
+  await rgwJson(userInfoArgs);
+  // 4) link bucket: tenant must be the BUCKET tenant
+  const linkArgs = ["bucket", "link", "--bucket", bucketName, "--uid", uid];
+  if (bucketTenant) linkArgs.push("--tenant", bucketTenant);
+  if (bucketId) linkArgs.push("--bucket-id", bucketId);
 
-  if (bucketId) {
-    args.push("--bucket-id", bucketId);
-  }
-
-  await rgwJson(args);
+  await rgwJson(linkArgs);
 }
+
+
+
 
 export async function createCephBucketViaS3(
   params: {
@@ -1085,7 +1111,7 @@ async function awsJsonOrNullWithDashboardCreds(
     return null;
   }
 }
-async function getCephS3Connection(): Promise<CephS3Connection> {
+export async function getCephS3Connection(): Promise<CephS3Connection> {
   if (cachedCephS3Conn) return cachedCephS3Conn;
 
   // 1) Optional env overrides
@@ -1135,7 +1161,7 @@ function mapCephVersioning(
   return "Disabled";
 }
 
-function buildS3BucketFromRgwStats(
+export function buildS3BucketFromRgwStats(
   stats: any,
   defaultRegion: string,
 ): CephBucket {
@@ -1375,4 +1401,22 @@ export async function getCephBucketSecurity(
   }
 
   return { acl, policy };
+}
+
+export async function getCephBucketTags(
+  bucketName: string,
+): Promise<Record<string, string> | undefined> {
+  const tagJson = await awsJsonOrNullWithDashboardCreds(
+    ["s3api", "get-bucket-tagging", "--bucket", bucketName],
+  );
+
+  const set = tagJson?.TagSet;
+  if (!Array.isArray(set) || set.length === 0) return undefined;
+
+  const out: Record<string, string> = {};
+  for (const t of set) {
+    if (!t?.Key || !t?.Value) continue;
+    out[String(t.Key)] = String(t.Value);
+  }
+  return Object.keys(out).length ? out : undefined;
 }
