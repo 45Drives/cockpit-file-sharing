@@ -384,7 +384,7 @@ export async function createCephBucketViaS3(
     tags?: Record<string, string>;
     encryptionMode?: "none" | "sse-s3" | "kms";
     kmsKeyId?: string;
-    bucketPolicyJson?: string;
+    bucketPolicy?: string | null; 
     aclRules?: CephAclRule[];
 
     objectLockEnabled?: boolean;
@@ -468,13 +468,20 @@ export async function createCephBucketViaS3(
   }
   
   // 5) bucket policy
-  if (params.bucketPolicyJson && params.bucketPolicyJson.trim()) {
-    await runAwsWithDashboardCreds(
-      ["s3api","put-bucket-policy","--bucket",params.bucketName,"--policy",params.bucketPolicyJson,
-      ],
-      endpointUrl,
-      
-    );
+  if (params.bucketPolicy !== undefined) {
+    const text = (params.bucketPolicy ?? "").trim();
+  
+    if (text) {
+      await runAwsWithDashboardCreds(
+        ["s3api","put-bucket-policy","--bucket",params.bucketName,"--policy",text],
+        endpointUrl,
+      );
+    } else {
+      await runAwsWithDashboardCreds(
+        ["s3api","delete-bucket-policy","--bucket",params.bucketName],
+        endpointUrl,
+      );
+    }
   }
 
   // 6) object lock configuration (if enabled)
@@ -861,7 +868,7 @@ export async function updateCephBucketFromForm(
     encryptionMode: form.cephEncryptionMode,
     kmsKeyId: form.cephKmsKeyId,
 
-    bucketPolicyJson: form.bucketPolicyText ?? null,
+    bucketPolicy: form.bucketPolicy ?? null,
     aclRules: form.cephAclRules,
     objectLockMode,
     objectLockRetentionDays,
@@ -905,7 +912,7 @@ export async function updateCephBucketViaS3(
     encryptionMode?: "none" | "sse-s3" | "kms";
     kmsKeyId?: string;
 
-    bucketPolicyJson?: string | null;
+    bucketPolicy?: string | null;
     aclRules?: CephAclRule[];
 
     objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
@@ -1008,8 +1015,8 @@ export async function updateCephBucketViaS3(
   }
 
   // 5) Bucket policy
-  if (params.bucketPolicyJson !== undefined) {
-    const text = params.bucketPolicyJson?.trim() ?? "";
+  if (params.bucketPolicy !== undefined) {
+    const text = params.bucketPolicy?.trim() ?? "";
 
     if (text) {
       await runAwsWithDashboardCreds(

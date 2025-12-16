@@ -467,6 +467,8 @@ import { splitBytesBinary } from "../../bucketBackends/bucketUtils";
 import { ArrowTopRightOnSquareIcon } from "@heroicons/vue/20/solid";
 const bucketPolicyError = ref<string | null>(null);
 const MAX_TAGS = 10;
+const normalizedPolicy: string | null = policyText ? policyText : null;
+
 const props = defineProps<{
   visible: boolean;
   mode: "create" | "edit";
@@ -683,7 +685,7 @@ function removeTagRow(index: number) {
 }
 
 function onSubmit() {
-  const policyText = modalForm.bucketPolicyText?.trim();
+  const policyText = (modalForm.bucketPolicyText ?? "").trim();
   if (policyText) {
     try {
       JSON.parse(policyText);
@@ -692,6 +694,8 @@ function onSubmit() {
       return;
     }
   }
+  const bucketPolicy: string | null = policyText ? policyText : null;
+
 
   const tagsMap = modalForm.tags
     .filter((t) => t.key.trim() && t.value.trim())
@@ -732,14 +736,14 @@ function onSubmit() {
         encryptionMode: modalForm.cephEncryptionMode,
         kmsKeyId: modalForm.cephEncryptionMode === "kms" ? modalForm.cephKmsKeyId || undefined : undefined,
 
-        bucketPolicyJson: policyText || undefined,
+        bucketPolicy: policyText || undefined,
         aclRules: cephAclRules,
       };
 
       form = {
         backend: "ceph",
         region: modalForm.region || undefined,
-        tagsText: tagsText || undefined,
+        tagsText: tagsText ?? "",
         ...cephCreate,
       } satisfies BucketCreateForm;
     } else {
@@ -747,13 +751,13 @@ function onSubmit() {
         name: modalForm.name,
         region: modalForm.region || undefined,
         owner: modalForm.owner || undefined,
-        tagsText: tagsText || undefined,
+        tagsText: tagsText ?? "",
 
         cephVersioningEnabled: !!modalForm.cephVersioningEnabled,
         cephEncryptionMode: modalForm.cephEncryptionMode,
         cephKmsKeyId: modalForm.cephEncryptionMode === "kms" ? modalForm.cephKmsKeyId || undefined : undefined,
 
-        bucketPolicyText: policyText || null,
+        bucketPolicy: bucketPolicy,
 
         cephObjectLockMode: modalForm.cephObjectLockMode,
         cephObjectLockRetentionDays: modalForm.cephObjectLockRetentionDays || undefined,

@@ -89,7 +89,7 @@ export interface GarageBucketOptions {
     objectLockRetentionDays?: number;
     encryptionMode?: "none" | "sse-s3" | "kms";
     kmsKeyId?: string;
-    bucketPolicyJson?: string;
+    bucketPolicy?: string | null;
     aclRules?: CephAclRule[];
   }
   
@@ -247,7 +247,7 @@ export type RgwDashboardS3Creds = {
     cephEncryptionMode?: "none" | "sse-s3" | "kms";
     cephKmsKeyId?: string;
 
-    bucketPolicyText?: string | null;
+    bucketPolicy?: string | null;
   
     cephObjectLockMode?: "GOVERNANCE" | "COMPLIANCE";
     cephObjectLockRetentionDays?: string;

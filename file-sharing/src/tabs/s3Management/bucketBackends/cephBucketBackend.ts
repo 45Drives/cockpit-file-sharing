@@ -30,7 +30,7 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
       tags: Object.keys(tags).length ? tags : undefined,
       encryptionMode: form.encryptionMode,
       kmsKeyId: form.kmsKeyId || undefined,
-      bucketPolicyJson: form.bucketPolicyJson || undefined,
+      bucketPolicy: form.bucketPolicy || undefined,
       owner: form.ownerUid,
       aclRules: form.aclRules,
       objectLockEnabled: form.objectLockEnabled,
@@ -73,7 +73,7 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
       tagsOption = newTags === null ? {} : newTags;
     }
 
-    const policyText = (form.bucketPolicyText ?? "").trim();
+    const policyText = (form.bucketPolicy ?? "").trim();
     let bucketPolicyOption: string | null | undefined = undefined;
     if (policyText) {
       bucketPolicyOption = policyText;
