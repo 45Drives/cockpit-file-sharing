@@ -467,7 +467,6 @@ import { splitBytesBinary } from "../../bucketBackends/bucketUtils";
 import { ArrowTopRightOnSquareIcon } from "@heroicons/vue/20/solid";
 const bucketPolicyError = ref<string | null>(null);
 const MAX_TAGS = 10;
-const normalizedPolicy: string | null = policyText ? policyText : null;
 
 const props = defineProps<{
   visible: boolean;

@@ -74,10 +74,8 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     }
 
     const policyText = (form.bucketPolicy ?? "").trim();
-    let bucketPolicyOption: string | null | undefined = undefined;
-    if (policyText) {
-      bucketPolicyOption = policyText;
-    }
+    const bucketPolicyOption: string | null =
+    policyText ? policyText : null;
 
     const newOwner = (form.owner || "").trim();
     const oldOwner = bucket.owner || "";
@@ -95,9 +93,8 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     if (tagsOption !== undefined) {
       params.tags = tagsOption;
     }
-    if (bucketPolicyOption !== undefined) {
-      params.bucketPolicyJson = bucketPolicyOption;
-    }
+      params.bucketPolicy = bucketPolicyOption;
+    
     if (ownerChanged) {
       params.owner = newOwner;
     }

@@ -466,17 +466,19 @@ export async function createCephBucketViaS3(
       
     );
   }
-  
+  console.log("policy type", params.bucketPolicy)
   // 5) bucket policy
   if (params.bucketPolicy !== undefined) {
     const text = (params.bucketPolicy ?? "").trim();
   
     if (text) {
+      console.log("bpolicy text ", text)
       await runAwsWithDashboardCreds(
         ["s3api","put-bucket-policy","--bucket",params.bucketName,"--policy",text],
         endpointUrl,
       );
     } else {
+      console.log("deleting bukcet policy")
       await runAwsWithDashboardCreds(
         ["s3api","delete-bucket-policy","--bucket",params.bucketName],
         endpointUrl,
@@ -1015,6 +1017,7 @@ export async function updateCephBucketViaS3(
   }
 
   // 5) Bucket policy
+  console.log("params.bucketPolicy ",params.bucketPolicy)
   if (params.bucketPolicy !== undefined) {
     const text = params.bucketPolicy?.trim() ?? "";
 
@@ -1025,7 +1028,9 @@ export async function updateCephBucketViaS3(
         endpointUrl,
         
       );
-    } else {
+    } 
+    else {
+      console.log("deleting policy inner ")
       await runAwsWithDashboardCreds(
         ["s3api", "delete-bucket-policy", "--bucket", params.bucketName],
         endpointUrl,
