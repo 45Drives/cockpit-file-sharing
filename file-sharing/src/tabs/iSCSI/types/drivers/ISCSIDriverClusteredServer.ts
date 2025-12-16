@@ -12,16 +12,7 @@ import { Portal } from "@/tabs/iSCSI/types/Portal";
 import { type Session } from "@/tabs/iSCSI/types/Session";
 import { type Target } from "@/tabs/iSCSI/types/Target";
 import { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
-import {
-    BashCommand,
-    Command,
-    Directory,
-    ProcessError,
-    safeJsonParse,
-    server,
-    Server,
-    StringToIntCaster,
-} from "@45drives/houston-common-lib";
+import { BashCommand, Directory, ProcessError, safeJsonParse, server, Server, StringToIntCaster,} from "@45drives/houston-common-lib";
 import { ResultAsync, err, errAsync, ok, okAsync, safeTry } from "neverthrow";
 import { useUserSettings } from "@/common/user-settings";
 import { ISCSIDriverSingleServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverSingleServer";
@@ -31,6 +22,7 @@ import { RadosBlockDevice } from '@/tabs/iSCSI/types/cluster/RadosBlockDevice';
 import { LogicalVolume } from '@/tabs/iSCSI/types/cluster/LogicalVolume';
 import { PhysicalVolume } from '../cluster/PhysicalVolume';
 import { VolumeGroup } from '../cluster/VolumeGroup';
+import { has45DrivesProvider } from '../../ui/ISCSITabMain.vue';
 
 const userSettingsResult = ResultAsync.fromSafePromise(useUserSettings(true));
 const hasVG = (path: string) => path.toUpperCase().includes("_VG");

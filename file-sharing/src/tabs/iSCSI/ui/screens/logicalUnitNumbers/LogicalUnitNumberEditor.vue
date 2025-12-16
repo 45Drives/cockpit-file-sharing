@@ -30,7 +30,7 @@
         <button
           class="btn btn-primary"
           @click="actions.createLun"
-          :disabled="!validationScope.isValid()"
+        :disabled="!validationScope.isValid() || !canCreate"
         >
           {{ "Create" }}
         </button>
@@ -73,7 +73,10 @@ defineExpose({populateNextNumber})
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const devices = inject<Ref<VirtualDevice[]>>("virtualDevices")!;
-
+  const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+  if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+  const canCreate = computed(() => canEditIscsi.value);
+  
 const deviceOptions: ComputedRef<SelectMenuOption<string>[]> = computed(() =>
   devices.value.filter((device) => !device.vgName && !device.assigned && !props.initiatorGroup.logicalUnitNumbers.find((lun) => lun.blockDevice === device)).map((device) => ({ label: device.deviceName, value: device.deviceName }))
 );

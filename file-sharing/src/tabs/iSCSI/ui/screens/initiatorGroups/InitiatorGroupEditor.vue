@@ -32,7 +32,7 @@
                 <button
                     class="btn btn-primary"
                     @click="promptCreateInitiatorGroup"
-                    :disabled="!validationScope.isValid() || !modified"
+                    :disabled="!validationScope.isValid() || !modified || !canCreate"
                 >{{ ("Create") }}</button>
             </div>
         </template>
@@ -42,7 +42,7 @@
 <script setup lang="ts">
     import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, validationSuccess, validationError, ValidationResultView, ValidationScope,confirmBeforeAction } from '@45drives/houston-common-ui';
     import type { ResultAsync } from 'neverthrow';
-    import { inject, ref,computed } from 'vue';
+    import { inject, ref,computed, type Ref } from 'vue';
     import { ProcessError } from '@45drives/houston-common-lib';
     import type { Target } from '@/tabs/iSCSI/types/Target';
     import { InitiatorGroup } from '@/tabs/iSCSI/types/InitiatorGroup';
@@ -55,7 +55,9 @@
     }>();
 
     const emit = defineEmits(['closeEditor','created']);
-
+    const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+  if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+  const canCreate = computed(() => canEditIscsi.value);
     const newInitiatorGroup = ref<InitiatorGroup>(InitiatorGroup.empty());
     const norm = (s: string | undefined | null) => (s ?? "").trim()
     const { tempObject: tempInitiatorGroup, modified, resetChanges } = useTempObjectStaging(newInitiatorGroup);

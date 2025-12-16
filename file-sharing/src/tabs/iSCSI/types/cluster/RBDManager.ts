@@ -25,27 +25,7 @@ export class RBDManager {
               return new ProcessError("Failed to fetch online cluster nodes");
           });
   }
-    // createRadosBlockDevice(name: string, size: number, parentPool: Pool, dataPool?: Pool) {
-    //     const dataPoolArgument =  dataPool === undefined ? "" :  `--data-pool ${dataPool.name}`
-
-    //     return this.server.execute(new BashCommand(`rbd create ${parentPool.name}/${name} --size ${size}B ${dataPoolArgument}`))
-    //     .andThen(() => 
-    //         this.server.execute(new BashCommand(`rbd map ${parentPool.name}/${name}`))
-    //         .andThen((mapProc) => this.server.execute(new BashCommand(`blockdev --getbsz ${mapProc.getStdout()}`))
-    //             .andThen((blockSizeProc) => {
-    //                 const blockSize = StringToIntCaster()(blockSizeProc.getStdout())
-
-    //                 if (!blockSize.isNone())
-    //                     return okAsync(new RadosBlockDevice(name, mapProc.getStdout().trim(), blockSize.some(), size, parentPool, dataPool));
-    //                 if (this.cachedRBDs === null) {
-    //                     this.cachedRBDs = [];
-    //                 }
-    //                 this.cachedRBDs.push(new RadosBlockDevice(name, mapProc.getStdout().trim(), blockSize.some(), size, parentPool, dataPool));
-    //                 return errAsync(new ProcessError("Unable to determine block size of RBD"));
-    //             })
-    //         )
-    //     )
-    // }
+ 
     createRadosBlockDevice(name: string, size: number, parentPool: Pool, dataPool?: Pool) {
         const dataPoolArgument =  dataPool === undefined ? "" :  `--data-pool ${dataPool.name}`
 
@@ -92,7 +72,6 @@ export class RBDManager {
     return this.allServers[0]
   }
 
-    
 
     createLogicalVolumeFromRadosBlockDevices(logicalVolumeName: string, volumeGroupName: string, rbds: RadosBlockDevice[]) {
         const rbdPaths = rbds.map((rbd) => rbd.filePath).join(' ');

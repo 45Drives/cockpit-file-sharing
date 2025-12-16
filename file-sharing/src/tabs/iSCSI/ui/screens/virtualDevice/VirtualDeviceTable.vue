@@ -1,17 +1,15 @@
 <template>
   <CardContainer>
     <template v-slot:header> Devices </template>
-    <div v-if="useUserSettings().value.iscsi.clusteredServer"class="overflow-hidden" :style="{
+    <div v-if="useUserSettings().value.iscsi.clusteredServer" class="overflow-hidden" :style="{
       'max-height': showAddDevice ? '1500px' : '0',
       transition: showAddDevice ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out',
     }">
-        <div class="card">
-        <RBDDeviceCreationScreen
-        @created="selectVirtualDevice"
-        @close="showAddDevice = false"/>
+      <div class="card">
+        <RBDDeviceCreationScreen @created="selectVirtualDevice" @close="showAddDevice = false" />
       </div>
 
-      </div>
+    </div>
     <div v-else class="overflow-hidden" :style="{
       'max-height': showAddDevice ? '1500px' : '0',
       transition: showAddDevice ? 'max-height 0.5s ease-in' : 'max-height 0.5s ease-out',
@@ -33,7 +31,7 @@
               <th scope="col">Device Name</th>
               <th scope="col">File Path</th>
               <th scope="col">Block Size</th>
-              <th  scope="col">Type</th>
+              <th scope="col">Type</th>
               <th v-if="useUserSettings().value.iscsi.clusteredServer" scope=" col">In Use</th>
               <th v-if="useUserSettings().value.iscsi.clusteredServer" scope="col"> Node IP
               </th>
@@ -46,20 +44,17 @@
 
             </tr>
           </template>
-            <template #tbody>
-  <template v-if="      !fetchingDevices ">
-    <template v-for="(device, index) in virtualDevices" :key="index">
-      <VirtualDeviceEntry
-        :device="device"
-        @deleteDevice="actions.refreshDevices"
-        @update="actions.refreshDevices"
-      />
-    </template>
-  </template>
-  <tr v-else>
-    <td colspan="6" class="p-4 text-gray-500 text-sm text-center">Loading devices...</td>
-  </tr>
-</template>
+          <template #tbody>
+            <template v-if="!fetchingDevices">
+              <template v-for="(device, index) in virtualDevices" :key="index">
+                <VirtualDeviceEntry :device="device" @deleteDevice="actions.refreshDevices"
+                  @update="actions.refreshDevices" />
+              </template>
+            </template>
+            <tr v-else>
+              <td colspan="6" class="p-4 text-gray-500 text-sm text-center">Loading devices...</td>
+            </tr>
+          </template>
 
 
         </Table>
@@ -70,7 +65,7 @@
 
 <script setup lang="ts">
 import { CardContainer, wrapActions, Table } from "@45drives/houston-common-ui";
-import { inject, ref, watch, type Ref,computed } from "vue";
+import { inject, ref, watch, type Ref, computed } from "vue";
 import { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 import { PlusIcon } from "@heroicons/vue/24/solid";
 import VirtualDeviceEntry from "../virtualDevice/VirtualDeviceEntry.vue";
@@ -86,10 +81,10 @@ const showAddDevice = ref(false);
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const virtualDevices = inject<Ref<VirtualDevice[]>>("virtualDevices")!;
-  const showAddRBD = ref(false);
+const showAddRBD = ref(false);
 
 const forceRefreshRecords = inject<Record<string, boolean>>("forceRefreshRecords")!;
-  const fetchingDevices = ref<boolean>(false);
+const fetchingDevices = ref<boolean>(false);
 
 watch(forceRefreshRecords, () => {
   if (forceRefreshRecords["devices"]) {
@@ -105,16 +100,16 @@ const emit = defineEmits<{
 }>();
 
 
-    const selectVirtualDevice = (device: VirtualDevice) => {
-      if (virtualDevices.value.find((existingDevice) => (existingDevice.deviceName === device.deviceName)) === undefined) {
-            return driver.andThen((driver) => driver.addVirtualDevice(device))
-            .andThen(() => actions.refreshDevices())           // refresh list
-                .map(() => {
-                  emit('selectDevice', device)
-                  showAddDevice.value = false;
-                });
-        }
-      return undefined;
+const selectVirtualDevice = (device: VirtualDevice) => {
+  if (virtualDevices.value.find((existingDevice) => (existingDevice.deviceName === device.deviceName)) === undefined) {
+    return driver.andThen((driver) => driver.addVirtualDevice(device))
+      .andThen(() => actions.refreshDevices())           // refresh list
+      .map(() => {
+        emit('selectDevice', device)
+        showAddDevice.value = false;
+      });
+  }
+  return undefined;
 }
 const refreshDevices = () => {
   fetchingDevices.value = true;
@@ -126,8 +121,8 @@ const refreshDevices = () => {
 
       })
     )
-    
-   
+
+
 };
 
 const actions = wrapActions({ refreshDevices: refreshDevices });

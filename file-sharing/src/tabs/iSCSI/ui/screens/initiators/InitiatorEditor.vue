@@ -21,7 +21,7 @@
         <button
           class="btn btn-primary"
           @click="promptCreateInitiator"
-          :disabled="!validationScope.isValid() || !modified"
+          :disabled="!validationScope.isValid() || !modified || !canCreate"
         >
           {{ "Create" }}
         </button>
@@ -43,7 +43,7 @@ import {
   ValidationScope,confirmBeforeAction
 } from "@45drives/houston-common-ui";
 import type { ResultAsync } from "neverthrow";
-import { inject, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import { ProcessError } from "@45drives/houston-common-lib";
 import type { InitiatorGroup } from "@/tabs/iSCSI/types/InitiatorGroup";
 import { Initiator } from "@/tabs/iSCSI/types/Initiator";
@@ -58,9 +58,9 @@ const emit = defineEmits(["closeEditor","created"]);
 const newInitiator = ref<Initiator>(Initiator.empty());
 
 const { tempObject: tempInitiator, modified, resetChanges } = useTempObjectStaging(newInitiator);
-
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
-
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+  if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+  const canCreate = computed(() => canEditIscsi.value);const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 const handleClose = () => {
   emit("closeEditor");
   resetChanges();

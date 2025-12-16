@@ -22,7 +22,7 @@
         <button
           class="btn btn-primary"
           @click="promptCreatePortal"
-          :disabled="!validationScope.isValid() || !modified"
+          :disabled="!validationScope.isValid() || !modified "
         >
           {{ "Create" }}
         </button>
@@ -44,7 +44,7 @@ import {
   ValidationScope,confirmBeforeAction
 } from "@45drives/houston-common-ui";
 import { ResultAsync } from "neverthrow";
-import { inject, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import { BashCommand, getServerCluster, ProcessError } from "@45drives/houston-common-lib";
 import type { Target } from "@/tabs/iSCSI/types/Target";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
@@ -62,8 +62,9 @@ const newPortal = ref<Portal>(new Portal(""));
 const { tempObject: tempPortal, modified, resetChanges } = useTempObjectStaging(newPortal);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
-
-let usedAddresses: string[] = [];
+  const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+  if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+  const canCreate = computed(() => canEditIscsi.value);let usedAddresses: string[] = [];
 
 useUserSettings(true).then((userSettings) => {
   if (userSettings.value.iscsi.clusteredServer) {

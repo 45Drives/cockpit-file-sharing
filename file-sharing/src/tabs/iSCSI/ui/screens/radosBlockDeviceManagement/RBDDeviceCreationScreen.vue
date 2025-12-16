@@ -65,7 +65,7 @@
         <button
           class="btn btn-primary"
           @click="actions.createDevice"
-          :disabled="!validationScope.isValid() || !modified"
+          :disabled="!validationScope.isValid() || !modified || !canCreate"
         >
           {{ "Create" }}
         </button>
@@ -94,7 +94,7 @@ import {
   ByteInput,
 } from "@45drives/houston-common-ui";
 import { ok, ResultAsync, safeTry } from "neverthrow";
-import { inject, ref, type Ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 
 const _ = cockpit.gettext;
 
@@ -104,8 +104,10 @@ const emit = defineEmits<{
 }>();
 
 const driver = inject<ResultAsync<ISCSIDriverClusteredServer, ProcessError>>("iSCSIDriver")!;
-
-interface DeviceOptions {
+  const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+  if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+  const canCreate = computed(() => canEditIscsi.value);
+  interface DeviceOptions {
   parentPool: Pool | undefined;
   dataPool: Pool | undefined;
   maximumSize: number | undefined;

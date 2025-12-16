@@ -1,5 +1,17 @@
 <template>
   <CenteredCardColumn v-if="driverInitalized">
+    <div
+  v-if="useUserSettings().value.iscsi.clusteredServer && !has45DrivesOcfProvider"
+  class="mb-4 rounded border border-yellow-500 bg-yellow-50 p-4 text-yellow-900"
+  role="alert"
+>
+  <div class="font-semibold">Missing required 45Drives packages</div>
+  <div class="mt-1 text-sm">
+    This system is missing the latest 45Drives iSCSI cluster packages. Please create a support ticket and our service team will reach out.
+    Until then, this page is read-only and you won’t be able to add new resources to a target.
+  </div>
+</div>
+
     <VirtualDeviceTable />
     <TargetTable />
     <ConfigurationEditor v-if="!useUserSettings().value.iscsi.clusteredServer" @config-updated="refreshTables()" />
@@ -8,7 +20,7 @@
 
 <script setup lang="ts">
 import { CenteredCardColumn, pushNotification, Notification, useTempObjectStaging,wrapAction } from "@45drives/houston-common-ui";
-import { provide, reactive, ref } from "vue";
+import { computed, provide, reactive, ref } from "vue";
 import { ISCSIDriverSingleServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverSingleServer";
 import { BashCommand, Directory, ExitedProcess, ProcessError, getServer } from "@45drives/houston-common-lib";
 import VirtualDeviceTable from "@/tabs/iSCSI/ui/screens/virtualDevice/VirtualDeviceTable.vue";
@@ -28,6 +40,10 @@ const driverInitalized = ref(false);
 // File paths
 const OLD_CONF_PATH = "/etc/scst/cockpit-iscsi.conf";
 const NEW_CONF_PATH = "/etc/scst.conf";
+const has45DrivesOcfProvider = ref(false);
+provide("has45DrivesOcfProvider", has45DrivesOcfProvider);
+const canEdit = computed(() => !useUserSettings().value.iscsi.clusteredServer || has45DrivesOcfProvider.value);
+provide("canEditIscsi", canEdit);
 
 // Function to check and move the configuration file
 const moveConfigFileIfNeeded = async () => {
@@ -50,12 +66,46 @@ const moveConfigFileIfNeeded = async () => {
 };
 
 // Updated function to initialize the iSCSI driver
+// const createISCSIDriver = (): ResultAsync<ISCSIDriver, ProcessError> => {
+//   return getServer()
+//     .andThen((server) => {
+//       return checkForClusteredServer().andThen(() => {
+//         return ResultAsync.fromSafePromise(moveConfigFileIfNeeded()).andThen(() => {
+//           const driver = useUserSettings().value.iscsi.clusteredServer ? new ISCSIDriverClusteredServer(server) : new ISCSIDriverSingleServer(server);
+
+//           return driver.initialize()
+//             .map((driver) => {
+//               driverInitalized.value = true;
+//               return driver;
+//             })
+//             .mapErr((error) => {
+//               pushNotification(new Notification("Failed to initialize iSCSI Driver", `${error.message}`, "error"));
+//               return error;
+//             });
+//         });
+//       });
+//     });
+// };
 const createISCSIDriver = (): ResultAsync<ISCSIDriver, ProcessError> => {
-  return getServer()
-    .andThen((server) => {
-      return checkForClusteredServer().andThen(() => {
-        return ResultAsync.fromSafePromise(moveConfigFileIfNeeded()).andThen(() => {
-          const driver = useUserSettings().value.iscsi.clusteredServer ? new ISCSIDriverClusteredServer(server) : new ISCSIDriverSingleServer(server);
+  return getServer().andThen((server) => {
+    return checkForClusteredServer().andThen(() => {
+      return ResultAsync.fromSafePromise(moveConfigFileIfNeeded()).andThen(() => {
+        const isCluster = useUserSettings().value.iscsi.clusteredServer;
+
+        const detectOcfProviderIfClustered = isCluster
+          ? detect45DrivesOcfProvider().map((exists) => {
+              has45DrivesOcfProvider.value = exists;
+              return exists;
+            })
+          : ResultAsync.fromSafePromise(Promise.resolve(true)).map(() => {
+              has45DrivesOcfProvider.value = false;
+              return false;
+            });
+
+        return detectOcfProviderIfClustered.andThen(() => {
+          const driver = isCluster
+            ? new ISCSIDriverClusteredServer(server)
+            : new ISCSIDriverSingleServer(server);
 
           return driver.initialize()
             .map((driver) => {
@@ -63,13 +113,17 @@ const createISCSIDriver = (): ResultAsync<ISCSIDriver, ProcessError> => {
               return driver;
             })
             .mapErr((error) => {
-              pushNotification(new Notification("Failed to initialize iSCSI Driver", `${error.message}`, "error"));
+              pushNotification(
+                new Notification("Failed to initialize iSCSI Driver", `${error.message}`, "error")
+              );
               return error;
             });
         });
       });
     });
+  });
 };
+
 
 const iSCSIDriver = wrapAction(createISCSIDriver)();
 provide("iSCSIDriver", iSCSIDriver);
@@ -111,5 +165,23 @@ function checkForClusteredServer() {
     }
   })
 }
+const detect45DrivesOcfProvider = (): ResultAsync<boolean, ProcessError> => {
+  return getServer().andThen((server) =>
+    server.execute(
+      new BashCommand(`
+        (
+          test -d /usr/lib/ocf/resource.d/45drives &&
+          ls -1 /usr/lib/ocf/resource.d/45drives 2>/dev/null | grep -q .
+        ) || (
+          test -d /usr/libexec/ocf/resource.d/45drives &&
+          ls -1 /usr/libexec/ocf/resource.d/45drives 2>/dev/null | grep -q .
+        ) && echo yes || echo no
+      `),
+      false
+    ).map((proc) => proc.getStdout().trim() === "yes")
+  );
+};
+
+
 
 </script>
