@@ -31,12 +31,12 @@
       <!-- STEP 2: choose view (after backend) -->
       <div v-else-if="step === 2 && selectedBackend">
         <div class="flex items-center justify-between mb-4">
-    <!-- <h2>
+    <h2>
       Backend:
       {{
         availableBackends.find((b) => b.value === selectedBackend)?.label
       }}
-    </h2> -->
+    </h2>
     <button type="button" class="primary-button" @click="goBackToBackendSelection">
       Back
     </button>
@@ -140,11 +140,15 @@
 
           <!-- MinIO users / access -->
           <div v-else-if="selectedBackend === 'minio'">
-            <MinioAccessManagement />
+            <MinioAccessManagement 
+            @backToViewSelection="() => { step = 2; selectedView = null; }"
+
+            />
           </div>
 
           <!-- Garage keys / users -->
           <GarageKeysPage
+          @backToViewSelection="() => { step = 2; selectedView = null; }"
             v-else-if="selectedBackend === 'garage'"
           />
         </template>
@@ -231,9 +235,9 @@ import type { RgwGateway } from "../types/types";
       isGarageAvailable.value = garageOk;
   
       // Do NOT auto-select backend here: user chooses in step 1
-      selectedBackend.value = "ceph";
+      selectedBackend.value = null;
       selectedView.value = null;
-      step.value = 2;
+      step.value = 1;
     } finally {
       loadingConfig.value = false;
     }

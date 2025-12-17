@@ -4,18 +4,11 @@
       v-if="modelValue"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
     >
-      <div class="bg-default rounded-lg shadow-lg max-w-sm w-full mx-4">
-        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+      <div class="bg-accent rounded-lg shadow-lg max-w-sm w-full mx-4">
+        <div class="px-5 py-4 border-b border-default flex items-center justify-between">
           <h3 class="text-base font-semibold">
             Create MinIO group
           </h3>
-          <button
-            class="px-2 py-1 text-xs rounded border border-gray-300 bg-secondary hover:bg-gray-100"
-            @click="close"
-            :disabled="loading"
-          >
-            Close
-          </button>
         </div>
   
         <div class="px-5 py-4 space-y-3 text-sm">
@@ -34,7 +27,7 @@
             <input
               v-model.trim="name"
               type="text"
-              class="w-full border border-gray-300 bg-default rounded px-2 py-1 text-sm"
+              class="w-full border border-default bg-default rounded px-2 py-1 text-sm"
               placeholder="e.g. engineering"
             />
           </div>
@@ -42,51 +35,51 @@
           <!-- Members -->
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-xs font-medium">
+              <label class="text-xs font-medium ">
                 Members
               </label>
-              <span class="text-[11px] text-gray-500">
+              <span class="text-sm text-default">
                 Selected: {{ selectedUsers.length }}
               </span>
             </div>
   
             <div
               v-if="availableUsers.length"
-              class="border border-gray-200 rounded max-h-40 overflow-y-auto bg-secondary"
+              class="border border-default rounded max-h-40 overflow-y-auto "
             >
               <label
                 v-for="u in availableUsers"
                 :key="u"
-                class="flex items-center justify-between px-3 py-1.5 text-xs border-b last:border-b-0 border-gray-100"
+                class="flex items-center justify-between px-3 py-1.5 text-xs border-b last:border-b-0 border-default"
               >
                 <div class="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     :value="u"
                     v-model="selectedUsers"
-                    class="h-4 w-4 rounded border-gray-300"
+                    class="h-4 w-4 rounded border-default"
                   />
-                  <span class="font-mono text-[11px] break-all">
+                  <span class="font-mono text-sm break-all">
                     {{ u }}
                   </span>
                 </div>
               </label>
             </div>
   
-            <p v-else class="text-[11px] text-gray-500 italic mt-1">
+            <p v-else class="text-sm text-gray-500 italic mt-1">
               No users available. At least one user is required to create a group.
             </p>
           </div>
   
-          <p class="text-[11px] text-gray-500">
+          <p class="text-sm text-gray-500">
             Groups are used to attach shared policies to multiple users. MinIO requires
             at least one member when creating a group.
           </p>
         </div>
   
-        <div class="px-5 py-3 border-t border-gray-200 flex justify-end space-x-2">
+        <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
           <button
-            class="px-3 py-1.5 text-xs rounded border border-gray-300 bg-secondary hover:bg-gray-100"
+            class="px-3 py-1.5 text-xs rounded border border-default bg-secondary hover:bg-gray-100"
             @click="close"
             :disabled="loading"
           >

@@ -98,7 +98,7 @@
                 Add tag
               </button>
 
-              <span class="text-[11px] text-muted">
+              <span class="text-sm text-muted">
                 {{ modalForm.tags.length }} / {{ MAX_TAGS }}
               </span>
             </div>
@@ -149,7 +149,7 @@
 
             <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
               <div>
-                <label class="mb-1 block text-[11px] font-medium text-slate-400">Max size</label>
+                <label class="mb-1 block text-sm font-medium text-slate-400">Max size</label>
                 <div class="flex gap-2">
                   <input
                     v-model="modalForm.minioQuotaMaxSize"

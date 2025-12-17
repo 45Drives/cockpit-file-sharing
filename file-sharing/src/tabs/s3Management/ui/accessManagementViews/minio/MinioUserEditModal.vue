@@ -5,17 +5,11 @@
     >
       <div class="bg-accent rounded-lg shadow-lg max-w-lg w-full mx-4">
         <!-- Header -->
-        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div class="px-5 py-4 border-b border-default flex items-center justify-between">
           <h3 class="text-base font-semibold">
             Edit user "{{ user?.username }}"
           </h3>
-          <button
-            class="text-xs text-gray-500 hover:text-gray-700"
-            @click="$emit('update:modelValue', false)"
-            :disabled="loading"
-          >
-            Close
-          </button>
+
         </div>
   
         <!-- Body -->
@@ -35,7 +29,7 @@
             <!-- Status + basic info -->
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-xs text-gray-500">Username</p>
+                <p class="text-xs text-default">Username</p>
                 <p class="text-sm font-medium">{{ user?.username }}</p>
               </div>
   
@@ -51,19 +45,19 @@
             <!-- Access: Policies / Groups tabs -->
             <section class="space-y-2">
               <div class="flex items-center justify-between">
-                <h4 class="text-xs font-semibold uppercase text-gray-500">
+                <h4 class="text-xs font-semibold uppercase text-default">
                   Access
                 </h4>
               </div>
   
               <!-- Tabs -->
-              <div class="flex border-b border-gray-200 mb-2 text-xs">
+              <div class="flex border-b border-default mb-2 text-xs">
                 <button
                   type="button"
                   class="px-3 py-1.5 -mb-px border-b-2"
                   :class="activeAccessTab === 'policies'
-                    ? 'border-blue-600 text-blue-600 font-medium'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'"
+                    ? 'border-default text-default font-medium'
+                    : 'border-transparent text-secondary hover:text-default'"
                   @click="activeAccessTab = 'policies'"
                 >
                   Policies
@@ -72,8 +66,8 @@
                   type="button"
                   class="px-3 py-1.5 -mb-px border-b-2"
                   :class="activeAccessTab === 'groups'
-                    ? 'border-blue-600 text-blue-600 font-medium'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'"
+                    ? 'border-default text-default font-medium'
+                    : 'border-transparent text-secondary hover:text-gray-700'"
                   @click="activeAccessTab = 'groups'"
                 >
                   Groups
@@ -82,37 +76,38 @@
   
               <!-- Policies pane -->
               <div v-if="activeAccessTab === 'policies'">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[11px] text-gray-500">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm text-default">
                     Attach one or more MinIO policies
                   </span>
-                  <span class="text-[11px] text-gray-400">
+                  <span class="text-sm text-default">
                     Selected: {{ localPolicies.length }}
                   </span>
                 </div>
   
-                <div class="border rounded px-2 py-2 max-h-40 overflow-y-auto bg-secondary">
+                <div class="border border-default rounded px-2 py-2 max-h-40 overflow-y-auto bg-default">
                   <label
                     v-for="p in availablePolicies"
                     :key="p"
-                    class="flex items-center space-x-2 text-xs mb-1"
+                    class="flex items-center space-x-2 text-xs mb-1 border-b border-default"
                   >
                     <input
                       type="checkbox"
                       :value="p"
                       v-model="localPolicies"
+                      class="bg-default"
                     />
                     <span>{{ p }}</span>
                   </label>
   
                   <p
                     v-if="!availablePolicies.length"
-                    class="text-xs italic text-gray-500"
+                    class="text-xs italic text-default"
                   >
                     No policies available.
                   </p>
                 </div>
-                <p class="text-[11px] text-gray-500 mt-1">
+                <p class="text-sm text-default mt-1">
                   Policies control which buckets and actions this user is allowed to access.
                 </p>
               </div>
@@ -120,15 +115,15 @@
               <!-- Groups pane -->
               <div v-else>
                 <div class="flex items-center justify-between mb-1">
-                  <span class="text-[11px] text-gray-500">
+                  <span class="text-xs text-default">
                     Attach user to one or more MinIO groups
                   </span>
-                  <span class="text-[11px] text-gray-400">
+                  <span class="text-sm text-default">
                     Selected: {{ localGroups.length }}
                   </span>
                 </div>
   
-                <div class="border rounded px-2 py-2 max-h-40 overflow-y-auto bg-secondary">
+                <div class="border border-default rounded px-2 py-2 max-h-40 overflow-y-auto bg-default">
                   <label
                     v-for="g in availableGroups"
                     :key="g"
@@ -144,35 +139,36 @@
   
                   <p
                     v-if="!availableGroups.length"
-                    class="text-xs italic text-gray-500"
+                    class="text-xs italic text-default"
                   >
                     No groups available.
                   </p>
                 </div>
-                <p class="text-[11px] text-gray-500 mt-1">
+                <p class="text-sm text-default mt-1">
                   Groups let you manage shared access for multiple users at once.
                 </p>
               </div>
             </section>
   
             <!-- Reset secret toggle -->
-            <div class="border-t border-gray-200 pt-3">
-              <label class="flex items-center space-x-2 text-xs">
+            <div class="border-t border-default pt-3">
+              <label class="flex items-center space-x-2 text-sm">
                 <input
                   type="checkbox"
                   v-model="resetSecret"
+                  class="bg-default"
                 />
                 <span>Reset user secret key</span>
               </label>
   
-              <p class="text-[11px] text-gray-500 mt-1">
+              <p class="text-xs text-default mt-1">
                 If enabled, the user will need to use the new secret key to access MinIO.
               </p>
   
               <!-- New secret controls -->
               <div
                 v-if="resetSecret"
-                class="mt-3 border rounded px-3 py-3 bg-secondary space-y-2"
+                class="mt-3 border border-default rounded px-3 py-3 bg-default space-y-2"
               >
                 <label class="block text-xs font-semibold mb-1">
                   New secret key
@@ -188,35 +184,35 @@
                 <div class="flex items-center justify-between mt-2">
                   <button
                     type="button"
-                    class="inline-flex items-center border border-blue-600 bg-blue-600 text-white text-[11px] font-medium rounded px-2.5 py-1 hover:bg-blue-700 disabled:opacity-60"
+                    class="inline-flex items-center border border-default bg-primary text-default text-sm font-medium rounded px-2.5 py-1 hover:bg-primary disabled:opacity-60"
                     @click="generateSecret"
                   >
                     Generate key
                   </button>
-                  <p class="text-[11px] text-gray-600 text-right max-w-xs">
+                  <p class="text-xs text-muted text-right max-w-xs">
                     If left empty, the backend can generate a random secret. If you provide a value here, that exact secret will be set.
                   </p>
                 </div>
               </div>
             </div>
   
-            <p class="text-[11px] text-gray-500">
+            <p class="text-sm text-default font-semibold">
               Username and creation date cannot be changed.
             </p>
           </div>
         </div>
   
         <!-- Footer -->
-        <div class="px-5 py-3 border-t border-gray-200 flex justify-end space-x-2 bg-secondary">
+        <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
           <button
-            class="px-3 py-1.5 text-xs rounded border border-gray-300 hover:bg-gray-50"
+            class="px-3 py-1.5 text-xs rounded border border-default bg-primary hover:bg-gray-50"
             @click="$emit('update:modelValue', false)"
             :disabled="loading"
           >
             Cancel
           </button>
           <button
-            class="px-3 py-1.5 text-xs rounded border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+            class="px-3 py-1.5 text-xs rounded border border-default bg-danger text-default hover:bg-danger disabled:opacity-60"
             @click="onSubmit"
             :disabled="loading || !user"
           >

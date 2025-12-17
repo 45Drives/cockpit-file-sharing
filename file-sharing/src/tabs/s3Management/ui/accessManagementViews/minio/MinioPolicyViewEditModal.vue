@@ -6,17 +6,10 @@
     >
       <div class="bg-default rounded-lg shadow-lg max-w-xl w-full mx-4">
         <!-- Header -->
-        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div class="px-5 py-4 border-b border-default flex items-center justify-between">
           <h3 class="text-base font-semibold">
             Policy: "{{ policyName }}"
           </h3>
-          <button
-            class="px-2 py-1 text-xs rounded border border-gray-300 bg-secondary hover:bg-gray-100"
-            @click="close"
-            :disabled="loading"
-          >
-            Close
-          </button>
         </div>
   
         <!-- Body -->
@@ -43,15 +36,15 @@
               <input
                 type="text"
                 :value="policyName || ''"
-                class="w-full border border-gray-200 bg-secondary rounded px-2 py-1 text-sm text-gray-600"
+                class="w-full border border-default bg-default rounded px-2 py-1 text-sm text-default"
                 disabled
               />
-              <p class="text-[11px] text-gray-500 mt-1">
+              <p class="text-sm text-gray-500 mt-1">
                 Policy names are managed in MinIO and cannot be changed here.
               </p>
             </div>
   
-            <!-- JSON editor -->A
+            <!-- JSON editor -->
             <div>
               <div class="flex items-center justify-between mb-1">
                 <label class="text-xs font-medium">
@@ -60,14 +53,14 @@
                 <div class="flex items-center space-x-2">
                   <button
                     type="button"
-                    class="px-2 py-1 text-[11px] rounded border border-gray-300 bg-secondary hover:bg-gray-100"
+                    class="px-2 py-1 text-sm rounded border border-default bg-secondary hover:bg-gray-100"
                     @click="resetJson"
                   >
                     Reset
                   </button>
                   <button
                     type="button"
-                    class="px-2 py-1 text-[11px] rounded border border-gray-300 bg-secondary hover:bg-gray-100"
+                    class="px-2 py-1 text-sm rounded border border-default bg-secondary hover:bg-gray-100"
                     @click="formatJson"
                   >
                     Format JSON
@@ -77,11 +70,11 @@
   
               <textarea
                 v-model="localJson"
-                class="w-full border border-gray-300 bg-default rounded px-2 py-2 text-xs font-mono min-h-[260px]"
+                class="w-full border border-default bg-default rounded px-2 py-2 text-xs font-mono min-h-[260px]"
                 placeholder="Policy JSON will appear here"
               />
   
-              <p class="text-[11px] text-gray-500 mt-1">
+              <p class="text-sm text-gray-500 mt-1">
                 Edit the JSON to change actions, resources, or conditions. Make sure it stays
                 valid JSON and compatible with S3-style policies.
               </p>
@@ -90,16 +83,16 @@
         </div>
   
         <!-- Footer -->
-        <div class="px-5 py-3 border-t border-gray-200 flex justify-end space-x-2">
+        <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
           <button
-            class="px-3 py-1.5 text-xs rounded border border-gray-300 bg-secondary hover:bg-gray-100"
+            class="px-3 py-1.5 text-xs rounded border border-default bg-secondary hover:bg-gray-100"
             @click="close"
             :disabled="loading"
           >
             Cancel
           </button>
           <button
-            class="px-3 py-1.5 text-xs rounded border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+            class="px-3 py-1.5 text-xs rounded border border-danger bg-danger text-white hover:bg-danger disabled:opacity-60"
             @click="save"
             :disabled="loading || !policyName"
           >

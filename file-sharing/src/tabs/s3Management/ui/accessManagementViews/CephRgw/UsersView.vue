@@ -1,166 +1,176 @@
 <template>
-  <div class="px-6 py-6 mx-auto box-border">
-    <header class="mb-4 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <button v-if="showBackButton" type="button"
-          class="inline-flex items-center border border-default text-xs font-medium rounded px-2 py-1"
+  <div class="space-y-4 sm:px-4 lg:px-6 sm:rounded-lg bg-accent rounded-md border border-default">
+    <div
+      class="grid grid-cols-[auto_1fr_auto] items-center gap-2 bg-well rounded-md shadow text-default my-2 ring-1 ring-black ring-opacity-5 p-4 m-4">
+      <!-- Left -->
+      <div>
+        <button type="button"
+          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
           @click="emit('backToViewSelection')">
+          <ArrowUturnLeftIcon class="size-icon" />
           Back
         </button>
-        <h1 class="text-2xl font-semibold">Ceph RGW Users</h1>
-      </div>
-    </header>
-
-    <section class="bg-default rounded-lg border border-default px-5 py-4 shadow-sm">
-      <div class="mb-3 grid grid-cols-3 items-center">
-        <div></div>
-
-        <h2 class="justify-self-center text-lg font-semibold">
-          User List
-        </h2>
-
-        <div class="justify-self-end flex items-center gap-2">
-          <button
-            class="inline-flex items-center border bg-primary  text-default text-xs font-medium rounded px-3 py-1.5 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-default"
-            @click="refresh" :disabled="loading" aria-label="Refresh" title="Refresh">
-            <ArrowPathIcon class="h-4 w-4" />
-          </button>
-
-          <button
-            class="inline-flex items-center border border-green-600 bg-green-600 text-white text-xs font-medium rounded px-3 py-1.5 hover:bg-green-700 disabled:opacity-60 disabled:cursor-default"
-            @click="openCreateDialog" :disabled="loading">
-            Create user
-          </button>
-        </div>
       </div>
 
-      <div v-if="error" class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-        {{ error }}
+      <!-- Center -->
+      <div class="justify-self-center">
+        <h1 class="text-2xl font-semibold text-default">Ceph RGW Users</h1>
       </div>
 
-      <div v-if="loading" class="py-3 text-sm">Loading users...</div>
-
-      <div v-else-if="users.length" class="overflow-x-auto">
-        <table class="min-w-full border-collapse text-sm">
-          <thead>
-            <tr>
-              <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Username</th>
-              <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Tenant</th>
-              <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Full name</th>
-              <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Email address</th>
-              <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Suspended</th>
-              <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Max. buckets</th>
-              <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Capacity Used %
-              </th>
-              <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Object Used %
-              </th>
-              <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr v-for="user in users" :key="user.uid">
-              <td class="px-3 py-2 border-b border-default">{{ user.uid }}</td>
-              <td class="px-3 py-2 border-b border-default">{{ user.tenant || "-" }}</td>
-              <td class="px-3 py-2 border-b border-default">{{ user.displayName || "-" }}</td>
-              <td class="px-3 py-2 border-b border-default">{{ user.email || "-" }}</td>
-              <td class="px-3 py-2 border-b border-default">
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                  :class="user.suspended ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'">
-                  {{ user.suspended ? "Yes" : "No" }}
-                </span>
-              </td>
-              <td class="px-3 py-2 border-b border-default">{{ user.maxBuckets ?? "-" }}</td>
-              <td class="px-3 py-2 border-b border-default">
-  <span class="cursor-help" :title="quotaTooltipBytes(user)">
-    {{ user.quotaUsedSizePercent != null ? user.quotaUsedSizePercent.toFixed(1) + '%' : '-' }}
-  </span>
-</td>
-
-<td class="px-3 py-2 border-b border-default">
-  <span class="cursor-help" :title="quotaTooltipObjects(user)">
-    {{ user.quotaUsedObjectsPercent != null ? user.quotaUsedObjectsPercent.toFixed(1) + '%' : '-' }}
-  </span>
-</td>
-              <td class="px-3 py-2 border-b border-default whitespace-nowrap">
-                <button
-  class="inline-flex items-center border border-default text-xs bg-primary font-medium rounded px-2 py-1 mr-1"
-  @click="openDetails(user)"
->
-  Details
-</button>
-
-                <button
-                  class="inline-flex items-center border border-default bg-secondary text-xs font-medium rounded px-2 py-1 mr-1"
-                  @click="onEdit(user)">
-                  Edit
-                </button>
-
-                <button
-                  class="inline-flex items-center border border-red-600 bg-red-500 text-white text-xs font-medium rounded px-2 py-1 hover:bg-red-600"
-                  @click="openDeleteDialog(user)">
-                  Delete
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Right -->
+      <div class="justify-self-end">
+        <button
+          class="inline-flex items-center border border-default bg-primary text-white text-xs font-medium rounded px-3 py-1.5 hover:bg-primary disabled:opacity-60 disabled:cursor-default"
+          @click="openCreateDialog" :disabled="loading">
+          Create user
+        </button>
       </div>
+    </div>
+    <div class="px-6 py-6 mx-auto box-border">
 
-      <div v-else class="py-3 text-sm">No RGW users found.</div>
-    </section>
-
-    <!-- Delete user dialog -->
-    <div v-if="showDeleteDialog && deleteTarget"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div class="rounded-lg shadow-lg max-w-md w-full mx-4 bg-default border border-default overflow-hidden">
-        <div class="px-5 py-4 border-b border-default">
-          <h3 class="text-base font-semibold">Delete user "{{ deleteTarget.uid }}"</h3>
+      <section class="bg-default rounded-lg border border-default px-5 py-4 shadow-sm">
+        <div class="mb-3 grid grid-cols-3 items-center">
+          <div></div>
+          <div></div>
+          <div class="justify-self-end flex items-center gap-2">
+            <button
+              class="inline-flex items-center border bg-primary  text-default text-xs font-medium rounded px-3 py-1.5 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-default"
+              @click="refresh" :disabled="loading" aria-label="Refresh" title="Refresh">
+              <ArrowPathIcon class="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        <div class="px-5 py-4 space-y-3 text-sm">
-          <p>Are you sure you want to delete this user?</p>
-
-          <label class="flex items-start space-x-2">
-            <input type="checkbox" v-model="purgeData" class="mt-0.5 h-4 w-4 rounded border-default" />
-            <span>
-              Delete all buckets and objects owned by this user
-              (<span class="font-semibold">--purge-data</span>)
-            </span>
-          </label>
-
-          <label class="flex items-start space-x-2">
-            <input type="checkbox" v-model="purgeKeys" class="mt-0.5 h-4 w-4 rounded border-default" />
-            <span>
-              Delete this user's access keys
-              (<span class="font-semibold">--purge-keys</span>)
-            </span>
-          </label>
-
-          <p class="text-xs text-red-600" v-if="purgeData">
-            Warning: purging data will remove all buckets and objects owned by this user. This cannot be undone.
-          </p>
+        <div v-if="error" class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ error }}
         </div>
 
-        <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-          <button class="px-3 py-1.5 text-xs rounded border border-default" @click="closeDeleteDialog"
-            :disabled="loading">
-            Cancel
-          </button>
-          <button
-            class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
-            @click="confirmDelete" :disabled="loading">
-            Delete
-          </button>
+        <div v-if="loading" class="py-3 text-sm">Loading users...</div>
+
+        <div v-else-if="users.length" class="overflow-x-auto">
+          <table class="min-w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Username</th>
+                <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Tenant</th>
+                <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Full name</th>
+                <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Email address
+                </th>
+                <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Suspended</th>
+                <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Max. buckets
+                </th>
+                <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Capacity Used %
+                </th>
+                <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Object Used %
+                </th>
+                <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr v-for="user in users" :key="user.uid">
+                <td class="px-3 py-2 border-b border-default">{{ user.uid }}</td>
+                <td class="px-3 py-2 border-b border-default">{{ user.tenant || "-" }}</td>
+                <td class="px-3 py-2 border-b border-default">{{ user.displayName || "-" }}</td>
+                <td class="px-3 py-2 border-b border-default">{{ user.email || "-" }}</td>
+                <td class="px-3 py-2 border-b border-default">
+                  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                    :class="user.suspended ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'">
+                    {{ user.suspended ? "Yes" : "No" }}
+                  </span>
+                </td>
+                <td class="px-3 py-2 border-b border-default">{{ user.maxBuckets ?? "-" }}</td>
+                <td class="px-3 py-2 border-b border-default">
+                  <span class="cursor-help" :title="quotaTooltipBytes(user)">
+                    {{ user.quotaUsedSizePercent != null ? user.quotaUsedSizePercent.toFixed(1) + '%' : '-' }}
+                  </span>
+                </td>
+
+                <td class="px-3 py-2 border-b border-default">
+                  <span class="cursor-help" :title="quotaTooltipObjects(user)">
+                    {{ user.quotaUsedObjectsPercent != null ? user.quotaUsedObjectsPercent.toFixed(1) + '%' : '-' }}
+                  </span>
+                </td>
+                <td class="px-3 py-2 border-b border-default whitespace-nowrap">
+                  <button
+                    class="inline-flex items-center border border-default text-xs bg-primary font-medium rounded px-2 py-1 mr-1"
+                    @click="openDetails(user)">
+                    Details
+                  </button>
+
+                  <button
+                    class="inline-flex items-center border border-default bg-secondary text-xs font-medium rounded px-2 py-1 mr-1"
+                    @click="onEdit(user)">
+                    Edit
+                  </button>
+
+                  <button
+                    class="inline-flex items-center border border-red-600 bg-red-500 text-white text-xs font-medium rounded px-2 py-1 hover:bg-red-600"
+                    @click="openDeleteDialog(user)">
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div v-else class="py-3 text-sm">No RGW users found.</div>
+      </section>
+
+      <!-- Delete user dialog -->
+      <div v-if="showDeleteDialog && deleteTarget"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div class="rounded-lg shadow-lg max-w-md w-full mx-4 bg-default border border-default overflow-hidden">
+          <div class="px-5 py-4 border-b border-default">
+            <h3 class="text-base font-semibold">Delete user "{{ deleteTarget.uid }}"</h3>
+          </div>
+
+          <div class="px-5 py-4 space-y-3 text-sm">
+            <p>Are you sure you want to delete this user?</p>
+
+            <label class="flex items-start space-x-2">
+              <input type="checkbox" v-model="purgeData" class="mt-0.5 h-4 w-4 rounded border-default" />
+              <span>
+                Delete all buckets and objects owned by this user
+                (<span class="font-semibold">--purge-data</span>)
+              </span>
+            </label>
+
+            <label class="flex items-start space-x-2">
+              <input type="checkbox" v-model="purgeKeys" class="mt-0.5 h-4 w-4 rounded border-default" />
+              <span>
+                Delete this user's access keys
+                (<span class="font-semibold">--purge-keys</span>)
+              </span>
+            </label>
+
+            <p class="text-xs text-red-600" v-if="purgeData">
+              Warning: purging data will remove all buckets and objects owned by this user. This cannot be undone.
+            </p>
+          </div>
+
+          <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
+            <button class="px-3 py-1.5 text-xs rounded border border-default" @click="closeDeleteDialog"
+              :disabled="loading">
+              Cancel
+            </button>
+            <button
+              class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
+              @click="confirmDelete" :disabled="loading">
+              Delete
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
+    <RgwUserCreateModal v-model="showUserDialog" :loading="loading" :error-message="userDialogError"
+      :mode="userDialogMode" :initial-user="editingUser" @submit="handleUserSubmit" />
+
+    <RgwUserDetailsModal v-model="showDetailsDialog" :loading="detailsLoading" :error-message="detailsError"
+      :user="selectedUserDetails" />
   </div>
-
-  <RgwUserCreateModal v-model="showUserDialog" :loading="loading" :error-message="userDialogError"
-    :mode="userDialogMode" :initial-user="editingUser" @submit="handleUserSubmit" />
-
-    <RgwUserDetailsModal v-model="showDetailsDialog" :loading="detailsLoading" :error-message="detailsError" :user="selectedUserDetails"/>
 </template>
 
 <script lang="ts" setup>
@@ -168,7 +178,7 @@ import { ref, onMounted } from "vue";
 import type { RgwUser, CreateRgwUserOptions, RgwUserDetails } from "@/tabs/s3Management/types/types";
 import { listRgwUsers, deleteRgwUser, createRgwUser, updateRgwUser, getRgwUserInfo } from "../../../api/s3CliAdapter";
 import RgwUserCreateModal from "./RgwUserCreateModal.vue";
-import { ArrowPathIcon } from "@heroicons/vue/20/solid";
+import { ArrowPathIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 import { formatBytes } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 import RgwUserDetailsModal from "./RgwUserDetailsModal.vue";
 
@@ -186,7 +196,7 @@ const userDialogMode = ref<"create" | "edit">("create");
 const editingUser = ref<RgwUser | null>(null);
 const userDialogError = ref<string | null>(null);
 
-  const showDetailsDialog = ref(false);
+const showDetailsDialog = ref(false);
 const detailsLoading = ref(false);
 const detailsError = ref<string | null>(null);
 const selectedUserDetails = ref<RgwUserDetails | null>(null);

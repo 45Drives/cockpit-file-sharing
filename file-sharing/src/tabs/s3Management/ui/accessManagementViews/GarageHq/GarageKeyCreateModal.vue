@@ -1,23 +1,23 @@
 <template>
     <div
       v-if="open"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40"
+      class="fixed inset-0 z-50 flex items-center justify-center"
     >
-      <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-        <h2 class="text-lg font-semibold text-default">
+      <div class="w-full max-w-md rounded-lg bg-default p-6 shadow-lg">
+        <h2 class="text-lg font-semibold text-default border-b border-default">
           Create new key
         </h2>
   
         <form class="mt-4 space-y-4" @submit.prevent="onSubmit">
           <div>
-            <label class="block text-sm font-medium text-slate-700">
+            <label class="block text-sm font-medium text-default">
               Name
             </label>
             <input
               v-model="name"
               type="text"
               required
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-default shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              class="mt-1 block w-full bg-accent rounded-md border border-default px-3 py-2 text-sm text-default shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="backup-user"
             />
           </div>
@@ -27,24 +27,24 @@
               id="create-can-bucket"
               v-model="canCreateBuckets"
               type="checkbox"
-              class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+              class="h-4 w-4 bg-accent rounded border-default bg-default text-primary focus:ring-primary"
             />
-            <label for="create-can-bucket" class="text-sm text-slate-700">
+            <label for="create-can-bucket" class="text-sm text-default">
               Can create buckets
             </label>
           </div>
   
           <div>
-            <label class="block text-sm font-medium text-slate-700">
+            <label class="block text-sm font-medium text-default">
               Expires in (optional)
             </label>
             <input
               v-model="expiresIn"
               type="text"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-default shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              class="mt-1 block w-full bg-accent rounded-md bg-default border border-default-300 px-3 py-2 text-sm text-default shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="e.g. 30d, 12h, 1w"
             />
-            <p class="mt-1 text-xs text-slate-500">
+            <p class="mt-1 text-xs text-default">
               Passed to <code>--expires-in</code> (see parse_duration format).
             </p>
           </div>
@@ -52,7 +52,7 @@
           <div class="mt-6 flex justify-end gap-2">
             <button
               type="button"
-              class="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              class="inline-flex items-center rounded-md border border-default px-3 py-1.5 text-sm font-medium text-default hover:bg-slate-50"
               @click="onClose"
               :disabled="saving"
             >

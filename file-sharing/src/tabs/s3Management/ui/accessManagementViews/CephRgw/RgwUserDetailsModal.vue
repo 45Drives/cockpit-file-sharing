@@ -19,7 +19,7 @@
             <h3 class="text-base font-semibold">User details</h3>
             <p class="text-sm text-default">
               {{ user?.uid || "No user selected" }}
-              <span v-if="user?.tenant" class="text-gray-400">
+              <span v-if="user?.tenant" class="text-default">
                 · Tenant: {{ user.tenant }}
               </span>
             </p>

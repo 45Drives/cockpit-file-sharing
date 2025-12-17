@@ -186,7 +186,6 @@ export type RgwDashboardS3Creds = {
     status: "enabled" | "disabled";
     policies?: string[];
     policyCount?: number;
-    createDate?: string;
   }
   
   export interface MinioUserCreatePayload {

@@ -247,7 +247,7 @@
 
             <!-- Tags -->
             <div v-if="bucket.tags && Object.keys(bucket.tags).length" class="mt-1 space-y-1 text-xs">
-              <p class="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+              <p class="text-sm font-medium uppercase tracking-wide text-slate-500">
                 Tags
               </p>
               <div class="flex flex-wrap gap-1.5">

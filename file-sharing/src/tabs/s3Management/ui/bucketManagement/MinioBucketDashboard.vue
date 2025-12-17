@@ -47,7 +47,7 @@
   <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
     <label class="text-label">Total Size</label>
     <p class="mt-1 text-lg font-semibold">{{ formatBytes(stats.totalSizeBytes) }}</p>
-    <p v-if="stats.quotaBytes" class="text-[11px] text-slate-500 mt-0.5">
+    <p v-if="stats.quotaBytes" class="text-sm text-slate-500 mt-0.5">
       Quota: {{ formatBytes(stats.quotaBytes) }}
     </p>
   </div>
@@ -81,7 +81,7 @@
     <p class="mt-1 text-lg font-semibold">
       {{ stats.objectLockEnabled ? "Enabled" : "Disabled" }}
     </p>
-    <p v-if="stats.objectLockMode" class="text-[11px] text-slate-500 mt-0.5">
+    <p v-if="stats.objectLockMode" class="text-sm text-slate-500 mt-0.5">
       Mode: {{ stats.objectLockMode }}
     </p>
   </div>
@@ -140,7 +140,7 @@
               <span
                 v-for="tag in tagsList"
                 :key="tag.key"
-                class="inline-flex items-center rounded-full border border-default bg-default px-2 py-0.5 text-[11px] text-default"
+                class="inline-flex items-center rounded-full border border-default bg-default px-2 py-0.5 text-sm text-default"
               >
                 {{ tag.key }}={{ tag.value }}
               </span>
@@ -154,7 +154,7 @@
   v-if="stats.replicationEnabled && stats.replicationUsage"
   class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default"
 >
-  <p class="text-[11px] uppercase tracking-wide text-default mb-2">
+  <p class="text-sm uppercase tracking-wide text-default mb-2">
     Replication health
   </p>
 
@@ -181,7 +181,7 @@
           v-if="histogramEntries.length"
           class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default"
         >
-          <p class="text-[11px] uppercase tracking-wide text-default mb-2">
+          <p class="text-sm uppercase tracking-wide text-default mb-2">
             Object size distribution
           </p>
           <div class="space-y-1 text-xs text-default">
@@ -202,7 +202,7 @@
   
         <!-- Raw JSON (debug) -->
         <details class="rounded-lg border border-default bg-default px-4 py-3 text-xs text-default">
-          <summary class="cursor-pointer text-[11px] font-medium uppercase tracking-wide text-default">
+          <summary class="cursor-pointer text-sm font-medium uppercase tracking-wide text-default">
             Raw MinIO stat JSON (debug)
           </summary>
           <pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all  text-default">

@@ -2,7 +2,8 @@
   // minioCliAdapter.ts
 import type {MinioBucket,BucketVersioningStatus, MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserGroupMembership, MinioUserUpdatePayload,
   MinioBucketDashboardStats,
-  MinioReplicationUsage
+  MinioReplicationUsage,
+  MinioGroupInfo
 } from "../types/types";
 
 import { legacy } from "../../../../../houston-common/houston-common-lib";
@@ -407,10 +408,7 @@ export async function listMinioUsers(): Promise<MinioUser[]> {
 
     const policyCount = policies?.length ?? 0;
 
-    const createDate: string | undefined =
-      obj.createDate || obj.createdAt || obj.creationDate;
-
-    users.push({ username, status, policies, policyCount, createDate,
+    users.push({ username, status, policies, policyCount,
     });
   }
 
@@ -838,25 +836,35 @@ export async function deleteMinioPolicy(name: string): Promise<void> {
 
 
 export async function getMinioGroupInfo(name: string): Promise<MinioGroupInfo> {
-  const info = await mcJsonSingle(["admin","group","info",MINIO_ALIAS,name,
-  ]);
+  const info = await mcJsonSingle(["admin", "group", "info", MINIO_ALIAS, name]);
 
-  const members: string[] =
-    info.members ||
-    info.Members ||
-    info.userList ||
+  const toStringArray = (v: any): string[] => {
+    if (Array.isArray(v)) {
+      return v.map((x) => String(x).trim()).filter(Boolean);
+    }
+    if (typeof v === "string") {
+      return v
+        .split(/[,\n]/g)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    return [];
+  };
+
+  const membersRaw =
+    info.members ??
+    info.Members ??
     [];
 
-  const policies: string[] =
-    info.policies ||
-    info.Policies ||
-    info.policyList ||
+  // mc --json group info uses "groupPolicy" (comma-separated string)
+  const policiesRaw =
+    info.groupPolicy ??
     [];
 
   return {
-    name,
-    members: Array.isArray(members) ? members : [],
-    policies: Array.isArray(policies) ? policies : [],
+    name: info.groupName ?? name,
+    members: toStringArray(membersRaw),
+    policies: toStringArray(policiesRaw),
     raw: info,
   };
 }

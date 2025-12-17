@@ -165,10 +165,10 @@
   
         <!-- Raw JSON (debug) -->
         <details class="rounded-lg border border-default bg-default px-4 py-3 text-xs text-default">
-          <summary class="cursor-pointer text-[11px] font-medium uppercase tracking-wide text-default">
+          <summary class="cursor-pointer text-sm font-medium uppercase tracking-wide text-default">
             Raw Garage bucket info (debug)
           </summary>
-          <pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all text-[11px] text-default">{{ stats.raw }}</pre>
+          <pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all text-sm text-default">{{ stats.raw }}</pre>
         </details>
       </div>
   

@@ -1,6 +1,6 @@
 <!-- MinioPoliciesView.vue -->
 <template>
-    <section class="bg-default rounded-lg border border-gray-200 px-5 py-4 shadow-sm">
+    <section class="bg-default rounded-lg border border-default px-5 py-4 shadow-sm">
       <div class="flex items-center justify-between mb-3">
         <div>
           <h2 class="text-lg font-semibold">Policies</h2>
@@ -10,7 +10,7 @@
         </div>
   
         <button
-          class="inline-flex items-center border border-green-600 bg-green-600 text-white text-xs font-medium rounded px-3 py-1.5 hover:bg-green-700 disabled:opacity-60"
+          class="inline-flex items-center border border-default bg-primary text-white text-xs font-medium rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
           @click="openCreateDialog"
           :disabled="loading"
         >
@@ -33,22 +33,22 @@
         <table class="min-w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th class="px-3 py-2 border-b border-gray-200 text-left font-semibold whitespace-nowrap">
+              <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">
                 Name
               </th>
-              <th class="px-3 py-2 border-b border-gray-200 text-left font-semibold whitespace-nowrap">
+              <th class="px-3 py-2 border-b border-default text-left font-semibold whitespace-nowrap">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="p in policies" :key="p">
-              <td class="px-3 py-2 border-b border-gray-200">
+              <td class="px-3 py-2 border-b border-default">
                 <span class="font-mono text-xs">{{ p }}</span>
               </td>
-              <td class="px-3 py-2 border-b border-gray-200 whitespace-nowrap">
+              <td class="px-3 py-2 border-b border-default whitespace-nowrap">
                 <button
-                  class="inline-flex items-center border border-gray-300 text-xs font-medium rounded px-2 py-1 mr-1"
+                  class="inline-flex items-center border border-default text-xs font-medium bg-primary rounded px-2 py-1 mr-1"
                   @click="onViewEditPolicy(p)"
                 >
                   View
@@ -91,7 +91,7 @@
         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
       >
         <div class="bg-accent rounded-lg shadow-lg max-w-md w-full mx-4">
-          <div class="px-5 py-4 border-b border-gray-200">
+          <div class="px-5 py-4 border-b border-default">
             <h3 class="text-base font-semibold">
               Delete policy "{{ deleteTarget }}"
             </h3>
@@ -106,9 +106,9 @@
             </p>
           </div>
   
-          <div class="px-5 py-3 border-t border-gray-200 flex justify-end space-x-2">
+          <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
             <button
-              class="px-3 py-1.5 text-xs rounded border border-gray-300 bg-secondary hover:bg-gray-100"
+              class="px-3 py-1.5 text-xs rounded border border-default bg-secondary hover:bg-gray-100"
               @click="closeDeleteDialog"
               :disabled="loading"
             >

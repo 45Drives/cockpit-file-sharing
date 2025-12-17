@@ -1,25 +1,13 @@
 <!-- MinioUsersTable.vue -->
 <template>
-    <div class="px-6 py-6 mx-auto box-border">
-      <header class="mb-4">
-        <h1 class="text-2xl font-semibold">MinIO Users</h1>
-      </header>
-  
-      <section class="bg-default rounded-lg border border-gray-200 px-5 py-4 shadow-sm">
+    <div class="px-6 py-6 mx-auto box-border">  
+      <section class="bg-default rounded-lg border border-default px-5 py-4 shadow-sm">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-lg font-semibold">User list</h2>
   
           <div class="flex items-center space-x-2">
             <button
-              class="inline-flex items-center border border-blue-600 bg-blue-600 text-white text-xs font-medium rounded px-3 py-1.5 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-default"
-              @click="refresh"
-              :disabled="loading"
-            >
-              Refresh
-            </button>
-  
-            <button
-              class="inline-flex items-center border border-green-600 bg-green-600 text-white text-xs font-medium rounded px-3 py-1.5 hover:bg-green-700 disabled:opacity-60 disabled:cursor-default"
+              class="inline-flex items-center border border-default bg-primary text-default text-xs font-medium rounded px-3 py-1.5 hover:bg-green-700 disabled:opacity-60 disabled:cursor-default"
               @click="openCreateDialog"
               :disabled="loading"
             >
@@ -43,29 +31,27 @@
           <table class="min-w-full border-collapse text-sm">
             <thead>
               <tr>
-                <th class="px-3 py-2 border-b border-gray-200 text-left font-semibold whitespace-nowrap">
+                <th class="px-3 py-2 border-b border-default text-center font-semibold whitespace-nowrap">
                   Username
                 </th>
-                <th class="px-3 py-2 border-b border-gray-200 text-left font-semibold whitespace-nowrap">
+                <th class="px-3 py-2 border-b border-default text-center font-semibold whitespace-nowrap">
                   Status
                 </th>
-                <th class="px-3 py-2 border-b border-gray-200 text-left font-semibold whitespace-nowrap">
+                <th class="px-3 py-2 border-b border-default text-center font-semibold whitespace-nowrap">
                   Policies
                 </th>
-                <th class="px-3 py-2 border-b border-gray-200 text-left font-semibold whitespace-nowrap">
-                  Created at
-                </th>
-                <th class="px-3 py-2 border-b border-gray-200 text-left font-semibold whitespace-nowrap">
+
+                <th class="px-3 py-2 border-b border-default text-center font-semibold whitespace-nowrap">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="u in users" :key="u.username">
-                <td class="px-3 py-2 border-b border-gray-200">
+              <tr v-for="u in users" :key="u.username" class="text-center">
+                <td class="px-3 py-2 border-b border-default">
                   {{ u.username }}
                 </td>
-                <td class="px-3 py-2 border-b border-gray-200">
+                <td class="px-3 py-2 border-b border-default">
                   <span
                     class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
                     :class="
@@ -77,28 +63,23 @@
                     {{ u.status === "enabled" ? "Enabled" : "Disabled" }}
                   </span>
                 </td>
-                <td class="px-3 py-2 border-b border-gray-200">
+                <td class="px-3 py-2 border-b border-default">
                   <span v-if="u.policies && u.policies.length" class="text-xs">
                     {{ u.policyCount }}
                   </span>
-                  <span v-else class="text-xs italic text-gray-500">
+                  <span v-else class="text-xs italic text-muted">
                     None
                   </span>
                 </td>
-                <td class="px-3 py-2 border-b border-gray-200">
-                  <span class="text-xs text-gray-600">
-                    {{ u.createDate || "-" }}
-                  </span>
-                </td>
-                <td class="px-3 py-2 border-b border-gray-200 whitespace-nowrap">
+                <td class="px-3 py-2 border-b border-default whitespace-nowrap">
                     <button
-    class="inline-flex items-center border border-gray-300 text-xs font-medium rounded px-2 py-1 mr-1"
+    class="inline-flex items-center border border-default bg-primary text-xs text-default font-medium rounded px-2 py-1 mr-1"
     @click="onViewUser(u)"
   >
     View
   </button>
   <button
-    class="inline-flex items-center border border-gray-300 text-xs font-medium rounded px-2 py-1 mr-1"
+    class="inline-flex items-center border border-default bg-secondary text-default text-xs font-medium rounded px-2 py-1 mr-1"
     @click="openEditDialog(u)"
   >
     Edit
@@ -128,7 +109,7 @@
         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
       >
         <div class="bg-accent rounded-lg shadow-lg max-w-md w-full mx-4">
-          <div class="px-5 py-4 border-b border-gray-200">
+          <div class="px-5 py-4 border-b border-default">
             <h3 class="text-base font-semibold">
               Delete user "{{ deleteTarget.username }}"
             </h3>
@@ -143,9 +124,9 @@
             </p>
           </div>
   
-          <div class="px-5 py-3 border-t border-gray-200 flex justify-end space-x-2">
+          <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
             <button
-              class="px-3 py-1.5 text-xs rounded border border-gray-300 bg-secondary"
+              class="px-3 py-1.5 text-xs rounded border border-default bg-secondary"
               @click="closeDeleteDialog"
               :disabled="loading"
             >
@@ -251,10 +232,6 @@ const editDialogError = ref<string | null>(null);
       // Non-fatal; just log or ignore
       console.warn("Failed to load MinIO policies", e);
     }
-  }
-  
-  function refresh() {
-    loadUsers();
   }
   
   function openCreateDialog() {

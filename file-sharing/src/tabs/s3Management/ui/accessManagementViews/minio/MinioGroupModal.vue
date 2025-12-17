@@ -5,7 +5,7 @@
     >
       <div class="bg-accent rounded-lg shadow-lg max-w-lg w-full mx-4">
         <!-- Header -->
-        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div class="px-5 py-4 border-b border-default flex items-center justify-between">
           <h3 class="text-base font-semibold">
             {{ isViewMode ? "Group details" : "Edit group" }} – "{{ groupName || "…" }}"
           </h3>
@@ -14,20 +14,13 @@
             <!-- Edit button only in view mode -->
             <button
               v-if="isViewMode"
-              class="text-xs px-2 py-1 rounded border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+              class="text-sm px-2 py-1 rounded border border-default bg-primary text-white hover:bg-primary disabled:opacity-60"
               @click="switchToEdit"
               :disabled="loading || !groupName"
             >
               Edit
             </button>
   
-            <button
-              class="text-xs text-gray-500 hover:text-gray-700"
-              @click="$emit('update:modelValue', false)"
-              :disabled="loading"
-            >
-              Close
-            </button>
           </div>
         </div>
   
@@ -48,15 +41,15 @@
             <!-- Members -->
             <section class="space-y-2">
               <div class="flex items-center justify-between">
-                <h4 class="text-xs font-semibold uppercase text-gray-500">
+                <h4 class="text-xs font-semibold uppercase text-default">
                   Members
                 </h4>
-                <span class="text-[11px] text-gray-400">
+                <span class="text-sm text-default">
                   Selected: {{ localMembers.length }}
                 </span>
               </div>
   
-              <div class="border rounded px-2 py-2 max-h-40 overflow-y-auto bg-secondary">
+              <div class="border rounded px-2 py-2 max-h-40 overflow-y-auto bg-default">
                 <label
                   v-for="u in availableUsers"
                   :key="u"
@@ -79,16 +72,16 @@
   
             <!-- Policies -->
             <section class="space-y-2">
-              <div class="flex items-center justify-between">
-                <h4 class="text-xs font-semibold uppercase text-gray-500">
+              <div class="flex items-center justify-between mt-4">
+                <h4 class="text-xs font-semibold uppercase text-default">
                   Policies
                 </h4>
-                <span class="text-[11px] text-gray-400">
+                <span class="text-sm text-default">
                   Selected: {{ localPolicies.length }}
                 </span>
               </div>
   
-              <div class="border rounded px-2 py-2 max-h-40 overflow-y-auto bg-secondary">
+              <div class="border rounded px-2 py-2 max-h-40 overflow-y-auto bg-default">
                 <label
                   v-for="p in availablePolicies"
                   :key="p"
@@ -116,9 +109,9 @@
         </div>
   
         <!-- Footer -->
-        <div class="px-5 py-3 border-t border-gray-200 flex justify-end space-x-2 bg-secondary">
+        <div class="px-5 py-3 border-t border-default flex justify-end space-x-2 ">
           <button
-            class="px-3 py-1.5 text-xs rounded border border-gray-300 hover:bg-gray-50"
+            class="px-3 py-1.5 text-xs rounded border border-default hover:bg-default"
             @click="$emit('update:modelValue', false)"
             :disabled="loading"
           >

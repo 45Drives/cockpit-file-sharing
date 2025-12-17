@@ -3,30 +3,30 @@
       v-if="open && keyDetail"
       class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40"
     >
-      <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-        <h2 class="text-lg font-semibold text-default">
+      <div class="w-full max-w-md rounded-lg bg-default p-6 shadow-lg">
+        <h2 class="text-lg font-semibold text-default border-b border-default">
           Edit access key
         </h2>
   
-        <p class="mt-1 text-xs text-slate-500">
+        <p class="mt-1 text-sm text-default font-semibold">
           Key ID:
           <span class="font-mono">{{ keyDetail.id }}</span>
         </p>
-        <p class="mt-1 text-[11px] text-slate-500">
+        <p class="mt-1 text-xs text-default">
           The key ID and secret key cannot be changed after creation. You can update the display
           name and whether this key is allowed to create buckets.
         </p>
   
         <form class="mt-4 space-y-4" @submit.prevent="onSubmit">
           <div>
-            <label class="block text-sm font-medium text-slate-700">
+            <label class="block text-sm font-medium text-default">
               Name
             </label>
             <input
               v-model="name"
               type="text"
               required
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-default shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              class="mt-1 block w-full bg-accent rounded-md border border-default  px-3 py-2 text-sm text-default shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
   
@@ -35,9 +35,9 @@
               id="edit-can-bucket"
               v-model="canCreateBuckets"
               type="checkbox"
-              class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+              class="h-4 w-4 rounded bg-accent border-default text-primary focus:ring-primary"
             />
-            <label for="edit-can-bucket" class="text-sm text-slate-700">
+            <label for="edit-can-bucket" class="text-sm text-defaul">
               Can create buckets
             </label>
           </div>
@@ -45,7 +45,7 @@
           <div class="mt-6 flex justify-end gap-2">
             <button
               type="button"
-              class="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              class="inline-flex items-center rounded-md border border-default bg-secondary px-3 py-1.5 text-sm font-medium text-default hover:bg-secondary"
               @click="onClose"
               :disabled="saving"
             >
@@ -53,7 +53,7 @@
             </button>
             <button
               type="submit"
-              class="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-primary-dark disabled:opacity-60"
+              class="inline-flex items-center rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-danger disabled:opacity-60"
               :disabled="saving"
             >
               Save
