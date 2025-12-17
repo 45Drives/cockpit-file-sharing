@@ -263,7 +263,7 @@ export class RBDManager {
 
      fetchAvaliableLogicalVolumes(): ResultAsync<LogicalVolume[], ProcessError> {
       const self = this;
-    console.log("this.allservers ", this.allServers)
+    // console.log("this.allservers ", this.allServers)
       return ResultAsync.combine(
         this.allServers.map((server) =>
           // 1) get all LVs for this server
@@ -274,13 +274,13 @@ export class RBDManager {
           ))
             .map(p => {
               const out = p.getStdout()
-              console.log("LVS raw stdout: ", out);
-              console.log("server ", server)
+              // console.log("LVS raw stdout: ", out);
+              // console.log("server ", server)
               return out;
             })
             .andThen(safeJsonParse<LogicalVolumeInfoJson>)
             .map(info => {
-              console.log("LVS PARSED JSON:", info);
+              // console.log("LVS PARSED JSON:", info);
               return info?.report?.flatMap(r => r.lv) ?? [];
             })            // 2) get PV->VG data ONCE (not per-LV)
             .andThen(lvList =>
@@ -289,7 +289,7 @@ export class RBDManager {
                 server.execute(new BashCommand(`pvs --reportformat json --units B -o pv_name,vg_name`))
                   .map(p => {
                     const out = p.getStdout()
-                    console.log("pvs raw stdout: ", out);
+                    // console.log("pvs raw stdout: ", out);
                     return out;
                   })
                   .andThen(safeJsonParse<PVToVGJson>)
@@ -311,11 +311,11 @@ export class RBDManager {
                 arr.push(rbd);
                 rbdByServer.set(rbd.server, arr);
               }
-              console.log("rbdByserver ", rbdByServer)
+              // console.log("rbdByserver ", rbdByServer)
               const rbdHere = rbdByServer.get(server) ?? [];
     
               // Build PV objects by matching to RBDs on THIS server
-              console.log("pvList ", pvList)
+              // console.log("pvList ", pvList)
               const pvsForServer = pvList
                 .map(pv => rbdHere.find(r => r.filePath === pv.pv_name))
                 .filter((x): x is RadosBlockDevice => !!x)
@@ -328,7 +328,7 @@ export class RBDManager {
                 if (hit) return hit;
                 const vg = new VolumeGroup(vgName, pvsForServer, server);
                 vgCache.set(vgName, vg);
-                console.log("vgName ", vg)
+                // console.log("vgName ", vg)
                 return vg;
               }
     
