@@ -1,19 +1,32 @@
 // cephRgwCliAdapter.ts
-import type {CephAclRule,RgwGateway,RgwUser,RgwDashboardS3Creds, CreatedRgwUserKeys,CreateRgwUserOptions,
-  RgwUserDetails,RgwUserKey,RgwUserCap, CephBucketUpdatePayload,CephAclPermission,BucketDashboardStats,BucketUserUsage,BucketDashboardOptions,
-  BucketVersioningStatus,CephBucket,} from "../types/types";
-  import { legacy, server, Command, unwrap } from "../../../../../houston-common/houston-common-lib";
-  import pLimit from "p-limit";
-  
-  
-  const rgwLimit = pLimit(6);
-  const { errorString } = legacy;
-  type CephS3Connection = {
-    endpointUrl: string;
-    region: string;
+import type {
+  CephAclRule,
+  RgwGateway,
+  RgwUser,
+  RgwDashboardS3Creds,
+  CreatedRgwUserKeys,
+  CreateRgwUserOptions,
+  RgwUserDetails,
+  RgwUserKey,
+  RgwUserCap,
+  CephBucketUpdatePayload,
+  CephAclPermission,
+  BucketDashboardStats,
+  BucketUserUsage,
+  BucketDashboardOptions,
+  BucketVersioningStatus,
+  CephBucket,
+} from "../types/types";
+import { legacy, server, Command, unwrap } from "../../../../../houston-common/houston-common-lib";
+import pLimit from "p-limit";
 
-  };
-  let cachedCephS3Conn: CephS3Connection | null = null;
+const rgwLimit = pLimit(6);
+const { errorString } = legacy;
+type CephS3Connection = {
+  endpointUrl: string;
+  region: string;
+};
+let cachedCephS3Conn: CephS3Connection | null = null;
 let cachedDashboardCreds: RgwDashboardS3Creds | null = null;
 
 export async function rgwJson(subArgs: string[]): Promise<any> {
@@ -39,15 +52,13 @@ export async function rgwJson(subArgs: string[]): Promise<any> {
   });
 }
 
-  export async function listBucketsFromCeph(): Promise<CephBucket[]> {
-    // RGW returns an array of bucket stats; we treat it as unknown/any here
-    const statsList: any[] = await rgwJson(["bucket", "stats"]);
-    const { region: defaultRegion } = await getCephS3Connection();
-  
-    return statsList.map((stats) =>
-      buildS3BucketFromRgwStats(stats, defaultRegion),
-    );
-  }
+export async function listBucketsFromCeph(): Promise<CephBucket[]> {
+  // RGW returns an array of bucket stats; we treat it as unknown/any here
+  const statsList: any[] = await rgwJson(["bucket", "stats"]);
+  const { region: defaultRegion } = await getCephS3Connection();
+
+  return statsList.map((stats) => buildS3BucketFromRgwStats(stats, defaultRegion));
+}
 
 export async function getBucketObjectStats(
   bucketName: string
@@ -81,7 +92,6 @@ export async function deleteBucketFromCeph(
 ): Promise<void> {
   const args: string[] = ["bucket", "rm", "--bucket", bucketName];
 
-
   if (options?.purgeObjects) {
     args.push("--purge-objects");
   }
@@ -103,8 +113,7 @@ export async function listRgwGateways(): Promise<RgwGateway[]> {
     const daemon: any = rawDaemon;
     const meta: any = daemon.metadata || {};
 
-    const hostname: string =
-      meta.hostname || id.split(".")[0] || id;
+    const hostname: string = meta.hostname || id.split(".")[0] || id;
 
     const frontendType: string = meta["frontend_type#0"] || "";
     const frontendConfig: string = meta["frontend_config#0"] || "";
@@ -117,16 +126,9 @@ export async function listRgwGateways(): Promise<RgwGateway[]> {
     }
 
     // Zone / zonegroup; fall back to "default" if not present
-    const zonegroup: string =
-      meta.zonegroup ||
-      meta["rgw_zonegroup"] ||
-      "default";
+    const zonegroup: string = meta.zonegroup || meta["rgw_zonegroup"] || "default";
 
-    const zone: string =
-      meta.zone ||
-      meta["rgw_zone"] ||
-      zonegroup ||
-      "default";
+    const zone: string = meta.zone || meta["rgw_zone"] || zonegroup || "default";
 
     // Heuristic for "default" gateway
     const isDefault: boolean =
@@ -139,16 +141,22 @@ export async function listRgwGateways(): Promise<RgwGateway[]> {
       continue;
     }
 
-    gateways.push({id,hostname,zonegroup,zone,endpoint,isDefault,
-    });
+    gateways.push({ id, hostname, zonegroup, zone, endpoint, isDefault });
 
-    console.log("RGW gateway from report:", {id,hostname,zonegroup,zone,frontendType,frontendConfig,endpoint,isDefault,
+    console.log("RGW gateway from report:", {
+      id,
+      hostname,
+      zonegroup,
+      zone,
+      frontendType,
+      frontendConfig,
+      endpoint,
+      isDefault,
     });
   }
 
   return gateways;
 }
-
 
 async function cephJson(subArgs: string[]): Promise<any> {
   const cmd = new Command(["ceph", ...subArgs, "--format", "json"], {
@@ -174,8 +182,6 @@ async function cephJson(subArgs: string[]): Promise<any> {
     throw new Error(errorString(state));
   }
 }
-
-
 export async function listRgwUsers(): Promise<RgwUser[]> {
   const uids: string[] = await rgwJson(["user", "list"]);
 
@@ -183,17 +189,125 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
   const users: RgwUser[] = [];
   let index = 0;
 
+  const toNumberOrNull = (v: any): number | null => {
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim() !== "") {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+
+  const clampPercent = (n: number): number => {
+    if (!Number.isFinite(n)) return 0;
+    if (n < 0) return 0;
+    if (n > 100) return 100;
+    return n;
+  };
+
+  const computePercentOrNull = (used: number | null, max: number | null): number | null => {
+    if (used == null || max == null) return null;
+    if (max <= 0) return null; // unlimited / not set
+    return clampPercent((used / max) * 100);
+  };
+
+  const computeRemainingOrNull = (used: number | null, max: number | null): number | null => {
+    if (used == null || max == null) return null;
+    if (max <= 0) return null; // unlimited / not set
+    return Math.max(max - used, 0);
+  };
+
+  // Prefer *_actual fields first so “used/free” matches quota enforcement.
+  const extractUsageFromUserStats = (
+    stats: any,
+  ): { usedSizeKb: number | null; usedObjects: number | null } => {
+    const candidates = [
+      stats,
+      stats?.stats,
+      stats?.usage,
+      stats?.summary,
+      stats?.user_stats,
+    ].filter(Boolean);
+
+    let usedBytes: number | null = null;
+    let usedKb: number | null = null;
+    let usedObjects: number | null = null;
+
+    for (const s of candidates) {
+      if (usedBytes == null) {
+        usedBytes =
+          toNumberOrNull(s?.size_actual) ??
+          toNumberOrNull(s?.total_bytes_actual) ??
+          toNumberOrNull(s?.total_size_actual) ??
+          null;
+      }
+
+      if (usedKb == null) {
+        usedKb =
+          toNumberOrNull(s?.size_kb_actual) ??
+          toNumberOrNull(s?.total_kb_actual) ??
+          toNumberOrNull(s?.total_size_kb_actual) ??
+          null;
+      }
+
+      // Fallbacks if *_actual isn’t present
+      if (usedBytes == null) {
+        usedBytes =
+          toNumberOrNull(s?.total_bytes) ??
+          toNumberOrNull(s?.total_size) ??
+          toNumberOrNull(s?.size) ??
+          null;
+      }
+
+      if (usedKb == null) {
+        usedKb =
+          toNumberOrNull(s?.total_kb) ??
+          toNumberOrNull(s?.total_size_kb) ??
+          toNumberOrNull(s?.size_kb) ??
+          null;
+      }
+
+      if (usedObjects == null) {
+        usedObjects =
+          toNumberOrNull(s?.num_objects) ??
+          toNumberOrNull(s?.total_objects) ??
+          toNumberOrNull(s?.objects) ??
+          null;
+      }
+    }
+
+    const usedSizeKb =
+      usedKb != null ? usedKb : usedBytes != null ? Math.floor(usedBytes / 1024) : null;
+
+    return { usedSizeKb, usedObjects };
+  };
+
   async function worker() {
     while (index < uids.length) {
       const fullUid = uids[index++];
       const { tenant, uid } = splitTenantFromUid(fullUid);
 
       try {
-        const args = ["user", "info", "--uid", uid];
-        if (tenant) args.push("--tenant", tenant);
+        // 1) user info (limits live here)
+        const infoArgs = ["user", "info", "--uid", uid];
+        if (tenant) infoArgs.push("--tenant", tenant);
+        const info = await rgwJson(infoArgs);
 
-        const info = await rgwJson(args);
         const userQuota = info.user_quota || {};
+        const quotaMaxSizeKb =
+          typeof userQuota.max_size_kb === "number" ? userQuota.max_size_kb : null;
+        const quotaMaxObjects =
+          typeof userQuota.max_objects === "number" ? userQuota.max_objects : null;
+
+        // 2) user stats (usage lives here)
+        const statsArgs = ["user", "stats", "--uid", uid];
+        if (tenant) statsArgs.push("--tenant", tenant);
+        const stats = await rgwJson(statsArgs);
+
+        const { usedSizeKb, usedObjects } = extractUsageFromUserStats(stats);
+
+        const quotaRemainingSizeKb = computeRemainingOrNull(usedSizeKb, quotaMaxSizeKb);
+        const quotaRemainingObjects = computeRemainingOrNull(usedObjects, quotaMaxObjects);
 
         users.push({
           uid,
@@ -201,37 +315,45 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
           displayName: info.display_name || info.displayName,
           email: info.email ?? undefined,
           suspended: !!info.suspended,
-          maxBuckets:
-            typeof info.max_buckets === "number" ? info.max_buckets : undefined,
-          capacityLimitPercent:
-            typeof userQuota.max_size_kb === "number" ? userQuota.max_size_kb : undefined,
-          objectLimitPercent:
-            typeof userQuota.max_objects === "number" ? userQuota.max_objects : undefined,
-        });
+          maxBuckets: typeof info.max_buckets === "number" ? info.max_buckets : undefined,
+
+          // Limits
+          quotaMaxSizeKb,
+          quotaMaxObjects,
+
+          // Current usage
+          quotaUsedSizeKb: usedSizeKb,
+          quotaUsedObjects: usedObjects,
+
+          // Convenience (computed)
+          quotaRemainingSizeKb,
+          quotaRemainingObjects,
+          quotaUsedSizePercent: computePercentOrNull(usedSizeKb, quotaMaxSizeKb),
+          quotaUsedObjectsPercent: computePercentOrNull(usedObjects, quotaMaxObjects),
+        } satisfies RgwUser);
       } catch (e) {
-        console.warn("Failed to fetch info for RGW user", fullUid, e);
+        console.warn("Failed to fetch info/stats for RGW user", fullUid, e);
         users.push({ uid, tenant } as RgwUser);
       }
     }
   }
 
   await Promise.all(
-    Array.from({ length: Math.min(CONCURRENCY, uids.length) }, () => worker())
+    Array.from({ length: Math.min(CONCURRENCY, uids.length) }, () => worker()),
   );
 
-  // keep original list order
+  // Keep original list order
   const key = (u: RgwUser) => (u.tenant ? `${u.tenant}$${u.uid}` : u.uid);
   users.sort((a, b) => uids.indexOf(key(a)) - uids.indexOf(key(b)));
 
   return users;
 }
 
+
 export async function listRGWUserNames(): Promise<string[]> {
   const users: string[] = await rgwJson(["user", "list"]);
   return users;
-
 }
-
 
 async function getDashboardS3Creds(): Promise<RgwDashboardS3Creds> {
   if (cachedDashboardCreds) return cachedDashboardCreds;
@@ -261,7 +383,7 @@ async function runAwsWithDashboardCreds(
   opts?: {
     // Use for cases like RGW create-bucket returning non-XML where awscli fails to parse
     verifyAfterError?: () => Promise<void>;
-  },
+  }
 ): Promise<any> {
   const { accessKey, secretKey } = await getDashboardS3Creds();
 
@@ -291,12 +413,9 @@ async function runAwsWithDashboardCreds(
     return;
   } catch (state: any) {
     const stderr =
-      typeof state?.getStderr === "function"
-        ? state.getStderr()
-        : String(state.stderr ?? "");
+      typeof state?.getStderr === "function" ? state.getStderr() : String(state.stderr ?? "");
 
-    const isCreateBucket =
-      args.length >= 2 && args[0] === "s3api" && args[1] === "create-bucket";
+    const isCreateBucket = args.length >= 2 && args[0] === "s3api" && args[1] === "create-bucket";
 
     const looksLikeXmlParseIssue =
       typeof stderr === "string" &&
@@ -310,15 +429,12 @@ async function runAwsWithDashboardCreds(
     if (isCreateBucket && looksLikeXmlParseIssue && opts?.verifyAfterError) {
       try {
         console.warn(
-          "runAwsWithDashboardCreds: awscli parse error on create-bucket; verifying via head-bucket",
+          "runAwsWithDashboardCreds: awscli parse error on create-bucket; verifying via head-bucket"
         );
         await opts.verifyAfterError();
         return; // soft success
       } catch (verifyErr) {
-        console.error(
-          "runAwsWithDashboardCreds: verification failed after parse error",
-          verifyErr,
-        );
+        console.error("runAwsWithDashboardCreds: verification failed after parse error", verifyErr);
       }
     }
 
@@ -328,29 +444,21 @@ async function runAwsWithDashboardCreds(
   }
 }
 
-async function ensureBucketExists(
-  bucketName: string,
-  endpointUrl: string,
-): Promise<void> {
+async function ensureBucketExists(bucketName: string, endpointUrl: string): Promise<void> {
   try {
-    await runAwsWithDashboardCreds(
-      ["s3api", "head-bucket", "--bucket", bucketName],
-      endpointUrl,
-    );
+    await runAwsWithDashboardCreds(["s3api", "head-bucket", "--bucket", bucketName], endpointUrl);
   } catch (err) {
     // If head-bucket fails, treat this as a real failure:
     // either create-bucket genuinely failed, or there is a connectivity/perm issue.
     throw new Error(
-      `Bucket "${bucketName}" does not appear to exist after create-bucket: ${String(
-        err,
-      )}`,
+      `Bucket "${bucketName}" does not appear to exist after create-bucket: ${String(err)}`
     );
   }
 }
 
 export async function changeRgwBucketOwner(
   bucketName: string,
-  newOwnerFromList: string, // "uid" or "tenant$uid"
+  newOwnerFromList: string // "uid" or "tenant$uid"
 ): Promise<void> {
   // 1) bucket context
   const stats = await rgwJson(["bucket", "stats", "--bucket", bucketName]);
@@ -372,31 +480,25 @@ export async function changeRgwBucketOwner(
   await rgwJson(linkArgs);
 }
 
+export async function createCephBucketViaS3(params: {
+  bucketName: string;
+  endpoint: string;
 
+  // extra config
+  tags?: Record<string, string>;
+  encryptionMode?: "none" | "sse-s3" | "kms";
+  kmsKeyId?: string;
+  bucketPolicy?: string | null;
+  aclRules?: CephAclRule[];
 
-
-export async function createCephBucketViaS3(
-  params: {
-    bucketName: string;
-    endpoint: string;
-
-    // extra config
-    tags?: Record<string, string>;
-    encryptionMode?: "none" | "sse-s3" | "kms";
-    kmsKeyId?: string;
-    bucketPolicy?: string | null; 
-    aclRules?: CephAclRule[];
-
-    objectLockEnabled?: boolean;
-    objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
-    objectLockRetentionDays?: number;
-    owner?: string;
-  }
-): Promise<void> {
+  objectLockEnabled?: boolean;
+  objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
+  objectLockRetentionDays?: number;
+  owner?: string;
+}): Promise<void> {
   const endpointUrl = params.endpoint.startsWith("http")
     ? params.endpoint
     : `http://${params.endpoint}`;
-
 
   const cannedAcl = deriveCannedAclFromRules(params.aclRules);
 
@@ -415,7 +517,6 @@ export async function createCephBucketViaS3(
   await runAwsWithDashboardCreds(createArgs, endpointUrl);
   await ensureBucketExists(params.bucketName, endpointUrl);
 
-
   // 2) tags
   if (params.tags && Object.keys(params.tags).length) {
     const TagSet = Object.entries(params.tags).map(([Key, Value]) => ({
@@ -426,10 +527,8 @@ export async function createCephBucketViaS3(
     const taggingJson = JSON.stringify({ TagSet });
 
     await runAwsWithDashboardCreds(
-      ["s3api","put-bucket-tagging","--bucket",params.bucketName,"--tagging",taggingJson,
-      ],
-      endpointUrl,
-      
+      ["s3api", "put-bucket-tagging", "--bucket", params.bucketName, "--tagging", taggingJson],
+      endpointUrl
     );
   }
 
@@ -460,38 +559,39 @@ export async function createCephBucketViaS3(
     });
 
     await runAwsWithDashboardCreds(
-      ["s3api","put-bucket-encryption","--bucket",params.bucketName,"--server-side-encryption-configuration",encryptionJson,
+      [
+        "s3api",
+        "put-bucket-encryption",
+        "--bucket",
+        params.bucketName,
+        "--server-side-encryption-configuration",
+        encryptionJson,
       ],
-      endpointUrl,
-      
+      endpointUrl
     );
   }
-  console.log("policy type", params.bucketPolicy)
+  console.log("policy type", params.bucketPolicy);
   // 5) bucket policy
   if (params.bucketPolicy !== undefined) {
     const text = (params.bucketPolicy ?? "").trim();
-  
+
     if (text) {
-      console.log("bpolicy text ", text)
+      console.log("bpolicy text ", text);
       await runAwsWithDashboardCreds(
-        ["s3api","put-bucket-policy","--bucket",params.bucketName,"--policy",text],
-        endpointUrl,
+        ["s3api", "put-bucket-policy", "--bucket", params.bucketName, "--policy", text],
+        endpointUrl
       );
     } else {
-      console.log("deleting bukcet policy")
+      console.log("deleting bukcet policy");
       await runAwsWithDashboardCreds(
-        ["s3api","delete-bucket-policy","--bucket",params.bucketName],
-        endpointUrl,
+        ["s3api", "delete-bucket-policy", "--bucket", params.bucketName],
+        endpointUrl
       );
     }
   }
 
   // 6) object lock configuration (if enabled)
-  if (
-    params.objectLockEnabled &&
-    params.objectLockMode &&
-    params.objectLockRetentionDays
-  ) {
+  if (params.objectLockEnabled && params.objectLockMode && params.objectLockRetentionDays) {
     const lockConfig = JSON.stringify({
       ObjectLockEnabled: "Enabled",
       Rule: {
@@ -503,10 +603,15 @@ export async function createCephBucketViaS3(
     });
 
     await runAwsWithDashboardCreds(
-      ["s3api","put-object-lock-configuration","--bucket",params.bucketName,"--object-lock-configuration",lockConfig,
+      [
+        "s3api",
+        "put-object-lock-configuration",
+        "--bucket",
+        params.bucketName,
+        "--object-lock-configuration",
+        lockConfig,
       ],
-      endpointUrl,
-      
+      endpointUrl
     );
   }
 
@@ -515,7 +620,6 @@ export async function createCephBucketViaS3(
     await changeRgwBucketOwner(params.bucketName, params.owner.trim());
   }
 }
-
 
 async function runRgwAdmin(args: string[]): Promise<{ stdout: string; stderr: string }> {
   const cmd = new Command(["radosgw-admin", ...args], { superuser: "try" });
@@ -548,7 +652,17 @@ async function runRgwAdmin(args: string[]): Promise<{ stdout: string; stderr: st
  * 1) user create
  */
 async function rgwUserCreateBase(opts: CreateRgwUserOptions): Promise<CreatedRgwUserKeys> {
-  const {uid,tenant,displayName,email,maxBuckets,systemUser,autoGenerateKey,accessKey,secretKey,suspended,
+  const {
+    uid,
+    tenant,
+    displayName,
+    email,
+    maxBuckets,
+    systemUser,
+    autoGenerateKey,
+    accessKey,
+    secretKey,
+    suspended,
   } = opts;
 
   if (!uid) throw new Error("rgwUserCreateBase: uid is required");
@@ -560,8 +674,7 @@ async function rgwUserCreateBase(opts: CreateRgwUserOptions): Promise<CreatedRgw
     );
   }
 
-  const args: string[] = ["user","create",`--uid=${uid}`,`--display-name=${displayName}`,
-  ];
+  const args: string[] = ["user", "create", `--uid=${uid}`, `--display-name=${displayName}`];
 
   if (tenant) {
     args.push(`--tenant=${tenant}`);
@@ -586,11 +699,7 @@ async function rgwUserCreateBase(opts: CreateRgwUserOptions): Promise<CreatedRgw
 
   // Handle suspended/enable right after create
   if (typeof suspended === "boolean") {
-    const suspendArgs: string[] = [
-      "user",
-      suspended ? "suspend" : "enable",
-      `--uid=${uid}`,
-    ];
+    const suspendArgs: string[] = ["user", suspended ? "suspend" : "enable", `--uid=${uid}`];
     if (tenant) {
       suspendArgs.push(`--tenant=${tenant}`);
     }
@@ -622,14 +731,18 @@ async function rgwUserCreateBase(opts: CreateRgwUserOptions): Promise<CreatedRgw
 /**
  * 2) user-level quota (quota-scope=user)
  */
-async function rgwSetUserQuota(opts: {uid: string;tenant?: string;enabled: boolean;maxSizeKb?: number;maxObjects?: number;
+async function rgwSetUserQuota(opts: {
+  uid: string;
+  tenant?: string;
+  enabled: boolean;
+  maxSizeKb?: number;
+  maxObjects?: number;
 }): Promise<void> {
   const { uid, tenant, enabled, maxSizeKb, maxObjects } = opts;
   if (!uid) throw new Error("rgwSetUserQuota: uid is required");
   if (!enabled) return;
 
-  const setArgs: string[] = ["quota","set",`--uid=${uid}`,"--quota-scope=user",
-  ];
+  const setArgs: string[] = ["quota", "set", `--uid=${uid}`, "--quota-scope=user"];
   if (tenant) setArgs.push(`--tenant=${tenant}`);
 
   if (typeof maxSizeKb === "number") {
@@ -642,21 +755,24 @@ async function rgwSetUserQuota(opts: {uid: string;tenant?: string;enabled: boole
 
   await runRgwAdmin(setArgs);
 
-  const enableArgs: string[] = ["quota","enable",`--uid=${uid}`,"--quota-scope=user",
-  ];
+  const enableArgs: string[] = ["quota", "enable", `--uid=${uid}`, "--quota-scope=user"];
   if (tenant) enableArgs.push(`--tenant=${tenant}`);
 
   await runRgwAdmin(enableArgs);
 }
 
-async function rgwSetBucketQuota(opts: {uid: string;tenant?: string;enabled: boolean;maxSizeKb?: number;maxObjects?: number;
+async function rgwSetBucketQuota(opts: {
+  uid: string;
+  tenant?: string;
+  enabled: boolean;
+  maxSizeKb?: number;
+  maxObjects?: number;
 }): Promise<void> {
   const { uid, tenant, enabled, maxSizeKb, maxObjects } = opts;
   if (!uid) throw new Error("rgwSetBucketQuota: uid is required");
   if (!enabled) return;
 
-  const setArgs: string[] = ["quota","set",`--uid=${uid}`,"--quota-scope=bucket",
-  ];
+  const setArgs: string[] = ["quota", "set", `--uid=${uid}`, "--quota-scope=bucket"];
   if (tenant) setArgs.push(`--tenant=${tenant}`);
 
   if (typeof maxSizeKb === "number") {
@@ -669,32 +785,48 @@ async function rgwSetBucketQuota(opts: {uid: string;tenant?: string;enabled: boo
 
   await runRgwAdmin(setArgs);
 
-  const enableArgs: string[] = ["quota","enable",`--uid=${uid}`,"--quota-scope=bucket",
-  ];
+  const enableArgs: string[] = ["quota", "enable", `--uid=${uid}`, "--quota-scope=bucket"];
   if (tenant) enableArgs.push(`--tenant=${tenant}`);
 
   await runRgwAdmin(enableArgs);
 }
 
-export async function createRgwUser(
-  opts: CreateRgwUserOptions
-): Promise<CreatedRgwUserKeys> {
-  const {uid,tenant,userQuotaEnabled,userQuotaMaxSizeKb,userQuotaMaxObjects,bucketQuotaEnabled,bucketQuotaMaxSizeKb,bucketQuotaMaxObjects,
+export async function createRgwUser(opts: CreateRgwUserOptions): Promise<CreatedRgwUserKeys> {
+  const {
+    uid,
+    tenant,
+    userQuotaEnabled,
+    userQuotaMaxSizeKb,
+    userQuotaMaxObjects,
+    bucketQuotaEnabled,
+    bucketQuotaMaxSizeKb,
+    bucketQuotaMaxObjects,
   } = opts;
 
   const keys = await rgwUserCreateBase(opts);
 
-  await rgwSetUserQuota({uid,tenant,enabled: !!userQuotaEnabled,maxSizeKb: userQuotaMaxSizeKb,maxObjects: userQuotaMaxObjects,
+  await rgwSetUserQuota({
+    uid,
+    tenant,
+    enabled: !!userQuotaEnabled,
+    maxSizeKb: userQuotaMaxSizeKb,
+    maxObjects: userQuotaMaxObjects,
   });
 
-  await rgwSetBucketQuota({uid,tenant,enabled: !!bucketQuotaEnabled,maxSizeKb: bucketQuotaMaxSizeKb,maxObjects: bucketQuotaMaxObjects,
+  await rgwSetBucketQuota({
+    uid,
+    tenant,
+    enabled: !!bucketQuotaEnabled,
+    maxSizeKb: bucketQuotaMaxSizeKb,
+    maxObjects: bucketQuotaMaxObjects,
   });
 
   return keys;
 }
 
-export async function deleteRgwUser(uid: string,opts?: {  tenant?: string;  purgeData?: boolean;  purgeKeys?: boolean;
-  }
+export async function deleteRgwUser(
+  uid: string,
+  opts?: { tenant?: string; purgeData?: boolean; purgeKeys?: boolean }
 ): Promise<void> {
   if (!uid) {
     throw new Error("deleteRgwUser: uid is required");
@@ -715,11 +847,24 @@ export async function deleteRgwUser(uid: string,opts?: {  tenant?: string;  purg
   await runRgwAdmin(args);
 }
 
-
-export async function updateRgwUser(
-  opts: CreateRgwUserOptions
-): Promise<void> {
-  const {uid,tenant,displayName,email,maxBuckets,systemUser,suspended,userQuotaEnabled,userQuotaMaxSizeKb,userQuotaMaxObjects,bucketQuotaEnabled,bucketQuotaMaxSizeKb,bucketQuotaMaxObjects,autoGenerateKey,accessKey,secretKey,
+export async function updateRgwUser(opts: CreateRgwUserOptions): Promise<void> {
+  const {
+    uid,
+    tenant,
+    displayName,
+    email,
+    maxBuckets,
+    systemUser,
+    suspended,
+    userQuotaEnabled,
+    userQuotaMaxSizeKb,
+    userQuotaMaxObjects,
+    bucketQuotaEnabled,
+    bucketQuotaMaxSizeKb,
+    bucketQuotaMaxObjects,
+    autoGenerateKey,
+    accessKey,
+    secretKey,
   } = opts;
 
   if (!uid) {
@@ -757,38 +902,42 @@ export async function updateRgwUser(
   await runRgwAdmin(args);
 
   if (typeof suspended === "boolean") {
-    const suspendArgs: string[] = [
-      "user",
-      suspended ? "suspend" : "enable",
-      `--uid=${uid}`,
-    ];
+    const suspendArgs: string[] = ["user", suspended ? "suspend" : "enable", `--uid=${uid}`];
     if (tenant) {
       suspendArgs.push(`--tenant=${tenant}`);
     }
     await runRgwAdmin(suspendArgs);
   }
 
-  await rgwSetUserQuota({uid,tenant,enabled: !!userQuotaEnabled,maxSizeKb: userQuotaMaxSizeKb,maxObjects: userQuotaMaxObjects,
+  await rgwSetUserQuota({
+    uid,
+    tenant,
+    enabled: !!userQuotaEnabled,
+    maxSizeKb: userQuotaMaxSizeKb,
+    maxObjects: userQuotaMaxObjects,
   });
 
-  await rgwSetBucketQuota({uid,tenant,enabled: !!bucketQuotaEnabled,maxSizeKb: bucketQuotaMaxSizeKb,maxObjects: bucketQuotaMaxObjects,
+  await rgwSetBucketQuota({
+    uid,
+    tenant,
+    enabled: !!bucketQuotaEnabled,
+    maxSizeKb: bucketQuotaMaxSizeKb,
+    maxObjects: bucketQuotaMaxObjects,
   });
 }
-
 export async function getRgwUserInfo(
   uid: string,
   tenant?: string
 ): Promise<RgwUserDetails> {
-  if (!uid) {
-    throw new Error("getRgwUserInfo: uid is required");
-  }
+  if (!uid) throw new Error("getRgwUserInfo: uid is required");
 
   const fullUid = tenant ? `${tenant}$${uid}` : uid;
 
-  const args: string[] = ["user", "info", `--uid=${fullUid}`];
-  const info = await rgwJson(args);
+  // Fetch only what the table doesn't already have (keys/caps + bucket quota).
+  // Do NOT call "user stats" or recompute usage/percent here, because listRgwUsers
+  // already provides quotaMax/used/remaining/percent and we want the modal to match the table.
+  const info = await rgwJson(["user", "info", `--uid=${fullUid}`]);
 
-  const userQuota = info.user_quota || {};
   const keysRaw = info.keys || info.s3_keys || [];
   const capsRaw = info.caps || [];
 
@@ -807,32 +956,40 @@ export async function getRgwUserInfo(
       }))
     : [];
 
-  // Decode tenant/uid from the actual user_id that RGW returns
   const fullUserId = info.user_id || info.uid || fullUid;
   const { tenant: decodedTenant, uid: shortUid } = splitTenantFromUid(fullUserId);
+
+  const bucketQuota = info.bucket_quota || {};
+
+  const bucketQuotaMaxSizeKb =
+    typeof bucketQuota.max_size_kb === "number"
+      ? bucketQuota.max_size_kb
+      : typeof bucketQuota.max_size === "number"
+        ? Math.floor(bucketQuota.max_size / 1024)
+        : null;
+
+  const bucketQuotaMaxObjects =
+    typeof bucketQuota.max_objects === "number" ? bucketQuota.max_objects : null;
 
   const details: RgwUserDetails = {
     uid: shortUid,
     tenant: decodedTenant,
+
     displayName: info.display_name || info.displayName,
-    email: info.email ?? undefined,
+    email: info.email ?? null,
     suspended: !!info.suspended,
-    maxBuckets:
-      typeof info.max_buckets === "number" ? info.max_buckets : undefined,
-    capacityLimitPercent:
-      typeof userQuota.max_size_kb === "number"
-        ? userQuota.max_size_kb
-        : undefined,
-    objectLimitPercent:
-      typeof userQuota.max_objects === "number"
-        ? userQuota.max_objects
-        : undefined,
+    maxBuckets: typeof info.max_buckets === "number" ? info.max_buckets : null,
+
+    bucketQuotaMaxSizeKb,
+    bucketQuotaMaxObjects,
+
     keys,
     caps,
   };
 
   return details;
 }
+
 
 function splitTenantFromUid(fullUid: string): { tenant?: string; uid: string } {
   const idx = fullUid.indexOf("$");
@@ -845,7 +1002,6 @@ function splitTenantFromUid(fullUid: string): { tenant?: string; uid: string } {
   };
 }
 
-
 export async function updateCephBucketFromForm(
   form: CephBucketUpdatePayload,
   gateway: RgwGateway
@@ -856,8 +1012,7 @@ export async function updateCephBucketFromForm(
 
   const objectLockMode = form.cephObjectLockMode;
   const objectLockRetentionDays =
-    form.cephObjectLockRetentionDays != null &&
-    form.cephObjectLockRetentionDays !== ""
+    form.cephObjectLockRetentionDays != null && form.cephObjectLockRetentionDays !== ""
       ? Number(form.cephObjectLockRetentionDays)
       : undefined;
 
@@ -900,29 +1055,27 @@ function parseTagsText(tagsText?: string): Record<string, string> | undefined {
 
   return Object.keys(tags).length ? tags : undefined;
 }
-export async function updateCephBucketViaS3(
-  params: {
-    bucketName: string;
-    endpoint: string;
-    region?: string;
+export async function updateCephBucketViaS3(params: {
+  bucketName: string;
+  endpoint: string;
+  region?: string;
 
-    // patches; if a field is undefined, we leave it as-is
-    versioningEnabled?: boolean;
+  // patches; if a field is undefined, we leave it as-is
+  versioningEnabled?: boolean;
 
-    tags?: Record<string, string> | null;
+  tags?: Record<string, string> | null;
 
-    encryptionMode?: "none" | "sse-s3" | "kms";
-    kmsKeyId?: string;
+  encryptionMode?: "none" | "sse-s3" | "kms";
+  kmsKeyId?: string;
 
-    bucketPolicy?: string | null;
-    aclRules?: CephAclRule[];
+  bucketPolicy?: string | null;
+  aclRules?: CephAclRule[];
 
-    objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
-    objectLockRetentionDays?: number;
+  objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
+  objectLockRetentionDays?: number;
 
-    owner?: string; // RGW uid, if you want to change owner
-  }
-): Promise<void> {
+  owner?: string; // RGW uid, if you want to change owner
+}): Promise<void> {
   const endpointUrl = params.endpoint.startsWith("http")
     ? params.endpoint
     : `http://${params.endpoint}`;
@@ -936,9 +1089,15 @@ export async function updateCephBucketViaS3(
     });
 
     await runAwsWithDashboardCreds(
-      ["s3api","put-bucket-versioning","--bucket",params.bucketName,"--versioning-configuration",versioningJson,
+      [
+        "s3api",
+        "put-bucket-versioning",
+        "--bucket",
+        params.bucketName,
+        "--versioning-configuration",
+        versioningJson,
       ],
-      endpointUrl,
+      endpointUrl
     );
   }
 
@@ -953,16 +1112,14 @@ export async function updateCephBucketViaS3(
       const taggingJson = JSON.stringify({ TagSet });
 
       await runAwsWithDashboardCreds(
-        ["s3api","put-bucket-tagging","--bucket",params.bucketName,"--tagging",taggingJson,
-        ],
-        endpointUrl,
+        ["s3api", "put-bucket-tagging", "--bucket", params.bucketName, "--tagging", taggingJson],
+        endpointUrl
       );
     } else {
       // explicit "clear tags"
       await runAwsWithDashboardCreds(
         ["s3api", "delete-bucket-tagging", "--bucket", params.bucketName],
-        endpointUrl,
-        
+        endpointUrl
       );
     }
   }
@@ -972,7 +1129,7 @@ export async function updateCephBucketViaS3(
     if (params.encryptionMode === "none") {
       await runAwsWithDashboardCreds(
         ["s3api", "delete-bucket-encryption", "--bucket", params.bucketName],
-        endpointUrl,
+        endpointUrl
       );
     } else {
       const rules: any[] = [];
@@ -998,9 +1155,15 @@ export async function updateCephBucketViaS3(
       const encryptionJson = JSON.stringify({ Rules: rules });
 
       await runAwsWithDashboardCreds(
-        ["s3api","put-bucket-encryption","--bucket",params.bucketName,"--server-side-encryption-configuration",encryptionJson,
+        [
+          "s3api",
+          "put-bucket-encryption",
+          "--bucket",
+          params.bucketName,
+          "--server-side-encryption-configuration",
+          encryptionJson,
         ],
-        endpointUrl,
+        endpointUrl
       );
     }
   }
@@ -1011,39 +1174,32 @@ export async function updateCephBucketViaS3(
     if (cannedAcl) {
       await runAwsWithDashboardCreds(
         ["s3api", "put-bucket-acl", "--bucket", params.bucketName, "--acl", cannedAcl],
-        endpointUrl,
+        endpointUrl
       );
     }
   }
 
   // 5) Bucket policy
-  console.log("params.bucketPolicy ",params.bucketPolicy)
+  console.log("params.bucketPolicy ", params.bucketPolicy);
   if (params.bucketPolicy !== undefined) {
     const text = params.bucketPolicy?.trim() ?? "";
 
     if (text) {
       await runAwsWithDashboardCreds(
-        ["s3api","put-bucket-policy","--bucket",params.bucketName,"--policy",text,
-        ],
-        endpointUrl,
-        
+        ["s3api", "put-bucket-policy", "--bucket", params.bucketName, "--policy", text],
+        endpointUrl
       );
-    } 
-    else {
-      console.log("deleting policy inner ")
+    } else {
+      console.log("deleting policy inner ");
       await runAwsWithDashboardCreds(
         ["s3api", "delete-bucket-policy", "--bucket", params.bucketName],
-        endpointUrl,
-        
+        endpointUrl
       );
     }
   }
 
   // 6) Object lock configuration (only if bucket already has locking enabled)
-  if (
-    params.objectLockMode &&
-    typeof params.objectLockRetentionDays === "number"
-  ) {
+  if (params.objectLockMode && typeof params.objectLockRetentionDays === "number") {
     const lockConfig = JSON.stringify({
       ObjectLockEnabled: "Enabled",
       Rule: {
@@ -1055,10 +1211,15 @@ export async function updateCephBucketViaS3(
     });
 
     await runAwsWithDashboardCreds(
-      ["s3api","put-object-lock-configuration","--bucket",params.bucketName,"--object-lock-configuration",lockConfig,
+      [
+        "s3api",
+        "put-object-lock-configuration",
+        "--bucket",
+        params.bucketName,
+        "--object-lock-configuration",
+        lockConfig,
       ],
-      endpointUrl,
-      
+      endpointUrl
     );
   }
 
@@ -1068,14 +1229,12 @@ export async function updateCephBucketViaS3(
   }
 }
 
-
 async function awsJsonOrNullWithDashboardCreds(
   args: string[],
   endpointOverride?: string,
   regionOverride?: string
 ): Promise<any | null> {
-  const { endpointUrl: defaultEndpoint, region: defaultRegion } =
-    await getCephS3Connection();
+  const { endpointUrl: defaultEndpoint, region: defaultRegion } = await getCephS3Connection();
 
   const endpointUrl =
     endpointOverride && endpointOverride.length
@@ -1089,12 +1248,12 @@ async function awsJsonOrNullWithDashboardCreds(
   const { accessKey, secretKey } = await getDashboardS3Creds();
 
   const cmdLine =
-  `AWS_ACCESS_KEY_ID='${accessKey}' ` +
-  `AWS_SECRET_ACCESS_KEY='${secretKey}' ` +
-  `AWS_DEFAULT_REGION='${region}' ` +
-  `AWS_DEFAULT_OUTPUT='json' ` + // override bad config (xml)
-  `aws --output json --endpoint-url '${endpointUrl}' ` + // force json output
-  args.map((a) => `'${a}'`).join(" ");
+    `AWS_ACCESS_KEY_ID='${accessKey}' ` +
+    `AWS_SECRET_ACCESS_KEY='${secretKey}' ` +
+    `AWS_DEFAULT_REGION='${region}' ` +
+    `AWS_DEFAULT_OUTPUT='json' ` + // override bad config (xml)
+    `aws --output json --endpoint-url '${endpointUrl}' ` + // force json output
+    args.map((a) => `'${a}'`).join(" ");
 
   const cmd = new Command(["bash", "-lc", cmdLine], { superuser: "try" });
 
@@ -1111,15 +1270,8 @@ async function awsJsonOrNullWithDashboardCreds(
     return JSON.parse(text);
   } catch (state: any) {
     const stderr =
-      typeof state?.getStderr === "function"
-        ? state.getStderr()
-        : String(state.stderr ?? "");
-    console.warn(
-      "awsJsonOrNullWithDashboardCreds error for",
-      args.join(" "),
-      "stderr=",
-      stderr
-    );
+      typeof state?.getStderr === "function" ? state.getStderr() : String(state.stderr ?? "");
+    console.warn("awsJsonOrNullWithDashboardCreds error for", args.join(" "), "stderr=", stderr);
     return null;
   }
 }
@@ -1131,9 +1283,7 @@ export async function getCephS3Connection(): Promise<CephS3Connection> {
   const envRegion = process.env.CEPH_S3_REGION;
 
   if (envEndpoint) {
-    const endpointUrl = envEndpoint.startsWith("http")
-      ? envEndpoint
-      : `http://${envEndpoint}`;
+    const endpointUrl = envEndpoint.startsWith("http") ? envEndpoint : `http://${envEndpoint}`;
 
     cachedCephS3Conn = {
       endpointUrl,
@@ -1150,9 +1300,7 @@ export async function getCephS3Connection(): Promise<CephS3Connection> {
     throw new Error("No RGW gateways found to derive Ceph S3 endpoint");
   }
 
-  const endpointUrl = gw.endpoint.startsWith("http")
-    ? gw.endpoint
-    : `http://${gw.endpoint}`;
+  const endpointUrl = gw.endpoint.startsWith("http") ? gw.endpoint : `http://${gw.endpoint}`;
 
   const region = gw.zone || gw.zonegroup || "us-east-1";
 
@@ -1160,9 +1308,7 @@ export async function getCephS3Connection(): Promise<CephS3Connection> {
   return cachedCephS3Conn;
 }
 
-function mapCephVersioning(
-  stats: any,
-): BucketVersioningStatus {
+function mapCephVersioning(stats: any): BucketVersioningStatus {
   // Ceph exposes several hints; map them into S3-style states
   if (stats.versioning === "enabled" || stats.versioning_enabled) {
     return "Enabled";
@@ -1173,14 +1319,10 @@ function mapCephVersioning(
   return "Disabled";
 }
 
-export function buildS3BucketFromRgwStats(
-  stats: any,
-  defaultRegion: string,
-): CephBucket {
+export function buildS3BucketFromRgwStats(stats: any, defaultRegion: string): CephBucket {
   // usage
   const usage = stats.usage || {};
-  const usageKey =
-    "rgw.main" in usage ? "rgw.main" : Object.keys(usage)[0];
+  const usageKey = "rgw.main" in usage ? "rgw.main" : Object.keys(usage)[0];
   const usageMain = usageKey ? usage[usageKey] || {} : {};
 
   const sizeBytes: number = usageMain.size ?? 0;
@@ -1188,14 +1330,10 @@ export function buildS3BucketFromRgwStats(
   const versionCount: number | undefined = usageMain.num_object_versions;
 
   // region / zone
-  const region: string =
-    stats.zone || stats.zonegroup || defaultRegion || "ceph-default-zone";
+  const region: string = stats.zone || stats.zonegroup || defaultRegion || "ceph-default-zone";
 
   // tags from tagset
-  const tags =
-    stats.tagset && Object.keys(stats.tagset).length
-      ? { ...stats.tagset }
-      : undefined;
+  const tags = stats.tagset && Object.keys(stats.tagset).length ? { ...stats.tagset } : undefined;
 
   // versioning + object lock
   const versioning = mapCephVersioning(stats);
@@ -1203,30 +1341,43 @@ export function buildS3BucketFromRgwStats(
 
   // optional: quota, zone, zonegroup, etc.
   const quotaBytes =
-    stats.bucket_quota && typeof stats.bucket_quota.max_size_kb === "number"
-      && stats.bucket_quota.max_size_kb > 0
+    stats.bucket_quota &&
+    typeof stats.bucket_quota.max_size_kb === "number" &&
+    stats.bucket_quota.max_size_kb > 0
       ? stats.bucket_quota.max_size_kb * 1024
       : undefined;
 
-  return {backendKind: "ceph",name: stats.bucket,region,owner: stats.owner,createdAt: stats.creation_time,lastModifiedTime: stats.mtime, sizeBytes,objectCount,versionCount,
-    quotaBytes,objectLockEnabled,versioning,tags,zone: stats.zone,zonegroup: stats.zonegroup, 
+  return {
+    backendKind: "ceph",
+    name: stats.bucket,
+    region,
+    owner: stats.owner,
+    createdAt: stats.creation_time,
+    lastModifiedTime: stats.mtime,
+    sizeBytes,
+    objectCount,
+    versionCount,
+    quotaBytes,
+    objectLockEnabled,
+    versioning,
+    tags,
+    zone: stats.zone,
+    zonegroup: stats.zonegroup,
     // leave these undefined for now; you can fill them in later
-    acl: undefined,policy: undefined,lastAccessed: undefined,placementTarget: stats.placement_rule,
+    acl: undefined,
+    policy: undefined,
+    lastAccessed: undefined,
+    placementTarget: stats.placement_rule,
   };
 }
 
 function deriveCannedAclFromRules(
-  rules?: CephAclRule[],
-):
-  | "private"
-  | "public-read"
-  | "public-read-write"
-  | "authenticated-read"
-  | null {
+  rules?: CephAclRule[]
+): "private" | "public-read" | "public-read-write" | "authenticated-read" | null {
   if (!rules || rules.length === 0) return null;
 
   const auth = rules.find((r) => r.grantee === "authenticated-users");
-  const all  = rules.find((r) => r.grantee === "all-users");
+  const all = rules.find((r) => r.grantee === "all-users");
   if (all) {
     if (all.permission === "READ") {
       return "public-read";
@@ -1310,16 +1461,12 @@ export async function getBucketDashboardStats(
   for (const userEntry of entries) {
     const userId = userEntry.user || userEntry.owner || "";
 
-    const buckets: any[] = Array.isArray(userEntry.buckets)
-      ? userEntry.buckets
-      : [];
+    const buckets: any[] = Array.isArray(userEntry.buckets) ? userEntry.buckets : [];
 
     for (const b of buckets) {
       if (b.bucket !== bucket) continue;
 
-      const categories: any[] = Array.isArray(b.categories)
-        ? b.categories
-        : [];
+      const categories: any[] = Array.isArray(b.categories) ? b.categories : [];
 
       const totals = categories.reduce(
         (acc, cat) => {
@@ -1366,17 +1513,12 @@ export async function getBucketDashboardStats(
   return { stats, perUser };
 }
 
-
 export async function getCephBucketSecurity(
-  bucketName: string,
+  bucketName: string
 ): Promise<{ acl?: CephAclRule[]; policy?: string }> {
   const [aclJson, policyJson] = await Promise.all([
-    awsJsonOrNullWithDashboardCreds(
-      ["s3api", "get-bucket-acl", "--bucket", bucketName],
-    ),
-    awsJsonOrNullWithDashboardCreds(
-      ["s3api", "get-bucket-policy", "--bucket", bucketName],
-    ),
+    awsJsonOrNullWithDashboardCreds(["s3api", "get-bucket-acl", "--bucket", bucketName]),
+    awsJsonOrNullWithDashboardCreds(["s3api", "get-bucket-policy", "--bucket", bucketName]),
   ]);
 
   let acl: CephAclRule[] | undefined;
@@ -1416,11 +1558,14 @@ export async function getCephBucketSecurity(
 }
 
 export async function getCephBucketTags(
-  bucketName: string,
+  bucketName: string
 ): Promise<Record<string, string> | undefined> {
-  const tagJson = await awsJsonOrNullWithDashboardCreds(
-    ["s3api", "get-bucket-tagging", "--bucket", bucketName],
-  );
+  const tagJson = await awsJsonOrNullWithDashboardCreds([
+    "s3api",
+    "get-bucket-tagging",
+    "--bucket",
+    bucketName,
+  ]);
 
   const set = tagJson?.TagSet;
   if (!Array.isArray(set) || set.length === 0) return undefined;

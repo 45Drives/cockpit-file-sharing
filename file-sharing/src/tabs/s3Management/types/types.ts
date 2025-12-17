@@ -113,6 +113,19 @@ export type RgwUser = {
     maxBuckets?: number | null;
     capacityLimitPercent?: number | null;
     objectLimitPercent?: number | null;
+    quotaMaxSizeKb?: number | null;
+    quotaMaxObjects?: number | null;
+  
+    // Current usage (from user stats)
+    quotaUsedSizeKb?: number | null;
+    quotaUsedObjects?: number | null;
+  
+    // Convenience (computed)
+    quotaRemainingSizeKb?: number | null;
+    quotaRemainingObjects?: number | null;
+    quotaUsedSizePercent?: number | null;
+    quotaUsedObjectsPercent?: number | null;
+
 }  
 export type RgwDashboardS3Creds = {
     accessKey: string;
@@ -160,16 +173,13 @@ export type RgwDashboardS3Creds = {
   }
   
   export interface RgwUserDetails extends RgwUser {
-    userQuotaMaxSizeKb?: number;
-    userQuotaMaxObjects?: number;
-  
-    bucketQuotaMaxSizeKb?: number;
-    bucketQuotaMaxObjects?: number;
+    bucketQuotaMaxSizeKb?: number | null;
+    bucketQuotaMaxObjects?: number | null;
   
     keys: RgwUserKey[];
     caps: RgwUserCap[];
-  
   }
+  
 
   export interface MinioUser {
     username: string;

@@ -4,7 +4,7 @@
       class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
     >
       <div class="bg-default rounded-lg shadow-lg max-w-md w-full mx-4">
-        <div class="px-5 py-4 border-b border-gray-200">
+        <div class="px-5 py-4 border-b border-default">
             <h3 class="text-base font-semibold">
   {{ isEdit ? "Edit RGW user" : "Create RGW user" }}
 </h3>
@@ -14,72 +14,77 @@
         <div class="px-5 py-4 space-y-3 text-sm">
           <!-- Basic identity -->
           <div>
-            <label class="block text-xs font-medium mb-1">
+            <label class="block text-sm font-medium mb-1">
               Username (uid)
             </label>
             <input
   v-model="form.uid"
   type="text"
-  class="w-full border border-gray-300 bg-default rounded px-2 py-1 text-sm"
+  class="w-full border border-default bg-default rounded px-2 py-1 text-sm"
   :readonly="isEdit"
 />
           </div>
   
           <div>
-            <label class="block text-xs font-medium mb-1">
+            <label class="block text-sm font-medium mb-1">
               Tenant
             </label>
             <input
               v-model="form.tenant"
               type="text"
-              class="w-full border border-gray-300 bg-default rounded px-2 py-1 text-sm"
+              class="w-full border border-default bg-default rounded px-2 py-1 text-sm"
               placeholder="optional"
             />
           </div>
   
           <div>
-            <label class="block text-xs font-medium mb-1">
+            <label class="block text-sm font-medium mb-1">
               Full name
             </label>
             <input
               v-model="form.fullName"
               type="text"
-              class="w-full border border-gray-300 bg-default rounded px-2 py-1 text-sm"
+              class="w-full border border-default bg-default rounded px-2 py-1 text-sm"
             />
           </div>
   
           <div>
-            <label class="block text-xs font-medium mb-1">
+            <label class="block text-sm font-medium mb-1">
               Email
             </label>
             <input
-              v-model="form.email"
-              type="email"
-              class="w-full border border-gray-300 bg-default rounded px-2 py-1 text-sm"
-              placeholder="optional"
-            />
+  v-model="form.email"
+  type="email"
+  class="w-full border border-default bg-default rounded px-2 py-1 text-sm"
+  placeholder="optional"
+  @blur="() => {
+    const e = form.email.trim();
+    if (e && !isValidEmail(e)) localError = 'Please enter a valid email address.';
+    else if (localError === 'Please enter a valid email address.') localError = null;
+  }"
+/>
           </div>
   
           <div>
-            <label class="block text-xs font-medium mb-1">
+            <label class="block text-sm font-medium mb-1">
               Max buckets
             </label>
             <input
               v-model.number="form.maxBuckets"
               type="number"
               min="0"
-              class="w-full border border-gray-300 bg-default rounded px-2 py-1 text-sm"
+              class="w-full border border-default bg-default rounded px-2 py-1 text-sm"
               placeholder="leave empty for default"
             />
           </div>
   
           <!-- Suspended / System user -->
-          <div class="border-t border-gray-200 pt-3 mt-2 grid grid-cols-2 gap-2 text-xs">
+          <div class="border-t border-default pt-3 mt-2 grid grid-cols-2 gap-2 text-sm">
             <label class="flex items-center space-x-2">
               <input
                 type="checkbox"
                 v-model="form.suspended"
-                class="h-4 w-4 rounded border-gray-300 bg-default"
+                class="h-4 w-4 rounded border-default bg-default"
               />
               <span>Suspended</span>
             </label>
@@ -88,23 +93,23 @@
               <input
                 type="checkbox"
                 v-model="form.systemUser"
-                class="h-4 w-4 rounded border-gray-300 bg-default"
+                class="h-4 w-4 rounded border-default bg-default"
               />
               <span>System user</span>
             </label>
           </div>
   
           <!-- User quota -->
-          <div class="border-t border-gray-200 pt-3 mt-2">
+          <div class="border-t border-default pt-3 mt-2">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold">
+              <span class="text-sm font-semibold">
                 User quota (quota-scope=user)
               </span>
-              <label class="flex items-center space-x-1 text-xs">
+              <label class="flex items-center space-x-1 text-sm">
                 <input
                   type="checkbox"
                   v-model="form.userQuotaEnabled"
-                  class="h-4 w-4 rounded border-gray-300 bg-default"
+                  class="h-4 w-4 rounded border-default bg-default"
                 />
                 <span>Enabled</span>
               </label>
@@ -112,7 +117,7 @@
   
             <div
               v-if="form.userQuotaEnabled"
-              class="mt-2 grid grid-cols-2 gap-2 text-xs"
+              class="mt-2 grid grid-cols-2 gap-2 text-sm"
             >
               <div class="space-y-1">
                 <label class="flex items-center space-x-1">
@@ -120,7 +125,7 @@
                     type="checkbox"
                     v-model="form.userQuotaUnlimitedSize"
                     :disabled="!form.userQuotaEnabled"
-                    class="h-4 w-4 rounded border-gray-300 bg-default disabled:bg-gray-100"
+                    class="h-4 w-4 rounded border-default bg-default disabled:bg-default"
                   />
                   <span>Unlimited size</span>
                 </label>
@@ -130,13 +135,13 @@
                     v-model.number="form.userQuotaMaxSizeKb"
                     type="number"
                     min="0"
-                    class="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-default disabled:bg-gray-100"
+                    class="w-full border border-default rounded px-2 py-1 text-sm bg-default disabled:bg-default"
                     :disabled="form.userQuotaUnlimitedSize"
                     placeholder="Max size"
                   />
                   <select
                     v-model="form.userQuotaSizeUnit"
-                    class="border border-gray-300 rounded px-1 py-1 text-xs bg-default disabled:bg-gray-100"
+                    class="border border-default rounded px-1 py-1 text-sm bg-default disabled:bg-default"
                     :disabled="form.userQuotaUnlimitedSize"
                   >
                     <option value="KiB">KiB</option>
@@ -153,7 +158,7 @@
                     type="checkbox"
                     v-model="form.userQuotaUnlimitedObjects"
                     :disabled="!form.userQuotaEnabled"
-                    class="h-4 w-4 rounded border-gray-300 bg-default disabled:bg-gray-100"
+                    class="h-4 w-4 rounded border-default bg-default disabled:bg-default"
                   />
                   <span>Unlimited objects</span>
                 </label>
@@ -161,7 +166,7 @@
                   v-model.number="form.userQuotaMaxObjects"
                   type="number"
                   min="0"
-                  class="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-default disabled:bg-gray-100"
+                  class="w-full border border-default rounded px-2 py-1 text-sm bg-default disabled:bg-default"
                   placeholder="Max objects"
                 />
               </div>
@@ -169,16 +174,16 @@
           </div>
   
           <!-- Bucket quota -->
-          <div class="border-t border-gray-200 pt-3 mt-2">
+          <div class="border-t border-default pt-3 mt-2">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold">
+              <span class="text-sm font-semibold">
                 Bucket quota (quota-scope=bucket)
               </span>
-              <label class="flex items-center space-x-1 text-xs">
+              <label class="flex items-center space-x-1 text-sm">
                 <input
                   type="checkbox"
                   v-model="form.bucketQuotaEnabled"
-                  class="h-4 w-4 rounded border-gray-300 bg-default"
+                  class="h-4 w-4 rounded border-default bg-default"
                 />
                 <span>Enabled</span>
               </label>
@@ -186,14 +191,14 @@
   
             <div
               v-if="form.bucketQuotaEnabled"
-              class="mt-2 grid grid-cols-2 gap-2 text-xs"
+              class="mt-2 grid grid-cols-2 gap-2 text-sm"
             >
               <div class="space-y-1">
                 <label class="flex items-center space-x-1">
                   <input
                     type="checkbox"
                     v-model="form.bucketQuotaUnlimitedSize"
-                    class="h-4 w-4 rounded border-gray-300 bg-default disabled:bg-gray-100"
+                    class="h-4 w-4 rounded border-default bg-default disabled:bg-default"
                   />
                   <span>Unlimited size</span>
                 </label>
@@ -203,13 +208,13 @@
                     v-model.number="form.bucketQuotaMaxSizeKb"
                     type="number"
                     min="0"
-                    class="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-default disabled:bg-gray-100"
+                    class="w-full border border-default rounded px-2 py-1 text-sm bg-default disabled:bg-default"
                     :disabled="form.bucketQuotaUnlimitedSize"
                     placeholder="Max size"
                   />
                   <select
                     v-model="form.bucketQuotaSizeUnit"
-                    class="border border-gray-300 rounded px-1 py-1 text-xs bg-default disabled:bg-gray-100"
+                    class="border border-default rounded px-1 py-1 text-sm bg-default disabled:bg-default"
                     :disabled="form.bucketQuotaUnlimitedSize"
                   >
                     <option value="KiB">KiB</option>
@@ -225,7 +230,7 @@
                   <input
                     type="checkbox"
                     v-model="form.bucketQuotaUnlimitedObjects"
-                    class="h-4 w-4 rounded border-gray-300 bg-default disabled:bg-gray-100"
+                    class="h-4 w-4 rounded border-default bg-default disabled:bg-default"
                   />
                   <span>Unlimited objects</span>
                 </label>
@@ -233,7 +238,7 @@
                   v-model.number="form.bucketQuotaMaxObjects"
                   type="number"
                   min="0"
-                  class="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-default disabled:bg-gray-100"
+                  class="w-full border border-default rounded px-2 py-1 text-sm bg-default disabled:bg-default"
                   placeholder="Max objects"
                 />
               </div>
@@ -242,19 +247,19 @@
         </div>
   
         <!-- Key generation + errors -->
-        <div class="px-5 border-t border-gray-200 pt-3 mt-2 space-y-2">
-          <label class="flex items-center space-x-2 text-xs">
+        <div class="px-5 border-t border-default pt-3 mt-2 mb-4 space-y-2">
+          <label class="flex items-center space-x-2 text-sm">
             <input
               type="checkbox"
               v-model="form.autoGenerateKey"
-              class="h-4 w-4 rounded border-gray-300"
+              class="h-4 w-4 rounded border-default"
             />
             <span>
     {{ isEdit ? "Rotate S3 access key/secret (auto-generate)" : "Auto-generate S3 access key/secret" }}
   </span>
           </label>
   
-          <div v-if="!form.autoGenerateKey" class="space-y-2 text-xs">
+          <div v-if="!form.autoGenerateKey" class="space-y-2 text-sm">
             <div>
               <label class="block mb-1">
                 Access key
@@ -262,7 +267,7 @@
               <input
                 v-model="form.accessKey"
                 type="text"
-                class="w-full border border-gray-300 bg-default rounded px-2 py-1 text-xs"
+                class="w-full border border-default bg-default rounded px-2 py-1 text-sm"
                 placeholder="required when not auto-generating"
               />
             </div>
@@ -273,30 +278,30 @@
               <input
                 v-model="form.secretKey"
                 type="password"
-                class="w-full border border-gray-300 bg-default rounded px-2 py-1 text-xs"
+                class="w-full border border-default bg-default rounded px-2 py-1 text-sm"
                 placeholder="required when not auto-generating"
               />
             </div>
           </div>
   
-          <p class="text-xs text-red-600" v-if="localError">
+          <p class="text-sm text-red-600" v-if="localError">
             {{ localError }}
           </p>
-          <p class="text-xs text-red-600" v-else-if="errorMessage">
+          <p class="text-sm text-red-600" v-else-if="errorMessage">
             {{ errorMessage }}
           </p>
         </div>
   
-        <div class="px-5 py-3 border-t border-gray-200 flex justify-end space-x-2">
+        <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
           <button
-            class="px-3 py-1.5 text-xs rounded border border-gray-300 bg-white hover:bg-gray-50"
+            class="px-3 py-1.5 text-sm rounded border text-default border-default bg-danger hover:bg-danger"
             @click="close"
             :disabled="loading"
           >
             Cancel
           </button>
           <button
-  class="px-3 py-1.5 text-xs rounded border border-green-600 bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
+  class="px-3 py-1.5 text-sm rounded border border-green-600 bg-green-600 text-default hover:bg-green-700 disabled:opacity-60"
   @click="submit"
   :disabled="loading"
 >
@@ -406,6 +411,12 @@ watch(
 function close() {
   emit("update:modelValue", false);
 }
+function isValidEmail(email: string): boolean {
+  const e = email.trim();
+  // Lightweight, practical check (not fully RFC strict)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+}
+
 
 function sizeToKiB(
   value: number | undefined,
@@ -483,6 +494,11 @@ function submit() {
     localError.value = "Username and full name are required.";
     return;
   }
+  const emailTrimmed = form.value.email.trim();
+  if (emailTrimmed && !isValidEmail(emailTrimmed)) {
+    localError.value = "Please enter a valid email address.";
+    return;
+  }
 
   const editing = isEdit.value;
 
@@ -544,7 +560,7 @@ function submit() {
     uid: form.value.uid,
     tenant: form.value.tenant || undefined,
     displayName: form.value.fullName,
-    email: form.value.email || undefined,
+    email: emailTrimmed || undefined,
     maxBuckets: form.value.maxBuckets,
 
     systemUser: form.value.systemUser,
