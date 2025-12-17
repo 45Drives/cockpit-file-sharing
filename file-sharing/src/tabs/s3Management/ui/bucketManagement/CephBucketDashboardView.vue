@@ -120,7 +120,13 @@
   
       <!-- Content -->
 <!-- Content -->
-<div v-else-if="stats" class="space-y-4 m-4">
+<div
+  v-if="usageWarning"
+  class="mx-4 rounded-lg border border-yellow-700/60 bg-yellow-950/40 px-4 py-3 text-sm text-yellow-200"
+>
+  {{ usageWarning }}
+</div>
+<div v-if="stats" class="space-y-4 m-4">
   <!-- Summary cards (traffic / ops) -->
   <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
     <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
@@ -438,7 +444,7 @@
   import { computed, onMounted, ref } from "vue";
   // Adjust import paths to your project layout:
   import type { BucketDashboardStats, BucketUserUsage, BucketDashboardOptions, CephAclRule, S3Bucket, CephBucket } from "../../types/types";
-  import { getBucketDashboardStats, getCephBucketSecurity,getCephBucketTags } from "../../api/s3CliAdapter";
+  import { getBucketDashboardStats , isRgwUsageLogEnabled} from "../../api/s3CliAdapter";
   import { hydrateCephBucket } from "../../bucketBackends/cephBucketBackend";
   import { formatBytes } from "../../bucketBackends/bucketUtils";
   
@@ -465,7 +471,8 @@
   const startDate = ref<string>("");
   const endDate = ref<string>("");
   const showLog = ref(false);
-  
+  const usageWarning = ref<string | null>(null);
+    
   function toDateString(d: Date): string {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -483,29 +490,38 @@
   }
   
   async function load() {
-    loading.value = true;
-    error.value = null;
-  
-    try {
-      const opts: BucketDashboardOptions = {
-        bucket: props.bucketName,
-        uid: uidFilter.value.trim() || undefined,
-        startDate: startDate.value || undefined,
-        endDate: endDate.value || undefined,
-        showLog: showLog.value,
-      };
-  
-      const { stats: s, perUser: u } = await getBucketDashboardStats(opts);
-      stats.value = s;
-      perUser.value = u;
-    } catch (e: any) {
-      error.value = e?.message ?? "Failed to load bucket usage";
-      stats.value = null;
-      perUser.value = [];
-    } finally {
-      loading.value = false;
+  loading.value = true;
+  error.value = null;
+  usageWarning.value = null;
+
+  try {
+    await loadSecurity();
+
+    const enabled = await isRgwUsageLogEnabled();
+    if (enabled === false) {
+      usageWarning.value =
+        "Usage logging is currently disabled. The dashboard may show no data or only historical data from when logging was enabled.";
     }
+
+    const opts: BucketDashboardOptions = {
+      bucket: props.bucketName,
+      uid: uidFilter.value.trim() || undefined,
+      startDate: startDate.value || undefined,
+      endDate: endDate.value || undefined,
+      showLog: showLog.value,
+    };
+
+    const { stats: s, perUser: u } = await getBucketDashboardStats(opts);
+    stats.value = s;
+    perUser.value = u;
+  } catch (e: any) {
+    error.value = e?.message ?? "Failed to load bucket dashboard";
+    stats.value = null;
+    perUser.value = [];
+  } finally {
+    loading.value = false;
   }
+}
   
 const securityLoading = ref(false);
 const securityError = ref<string | null>(null);

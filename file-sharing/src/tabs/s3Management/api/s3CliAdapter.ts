@@ -1557,23 +1557,27 @@ export async function getCephBucketSecurity(
   return { acl, policy };
 }
 
-export async function getCephBucketTags(
-  bucketName: string
-): Promise<Record<string, string> | undefined> {
-  const tagJson = await awsJsonOrNullWithDashboardCreds([
-    "s3api",
-    "get-bucket-tagging",
-    "--bucket",
-    bucketName,
-  ]);
+export async function isRgwUsageLogEnabled(): Promise<boolean | null> {
+  return rgwLimit(async () => {
+    const cmd = new Command(["ceph", "config", "get", "client.rgw", "rgw_enable_usage_log"], {
+      superuser: "try",
+    });
 
-  const set = tagJson?.TagSet;
-  if (!Array.isArray(set) || set.length === 0) return undefined;
+    try {
+      const proc = await unwrap(server.execute(cmd));
+      const stdout =
+        typeof (proc as any).getStdout === "function"
+          ? (proc as any).getStdout()
+          : ((proc as any).stdout ?? "").toString();
 
-  const out: Record<string, string> = {};
-  for (const t of set) {
-    if (!t?.Key || !t?.Value) continue;
-    out[String(t.Key)] = String(t.Value);
-  }
-  return Object.keys(out).length ? out : undefined;
+      const text = (stdout ?? "").toString().trim().toLowerCase();
+
+      if (text === "true") return true;
+      if (text === "false") return false;
+      return null;
+    } catch (state: any) {
+      return null;
+    }
+  });
 }
+
