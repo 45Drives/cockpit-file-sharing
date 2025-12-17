@@ -29,7 +29,7 @@
               <th scope="col">Group Name</th>
               <th scope="col" class="flex flex-row justify-end">
                 <span class="sr-only">Delete</span>
-                <button @click="showEditor = !showEditor">
+                <button @click="showEditor = !showEditor" :disabled="!canCreate">
                   <PlusIcon class="size-icon icon-default" />
                 </button>
               </th>
@@ -52,7 +52,7 @@
 </template>
 <script setup lang="ts">
 import { CardContainer, wrapActions, Table } from "@45drives/houston-common-ui";
-import { inject, ref, type Ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import { PlusIcon } from "@heroicons/vue/24/solid";
 import type { ResultAsync } from "neverthrow";
 import { okAsync } from "neverthrow";
@@ -78,6 +78,9 @@ const pendingFreedPaths = ref<Set<string>>(new Set());
 const rememberFreed = (paths: string[]) => {
   paths.forEach((p) => pendingFreedPaths.value.add(p));
 };
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+const canCreate = computed(() => canEditIscsi.value);
 
 const refreshTable = () => {
   return driver.andThen((d) =>

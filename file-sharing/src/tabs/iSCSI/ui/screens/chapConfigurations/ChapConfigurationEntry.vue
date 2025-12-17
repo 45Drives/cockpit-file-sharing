@@ -9,7 +9,7 @@
     </td>
     <td>{{ config.chapType }}</td>
     <td class="button-group-row justify-end">
-      <button @click="promptDeletion">
+      <button @click="promptDeletion" :disabled="!canCreate">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
@@ -25,7 +25,7 @@ import { ProcessError } from "@45drives/houston-common-lib";
 import { confirmBeforeAction, wrapActions } from "@45drives/houston-common-ui";
 import { EyeIcon, TrashIcon } from "@heroicons/vue/20/solid";
 import { ResultAsync } from "neverthrow";
-import { computed, inject, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 
 const props = defineProps<{ target: Target; config: CHAPConfiguration }>();
 
@@ -37,6 +37,9 @@ const showPassword = ref(false);
 const displayedPassword = computed(() => {
   return showPassword.value ? props.config.password : "****************";
 });
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+  if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+  const canCreate = computed(() => canEditIscsi.value);
 
 const deleteEntry = () => {
   return driver

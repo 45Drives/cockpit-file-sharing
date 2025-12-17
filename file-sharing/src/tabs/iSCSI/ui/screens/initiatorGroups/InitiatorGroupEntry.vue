@@ -6,11 +6,11 @@
         <span class="sr-only">Edit</span>
         <WrenchIcon class="size-icon icon-default" />
       </button>
-      <button v-if="!useUserSettings().value.iscsi.clusteredServer" @click="promptDeletion">
+      <button v-if="!useUserSettings().value.iscsi.clusteredServer" @click="promptDeletion" >
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
-      <button @click="promptDeletion">
+      <button @click="promptDeletion" :disabled="!canCreate">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import { TrashIcon, WrenchIcon } from "@heroicons/vue/20/solid";
 import { wrapActions, confirmBeforeAction } from "@45drives/houston-common-ui";
-import { inject, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import { Disclosure } from "@45drives/houston-common-ui";
 import { ResultAsync } from "neverthrow";
 import { ProcessError } from "@45drives/houston-common-lib";
@@ -49,6 +49,9 @@ const emit = defineEmits(["deleteEntry", "groupWillDelete"]);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 const showEditor = ref(false);
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+const canCreate = computed(() => canEditIscsi.value);
 
 const deleteEntry = () => {
   return driver
