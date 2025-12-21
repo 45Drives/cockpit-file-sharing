@@ -253,6 +253,7 @@ import type { RgwGateway } from "../types/types";
   
     try {
       const list = await listRgwGateways();
+      
       gateways.value = list;
       if (list.length === 0) {
         selectedGatewayId.value = null;

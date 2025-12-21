@@ -1,24 +1,10 @@
 // cephRgwCliAdapter.ts
-import type {
-  CephAclRule,
-  RgwGateway,
-  RgwUser,
-  RgwDashboardS3Creds,
-  CreatedRgwUserKeys,
-  CreateRgwUserOptions,
-  RgwUserDetails,
-  RgwUserKey,
-  RgwUserCap,
-  CephBucketUpdatePayload,
-  CephAclPermission,
-  BucketDashboardStats,
-  BucketUserUsage,
-  BucketDashboardOptions,
-  BucketVersioningStatus,
-  CephBucket,
+import type {CephAclRule,RgwGateway,RgwUser,RgwDashboardS3Creds,CreatedRgwUserKeys,CreateRgwUserOptions,RgwUserDetails,RgwUserKey,RgwUserCap,CephBucketUpdatePayload,
+  BucketDashboardStats,BucketUserUsage,BucketDashboardOptions,BucketVersioningStatus,CephBucket,
 } from "../types/types";
 import { legacy, server, Command, unwrap } from "../../../../../houston-common/houston-common-lib";
 import pLimit from "p-limit";
+
 
 const rgwLimit = pLimit(6);
 const { errorString } = legacy;
@@ -26,8 +12,10 @@ type CephS3Connection = {
   endpointUrl: string;
   region: string;
 };
+
 let cachedCephS3Conn: CephS3Connection | null = null;
-let cachedDashboardCreds: RgwDashboardS3Creds | null = null;
+type RgwS3Creds = { accessKey: string; secretKey: string };
+const cachedRgwCredsByUid = new Map<string, RgwS3Creds>();
 
 export async function rgwJson(subArgs: string[]): Promise<any> {
   return rgwLimit(async () => {
@@ -63,6 +51,7 @@ export async function listBucketsFromCeph(): Promise<CephBucket[]> {
 export async function getBucketObjectStats(
   bucketName: string
 ): Promise<{ objectCount: number; sizeBytes: number }> {
+  console.log("bukcet name getbucketobjects", bucketName)
   const stats = await rgwJson(["bucket", "stats", "--bucket", bucketName]);
 
   const usage = stats.usage || {};
@@ -79,6 +68,8 @@ export async function isCephRgwHealthy(): Promise<boolean> {
   try {
     // Any lightweight admin call that fails fast if RGW is unreachable/unauthorized
     await rgwJson(["zonegroup", "get"]);
+    await ensureRgwUserExists({uid: "houstonUi",displayName: "Houston UI",systemUser: false,
+    });
     return true;
   } catch (e) {
     console.warn("Ceph RGW health check failed:", e);
@@ -99,63 +90,127 @@ export async function deleteBucketFromCeph(
   await rgwJson(args);
 }
 
-export async function listRgwGateways(): Promise<RgwGateway[]> {
-  // `ceph report` contains the servicemap with RGW daemons and metadata.
+async function execText(
+  args: string[],
+  superuser: "try" | "required" | "none" = "try"
+): Promise<string> {
+  const cmd = new Command(args, { superuser });
+
+  try {
+    const proc = await unwrap(server.execute(cmd));
+    const stdout =
+      typeof (proc as any).getStdout === "function"
+        ? (proc as any).getStdout()
+        : ((proc as any).stdout ?? "").toString();
+
+    return (stdout ?? "").toString().trim();
+  } catch (state: any) {
+    console.error("execText error for", args, state);
+    throw new Error(errorString(state));
+  }
+}
+
+function parseRgwFrontend(frontendConfig: string): { host?: string; port: number } | null {
+  // Matches: "beast endpoint=192.168.85.64:8080"
+  const endpoint = frontendConfig.match(/\bendpoint=(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})\b/);
+  if (endpoint && endpoint[1] && endpoint[2]) {
+    const port = Number(endpoint[2]);
+    if (Number.isFinite(port) && port > 0 && port < 65536) return { host: endpoint[1], port };
+  }
+
+  // Matches: "beast port=192.168.45.230:8080"
+  const portIp = frontendConfig.match(/\bport=(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})\b/);
+  if (portIp && portIp[1] && portIp[2]) {
+    const port = Number(portIp[2]);
+    if (Number.isFinite(port) && port > 0 && port < 65536) return { host: portIp[1], port };
+  }
+
+  // Matches: "beast port=8080"
+  const portOnly = frontendConfig.match(/\bport=(\d{1,5})\b/);
+  if (portOnly && portOnly[1]) {
+    const port = Number(portOnly[1]);
+    if (Number.isFinite(port) && port > 0 && port < 65536) return { port };
+  }
+
+  return null;
+}
+
+async function resolveIpv4ViaGetent(hostname: string): Promise<string | null> {
+  const h = String(hostname ?? "").trim();
+  if (!h) return null;
+
+  const ip = await execText([
+    "bash",
+    "-lc",
+    `getent ahostsv4 "${h.replace(/"/g, '\\"')}" | awk 'NR==1{print $1}'`,
+  ]);
+
+  return ip ? ip : null;
+}
+
+async function httpProbeViaCurl(endpointUrl: string, timeoutSec = 1): Promise<boolean> {
+  const url = String(endpointUrl ?? "").trim();
+  if (!url) return false;
+
+  const rc = await execText([
+    "bash",
+    "-lc",
+    `curl -sS -m ${timeoutSec} -o /dev/null "${url}/" >/dev/null 2>&1; echo $?`,
+  ]);
+
+  return rc === "0";
+}
+
+export async function firstWorkingRgwGateway(): Promise<RgwGateway | null> {
   const report = await cephJson(["report"]);
 
   const svcMap = report.servicemap || report.service_map || {};
   const rgwSvc = svcMap.services?.rgw || svcMap["rgw"] || {};
   const daemons = rgwSvc.daemons || rgwSvc["daemons"] || {};
 
-  const gateways: RgwGateway[] = [];
-
   for (const [id, rawDaemon] of Object.entries(daemons)) {
+    if (id === "summary") continue;
+
     const daemon: any = rawDaemon;
     const meta: any = daemon.metadata || {};
 
-    const hostname: string = meta.hostname || id.split(".")[0] || id;
+    const hostname = String(meta.hostname ?? "").trim();
+    if (!hostname) continue;
 
-    const frontendType: string = meta["frontend_type#0"] || "";
     const frontendConfig: string = meta["frontend_config#0"] || "";
+    const parsed = parseRgwFrontend(frontendConfig);
+    if (!parsed) continue;
 
-    // Parse "endpoint=IP:PORT" from e.g. "beast endpoint=192.168.85.65:8080"
-    let endpoint = "";
-    const m = frontendConfig.match(/endpoint=([^\s,]+)/);
-    if (m) {
-      endpoint = m[1];
-    }
-
-    // Zone / zonegroup; fall back to "default" if not present
     const zonegroup: string = meta.zonegroup || meta["rgw_zonegroup"] || "default";
-
     const zone: string = meta.zone || meta["rgw_zone"] || zonegroup || "default";
 
-    // Heuristic for "default" gateway
     const isDefault: boolean =
       !!meta["rgw_zone_default"] ||
       !!meta["rgw_zonegroup_default"] ||
       (zonegroup === "default" && zone === "default");
 
-    // If there is no endpoint at all, you may want to skip this daemon
-    if (!endpoint && !frontendConfig) {
-      continue;
+    let host = parsed.host;
+    const port = parsed.port;
+
+    if (!host) {
+      const ip = await resolveIpv4ViaGetent(hostname);
+      if (!ip) continue;
+      host = ip;
     }
 
-    gateways.push({ id, hostname, zonegroup, zone, endpoint, isDefault });
+    const endpoint = `http://${host}:${port}`;
+    const ok = await httpProbeViaCurl(endpoint, 1);
+    if (!ok) continue;
 
-    console.log("RGW gateway from report:", {
-      id,
-      hostname,
-      zonegroup,
-      zone,
-      frontendType,
-      frontendConfig,
-      endpoint,
-      isDefault,
-    });
+    return { id, hostname, zonegroup, zone, endpoint, isDefault };
   }
 
-  return gateways;
+  return null;
+}
+
+export async function listRgwGateways(): Promise<RgwGateway[]> {
+  const gw = await firstWorkingRgwGateway();
+  return gw ? [gw] : [];
 }
 
 async function cephJson(subArgs: string[]): Promise<any> {
@@ -219,7 +274,7 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
 
   // Prefer *_actual fields first so “used/free” matches quota enforcement.
   const extractUsageFromUserStats = (
-    stats: any,
+    stats: any
   ): { usedSizeKb: number | null; usedObjects: number | null } => {
     const candidates = [
       stats,
@@ -308,7 +363,6 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
 
         const quotaRemainingSizeKb = computeRemainingOrNull(usedSizeKb, quotaMaxSizeKb);
         const quotaRemainingObjects = computeRemainingOrNull(usedObjects, quotaMaxObjects);
-
         users.push({
           uid,
           tenant,
@@ -338,9 +392,7 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
     }
   }
 
-  await Promise.all(
-    Array.from({ length: Math.min(CONCURRENCY, uids.length) }, () => worker()),
-  );
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, uids.length) }, () => worker()));
 
   // Keep original list order
   const key = (u: RgwUser) => (u.tenant ? `${u.tenant}$${u.uid}` : u.uid);
@@ -349,54 +401,75 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
   return users;
 }
 
-
 export async function listRGWUserNames(): Promise<string[]> {
   const users: string[] = await rgwJson(["user", "list"]);
   return users;
 }
 
-async function getDashboardS3Creds(): Promise<RgwDashboardS3Creds> {
-  if (cachedDashboardCreds) return cachedDashboardCreds;
 
-  const info = await rgwJson(["user", "info", "--uid", "dashboard"]);
+async function getRgwUserS3Creds(uid: string): Promise<RgwS3Creds> {
+  const key = (uid || "").trim();
+  if (!key) throw new Error("getRgwUserS3Creds: uid is required");
 
-  const keys = info.keys || info.s3_keys || [];
+  const cached = cachedRgwCredsByUid.get(key);
+  if (cached) return cached;
+
+  const info = await rgwJson(["user", "info", "--uid", key]);
+
+  const keys = (info as any).keys || (info as any).s3_keys || [];
   if (!Array.isArray(keys) || keys.length === 0) {
-    throw new Error("No S3 keys found for dashboard user");
+    throw new Error(`No S3 keys found for RGW user: ${key}`);
   }
 
   const first = keys[0];
 
-  const accessKey = first.access_key || first.accessKey;
-  const secretKey = first.secret_key || first.secretKey;
+  const accessKey = (first as any).access_key || (first as any).accessKey;
+  const secretKey = (first as any).secret_key || (first as any).secretKey;
 
   if (!accessKey || !secretKey) {
-    throw new Error("Dashboard user S3 keys are missing access/secret key fields");
+    throw new Error(`RGW user ${key} S3 keys are missing access/secret key fields`);
   }
 
-  cachedDashboardCreds = { accessKey, secretKey };
-  return cachedDashboardCreds;
+  const creds: RgwS3Creds = { accessKey, secretKey };
+  cachedRgwCredsByUid.set(key, creds);
+  return creds;
 }
+
+// Backwards-compatible wrappers (optional, keep call sites unchanged if you want)
+async function getDashboardS3Creds(): Promise<RgwS3Creds> {
+  return getRgwUserS3Creds("dashboard");
+}
+
+async function getHoustonUiS3Creds(): Promise<RgwS3Creds> {
+  return getRgwUserS3Creds("houstonUi");
+}
+
+function shQuote(s: string): string {
+  // Safe for bash: wraps in single quotes and escapes any embedded single quotes
+  return `'${String(s).replace(/'/g, `'\\''`)}'`;
+}
+
 async function runAwsWithDashboardCreds(
   args: string[],
   endpointUrl: string,
   opts?: {
-    // Use for cases like RGW create-bucket returning non-XML where awscli fails to parse
     verifyAfterError?: () => Promise<void>;
   }
 ): Promise<any> {
-  const { accessKey, secretKey } = await getDashboardS3Creds();
+  const isCreateBucket = args.length >= 2 && args[0] === "s3api" && args[1] === "create-bucket";
+
+  const creds = isCreateBucket
+    ? await getHoustonUiS3Creds() // you provide this
+    : await getDashboardS3Creds();
 
   const cmdLine =
-    `AWS_ACCESS_KEY_ID='${accessKey}' ` +
-    `AWS_SECRET_ACCESS_KEY='${secretKey}' ` +
-    `AWS_DEFAULT_REGION='default' ` +
-    `AWS_DEFAULT_OUTPUT='json' ` +
-    `aws --output json --endpoint-url '${endpointUrl}' ` +
-    args.map((a) => `'${a}'`).join(" ");
+    `AWS_ACCESS_KEY_ID=${shQuote(creds.accessKey)} ` +
+    `AWS_SECRET_ACCESS_KEY=${shQuote(creds.secretKey)} ` +
+    `AWS_DEFAULT_OUTPUT=${shQuote("json")} ` +
+    `aws --output json --endpoint-url ${shQuote(endpointUrl)} ` +
+    args.map(shQuote).join(" ");
 
   const cmd = new Command(["bash", "-lc", cmdLine], { superuser: "try" });
-  console.log("cmd ", cmd);
 
   try {
     const proc = await unwrap(server.execute(cmd));
@@ -407,7 +480,6 @@ async function runAwsWithDashboardCreds(
 
     const text = (stdout ?? "").toString().trim();
     if (text) {
-      console.log("runAwsWithDashboardCreds stdout =", text);
       return text;
     }
     return;
@@ -415,26 +487,12 @@ async function runAwsWithDashboardCreds(
     const stderr =
       typeof state?.getStderr === "function" ? state.getStderr() : String(state.stderr ?? "");
 
-    const isCreateBucket = args.length >= 2 && args[0] === "s3api" && args[1] === "create-bucket";
-
-    const looksLikeXmlParseIssue =
-      typeof stderr === "string" &&
-      stderr.includes("Unable to parse response") &&
-      (stderr.includes("invalid XML received") ||
-        stderr.includes("not well-formed") ||
-        stderr.includes("invalid token"));
-
-    // For create-bucket, RGW can succeed but return a body awscli can't parse.
-    // If we have a verifier and it succeeds, treat as success.
-    if (isCreateBucket && looksLikeXmlParseIssue && opts?.verifyAfterError) {
+    if (isCreateBucket && opts?.verifyAfterError) {
       try {
-        console.warn(
-          "runAwsWithDashboardCreds: awscli parse error on create-bucket; verifying via head-bucket"
-        );
         await opts.verifyAfterError();
-        return; // soft success
-      } catch (verifyErr) {
-        console.error("runAwsWithDashboardCreds: verification failed after parse error", verifyErr);
+        return;
+      } catch {
+        // verification failed; throw original error below
       }
     }
 
@@ -444,47 +502,78 @@ async function runAwsWithDashboardCreds(
   }
 }
 
-async function ensureBucketExists(bucketName: string, endpointUrl: string): Promise<void> {
-  try {
-    await runAwsWithDashboardCreds(["s3api", "head-bucket", "--bucket", bucketName], endpointUrl);
-  } catch (err) {
-    // If head-bucket fails, treat this as a real failure:
-    // either create-bucket genuinely failed, or there is a connectivity/perm issue.
-    throw new Error(
-      `Bucket "${bucketName}" does not appear to exist after create-bucket: ${String(err)}`
-    );
-  }
-}
+
 
 export async function changeRgwBucketOwner(
   bucketName: string,
   newOwnerFromList: string // "uid" or "tenant$uid"
 ): Promise<void> {
+  const rawBucketName = (bucketName || "").trim();
+  if (!rawBucketName) throw new Error("changeRgwBucketOwner: bucketName is required");
+
   // 1) bucket context
-  const stats = await rgwJson(["bucket", "stats", "--bucket", bucketName]);
+  const stats = await rgwJson(["bucket", "stats", "--bucket", rawBucketName]);
+
   const bucketId: string | undefined = stats.id || stats.bucket_id || stats.bucket?.id;
-  const bucketTenant: string | undefined = (stats.tenant ?? "").trim() || undefined;
+  const sourceTenant: string = String(stats.tenant ?? "").trim(); // "" means non-tenant bucket
 
-  // 2) user context
-  const { tenant: userTenant, uid } = splitTenantFromUid(newOwnerFromList);
+  // 2) new owner context ("uid" or "tenant$uid")
+  const { tenant: targetTenant, uid: targetUid } = splitTenantFromUid(newOwnerFromList);
+  if (!targetUid) throw new Error("changeRgwBucketOwner: new owner uid is required");
 
-  // 3) validate user exists (tenant-aware)
-  const userInfoArgs = ["user", "info", "--uid", uid];
-  if (userTenant) userInfoArgs.push("--tenant", userTenant);
-  await rgwJson(userInfoArgs);
-  // 4) link bucket: tenant must be the BUCKET tenant
-  const linkArgs = ["bucket", "link", "--bucket", bucketName, "--uid", uid];
-  if (bucketTenant) linkArgs.push("--tenant", bucketTenant);
+  const targetUserId = targetTenant ? `${targetTenant}$${targetUid}` : targetUid;
+
+  // 3) LINK (docs-style)
+  // - non-tenant bucket -> tenanted user: use /BUCKET
+  // - otherwise: use BUCKET (or tenant/bucket if the bucket is already tenanted)
+  const linkBucketRef =
+    !sourceTenant && !!targetTenant
+      ? `/${rawBucketName}`
+      : sourceTenant
+        ? `${sourceTenant}/${rawBucketName}`
+        : rawBucketName;
+
+  const linkArgs = ["bucket", "link", "--bucket", linkBucketRef,  "--uid", targetUserId,];
   if (bucketId) linkArgs.push("--bucket-id", bucketId);
 
+  console.log("changeRgwBucketOwner: link", {
+    rawBucketName,
+    sourceTenant,
+    targetTenant: targetTenant ?? "",
+    targetUserId,
+    bucketId: bucketId ?? "",
+    cmd: `radosgw-admin ${linkArgs.join(" ")}`,
+  });
+
   await rgwJson(linkArgs);
+
+  // 4) CHOWN (docs-style)
+  // - if target is tenanted: tenant/bucket
+  // - else: bucket
+  const chownBucketRef = targetTenant ? `${targetTenant}/${rawBucketName}` : rawBucketName;
+
+  const chownArgs = ["bucket", "chown",  "--bucket", chownBucketRef,"--uid", targetUserId,];
+  if (bucketId) chownArgs.push("--bucket-id", bucketId);
+
+  console.log("changeRgwBucketOwner: chown", {
+    rawBucketName,
+    sourceTenant,
+    chownBucketRef,
+    targetTenant: targetTenant ?? "",
+    targetUserId,
+    bucketId: bucketId ?? "",
+    cmd: `radosgw-admin ${chownArgs.join(" ")}`,
+  });
+
+  await rgwJson(chownArgs);
 }
+
 
 export async function createCephBucketViaS3(params: {
   bucketName: string;
   endpoint: string;
+  tenant?:string
 
-  // extra config
   tags?: Record<string, string>;
   encryptionMode?: "none" | "sse-s3" | "kms";
   kmsKeyId?: string;
@@ -496,56 +585,49 @@ export async function createCephBucketViaS3(params: {
   objectLockRetentionDays?: number;
   owner?: string;
 }): Promise<void> {
+  const log = (...a: any[]) => console.log("[createCephBucketViaS3]", ...a);
+
   const endpointUrl = params.endpoint.startsWith("http")
     ? params.endpoint
     : `http://${params.endpoint}`;
 
+
   const cannedAcl = deriveCannedAclFromRules(params.aclRules);
 
-  // 1) create bucket (optionally with object-lock flag and canned ACL)
+  const houstonCreds = await getRgwUserS3Creds("houstonUi");
+  const dashboardCreds = await getRgwUserS3Creds("dashboard");
+
+  // 1) create bucket using houstonUi creds
   const createArgs = ["s3api", "create-bucket", "--bucket", params.bucketName];
 
-  if (cannedAcl && cannedAcl !== "private") {
-    // private is the default; only send if we actually want public/authenticated
-    createArgs.push("--acl", cannedAcl);
-  }
+  if (cannedAcl && cannedAcl !== "private") createArgs.push("--acl", cannedAcl);
+  if (params.objectLockEnabled) createArgs.push("--object-lock-enabled-for-bucket");
 
-  if (params.objectLockEnabled) {
-    createArgs.push("--object-lock-enabled-for-bucket");
-  }
+  await runAwsWithCreds(createArgs, endpointUrl, houstonCreds);
 
-  await runAwsWithDashboardCreds(createArgs, endpointUrl);
-  await ensureBucketExists(params.bucketName, endpointUrl);
 
-  // 2) tags
+  // 2) tags using dashboard creds
   if (params.tags && Object.keys(params.tags).length) {
-    const TagSet = Object.entries(params.tags).map(([Key, Value]) => ({
-      Key,
-      Value,
-    }));
-
+    const TagSet = Object.entries(params.tags).map(([Key, Value]) => ({ Key, Value }));
     const taggingJson = JSON.stringify({ TagSet });
 
-    await runAwsWithDashboardCreds(
+    log("put-bucket-tagging", { tagCount: TagSet.length });
+    await runAwsWithCreds(
       ["s3api", "put-bucket-tagging", "--bucket", params.bucketName, "--tagging", taggingJson],
-      endpointUrl
+      endpointUrl,
+      dashboardCreds
     );
+  } else {
   }
 
-  // 3) encryption
+  // 3) encryption using dashboard creds
   if (params.encryptionMode && params.encryptionMode !== "none") {
     const rules: any[] = [];
 
     if (params.encryptionMode === "sse-s3") {
-      rules.push({
-        ApplyServerSideEncryptionByDefault: {
-          SSEAlgorithm: "AES256",
-        },
-      });
+      rules.push({ ApplyServerSideEncryptionByDefault: { SSEAlgorithm: "AES256" } });
     } else if (params.encryptionMode === "kms") {
-      if (!params.kmsKeyId) {
-        throw new Error("KMS encryption selected but no kmsKeyId provided");
-      }
+      if (!params.kmsKeyId) throw new Error("KMS encryption selected but no kmsKeyId provided");
       rules.push({
         ApplyServerSideEncryptionByDefault: {
           SSEAlgorithm: "aws:kms",
@@ -554,11 +636,10 @@ export async function createCephBucketViaS3(params: {
       });
     }
 
-    const encryptionJson = JSON.stringify({
-      Rules: rules,
-    });
+    const encryptionJson = JSON.stringify({ Rules: rules });
 
-    await runAwsWithDashboardCreds(
+    log("put-bucket-encryption", { mode: params.encryptionMode });
+    await runAwsWithCreds(
       [
         "s3api",
         "put-bucket-encryption",
@@ -567,30 +648,35 @@ export async function createCephBucketViaS3(params: {
         "--server-side-encryption-configuration",
         encryptionJson,
       ],
-      endpointUrl
+      endpointUrl,
+      dashboardCreds
     );
-  }
-  console.log("policy type", params.bucketPolicy);
-  // 5) bucket policy
-  if (params.bucketPolicy !== undefined) {
-    const text = (params.bucketPolicy ?? "").trim();
-
-    if (text) {
-      console.log("bpolicy text ", text);
-      await runAwsWithDashboardCreds(
-        ["s3api", "put-bucket-policy", "--bucket", params.bucketName, "--policy", text],
-        endpointUrl
-      );
-    } else {
-      console.log("deleting bukcet policy");
-      await runAwsWithDashboardCreds(
-        ["s3api", "delete-bucket-policy", "--bucket", params.bucketName],
-        endpointUrl
-      );
-    }
+  } else {
+    log("skipping encryption");
   }
 
-  // 6) object lock configuration (if enabled)
+  // 5) bucket policy using dashboard creds
+// 5) bucket policy using dashboard creds (SigV4; supports tenant:bucket)
+if (params.bucketPolicy !== undefined) {
+  const text = (params.bucketPolicy ?? "").trim();
+
+  const creds: CephCreds = {
+    accessKeyId: dashboardCreds.accessKey,
+    secretAccessKey: dashboardCreds.secretKey,
+  };
+
+  if (text) {
+    
+    await cephPutBucketPolicy(endpointUrl, creds, params.bucketName, text);
+  } else {
+    await cephDeleteBucketPolicy(endpointUrl, creds, params.bucketName);
+  }
+}
+else {
+    log("skipping bucket policy (undefined)");
+  }
+
+  // 6) object lock configuration using dashboard creds
   if (params.objectLockEnabled && params.objectLockMode && params.objectLockRetentionDays) {
     const lockConfig = JSON.stringify({
       ObjectLockEnabled: "Enabled",
@@ -602,7 +688,12 @@ export async function createCephBucketViaS3(params: {
       },
     });
 
-    await runAwsWithDashboardCreds(
+    log("put-object-lock-configuration", {
+      mode: params.objectLockMode,
+      days: params.objectLockRetentionDays,
+    });
+
+    await runAwsWithCreds(
       [
         "s3api",
         "put-object-lock-configuration",
@@ -611,15 +702,64 @@ export async function createCephBucketViaS3(params: {
         "--object-lock-configuration",
         lockConfig,
       ],
-      endpointUrl
+      endpointUrl,
+      dashboardCreds
     );
+  } else {
+    log("skipping object lock config");
   }
 
   // 7) finally, change bucket owner via radosgw-admin
   if (params.owner && params.owner.trim()) {
-    await changeRgwBucketOwner(params.bucketName, params.owner.trim());
+    const owner = params.owner.trim();
+    log("changeRgwBucketOwner", { owner });
+    await changeRgwBucketOwner(params.bucketName, owner);
+  } else {
+    log("skipping owner change");
+  }
+
+  log("done");
+}
+
+
+async function runAwsWithCreds(
+  args: string[],
+  endpointUrl: string,
+  creds: RgwS3Creds,
+  opts?: { verifyAfterError?: () => Promise<void> }
+): Promise<any> {
+  const cmdLine =
+    `AWS_ACCESS_KEY_ID=${shQuote(creds.accessKey)} ` +
+    `AWS_SECRET_ACCESS_KEY=${shQuote(creds.secretKey)} ` +
+    `AWS_DEFAULT_OUTPUT=${shQuote("json")} ` +
+    `aws --output json --endpoint-url ${shQuote(endpointUrl)} ` +
+    args.map(shQuote).join(" ");
+
+  const cmd = new Command(["bash", "-lc", cmdLine], { superuser: "try" });
+
+  try {
+    const proc = await unwrap(server.execute(cmd));
+    const stdout =
+      typeof (proc as any).getStdout === "function"
+        ? (proc as any).getStdout()
+        : ((proc as any).stdout ?? "").toString();
+
+    const text = (stdout ?? "").toString().trim();
+    return text || undefined;
+  } catch (state: any) {
+    if (opts?.verifyAfterError) {
+      try {
+        await opts.verifyAfterError();
+        return;
+      } catch {
+        // fall through
+      }
+    }
+    throw new Error(errorString(state));
   }
 }
+
+
 
 async function runRgwAdmin(args: string[]): Promise<{ stdout: string; stderr: string }> {
   const cmd = new Command(["radosgw-admin", ...args], { superuser: "try" });
@@ -652,17 +792,7 @@ async function runRgwAdmin(args: string[]): Promise<{ stdout: string; stderr: st
  * 1) user create
  */
 async function rgwUserCreateBase(opts: CreateRgwUserOptions): Promise<CreatedRgwUserKeys> {
-  const {
-    uid,
-    tenant,
-    displayName,
-    email,
-    maxBuckets,
-    systemUser,
-    autoGenerateKey,
-    accessKey,
-    secretKey,
-    suspended,
+  const {uid,tenant,displayName,email,maxBuckets,systemUser,autoGenerateKey,accessKey,secretKey,suspended,
   } = opts;
 
   if (!uid) throw new Error("rgwUserCreateBase: uid is required");
@@ -731,12 +861,7 @@ async function rgwUserCreateBase(opts: CreateRgwUserOptions): Promise<CreatedRgw
 /**
  * 2) user-level quota (quota-scope=user)
  */
-async function rgwSetUserQuota(opts: {
-  uid: string;
-  tenant?: string;
-  enabled: boolean;
-  maxSizeKb?: number;
-  maxObjects?: number;
+async function rgwSetUserQuota(opts: {uid: string;tenant?: string;enabled: boolean;maxSizeKb?: number;maxObjects?: number;
 }): Promise<void> {
   const { uid, tenant, enabled, maxSizeKb, maxObjects } = opts;
   if (!uid) throw new Error("rgwSetUserQuota: uid is required");
@@ -761,12 +886,7 @@ async function rgwSetUserQuota(opts: {
   await runRgwAdmin(enableArgs);
 }
 
-async function rgwSetBucketQuota(opts: {
-  uid: string;
-  tenant?: string;
-  enabled: boolean;
-  maxSizeKb?: number;
-  maxObjects?: number;
+async function rgwSetBucketQuota(opts: {uid: string;tenant?: string;enabled: boolean;maxSizeKb?: number;maxObjects?: number;
 }): Promise<void> {
   const { uid, tenant, enabled, maxSizeKb, maxObjects } = opts;
   if (!uid) throw new Error("rgwSetBucketQuota: uid is required");
@@ -792,33 +912,15 @@ async function rgwSetBucketQuota(opts: {
 }
 
 export async function createRgwUser(opts: CreateRgwUserOptions): Promise<CreatedRgwUserKeys> {
-  const {
-    uid,
-    tenant,
-    userQuotaEnabled,
-    userQuotaMaxSizeKb,
-    userQuotaMaxObjects,
-    bucketQuotaEnabled,
-    bucketQuotaMaxSizeKb,
-    bucketQuotaMaxObjects,
+  const {uid,tenant,userQuotaEnabled,userQuotaMaxSizeKb,userQuotaMaxObjects,bucketQuotaEnabled,bucketQuotaMaxSizeKb,bucketQuotaMaxObjects,
   } = opts;
 
   const keys = await rgwUserCreateBase(opts);
 
-  await rgwSetUserQuota({
-    uid,
-    tenant,
-    enabled: !!userQuotaEnabled,
-    maxSizeKb: userQuotaMaxSizeKb,
-    maxObjects: userQuotaMaxObjects,
+  await rgwSetUserQuota({uid,tenant,enabled: !!userQuotaEnabled,maxSizeKb: userQuotaMaxSizeKb,maxObjects: userQuotaMaxObjects,
   });
 
-  await rgwSetBucketQuota({
-    uid,
-    tenant,
-    enabled: !!bucketQuotaEnabled,
-    maxSizeKb: bucketQuotaMaxSizeKb,
-    maxObjects: bucketQuotaMaxObjects,
+  await rgwSetBucketQuota({uid,tenant,enabled: !!bucketQuotaEnabled,maxSizeKb: bucketQuotaMaxSizeKb,maxObjects: bucketQuotaMaxObjects,
   });
 
   return keys;
@@ -848,23 +950,7 @@ export async function deleteRgwUser(
 }
 
 export async function updateRgwUser(opts: CreateRgwUserOptions): Promise<void> {
-  const {
-    uid,
-    tenant,
-    displayName,
-    email,
-    maxBuckets,
-    systemUser,
-    suspended,
-    userQuotaEnabled,
-    userQuotaMaxSizeKb,
-    userQuotaMaxObjects,
-    bucketQuotaEnabled,
-    bucketQuotaMaxSizeKb,
-    bucketQuotaMaxObjects,
-    autoGenerateKey,
-    accessKey,
-    secretKey,
+  const {uid,tenant,displayName,email,maxBuckets,systemUser,suspended,userQuotaEnabled,userQuotaMaxSizeKb,userQuotaMaxObjects,bucketQuotaEnabled,bucketQuotaMaxSizeKb,bucketQuotaMaxObjects,autoGenerateKey,accessKey,secretKey,
   } = opts;
 
   if (!uid) {
@@ -909,26 +995,13 @@ export async function updateRgwUser(opts: CreateRgwUserOptions): Promise<void> {
     await runRgwAdmin(suspendArgs);
   }
 
-  await rgwSetUserQuota({
-    uid,
-    tenant,
-    enabled: !!userQuotaEnabled,
-    maxSizeKb: userQuotaMaxSizeKb,
-    maxObjects: userQuotaMaxObjects,
+  await rgwSetUserQuota({uid,tenant,enabled: !!userQuotaEnabled,maxSizeKb: userQuotaMaxSizeKb,maxObjects: userQuotaMaxObjects,
   });
 
-  await rgwSetBucketQuota({
-    uid,
-    tenant,
-    enabled: !!bucketQuotaEnabled,
-    maxSizeKb: bucketQuotaMaxSizeKb,
-    maxObjects: bucketQuotaMaxObjects,
+  await rgwSetBucketQuota({uid,tenant,enabled: !!bucketQuotaEnabled,maxSizeKb: bucketQuotaMaxSizeKb,maxObjects: bucketQuotaMaxObjects,
   });
 }
-export async function getRgwUserInfo(
-  uid: string,
-  tenant?: string
-): Promise<RgwUserDetails> {
+export async function getRgwUserInfo(uid: string, tenant?: string): Promise<RgwUserDetails> {
   if (!uid) throw new Error("getRgwUserInfo: uid is required");
 
   const fullUid = tenant ? `${tenant}$${uid}` : uid;
@@ -990,291 +1063,19 @@ export async function getRgwUserInfo(
   return details;
 }
 
-
 function splitTenantFromUid(fullUid: string): { tenant?: string; uid: string } {
   const idx = fullUid.indexOf("$");
+
   if (idx === -1) {
     return { uid: fullUid };
   }
   return {
     tenant: fullUid.slice(0, idx),
-    uid: fullUid.slice(idx + 1),
+    uid: fullUid,
   };
 }
 
-export async function updateCephBucketFromForm(
-  form: CephBucketUpdatePayload,
-  gateway: RgwGateway
-): Promise<void> {
-  const endpointUrl = gateway.endpoint;
-  const region = form.region || "us-east-1";
-  const tags = parseTagsText(form.tagsText) ?? {};
 
-  const objectLockMode = form.cephObjectLockMode;
-  const objectLockRetentionDays =
-    form.cephObjectLockRetentionDays != null && form.cephObjectLockRetentionDays !== ""
-      ? Number(form.cephObjectLockRetentionDays)
-      : undefined;
-
-  await updateCephBucketViaS3({
-    bucketName: form.name,
-    endpoint: endpointUrl,
-    region,
-    versioningEnabled: form.cephVersioningEnabled,
-    tags,
-    encryptionMode: form.cephEncryptionMode,
-    kmsKeyId: form.cephKmsKeyId,
-
-    bucketPolicy: form.bucketPolicy ?? null,
-    aclRules: form.cephAclRules,
-    objectLockMode,
-    objectLockRetentionDays,
-    owner: form.owner,
-  });
-}
-
-function parseTagsText(tagsText?: string): Record<string, string> | undefined {
-  const text = (tagsText || "").trim();
-  if (!text) return undefined;
-
-  const tags: Record<string, string> = {};
-
-  for (const pair of text.split(",")) {
-    const trimmed = pair.trim();
-    if (!trimmed) continue;
-
-    const eqIdx = trimmed.indexOf("=");
-    if (eqIdx === -1) continue;
-
-    const key = trimmed.slice(0, eqIdx).trim();
-    const value = trimmed.slice(eqIdx + 1).trim();
-
-    if (!key || !value) continue;
-    tags[key] = value;
-  }
-
-  return Object.keys(tags).length ? tags : undefined;
-}
-export async function updateCephBucketViaS3(params: {
-  bucketName: string;
-  endpoint: string;
-  region?: string;
-
-  // patches; if a field is undefined, we leave it as-is
-  versioningEnabled?: boolean;
-
-  tags?: Record<string, string> | null;
-
-  encryptionMode?: "none" | "sse-s3" | "kms";
-  kmsKeyId?: string;
-
-  bucketPolicy?: string | null;
-  aclRules?: CephAclRule[];
-
-  objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
-  objectLockRetentionDays?: number;
-
-  owner?: string; // RGW uid, if you want to change owner
-}): Promise<void> {
-  const endpointUrl = params.endpoint.startsWith("http")
-    ? params.endpoint
-    : `http://${params.endpoint}`;
-
-  const region = params.region || "us-east-1";
-
-  // 1) Versioning
-  if (typeof params.versioningEnabled === "boolean") {
-    const versioningJson = JSON.stringify({
-      Status: params.versioningEnabled ? "Enabled" : "Suspended",
-    });
-
-    await runAwsWithDashboardCreds(
-      [
-        "s3api",
-        "put-bucket-versioning",
-        "--bucket",
-        params.bucketName,
-        "--versioning-configuration",
-        versioningJson,
-      ],
-      endpointUrl
-    );
-  }
-
-  // 2) Tags
-  if (params.tags !== undefined) {
-    const tags = params.tags || {};
-    if (Object.keys(tags).length > 0) {
-      const TagSet = Object.entries(tags).map(([Key, Value]) => ({
-        Key,
-        Value,
-      }));
-      const taggingJson = JSON.stringify({ TagSet });
-
-      await runAwsWithDashboardCreds(
-        ["s3api", "put-bucket-tagging", "--bucket", params.bucketName, "--tagging", taggingJson],
-        endpointUrl
-      );
-    } else {
-      // explicit "clear tags"
-      await runAwsWithDashboardCreds(
-        ["s3api", "delete-bucket-tagging", "--bucket", params.bucketName],
-        endpointUrl
-      );
-    }
-  }
-
-  // 3) Encryption
-  if (params.encryptionMode !== undefined) {
-    if (params.encryptionMode === "none") {
-      await runAwsWithDashboardCreds(
-        ["s3api", "delete-bucket-encryption", "--bucket", params.bucketName],
-        endpointUrl
-      );
-    } else {
-      const rules: any[] = [];
-
-      if (params.encryptionMode === "sse-s3") {
-        rules.push({
-          ApplyServerSideEncryptionByDefault: {
-            SSEAlgorithm: "AES256",
-          },
-        });
-      } else if (params.encryptionMode === "kms") {
-        if (!params.kmsKeyId) {
-          throw new Error("KMS encryption selected but no kmsKeyId provided");
-        }
-        rules.push({
-          ApplyServerSideEncryptionByDefault: {
-            SSEAlgorithm: "aws:kms",
-            KMSMasterKeyID: params.kmsKeyId,
-          },
-        });
-      }
-
-      const encryptionJson = JSON.stringify({ Rules: rules });
-
-      await runAwsWithDashboardCreds(
-        [
-          "s3api",
-          "put-bucket-encryption",
-          "--bucket",
-          params.bucketName,
-          "--server-side-encryption-configuration",
-          encryptionJson,
-        ],
-        endpointUrl
-      );
-    }
-  }
-
-  // 4) ACL
-  if (params.aclRules && params.aclRules.length > 0) {
-    const cannedAcl = deriveCannedAclFromRules(params.aclRules);
-    if (cannedAcl) {
-      await runAwsWithDashboardCreds(
-        ["s3api", "put-bucket-acl", "--bucket", params.bucketName, "--acl", cannedAcl],
-        endpointUrl
-      );
-    }
-  }
-
-  // 5) Bucket policy
-  console.log("params.bucketPolicy ", params.bucketPolicy);
-  if (params.bucketPolicy !== undefined) {
-    const text = params.bucketPolicy?.trim() ?? "";
-
-    if (text) {
-      await runAwsWithDashboardCreds(
-        ["s3api", "put-bucket-policy", "--bucket", params.bucketName, "--policy", text],
-        endpointUrl
-      );
-    } else {
-      console.log("deleting policy inner ");
-      await runAwsWithDashboardCreds(
-        ["s3api", "delete-bucket-policy", "--bucket", params.bucketName],
-        endpointUrl
-      );
-    }
-  }
-
-  // 6) Object lock configuration (only if bucket already has locking enabled)
-  if (params.objectLockMode && typeof params.objectLockRetentionDays === "number") {
-    const lockConfig = JSON.stringify({
-      ObjectLockEnabled: "Enabled",
-      Rule: {
-        DefaultRetention: {
-          Mode: params.objectLockMode,
-          Days: params.objectLockRetentionDays,
-        },
-      },
-    });
-
-    await runAwsWithDashboardCreds(
-      [
-        "s3api",
-        "put-object-lock-configuration",
-        "--bucket",
-        params.bucketName,
-        "--object-lock-configuration",
-        lockConfig,
-      ],
-      endpointUrl
-    );
-  }
-
-  // 7) Change RGW owner (radosgw-admin bucket link)
-  if (params.owner && params.owner.trim()) {
-    await changeRgwBucketOwner(params.bucketName, params.owner.trim());
-  }
-}
-
-async function awsJsonOrNullWithDashboardCreds(
-  args: string[],
-  endpointOverride?: string,
-  regionOverride?: string
-): Promise<any | null> {
-  const { endpointUrl: defaultEndpoint, region: defaultRegion } = await getCephS3Connection();
-
-  const endpointUrl =
-    endpointOverride && endpointOverride.length
-      ? endpointOverride.startsWith("http")
-        ? endpointOverride
-        : `http://${endpointOverride}`
-      : defaultEndpoint;
-
-  const region = regionOverride || defaultRegion;
-
-  const { accessKey, secretKey } = await getDashboardS3Creds();
-
-  const cmdLine =
-    `AWS_ACCESS_KEY_ID='${accessKey}' ` +
-    `AWS_SECRET_ACCESS_KEY='${secretKey}' ` +
-    `AWS_DEFAULT_REGION='${region}' ` +
-    `AWS_DEFAULT_OUTPUT='json' ` + // override bad config (xml)
-    `aws --output json --endpoint-url '${endpointUrl}' ` + // force json output
-    args.map((a) => `'${a}'`).join(" ");
-
-  const cmd = new Command(["bash", "-lc", cmdLine], { superuser: "try" });
-
-  try {
-    const proc = await unwrap(server.execute(cmd));
-    const stdout =
-      typeof (proc as any).getStdout === "function"
-        ? (proc as any).getStdout()
-        : ((proc as any).stdout ?? "").toString();
-
-    const text = (stdout ?? "").toString().trim();
-    console.log("awsJsonOrNullWithDashboardCreds stdout =", text);
-    if (!text) return {};
-    return JSON.parse(text);
-  } catch (state: any) {
-    const stderr =
-      typeof state?.getStderr === "function" ? state.getStderr() : String(state.stderr ?? "");
-    console.warn("awsJsonOrNullWithDashboardCreds error for", args.join(" "), "stderr=", stderr);
-    return null;
-  }
-}
 export async function getCephS3Connection(): Promise<CephS3Connection> {
   if (cachedCephS3Conn) return cachedCephS3Conn;
 
@@ -1321,6 +1122,7 @@ function mapCephVersioning(stats: any): BucketVersioningStatus {
 
 export function buildS3BucketFromRgwStats(stats: any, defaultRegion: string): CephBucket {
   // usage
+  console.log("buildS3BucketFromRgwStats ", stats)
   const usage = stats.usage || {};
   const usageKey = "rgw.main" in usage ? "rgw.main" : Object.keys(usage)[0];
   const usageMain = usageKey ? usage[usageKey] || {} : {};
@@ -1346,28 +1148,9 @@ export function buildS3BucketFromRgwStats(stats: any, defaultRegion: string): Ce
     stats.bucket_quota.max_size_kb > 0
       ? stats.bucket_quota.max_size_kb * 1024
       : undefined;
-
-  return {
-    backendKind: "ceph",
-    name: stats.bucket,
-    region,
-    owner: stats.owner,
-    createdAt: stats.creation_time,
-    lastModifiedTime: stats.mtime,
-    sizeBytes,
-    objectCount,
-    versionCount,
-    quotaBytes,
-    objectLockEnabled,
-    versioning,
-    tags,
-    zone: stats.zone,
-    zonegroup: stats.zonegroup,
-    // leave these undefined for now; you can fill them in later
-    acl: undefined,
-    policy: undefined,
-    lastAccessed: undefined,
-    placementTarget: stats.placement_rule,
+  return {backendKind: "ceph",name: stats.bucket,region,owner: stats.owner,createdAt: stats.creation_time,lastModifiedTime: stats.mtime,sizeBytes,
+    objectCount,versionCount,quotaBytes,objectLockEnabled,versioning,tags,zone: stats.zone,zonegroup: stats.zonegroup,
+    // leave these undefined for now; you can fill them in lateracl: undefined,policy: undefined,lastAccessed: undefined,placementTarget: stats.placement_rule,
   };
 }
 
@@ -1512,50 +1295,77 @@ export async function getBucketDashboardStats(
 
   return { stats, perUser };
 }
-
 export async function getCephBucketSecurity(
   bucketName: string
-): Promise<{ acl?: CephAclRule[]; policy?: string }> {
-  const [aclJson, policyJson] = await Promise.all([
-    awsJsonOrNullWithDashboardCreds(["s3api", "get-bucket-acl", "--bucket", bucketName]),
-    awsJsonOrNullWithDashboardCreds(["s3api", "get-bucket-policy", "--bucket", bucketName]),
-  ]);
+): Promise<{ policy?: string }> {
+  const { endpointUrl, region } = await getCephS3Connection();
+  const { accessKey, secretKey } = await getDashboardS3Creds();
 
-  let acl: CephAclRule[] | undefined;
+  const creds: CephCreds = { accessKeyId: accessKey, secretAccessKey: secretKey };
+  bucketName = bucketName.replace('/',':')
+
+
+  console.log("getBucket name ", bucketName)
+  
+
+  const policyStr = await cephGetBucketPolicy(endpointUrl, creds, bucketName);
+
   let policy: string | undefined;
-
-  if (aclJson && Array.isArray(aclJson.Grants)) {
-    const rules: CephAclRule[] = [];
-
-    for (const g of aclJson.Grants as any[]) {
-      if (!g || !g.Grantee || !g.Permission) continue;
-      const perm = g.Permission as any;
-
-      if (g.Grantee.Type === "Group" && typeof g.Grantee.URI === "string") {
-        if (g.Grantee.URI.endsWith("/AllUsers")) {
-          rules.push({ grantee: "all-users", permission: perm });
-        } else if (g.Grantee.URI.endsWith("/AuthenticatedUsers")) {
-          rules.push({ grantee: "authenticated-users", permission: perm });
-        }
-      } else if (g.Grantee.Type === "CanonicalUser") {
-        rules.push({ grantee: "owner", permission: perm });
-      }
-    }
-
-    if (rules.length) acl = rules;
-  }
-
-  if (policyJson && typeof policyJson.Policy === "string") {
+  if (policyStr) {
     try {
-      const parsed = JSON.parse(policyJson.Policy);
-      policy = JSON.stringify(parsed, null, 2);
+      policy = JSON.stringify(JSON.parse(policyStr), null, 2);
     } catch {
-      policy = policyJson.Policy;
+      policy = policyStr;
     }
   }
 
-  return { acl, policy };
+  return { policy };
 }
+
+
+// export async function getCephBucketSecurity(
+//   bucketName: string
+// ): Promise<{ acl?: CephAclRule[]; policy?: string }> {
+//   const [aclJson, policyJson] = await Promise.all([
+//     awsJsonOrNullWithDashboardCreds(["s3api", "get-bucket-acl", "--bucket", bucketName]),
+//     awsJsonOrNullWithDashboardCreds(["s3api", "get-bucket-policy", "--bucket", bucketName]),
+//   ]);
+
+//   let acl: CephAclRule[] | undefined;
+//   let policy: string | undefined;
+
+//   if (aclJson && Array.isArray(aclJson.Grants)) {
+//     const rules: CephAclRule[] = [];
+
+//     for (const g of aclJson.Grants as any[]) {
+//       if (!g || !g.Grantee || !g.Permission) continue;
+//       const perm = g.Permission as any;
+
+//       if (g.Grantee.Type === "Group" && typeof g.Grantee.URI === "string") {
+//         if (g.Grantee.URI.endsWith("/AllUsers")) {
+//           rules.push({ grantee: "all-users", permission: perm });
+//         } else if (g.Grantee.URI.endsWith("/AuthenticatedUsers")) {
+//           rules.push({ grantee: "authenticated-users", permission: perm });
+//         }
+//       } else if (g.Grantee.Type === "CanonicalUser") {
+//         rules.push({ grantee: "owner", permission: perm });
+//       }
+//     }
+
+//     if (rules.length) acl = rules;
+//   }
+
+//   if (policyJson && typeof policyJson.Policy === "string") {
+//     try {
+//       const parsed = JSON.parse(policyJson.Policy);
+//       policy = JSON.stringify(parsed, null, 2);
+//     } catch {
+//       policy = policyJson.Policy;
+//     }
+//   }
+
+//   return { acl, policy };
+// }
 
 export async function isRgwUsageLogEnabled(): Promise<boolean | null> {
   return rgwLimit(async () => {
@@ -1581,3 +1391,596 @@ export async function isRgwUsageLogEnabled(): Promise<boolean | null> {
   });
 }
 
+async function rgwUserExists(uid: string, tenant?: string): Promise<boolean> {
+  const args = ["user", "info", "--uid", uid];
+  if (tenant) args.push("--tenant", tenant);
+
+  try {
+    await rgwJson(args);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function ensureRgwUserExists(opts: {uid: string;tenant?: string;displayName: string;systemUser?: boolean;maxBuckets?: number;suspended?: boolean;
+}): Promise<void> {
+  const exists = await rgwUserExists(opts.uid, opts.tenant);
+  if (exists) return;
+
+  // Create user and auto-generate keys
+  await createRgwUser({
+    uid: opts.uid,
+    tenant: opts.tenant,
+    displayName: opts.displayName,
+    maxBuckets: opts.maxBuckets,
+    systemUser: opts.systemUser ?? true,
+    autoGenerateKey: true,
+    suspended: opts.suspended ?? false,
+
+    // quotas off by default
+    userQuotaEnabled: false,
+    bucketQuotaEnabled: false,
+  });
+}
+
+
+
+export type CephCreds = { accessKeyId: string; secretAccessKey: string };
+
+
+
+async function execPython(
+  pythonSource: string,
+  env: Record<string, string>,
+  superuser: "try" | "required" | "none" = "try"
+): Promise<string> {
+  const exports = Object.entries(env)
+    .map(([k, v]) => `export ${k}=${shQuote(v)}`)
+    .join("; ");
+
+  const cmdLine = `${exports}; python3 - <<'PY'\n${pythonSource}\nPY`;
+  const cmd = new Command(["bash", "-lc", cmdLine], { superuser });
+
+  try {
+    const proc = await unwrap(server.execute(cmd));
+    const stdout =
+      typeof (proc as any).getStdout === "function"
+        ? (proc as any).getStdout()
+        : ((proc as any).stdout ?? "").toString();
+
+    return (stdout ?? "").toString().trim();
+  } catch (state: any) {
+    throw new Error(errorString(state));
+  }
+}
+
+/**
+ * Botocore setup:
+ * - path-style addressing
+ * - SigV4
+ * - disable bucket name validation to allow tenant:bucket
+ *
+ * IMPORTANT: do not require RGW_OP here (create/versioning/etc. won't provide it).
+ */
+const PY_SETUP = `
+import os, json
+import botocore.session
+from botocore.config import Config
+import botocore.handlers
+
+endpoint = os.environ["RGW_ENDPOINT"]
+bucket = os.environ["RGW_BUCKET"]
+region = os.environ.get("RGW_REGION", "us-east-1")
+
+sess = botocore.session.get_session()
+client = sess.create_client(
+  "s3",
+  endpoint_url=endpoint,
+  aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+  aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+  config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+  region_name=region,
+)
+
+# Disable bucket name validation (allows tenant:bucket)
+emitter = client.meta.events
+for ev in ("before-parameter-build.s3", "provide-client-params.s3"):
+  try: emitter.unregister(ev, botocore.handlers.validate_bucket_name)
+  except Exception: pass
+  try: emitter.unregister(ev, "botocore.handlers.validate_bucket_name")
+  except Exception: pass
+`;
+
+
+
+/* -----------------------------
+   Policy (tenant-safe)
+-------------------------------- */
+
+export async function cephGetBucketPolicy(
+  endpointUrl: string,
+  creds: CephCreds,
+  bucket: string,
+  region = "us-east-1"
+): Promise<string | undefined> {
+  const py =
+    PY_SETUP +
+    `
+try:
+  resp = client.get_bucket_policy(Bucket=bucket)
+  pol = resp.get("Policy")
+  if isinstance(pol, str):
+    print(pol)
+  else:
+    print(json.dumps(pol) if pol is not None else "")
+except Exception as e:
+  msg = str(e)
+  if "NoSuchBucketPolicy" in msg or "NoSuchBucket" in msg or "404" in msg:
+    print("")
+  else:
+    raise
+`;
+
+  const out = await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    RGW_REGION: region,
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+
+  return out ? out : undefined;
+}
+
+export async function cephPutBucketPolicy(
+  endpointUrl: string,
+  creds: CephCreds,
+  bucket: string,
+  policyJson: string,
+  region = "us-east-1"
+): Promise<void> {
+  const py =
+    PY_SETUP +
+    `
+policy_text = os.environ["RGW_POLICY_JSON"]
+policy = json.loads(policy_text)  # validate JSON
+client.put_bucket_policy(Bucket=bucket, Policy=json.dumps(policy))
+print("ok")
+`;
+
+  await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    RGW_REGION: region,
+    RGW_POLICY_JSON: policyJson,
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+}
+
+export async function cephDeleteBucketPolicy(
+  endpointUrl: string,
+  creds: CephCreds,
+  bucket: string,
+  region = "us-east-1"
+): Promise<void> {
+  const py =
+    PY_SETUP +
+    `
+try:
+  client.delete_bucket_policy(Bucket=bucket)
+except Exception as e:
+  msg = str(e)
+  if "NoSuchBucketPolicy" in msg or "NoSuchBucket" in msg or "404" in msg:
+    pass
+  else:
+    raise
+print("ok")
+`;
+
+  await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    RGW_REGION: region,
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+}
+
+/* -----------------------------
+   Versioning (tenant-safe)
+-------------------------------- */
+
+export async function cephPutBucketVersioning(
+  endpointUrl: string,
+  creds: CephCreds,
+  bucket: string,
+  enabled: boolean,
+  region = "us-east-1"
+): Promise<void> {
+  const py =
+    PY_SETUP +
+    `
+status = "Enabled" if os.environ["RGW_VERSIONING_ENABLED"] == "true" else "Suspended"
+client.put_bucket_versioning(
+  Bucket=bucket,
+  VersioningConfiguration={"Status": status},
+)
+print("ok")
+`;
+
+  await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    RGW_REGION: region,
+    RGW_VERSIONING_ENABLED: enabled ? "true" : "false",
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+}
+
+/* -----------------------------
+   Tags (tenant-safe)
+-------------------------------- */
+
+export async function cephPutBucketTagging(
+  endpointUrl: string,
+  creds: CephCreds,
+  bucket: string,
+  tags: Record<string, string>,
+  region = "us-east-1"
+): Promise<void> {
+  const TagSet = Object.entries(tags).map(([Key, Value]) => ({ Key, Value }));
+  const py =
+    PY_SETUP +
+    `
+tagging = json.loads(os.environ["RGW_TAGGING_JSON"])
+client.put_bucket_tagging(Bucket=bucket, Tagging=tagging)
+print("ok")
+`;
+
+  await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    RGW_REGION: region,
+    RGW_TAGGING_JSON: JSON.stringify({ TagSet }),
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+}
+
+export async function cephDeleteBucketTagging(
+  endpointUrl: string,
+  creds: CephCreds,
+  bucket: string,
+  region = "us-east-1"
+): Promise<void> {
+  const py =
+    PY_SETUP +
+    `
+try:
+  client.delete_bucket_tagging(Bucket=bucket)
+except Exception as e:
+  msg = str(e)
+  if "NoSuchTagSet" in msg or "NoSuchBucket" in msg or "404" in msg:
+    pass
+  else:
+    raise
+print("ok")
+`;
+
+  await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    RGW_REGION: region,
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+}
+
+/* -----------------------------
+   Encryption (tenant-safe)
+-------------------------------- */
+
+export async function cephPutBucketEncryption(
+  endpointUrl: string,
+  creds: CephCreds,
+  bucket: string,
+  encryptionMode: "sse-s3" | "kms",
+  kmsKeyId: string | undefined,
+  region = "us-east-1"
+): Promise<void> {
+  const py =
+    PY_SETUP +
+    `
+mode = os.environ["RGW_ENCRYPTION_MODE"]
+kms = os.environ.get("RGW_KMS_KEY_ID", "")
+rules = []
+
+if mode == "sse-s3":
+  rules.append({"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}})
+elif mode == "kms":
+  if not kms:
+    raise Exception("KMS encryption selected but no kmsKeyId provided")
+  rules.append({"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "aws:kms", "KMSMasterKeyID": kms}})
+else:
+  raise Exception("Unsupported encryption mode")
+
+client.put_bucket_encryption(
+  Bucket=bucket,
+  ServerSideEncryptionConfiguration={"Rules": rules},
+)
+print("ok")
+`;
+
+  await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    RGW_REGION: region,
+    RGW_ENCRYPTION_MODE: encryptionMode,
+    RGW_KMS_KEY_ID: kmsKeyId ?? "",
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+}
+
+export async function cephDeleteBucketEncryption(
+  endpointUrl: string,
+  creds: CephCreds,
+  bucket: string,
+  region = "us-east-1"
+): Promise<void> {
+  const py =
+    PY_SETUP +
+    `
+try:
+  client.delete_bucket_encryption(Bucket=bucket)
+except Exception as e:
+  msg = str(e)
+  if "ServerSideEncryptionConfigurationNotFoundError" in msg or "NoSuchBucket" in msg or "404" in msg:
+    pass
+  else:
+    raise
+print("ok")
+`;
+
+  await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    RGW_REGION: region,
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+}
+
+/* -----------------------------
+   ACL (tenant-safe, canned ACL only)
+-------------------------------- */
+
+export async function cephPutBucketAclCanned(
+  endpointUrl: string,
+  creds: CephCreds,
+  bucket: string,
+  cannedAcl: "private" | "public-read" | "public-read-write" | "authenticated-read",
+  region = "us-east-1"
+): Promise<void> {
+  const py =
+    PY_SETUP +
+    `
+acl = os.environ["RGW_CANNED_ACL"]
+client.put_bucket_acl(Bucket=bucket, ACL=acl)
+print("ok")
+`;
+
+  await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    RGW_REGION: region,
+    RGW_CANNED_ACL: cannedAcl,
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+}
+
+/* -----------------------------
+   Object lock configuration (tenant-safe)
+-------------------------------- */
+
+export async function cephPutObjectLockConfiguration(
+  endpointUrl: string,
+  creds: CephCreds,
+  bucket: string,
+  mode: "GOVERNANCE" | "COMPLIANCE",
+  days: number,
+  region = "us-east-1"
+): Promise<void> {
+  const py =
+    PY_SETUP +
+    `
+mode = os.environ["RGW_OBJECT_LOCK_MODE"]
+days = int(os.environ["RGW_OBJECT_LOCK_DAYS"])
+
+client.put_object_lock_configuration(
+  Bucket=bucket,
+  ObjectLockConfiguration={
+    "ObjectLockEnabled": "Enabled",
+    "Rule": {"DefaultRetention": {"Mode": mode, "Days": days}},
+  },
+)
+print("ok")
+`;
+
+  await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    RGW_REGION: region,
+    RGW_OBJECT_LOCK_MODE: mode,
+    RGW_OBJECT_LOCK_DAYS: String(days),
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+}
+
+/* -----------------------------
+   Create bucket (tenant-safe if bucket contains :)
+   Also tolerant of RGW returning JSON on create.
+-------------------------------- */
+
+export async function cephCreateBucket(
+  endpointUrl: string,
+  creds: RgwS3Creds,
+  bucket: string,
+  opts?: {
+    region?: string; // default us-east-1
+    objectLockEnabled?: boolean;
+  }
+): Promise<void> {
+  const region = opts?.region ?? "us-east-1";
+
+  // Note: create_bucket normally returns XML. Some RGW configs return JSON
+  // and botocore throws ResponseParserError. We treat that as success if
+  // head_bucket confirms bucket exists.
+  const py =
+    PY_SETUP +
+    `
+import time
+
+def head_ok():
+  try:
+    client.head_bucket(Bucket=bucket)
+    return True
+  except Exception:
+    return False
+
+params = {"Bucket": bucket}
+
+if os.environ.get("RGW_OBJECT_LOCK_ENABLED") == "true":
+  params["ObjectLockEnabledForBucket"] = True
+
+if region and region != "us-east-1":
+  params["CreateBucketConfiguration"] = {"LocationConstraint": region}
+
+try:
+  client.create_bucket(**params)
+  print("ok")
+except Exception as e:
+  msg = str(e)
+
+  # Idempotency cases
+  if "BucketAlreadyOwnedByYou" in msg or "BucketAlreadyExists" in msg:
+    print("ok")
+  # If RGW returned invalid XML (often because it returned JSON), verify via head_bucket
+  elif "ResponseParserError" in msg or "invalid XML" in msg or "Unable to parse response" in msg:
+    # small retry window for eventual consistency
+    for _ in range(5):
+      if head_ok():
+        print("ok")
+        break
+      time.sleep(0.2)
+    else:
+      raise
+  else:
+    raise
+`;
+
+  await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    RGW_REGION: region,
+    RGW_OBJECT_LOCK_ENABLED: opts?.objectLockEnabled ? "true" : "false",
+    AWS_ACCESS_KEY_ID: creds.accessKey,
+    AWS_SECRET_ACCESS_KEY: creds.secretKey,
+  });
+}
+
+
+export async function updateCephBucketViaS3(params: {
+  bucketName: string;
+  endpoint: string;
+  
+  region?: string;
+
+  versioningEnabled?: boolean;
+  tags?: Record<string, string> | null;
+
+  encryptionMode?: "none" | "sse-s3" | "kms";
+  kmsKeyId?: string;
+
+  bucketPolicy?: string | null;
+  aclRules?: CephAclRule[];
+
+  objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
+  objectLockRetentionDays?: number;
+  owner?: string; // keep your radosgw-admin chown/link path separate if needed
+}): Promise<void> {
+  const endpointUrl = params.endpoint.startsWith("http") ? params.endpoint : `http://${params.endpoint}`;
+  const region = params.region || "us-east-1";
+
+  const { accessKey, secretKey } = await getDashboardS3Creds();
+  const creds: CephCreds = { accessKeyId: accessKey, secretAccessKey: secretKey };
+  const bucketNameForAws = params.bucketName.replace("/",":")
+  // 1) Versioning
+  if (typeof params.versioningEnabled === "boolean") {
+    await cephPutBucketVersioning(endpointUrl, creds, bucketNameForAws, params.versioningEnabled, region);
+  }
+
+  // 2) Tags
+  if (params.tags !== undefined) {
+    const tags = params.tags || {};
+    if (Object.keys(tags).length > 0) {
+      await cephPutBucketTagging(endpointUrl, creds, bucketNameForAws, tags, region);
+    } else {
+      await cephDeleteBucketTagging(endpointUrl, creds, bucketNameForAws, region);
+    }
+  }
+
+  // 3) Encryption
+  if (params.encryptionMode !== undefined) {
+    if (params.encryptionMode === "none") {
+      await cephDeleteBucketEncryption(endpointUrl, creds, bucketNameForAws, region);
+    } else {
+      await cephPutBucketEncryption(
+        endpointUrl,
+        creds,
+        bucketNameForAws,
+        params.encryptionMode,
+        params.kmsKeyId,
+        region
+      );
+    }
+  }
+
+  // 4) ACL (canned ACL derived from rules)
+  if (params.aclRules && params.aclRules.length > 0) {
+    const cannedAcl = deriveCannedAclFromRules(params.aclRules);
+    if (cannedAcl) {
+      await cephPutBucketAclCanned(endpointUrl, creds, bucketNameForAws, cannedAcl, region);
+    }
+  }
+
+  // 5) Bucket policy
+  if (params.bucketPolicy !== undefined) {
+    const text = (params.bucketPolicy ?? "").trim();
+    if (text) {
+      await cephPutBucketPolicy(endpointUrl, creds, bucketNameForAws, text, region);
+    } else {
+      await cephDeleteBucketPolicy(endpointUrl, creds, bucketNameForAws, region);
+    }
+  }
+
+  // 6) Object lock config
+  if (params.objectLockMode && typeof params.objectLockRetentionDays === "number") {
+    await cephPutObjectLockConfiguration(
+      endpointUrl,
+      creds,
+      bucketNameForAws,
+      params.objectLockMode,
+      params.objectLockRetentionDays,
+      region
+    );
+  }
+
+  if (params.owner && params.owner.trim()) {
+    await changeRgwBucketOwner(params.bucketName, params.owner.trim());
+  }
+}

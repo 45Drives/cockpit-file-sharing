@@ -30,6 +30,7 @@ export interface CephBucket extends S3BucketBase {
   placementTarget?: string;
   zone?: string;
   zonegroup?: string;
+  adminRef: string
 }
 
 export interface GarageBucket extends S3BucketBase {
@@ -268,6 +269,7 @@ export type RgwDashboardS3Creds = {
       | "READ_ACP"
       | "WRITE_ACP"
       | "FULL_CONTROL";
+      adminRef?: string
   }
   
   export type CephAclRule = {

@@ -183,7 +183,9 @@
 
                 <div>
                   <h3 class="text-base font-semibold text-slate-100">
-                    {{ bucket.name }}
+                  
+                  <span v-if="backend === 'ceph'">{{ bucket.adminRef }}</span> 
+                  <span v-else>{{ bucket.name }}</span> 
                   </h3>
                   <p class="text-xs text-slate-400">
                     {{ bucket.region || "Unknown region" }}

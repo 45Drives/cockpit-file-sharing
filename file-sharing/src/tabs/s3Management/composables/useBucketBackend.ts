@@ -43,9 +43,10 @@ export function useBucketBackend<K extends BackendKind>(
           flushScheduled = false;
   
           for (const u of pending) {
-            const i = buckets.value.findIndex(
-              (b: any) => (b as any).name === (u as any).name,
-            );
+            const keyOf = (x: any) => x.adminRef ?? x.id ?? x.name;
+
+            const i = buckets.value.findIndex((b: any) => keyOf(b) === keyOf(u));
+            
             if (i >= 0) buckets.value[i] = u;
           }
           pending = [];

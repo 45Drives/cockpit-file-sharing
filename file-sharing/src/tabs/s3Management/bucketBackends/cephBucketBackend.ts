@@ -82,7 +82,7 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     const ownerChanged = newOwner && newOwner !== oldOwner;
 
     const params: any = {
-      bucketName: bucket.name,
+      bucketName: bucket.adminRef,
       endpoint: ctx.cephGateway?.endpoint ?? "http://192.168.85.64:8080",
       // region,
     };
@@ -98,7 +98,6 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     if (ownerChanged) {
       params.owner = newOwner;
     }
-
     await updateCephBucketViaS3(params);
 
     // sync local
@@ -130,21 +129,23 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
       shells.map(async (b) => {
         try {
           const stats = await rgwJson(["bucket", "stats", "--bucket", b.name]);
+          const adminRef = b.name;
           const full = buildS3BucketFromRgwStats(stats, defaultRegion);
-          onUpdate({ ...b, ...full });
+          onUpdate({ ...b, ...full ,adminRef});
         } catch {
           // leave shell
         }
       }),
     );
-  
+    console.log("shells ", shells)
     return shells;
   },
 };
 export async function hydrateCephBucket(
   bucket: CephBucket,
 ): Promise<CephBucket> {
-  const { acl, policy } = await getCephBucketSecurity(bucket.name);
+  
+  const { acl, policy } = await getCephBucketSecurity(bucket.adminRef!);
   return {
     ...bucket,
     acl,
