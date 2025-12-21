@@ -31,6 +31,7 @@
               <option v-for="u in cephUsers" :key="u" :value="u">
                 {{ u }}
               </option>
+
             </select>
 
             <p v-if="loadingCephUsers" class="mt-1 text-md text-muted">
@@ -448,8 +449,9 @@ const modalForm = reactive({
   cephKmsKeyId: "",
   bucketPolicyText: "",
   cephVersioningEnabled: false,
-  cephAclScope: "owner" as "owner" | "authenticated-users" | "all-users",
-  cephAclPermission: "READ" as CephAclPermission,
+  cephAclScope: "owner" as CephAclRule["grantee"],
+  cephAclPermission: "FULL_CONTROL" as CephAclPermission,
+ 
   cephPlacementTarget: "",
 });
 
@@ -493,7 +495,7 @@ function resetForm() {
   modalForm.cephVersioningEnabled = false;
   modalForm.cephPlacementTarget = "";
   modalForm.cephAclScope = "owner";
-  modalForm.cephAclPermission = "READ";
+modalForm.cephAclPermission = "FULL_CONTROL";
 
   bucketPolicyError.value = null;
 }
@@ -571,18 +573,20 @@ function initFromProps() {
       const ownerRule = aclRules.find((r) => r.grantee === "owner");
 
       const chosen =
-        publicRule || authRule || ownerRule || {
-          grantee: "owner",
-          permission: "READ" as CephAclPermission,
-        };
+  publicRule || authRule || ownerRule || {
+    grantee: "owner",
+    permission: "FULL_CONTROL" as CephAclPermission,
+  };
 
-      modalForm.cephAclScope = chosen.grantee as "owner" | "authenticated-users" | "all-users";
-      modalForm.cephAclPermission = chosen.permission;
+
+  modalForm.cephAclScope = chosen.grantee;
+  modalForm.cephAclPermission = chosen.permission
+
       modalForm.cephVersioningEnabled = props.bucketToEdit.versioning === "Enabled";
 
     } else {
       modalForm.cephAclScope = "owner";
-      modalForm.cephAclPermission = "READ";
+      modalForm.cephAclPermission = "FULL_CONTROL";
     }
   }
 }
@@ -606,11 +610,21 @@ watch(
   }
 );
 
-const cephAclPermissionOptions: { value: CephAclPermission; label: string }[] = [
-  { value: "FULL_CONTROL", label: "Full control" },
-  { value: "READ", label: "Read" },
-  { value: "READ_WRITE", label: "Read and write" },
-];
+const cephAclPermissionOptions = computed((): { value: CephAclPermission; label: string }[] => {
+  if (modalForm.cephAclScope === "owner") {
+    return [{ value: "FULL_CONTROL", label: "Full control" }];
+  }
+  if (modalForm.cephAclScope === "authenticated-users") {
+    return [{ value: "READ", label: "Read" }];
+  }
+  return [
+    { value: "READ", label: "Read" },
+    { value: "READ_WRITE", label: "Read and write" },
+  ];
+});
+
+
+
 
 function addTagRow() {
   modalForm.tags.push({ key: "", value: "" });
@@ -798,5 +812,22 @@ watch(
   },
   { immediate: true }
 );
+watch(
+  () => modalForm.cephAclScope,
+  (scope) => {
+    if (scope === "owner") {
+      modalForm.cephAclPermission = "FULL_CONTROL";
+    } else if (scope === "authenticated-users") {
+      modalForm.cephAclPermission = "READ";
+    } else {
+      // all-users
+      if (modalForm.cephAclPermission !== "READ" && modalForm.cephAclPermission !== "READ_WRITE") {
+        modalForm.cephAclPermission = "READ";
+      }
+    }
+  },
+  { immediate: true },
+);
+
 
 </script>

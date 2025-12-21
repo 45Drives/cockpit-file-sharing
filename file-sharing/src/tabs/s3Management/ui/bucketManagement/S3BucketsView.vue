@@ -49,7 +49,7 @@
             class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:ring-1" />
         </label>
 
-        <label class="flex min-w-[180px] flex-1 flex-col gap-1">
+        <label v-if="backend != 'ceph'" class="flex min-w-[180px] flex-1 flex-col gap-1">
           <span class="text-xs font-medium uppercase tracking-wide text-label">
             Region / Zone
           </span>
@@ -71,7 +71,7 @@
           <select v-model="sortKey"
             class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-label outline-none focus:ring-1">
             <option value="name">Name</option>
-            <option value="region">Region / Zone</option>
+            <option v-if="backend != 'ceph'" value="region">Region / Zone</option>
             <option value="objects">Objects</option>
             <option value="size">Size</option>
           </select>
@@ -187,7 +187,7 @@
                   <span v-if="backend === 'ceph'">{{ bucket.adminRef }}</span> 
                   <span v-else>{{ bucket.name }}</span> 
                   </h3>
-                  <p class="text-xs text-slate-400">
+                  <p v-if="backend != 'ceph'" class="text-xs text-slate-400">
                     {{ bucket.region || "Unknown region" }}
                   </p>
                 </div>
@@ -413,7 +413,12 @@ function formatDate(value?: string): string {
 }
 
 function openUsageDashboard(bucket: BucketType) {
-  usageBucketName.value = bucket.name;
+  if(bucket.backendKind =="ceph"){
+    usageBucketName.value = bucket.adminRef
+  }else{
+    usageBucketName.value = bucket.name;
+
+  }
   usageBucket.value = bucket;
 
   showUsageDashboard.value = true;

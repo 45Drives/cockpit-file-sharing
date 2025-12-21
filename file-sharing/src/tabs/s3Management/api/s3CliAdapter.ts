@@ -1,6 +1,7 @@
 // cephRgwCliAdapter.ts
 import type {CephAclRule,RgwGateway,RgwUser,RgwDashboardS3Creds,CreatedRgwUserKeys,CreateRgwUserOptions,RgwUserDetails,RgwUserKey,RgwUserCap,CephBucketUpdatePayload,
   BucketDashboardStats,BucketUserUsage,BucketDashboardOptions,BucketVersioningStatus,CephBucket,
+  CephAclPermission,
 } from "../types/types";
 import { legacy, server, Command, unwrap } from "../../../../../houston-common/houston-common-lib";
 import pLimit from "p-limit";
@@ -10,7 +11,6 @@ const rgwLimit = pLimit(6);
 const { errorString } = legacy;
 type CephS3Connection = {
   endpointUrl: string;
-  region: string;
 };
 
 let cachedCephS3Conn: CephS3Connection | null = null;
@@ -43,9 +43,8 @@ export async function rgwJson(subArgs: string[]): Promise<any> {
 export async function listBucketsFromCeph(): Promise<CephBucket[]> {
   // RGW returns an array of bucket stats; we treat it as unknown/any here
   const statsList: any[] = await rgwJson(["bucket", "stats"]);
-  const { region: defaultRegion } = await getCephS3Connection();
 
-  return statsList.map((stats) => buildS3BucketFromRgwStats(stats, defaultRegion));
+  return statsList.map((stats) => buildS3BucketFromRgwStats(stats));
 }
 
 export async function getBucketObjectStats(
@@ -1081,14 +1080,12 @@ export async function getCephS3Connection(): Promise<CephS3Connection> {
 
   // 1) Optional env overrides
   const envEndpoint = process.env.CEPH_S3_ENDPOINT;
-  const envRegion = process.env.CEPH_S3_REGION;
 
   if (envEndpoint) {
     const endpointUrl = envEndpoint.startsWith("http") ? envEndpoint : `http://${envEndpoint}`;
 
     cachedCephS3Conn = {
       endpointUrl,
-      region: envRegion || "us-east-1",
     };
     return cachedCephS3Conn;
   }
@@ -1103,9 +1100,7 @@ export async function getCephS3Connection(): Promise<CephS3Connection> {
 
   const endpointUrl = gw.endpoint.startsWith("http") ? gw.endpoint : `http://${gw.endpoint}`;
 
-  const region = gw.zone || gw.zonegroup || "us-east-1";
-
-  cachedCephS3Conn = { endpointUrl, region };
+  cachedCephS3Conn = { endpointUrl };
   return cachedCephS3Conn;
 }
 
@@ -1120,7 +1115,7 @@ function mapCephVersioning(stats: any): BucketVersioningStatus {
   return "Disabled";
 }
 
-export function buildS3BucketFromRgwStats(stats: any, defaultRegion: string): CephBucket {
+export function buildS3BucketFromRgwStats(stats: any): CephBucket {
   // usage
   console.log("buildS3BucketFromRgwStats ", stats)
   const usage = stats.usage || {};
@@ -1130,9 +1125,6 @@ export function buildS3BucketFromRgwStats(stats: any, defaultRegion: string): Ce
   const sizeBytes: number = usageMain.size ?? 0;
   const objectCount: number = usageMain.num_objects ?? 0;
   const versionCount: number | undefined = usageMain.num_object_versions;
-
-  // region / zone
-  const region: string = stats.zone || stats.zonegroup || defaultRegion || "ceph-default-zone";
 
   // tags from tagset
   const tags = stats.tagset && Object.keys(stats.tagset).length ? { ...stats.tagset } : undefined;
@@ -1148,39 +1140,33 @@ export function buildS3BucketFromRgwStats(stats: any, defaultRegion: string): Ce
     stats.bucket_quota.max_size_kb > 0
       ? stats.bucket_quota.max_size_kb * 1024
       : undefined;
-  return {backendKind: "ceph",name: stats.bucket,region,owner: stats.owner,createdAt: stats.creation_time,lastModifiedTime: stats.mtime,sizeBytes,
-    objectCount,versionCount,quotaBytes,objectLockEnabled,versioning,tags,zone: stats.zone,zonegroup: stats.zonegroup,
+  return {backendKind: "ceph",name: stats.bucket,owner: stats.owner,createdAt: stats.creation_time,lastModifiedTime: stats.mtime,sizeBytes,
+    objectCount,versionCount,quotaBytes,objectLockEnabled,versioning,tags,zone: stats.zone,zonegroup: stats.zonegroup
     // leave these undefined for now; you can fill them in lateracl: undefined,policy: undefined,lastAccessed: undefined,placementTarget: stats.placement_rule,
   };
 }
 
 function deriveCannedAclFromRules(
-  rules?: CephAclRule[]
+  rules?: CephAclRule[],
 ): "private" | "public-read" | "public-read-write" | "authenticated-read" | null {
   if (!rules || rules.length === 0) return null;
 
-  const auth = rules.find((r) => r.grantee === "authenticated-users");
   const all = rules.find((r) => r.grantee === "all-users");
   if (all) {
-    if (all.permission === "READ") {
-      return "public-read";
-    }
-    if (all.permission === "READ_WRITE" || all.permission === "FULL_CONTROL") {
-      return "public-read-write";
-    }
+    if (all.permission === "READ") return "public-read";
+    if (all.permission === "READ_WRITE" || all.permission === "FULL_CONTROL") return "public-read-write";
   }
 
+  const auth = rules.find((r) => r.grantee === "authenticated-users");
   if (auth) {
-    if (
-      auth.permission === "READ" ||
-      auth.permission === "READ_WRITE" ||
-      auth.permission === "FULL_CONTROL"
-    ) {
-      return "authenticated-read";
-    }
+    // canned ACL only supports authenticated-read
+    return "authenticated-read";
   }
+
+  // owner rule (or anything else)
   return "private";
 }
+
 export async function getBucketDashboardStats(
   opts: BucketDashboardOptions
 ): Promise<{ stats: BucketDashboardStats; perUser: BucketUserUsage[] }> {
@@ -1297,19 +1283,81 @@ export async function getBucketDashboardStats(
 }
 export async function getCephBucketSecurity(
   bucketName: string
-): Promise<{ policy?: string }> {
-  const { endpointUrl, region } = await getCephS3Connection();
+): Promise<{ acl?: CephAclRule[]; policy?: string }> {
+  const { endpointUrl } = await getCephS3Connection();
   const { accessKey, secretKey } = await getDashboardS3Creds();
 
   const creds: CephCreds = { accessKeyId: accessKey, secretAccessKey: secretKey };
-  bucketName = bucketName.replace('/',':')
 
+  const [aclJson, policyStr] = await Promise.all([
+    cephGetBucketAcl(endpointUrl, creds, bucketName),
+    cephGetBucketPolicy(endpointUrl, creds, bucketName),
+  ]);
 
-  console.log("getBucket name ", bucketName)
-  
+  type RawAclPermission = "READ" | "WRITE" | "FULL_CONTROL" | string;
 
-  const policyStr = await cephGetBucketPolicy(endpointUrl, creds, bucketName);
+  function collapsePerms(perms: Set<RawAclPermission>): CephAclPermission {
+    if (perms.has("FULL_CONTROL")) return "FULL_CONTROL";
+    const hasRead = perms.has("READ");
+    const hasWrite = perms.has("WRITE");
 
+    // If WRITE exists, treat it as "Read and write"
+    if (hasRead && hasWrite) return "READ_WRITE";
+    if (hasWrite) return "READ_WRITE";
+    return "READ";
+  }
+
+  function pickUiRuleFromAclJson(input: any): CephAclRule | undefined {
+    if (!input || !Array.isArray(input.Grants)) return;
+
+    const permsByGrantee: Record<CephAclRule["grantee"], Set<RawAclPermission>> = {
+      "all-users": new Set(),
+      "authenticated-users": new Set(),
+      owner: new Set(),
+    };
+
+    for (const g of input.Grants as any[]) {
+      if (!g?.Grantee || !g?.Permission) continue;
+
+      const perm = g.Permission as RawAclPermission;
+      const gr = g.Grantee;
+
+      if (gr.Type === "Group" && typeof gr.URI === "string") {
+        if (gr.URI.endsWith("/AllUsers")) permsByGrantee["all-users"].add(perm);
+        else if (gr.URI.endsWith("/AuthenticatedUsers")) {
+          permsByGrantee["authenticated-users"].add(perm);
+        }
+      } else if (gr.Type === "CanonicalUser") {
+        permsByGrantee.owner.add(perm);
+      }
+    }
+
+    // Prefer Everyone, else Authenticated users, else Owner
+    if (permsByGrantee["all-users"].size) {
+      return {
+        grantee: "all-users",
+        permission: collapsePerms(permsByGrantee["all-users"]),
+      };
+    }
+    if (permsByGrantee["authenticated-users"].size) {
+      return {
+        grantee: "authenticated-users",
+        permission: collapsePerms(permsByGrantee["authenticated-users"]),
+      };
+    }
+    if (permsByGrantee.owner.size) {
+      return { grantee: "owner", permission: "FULL_CONTROL" };
+    }
+
+    return;
+  }
+
+  // Collapsed ACL for the UI (single rule)
+  let acl: CephAclRule[] | undefined;
+  const uiRule = pickUiRuleFromAclJson(aclJson);
+  if (uiRule) acl = [uiRule];
+
+  // Pretty-print policy
   let policy: string | undefined;
   if (policyStr) {
     try {
@@ -1319,7 +1367,7 @@ export async function getCephBucketSecurity(
     }
   }
 
-  return { policy };
+  return { acl, policy };
 }
 
 
@@ -1470,7 +1518,6 @@ import botocore.handlers
 
 endpoint = os.environ["RGW_ENDPOINT"]
 bucket = os.environ["RGW_BUCKET"]
-region = os.environ.get("RGW_REGION", "us-east-1")
 
 sess = botocore.session.get_session()
 client = sess.create_client(
@@ -1479,7 +1526,6 @@ client = sess.create_client(
   aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
   aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
   config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
-  region_name=region,
 )
 
 # Disable bucket name validation (allows tenant:bucket)
@@ -1501,7 +1547,6 @@ export async function cephGetBucketPolicy(
   endpointUrl: string,
   creds: CephCreds,
   bucket: string,
-  region = "us-east-1"
 ): Promise<string | undefined> {
   const py =
     PY_SETUP +
@@ -1524,7 +1569,6 @@ except Exception as e:
   const out = await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
-    RGW_REGION: region,
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
     AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
   });
@@ -1537,7 +1581,6 @@ export async function cephPutBucketPolicy(
   creds: CephCreds,
   bucket: string,
   policyJson: string,
-  region = "us-east-1"
 ): Promise<void> {
   const py =
     PY_SETUP +
@@ -1551,7 +1594,6 @@ print("ok")
   await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
-    RGW_REGION: region,
     RGW_POLICY_JSON: policyJson,
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
     AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
@@ -1562,7 +1604,6 @@ export async function cephDeleteBucketPolicy(
   endpointUrl: string,
   creds: CephCreds,
   bucket: string,
-  region = "us-east-1"
 ): Promise<void> {
   const py =
     PY_SETUP +
@@ -1581,7 +1622,6 @@ print("ok")
   await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
-    RGW_REGION: region,
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
     AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
   });
@@ -1596,7 +1636,6 @@ export async function cephPutBucketVersioning(
   creds: CephCreds,
   bucket: string,
   enabled: boolean,
-  region = "us-east-1"
 ): Promise<void> {
   const py =
     PY_SETUP +
@@ -1612,7 +1651,6 @@ print("ok")
   await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
-    RGW_REGION: region,
     RGW_VERSIONING_ENABLED: enabled ? "true" : "false",
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
     AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
@@ -1628,7 +1666,6 @@ export async function cephPutBucketTagging(
   creds: CephCreds,
   bucket: string,
   tags: Record<string, string>,
-  region = "us-east-1"
 ): Promise<void> {
   const TagSet = Object.entries(tags).map(([Key, Value]) => ({ Key, Value }));
   const py =
@@ -1642,7 +1679,6 @@ print("ok")
   await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
-    RGW_REGION: region,
     RGW_TAGGING_JSON: JSON.stringify({ TagSet }),
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
     AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
@@ -1653,7 +1689,6 @@ export async function cephDeleteBucketTagging(
   endpointUrl: string,
   creds: CephCreds,
   bucket: string,
-  region = "us-east-1"
 ): Promise<void> {
   const py =
     PY_SETUP +
@@ -1672,7 +1707,6 @@ print("ok")
   await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
-    RGW_REGION: region,
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
     AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
   });
@@ -1688,7 +1722,6 @@ export async function cephPutBucketEncryption(
   bucket: string,
   encryptionMode: "sse-s3" | "kms",
   kmsKeyId: string | undefined,
-  region = "us-east-1"
 ): Promise<void> {
   const py =
     PY_SETUP +
@@ -1716,7 +1749,6 @@ print("ok")
   await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
-    RGW_REGION: region,
     RGW_ENCRYPTION_MODE: encryptionMode,
     RGW_KMS_KEY_ID: kmsKeyId ?? "",
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
@@ -1728,7 +1760,6 @@ export async function cephDeleteBucketEncryption(
   endpointUrl: string,
   creds: CephCreds,
   bucket: string,
-  region = "us-east-1"
 ): Promise<void> {
   const py =
     PY_SETUP +
@@ -1747,7 +1778,6 @@ print("ok")
   await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
-    RGW_REGION: region,
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
     AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
   });
@@ -1762,7 +1792,6 @@ export async function cephPutBucketAclCanned(
   creds: CephCreds,
   bucket: string,
   cannedAcl: "private" | "public-read" | "public-read-write" | "authenticated-read",
-  region = "us-east-1"
 ): Promise<void> {
   const py =
     PY_SETUP +
@@ -1771,11 +1800,10 @@ acl = os.environ["RGW_CANNED_ACL"]
 client.put_bucket_acl(Bucket=bucket, ACL=acl)
 print("ok")
 `;
-
+console.log("bucket acl", bucket)
   await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
-    RGW_REGION: region,
     RGW_CANNED_ACL: cannedAcl,
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
     AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
@@ -1792,7 +1820,6 @@ export async function cephPutObjectLockConfiguration(
   bucket: string,
   mode: "GOVERNANCE" | "COMPLIANCE",
   days: number,
-  region = "us-east-1"
 ): Promise<void> {
   const py =
     PY_SETUP +
@@ -1813,7 +1840,6 @@ print("ok")
   await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
-    RGW_REGION: region,
     RGW_OBJECT_LOCK_MODE: mode,
     RGW_OBJECT_LOCK_DAYS: String(days),
     AWS_ACCESS_KEY_ID: creds.accessKeyId,
@@ -1831,11 +1857,9 @@ export async function cephCreateBucket(
   creds: RgwS3Creds,
   bucket: string,
   opts?: {
-    region?: string; // default us-east-1
     objectLockEnabled?: boolean;
   }
 ): Promise<void> {
-  const region = opts?.region ?? "us-east-1";
 
   // Note: create_bucket normally returns XML. Some RGW configs return JSON
   // and botocore throws ResponseParserError. We treat that as success if
@@ -1857,8 +1881,7 @@ params = {"Bucket": bucket}
 if os.environ.get("RGW_OBJECT_LOCK_ENABLED") == "true":
   params["ObjectLockEnabledForBucket"] = True
 
-if region and region != "us-east-1":
-  params["CreateBucketConfiguration"] = {"LocationConstraint": region}
+
 
 try:
   client.create_bucket(**params)
@@ -1886,7 +1909,6 @@ except Exception as e:
   await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
-    RGW_REGION: region,
     RGW_OBJECT_LOCK_ENABLED: opts?.objectLockEnabled ? "true" : "false",
     AWS_ACCESS_KEY_ID: creds.accessKey,
     AWS_SECRET_ACCESS_KEY: creds.secretKey,
@@ -1897,8 +1919,6 @@ except Exception as e:
 export async function updateCephBucketViaS3(params: {
   bucketName: string;
   endpoint: string;
-  
-  region?: string;
 
   versioningEnabled?: boolean;
   tags?: Record<string, string> | null;
@@ -1914,30 +1934,29 @@ export async function updateCephBucketViaS3(params: {
   owner?: string; // keep your radosgw-admin chown/link path separate if needed
 }): Promise<void> {
   const endpointUrl = params.endpoint.startsWith("http") ? params.endpoint : `http://${params.endpoint}`;
-  const region = params.region || "us-east-1";
 
   const { accessKey, secretKey } = await getDashboardS3Creds();
   const creds: CephCreds = { accessKeyId: accessKey, secretAccessKey: secretKey };
   const bucketNameForAws = params.bucketName.replace("/",":")
   // 1) Versioning
   if (typeof params.versioningEnabled === "boolean") {
-    await cephPutBucketVersioning(endpointUrl, creds, bucketNameForAws, params.versioningEnabled, region);
+    await cephPutBucketVersioning(endpointUrl, creds, bucketNameForAws, params.versioningEnabled);
   }
 
   // 2) Tags
   if (params.tags !== undefined) {
     const tags = params.tags || {};
     if (Object.keys(tags).length > 0) {
-      await cephPutBucketTagging(endpointUrl, creds, bucketNameForAws, tags, region);
+      await cephPutBucketTagging(endpointUrl, creds, bucketNameForAws, tags, );
     } else {
-      await cephDeleteBucketTagging(endpointUrl, creds, bucketNameForAws, region);
+      await cephDeleteBucketTagging(endpointUrl, creds, bucketNameForAws, );
     }
   }
 
   // 3) Encryption
   if (params.encryptionMode !== undefined) {
     if (params.encryptionMode === "none") {
-      await cephDeleteBucketEncryption(endpointUrl, creds, bucketNameForAws, region);
+      await cephDeleteBucketEncryption(endpointUrl, creds, bucketNameForAws, );
     } else {
       await cephPutBucketEncryption(
         endpointUrl,
@@ -1945,26 +1964,30 @@ export async function updateCephBucketViaS3(params: {
         bucketNameForAws,
         params.encryptionMode,
         params.kmsKeyId,
-        region
+        
       );
     }
   }
-
+  console.log("params.acl rules", params.aclRules)
   // 4) ACL (canned ACL derived from rules)
-  if (params.aclRules && params.aclRules.length > 0) {
-    const cannedAcl = deriveCannedAclFromRules(params.aclRules);
-    if (cannedAcl) {
-      await cephPutBucketAclCanned(endpointUrl, creds, bucketNameForAws, cannedAcl, region);
-    }
+  if (params.aclRules !== undefined) {
+    // empty array means "reset to private" (or whatever you want)
+    const cannedAcl =
+      (params.aclRules && params.aclRules.length > 0
+        ? deriveCannedAclFromRules(params.aclRules)
+        : "private") ?? "private";
+        console.log("cannedacl ",cannedAcl)
+    await cephPutBucketAclCanned(endpointUrl, creds, bucketNameForAws, cannedAcl);
   }
+  
 
   // 5) Bucket policy
   if (params.bucketPolicy !== undefined) {
     const text = (params.bucketPolicy ?? "").trim();
     if (text) {
-      await cephPutBucketPolicy(endpointUrl, creds, bucketNameForAws, text, region);
+      await cephPutBucketPolicy(endpointUrl, creds, bucketNameForAws, text, );
     } else {
-      await cephDeleteBucketPolicy(endpointUrl, creds, bucketNameForAws, region);
+      await cephDeleteBucketPolicy(endpointUrl, creds, bucketNameForAws, );
     }
   }
 
@@ -1976,11 +1999,48 @@ export async function updateCephBucketViaS3(params: {
       bucketNameForAws,
       params.objectLockMode,
       params.objectLockRetentionDays,
-      region
+      
     );
   }
 
   if (params.owner && params.owner.trim()) {
     await changeRgwBucketOwner(params.bucketName, params.owner.trim());
+  }
+}
+
+
+export async function cephGetBucketAcl(
+  endpointUrl: string,
+  creds: CephCreds,
+  bucket: string,
+): Promise<any | undefined> {
+  const py =
+    PY_SETUP +
+    `
+try:
+  resp = client.get_bucket_acl(Bucket=bucket)
+  print(json.dumps(resp))
+except Exception as e:
+  msg = str(e)
+  if "NoSuchBucket" in msg or "404" in msg:
+    print("")
+  else:
+    raise
+`;
+
+  const out = await execPython(py, {
+    RGW_ENDPOINT: endpointUrl,
+    RGW_BUCKET: bucket,
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+
+  if (!out) return undefined;
+  try {
+
+    console.log("acl get", JSON.parse(out))
+    return JSON.parse(out);
+  } catch {
+    return undefined;
   }
 }

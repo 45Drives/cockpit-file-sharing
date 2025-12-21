@@ -19,8 +19,6 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
       if (form.backend !== "ceph") {
     throw new Error("Ceph backend received non-ceph form");
   }
-    const region =
-      form.placementTarget || ctx.cephGateway?.zone || "us-east-1";
 
     const tags = parseTags(form.tagsText || "");
 
@@ -43,11 +41,6 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     if (form.backend !== "ceph") {
       throw new Error("Ceph backend received non-ceph form");
     }
-    // const region =
-    //   form.placementTarget ||
-    //   form.region ||
-    //   ctx.cephGateway?.zone ||
-    //   "us-east-1";
 
     const parsedTags = parseTags(form.tagsText || "");
     const newTags: Record<string, string> | null =
@@ -84,7 +77,6 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     const params: any = {
       bucketName: bucket.adminRef,
       endpoint: ctx.cephGateway?.endpoint ?? "http://192.168.85.64:8080",
-      // region,
     };
 
     if (versioningChanged) {
@@ -98,6 +90,8 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     if (ownerChanged) {
       params.owner = newOwner;
     }
+    params.aclRules = form.cephAclRules
+    
     await updateCephBucketViaS3(params);
 
     // sync local
@@ -119,10 +113,9 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     _ctx: BackendContext,
     onUpdate: (bucket: CephBucket) => void,
   ): Promise<CephBucket[]> {
-    const { region: defaultRegion } = await getCephS3Connection();
   
     const names: string[] = await rgwJson(["bucket", "list"]);
-    const shells = names.map((n) => shellCephBucket(n, defaultRegion));
+    const shells = names.map((n) => shellCephBucket(n));
   
     // Fire-and-forget: rgwJson itself is globally concurrency-limited now
     void Promise.all(
@@ -130,7 +123,7 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
         try {
           const stats = await rgwJson(["bucket", "stats", "--bucket", b.name]);
           const adminRef = b.name;
-          const full = buildS3BucketFromRgwStats(stats, defaultRegion);
+          const full = buildS3BucketFromRgwStats(stats);
           onUpdate({ ...b, ...full ,adminRef});
         } catch {
           // leave shell
@@ -144,8 +137,8 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
 export async function hydrateCephBucket(
   bucket: CephBucket,
 ): Promise<CephBucket> {
-  
-  const { acl, policy } = await getCephBucketSecurity(bucket.adminRef!);
+
+  const { acl, policy } = await getCephBucketSecurity(bucket.adminRef.replace("/",":"));
   return {
     ...bucket,
     acl,
@@ -153,11 +146,10 @@ export async function hydrateCephBucket(
   };
 }
 
-function shellCephBucket(name: string, defaultRegion: string): CephBucket {
+function shellCephBucket(name: string): CephBucket {
   return {
     backendKind: "ceph",
     name,
-    region: defaultRegion || "ceph-default-zone",
 
     owner: undefined,
     createdAt: undefined,

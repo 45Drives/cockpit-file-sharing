@@ -472,7 +472,7 @@
   const endDate = ref<string>("");
   const showLog = ref(false);
   const usageWarning = ref<string | null>(null);
-    
+
   function toDateString(d: Date): string {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
