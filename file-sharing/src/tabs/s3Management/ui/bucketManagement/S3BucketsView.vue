@@ -293,10 +293,25 @@ class="rounded-md border border-default bg-primary px-2.5 py-1 text-xs font-medi
     </div>
 
     <!-- Create/Edit modal -->
-    <BucketFormModal :visible="showModal" :mode="modalMode" :backend="backend" :cephGateway="cephGateway || null"
-      :cephUsers="cephUsers" :loadingCephUsers="loadingCephUsers" :cephUsersError="cephUsersError"
-      :bucketToEdit="editingBucket" :garageKeys="garageKeys" :loadingGarageKeys="loadingGarageKeys"
-      :garageKeysError="garageKeysError" @close="closeModal" @submit="handleFormSubmit" />
+    <BucketFormModal
+  :visible="showModal"
+  :mode="modalMode"
+  :backend="backend"
+  :cephGateway="cephGateway || null"
+  :cephUsers="cephUsers"
+  :loadingCephUsers="loadingCephUsers"
+  :cephUsersError="cephUsersError"
+  :cephPlacementTargets="cephPlacementTargets"
+  :loadingCephPlacementTargets="loadingCephPlacementTargets"
+  :cephPlacementTargetsError="cephPlacementTargetsError"
+  :bucketToEdit="editingBucket"
+  :garageKeys="garageKeys"
+  :loadingGarageKeys="loadingGarageKeys"
+  :garageKeysError="garageKeysError"
+  @close="closeModal"
+  @submit="handleFormSubmit"
+/>
+
 
     <!-- Delete confirm modal -->
     <BucketDeleteModal :bucket="bucketToDelete" @cancel="bucketToDelete = null" @confirm="performDelete" />
@@ -305,7 +320,7 @@ class="rounded-md border border-default bg-primary px-2.5 py-1 text-xs font-medi
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
-import { listRGWUserNames } from "../../api/s3CliAdapter";
+import { listRgwPlacementTargets, listRGWUserNames } from "../../api/s3CliAdapter";
 import type { RgwGateway, CephBucket, MinioBucket, GarageBucket } from "../../types/types";
 import { ArchiveBoxIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 import BucketFormModal from "./BucketFormModal.vue";
@@ -343,6 +358,9 @@ const showUsageDashboard = ref(false);
 const usageBucketName = ref<string | null>(null);
 const usageBucket = ref<BucketType | null>(null);
 const openingModal = ref(false);
+const cephPlacementTargets = ref<string[]>([]);
+const loadingCephPlacementTargets = ref(false);
+const cephPlacementTargetsError = ref<string | null>(null);
 
 
 const pageSize = ref<number>(30);
@@ -632,6 +650,8 @@ async function openCreateModal() {
 
     if (props.backend === "ceph") {
       await loadCephUsersIfNeeded();
+      await loadCephPlacementTargetsIfNeeded();
+
     }
     if (props.backend === "garage") {
       await loadGarageKeysIfNeeded();
@@ -640,6 +660,24 @@ async function openCreateModal() {
     showModal.value = true;
   } finally {
     openingModal.value = false;
+  }
+}
+
+
+
+
+async function loadCephPlacementTargetsIfNeeded() {
+  if (props.backend !== "ceph") return;
+
+  loadingCephPlacementTargets.value = true;
+  cephPlacementTargetsError.value = null;
+  try {
+    cephPlacementTargets.value = await listRgwPlacementTargets(/* optional zonegroup */);
+  } catch (e: any) {
+    cephPlacementTargetsError.value = e?.message ?? "Failed to list placement targets";
+    cephPlacementTargets.value = [];
+  } finally {
+    loadingCephPlacementTargets.value = false;
   }
 }
 
@@ -653,6 +691,7 @@ async function openEditModal(bucket: BucketType) {
       await loadCephUsersIfNeeded();
     } else if (props.backend === "ceph") {
       await loadCephUsersIfNeeded();
+      await loadCephPlacementTargetsIfNeeded();
     }
 
     if (props.backend === "garage") {

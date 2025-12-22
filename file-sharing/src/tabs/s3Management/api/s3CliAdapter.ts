@@ -518,9 +518,8 @@ export async function changeRgwBucketOwner(
 
   // 2) new owner context ("uid" or "tenant$uid")
   const { tenant: targetTenant, uid: targetUid } = splitTenantFromUid(newOwnerFromList);
-  if (!targetUid) throw new Error("changeRgwBucketOwner: new owner uid is required");
 
-  const targetUserId = targetTenant ? `${targetTenant}$${targetUid}` : targetUid;
+  const targetUserId = newOwnerFromList
 
   // 3) LINK (docs-style)
   // - non-tenant bucket -> tenanted user: use /BUCKET
@@ -529,7 +528,7 @@ export async function changeRgwBucketOwner(
     !sourceTenant && !!targetTenant
       ? `/${rawBucketName}`
       : sourceTenant
-        ? `${sourceTenant}/${rawBucketName}`
+        ? `${rawBucketName}`
         : rawBucketName;
 
   const linkArgs = ["bucket", "link", "--bucket", linkBucketRef,  "--uid", targetUserId,];
@@ -549,7 +548,14 @@ export async function changeRgwBucketOwner(
   // 4) CHOWN (docs-style)
   // - if target is tenanted: tenant/bucket
   // - else: bucket
-  const chownBucketRef = targetTenant ? `${targetTenant}/${rawBucketName}` : rawBucketName;
+  let chownBucketRef ;
+  if(!targetUserId.includes("$")){
+      chownBucketRef = rawBucketName.split("/")[1]
+  }
+  else{
+     chownBucketRef = rawBucketName;
+
+  }
 
   const chownArgs = ["bucket", "chown",  "--bucket", chownBucketRef,"--uid", targetUserId,];
   if (bucketId) chownArgs.push("--bucket-id", bucketId);
@@ -567,7 +573,6 @@ export async function changeRgwBucketOwner(
   await rgwJson(chownArgs);
 }
 
-
 export async function createCephBucketViaS3(params: {
   bucketName: string;
   endpoint: string;
@@ -583,6 +588,7 @@ export async function createCephBucketViaS3(params: {
   objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
   objectLockRetentionDays?: number;
   owner?: string;
+  placementTarget?: string;
 }): Promise<void> {
   const log = (...a: any[]) => console.log("[createCephBucketViaS3]", ...a);
 
@@ -598,7 +604,18 @@ export async function createCephBucketViaS3(params: {
 
   // 1) create bucket using houstonUi creds
   const createArgs = ["s3api", "create-bucket", "--bucket", params.bucketName];
-
+  if (params.placementTarget?.trim()) {
+    const zonegroupApi = await getRgwZonegroupApiName(); // returns "zonegroupy"
+    if (!zonegroupApi) throw new Error("Could not determine RGW zonegroup api_name");
+  
+    createArgs.push(
+      "--create-bucket-configuration",
+      `LocationConstraint=${zonegroupApi}:${params.placementTarget.trim()}`
+    );
+  }
+  
+  
+  
   if (cannedAcl && cannedAcl !== "private") createArgs.push("--acl", cannedAcl);
   if (params.objectLockEnabled) createArgs.push("--object-lock-enabled-for-bucket");
 
@@ -1370,51 +1387,6 @@ export async function getCephBucketSecurity(
   return { acl, policy };
 }
 
-
-// export async function getCephBucketSecurity(
-//   bucketName: string
-// ): Promise<{ acl?: CephAclRule[]; policy?: string }> {
-//   const [aclJson, policyJson] = await Promise.all([
-//     awsJsonOrNullWithDashboardCreds(["s3api", "get-bucket-acl", "--bucket", bucketName]),
-//     awsJsonOrNullWithDashboardCreds(["s3api", "get-bucket-policy", "--bucket", bucketName]),
-//   ]);
-
-//   let acl: CephAclRule[] | undefined;
-//   let policy: string | undefined;
-
-//   if (aclJson && Array.isArray(aclJson.Grants)) {
-//     const rules: CephAclRule[] = [];
-
-//     for (const g of aclJson.Grants as any[]) {
-//       if (!g || !g.Grantee || !g.Permission) continue;
-//       const perm = g.Permission as any;
-
-//       if (g.Grantee.Type === "Group" && typeof g.Grantee.URI === "string") {
-//         if (g.Grantee.URI.endsWith("/AllUsers")) {
-//           rules.push({ grantee: "all-users", permission: perm });
-//         } else if (g.Grantee.URI.endsWith("/AuthenticatedUsers")) {
-//           rules.push({ grantee: "authenticated-users", permission: perm });
-//         }
-//       } else if (g.Grantee.Type === "CanonicalUser") {
-//         rules.push({ grantee: "owner", permission: perm });
-//       }
-//     }
-
-//     if (rules.length) acl = rules;
-//   }
-
-//   if (policyJson && typeof policyJson.Policy === "string") {
-//     try {
-//       const parsed = JSON.parse(policyJson.Policy);
-//       policy = JSON.stringify(parsed, null, 2);
-//     } catch {
-//       policy = policyJson.Policy;
-//     }
-//   }
-
-//   return { acl, policy };
-// }
-
 export async function isRgwUsageLogEnabled(): Promise<boolean | null> {
   return rgwLimit(async () => {
     const cmd = new Command(["ceph", "config", "get", "client.rgw", "rgw_enable_usage_log"], {
@@ -2043,4 +2015,54 @@ except Exception as e:
   } catch {
     return undefined;
   }
+}
+
+export async function listRgwPlacementTargets(zonegroup?: string): Promise<string[]> {
+  const args = ["zonegroup", "placement", "list", "--format", "json"];
+  if (zonegroup) args.splice(1, 0, "--rgw-zonegroup", zonegroup);
+
+  const out = await rgwJson(args);
+  if (!out) return [];
+
+  // Case 1: this command returns an array of { key, val: { name, ... } }
+  if (Array.isArray(out)) {
+    return out
+      .map((x: any) => {
+        if (typeof x === "string") return x;
+        if (x && typeof x === "object") return x.key ?? x.name ?? x.val?.name;
+        return "";
+      })
+      .map((x: any) => (typeof x === "string" ? x.trim() : ""))
+      .filter(Boolean);
+  }
+
+  // Case 2: other formats might return { placement_targets: [...] }
+  const pt = (out as any).placement_targets;
+  if (Array.isArray(pt)) {
+    if (pt.length && typeof pt[0] === "object" && pt[0]) {
+      return pt
+        .map((x: any) => x.key ?? x.name ?? x.placement_target ?? x.id)
+        .map((x: any) => (typeof x === "string" ? x.trim() : ""))
+        .filter(Boolean);
+    }
+    return pt.map((x: any) => String(x).trim()).filter(Boolean);
+  }
+
+  return [];
+}
+
+export async function getRgwZonegroupName(): Promise<string | null> {
+  const out = await rgwJson(["zonegroup", "list", "--format", "json"]);
+  const zgs = (out as any)?.zonegroups;
+  if (Array.isArray(zgs) && zgs.length) return String(zgs[0]);
+  return null;
+}
+
+export async function getRgwZonegroupApiName(zonegroup?: string): Promise<string | null> {
+  const zg = zonegroup ?? (await getRgwZonegroupName());
+  if (!zg) return null;
+
+  const out = await rgwJson(["zonegroup", "get", "--rgw-zonegroup", zg, "--format", "json"]);
+  const api = (out as any)?.api_name;
+  return typeof api === "string" && api.trim() ? api.trim() : null;
 }

@@ -9,20 +9,20 @@
       <form @submit.prevent="onSubmit"
         class="grid grid-cols-1 gap-3 text-sm md:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)]">
         <div class="w-full min-w-0">
-          <label class="mb-1 block text-xs font-medium text-slate-300">Bucket name</label>
+          <label class="mb-1 block text-md font-medium text-slate-300">Bucket name</label>
           <input v-model="modalForm.name" :disabled="mode === 'edit'" type="text" required
             class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1 disabled:opacity-60" />
         </div>
 
         <div class="w-full min-w-0">
-          <label class="mb-1 block text-xs font-medium text-slate-300">Region</label>
+          <label class="mb-1 block text-md font-medium text-slate-300">Region</label>
           <input v-model="modalForm.region" type="text" placeholder="optional"
             class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1" />
         </div>
 
         <!-- Owner -->
         <div class="md:col-span-2">
-          <label class="mb-1 block text-xs font-medium text-slate-300">Owner</label>
+          <label class="mb-1 block text-md font-medium text-slate-300">Owner</label>
 
           <template v-if="backend === 'ceph'">
             <select v-model="modalForm.owner"
@@ -48,7 +48,7 @@
 
         <!-- TAGS -->
         <div v-if="backend !== 'garage'" class="md:col-span-2">
-          <label class="mb-1 block text-xs font-medium text-slate-300">Tags</label>
+          <label class="mb-1 block text-md font-medium ">Tags</label>
 
           <div class="space-y-2">
             <div v-for="(tag, index) in modalForm.tags" :key="index" class="flex gap-2">
@@ -57,14 +57,22 @@
               <input v-model="tag.value" type="text" placeholder="value (e.g. prod)"
                 class="flex-1 rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1" />
               <button v-if="modalForm.tags.length > 1" type="button" @click="removeTagRow(index)"
-                class="rounded-md border border-default bg-default px-2 py-2 text-xs font-medium text-slate-100 hover:bg-slate-800">
+                class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-slate-100 hover:bg-slate-800">
                 Remove
               </button>
+              <button
+  v-else
+  type="button"
+  @click="clearTagRow(index)"
+  class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-slate-100 hover:bg-slate-800"
+>
+  Clear
+</button>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
               <button type="button" @click="addTagRow" :disabled="modalForm.tags.length >= MAX_TAGS"
-                class="rounded-md border  border-default bg-secondary px-3 py-2 text-xs font-medium text-slate-100 hover:bg-slate-900 disabled:opacity-50">
+                class="rounded-md border  border-default bg-secondary px-3 py-2 text-md font-medium text-slate-100 hover:bg-slate-900 disabled:opacity-50">
                 Add tag
               </button>
 
@@ -85,33 +93,33 @@
         <!-- MinIO -->
         <div v-if="backend === 'minio'" class="md:col-span-2 mt-2 border-t border-slate-800 pt-3 space-y-4">
           <div class="flex items-center justify-between">
-            <label class="text-xs font-medium text-slate-300">
+            <label class="text-sm font-medium font-semibold text-default">
               Object locking (--with-lock)
             </label>
             <div class="flex items-center gap-2">
               <input id="minioObjectLockEnabled" v-model="modalForm.minioObjectLockEnabled" type="checkbox"
                 class="h-4 w-4 rounded border-slate-600 bg-default" />
-              <label for="minioObjectLockEnabled" class="text-xs text-slate-300">Enable</label>
+              <label for="minioObjectLockEnabled" class="text-md font-semibold text-default">Enable</label>
             </div>
           </div>
 
           <div class="flex items-center justify-between">
-            <label class="text-xs font-medium text-slate-300">
+            <label class="text-sm font-medium font-semibold text-default">
               Versioning (--with-versioning)
             </label>
             <div class="flex items-center gap-2">
               <input id="minioVersioningEnabled" v-model="modalForm.minioVersioningEnabled" type="checkbox"
                 class="h-4 w-4 rounded border-slate-600 bg-default" />
-              <label for="minioVersioningEnabled" class="text-xs text-slate-300">Enable</label>
+              <label for="minioVersioningEnabled" class="text-md font-semibold text-default">Enable</label>
             </div>
           </div>
 
           <div class="space-y-2">
-            <label class="block text-xs font-medium text-slate-300">Quota</label>
+            <label class="block text-md font-medium font-semibold text-default">Quota</label>
 
             <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
               <div>
-                <label class="mb-1 block text-sm font-medium text-slate-400">Max size</label>
+                <label class="mb-1 block text-sm font-medium font-semibold text-default">Max size</label>
                 <div class="flex gap-2">
                   <input v-model="modalForm.minioQuotaMaxSize" type="number" min="0" placeholder="e.g. 100"
                     class="w-full rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1" />
@@ -131,12 +139,12 @@
         <div v-if="backend === 'garage'" class="md:col-span-2 mt-2 border-t border-slate-800 pt-3 space-y-3">
           <div class="flex gap-2">
             <div class="flex-1">
-              <label class="mb-1 block text-xs font-medium text-slate-300">Max size</label>
+              <label class="mb-1 block text-md font-medium font-semibold text-default">Max size</label>
               <input v-model="modalForm.garageMaxSize" type="number" min="0" placeholder="e.g. 30"
                 class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1" />
             </div>
             <div class="w-24">
-              <label class="mb-1 block text-xs font-medium text-slate-300">Unit</label>
+              <label class="mb-1 block text-md font-medium font-semibold text-default">Unit</label>
               <select v-model="modalForm.garageMaxSizeUnit"
                 class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1">
                 <option value="MiB">MiB</option>
@@ -147,13 +155,13 @@
           </div>
 
           <div>
-            <label class="mb-1 block text-xs font-medium text-slate-300">Max objects</label>
+            <label class="mb-1 block text-md font-medium font-semibold text-default">Max objects</label>
             <input v-model="modalForm.garageMaxObjects" type="number" min="0" placeholder="e.g. 100000"
               class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1" />
           </div>
 
           <div class="space-y-2">
-            <label class="block text-xs font-medium text-slate-300">Grant access keys</label>
+            <label class="block text-md font-medium font-semibold text-default">Grant access keys</label>
 
             <p v-if="loadingGarageKeys" class="text-md text-muted">Loading Garage keys…</p>
             <p v-else-if="garageKeysError" class="text-md text-red-400">{{ garageKeysError }}</p>
@@ -166,7 +174,7 @@
               <div v-for="k in (garageKeys || [])" :key="k.id"
                 class="flex items-center justify-between gap-3 rounded-md border border-default bg-default px-3 py-2">
                 <div class="min-w-0">
-                  <div class="text-xs font-medium text-slate-200 truncate">{{ k.name || k.id }}</div>
+                  <div class="text-md font-medium text-slate-200 truncate">{{ k.name || k.id }}</div>
                   <div class="text-sm text-muted font-mono truncate">{{ k.id }}</div>
                 </div>
 
@@ -175,7 +183,7 @@
                     :checked="isGranted(k.id, k.name)"
                     @change="toggleGrant(k.id, k.name, ($event.target as HTMLInputElement).checked)" />
 
-                  <div v-if="isGranted(k.id, k.name)" class="flex items-center gap-2 text-xs">
+                  <div v-if="isGranted(k.id, k.name)" class="flex items-center gap-2 text-md">
                     <label class="flex items-center gap-1">
                       <input type="checkbox" class="h-4 w-4 rounded border-slate-600 bg-default"
                         v-model="grantFor(k.id, k.name).read" />
@@ -198,17 +206,17 @@
               </div>
             </div>
 
-            <p class="text-xs text-muted">
+            <p class="text-md text-muted">
               Owner is required for some bucket admin actions (example: website config via S3 APIs).
             </p>
           </div>
 
           <div>
-            <label class="mb-1 block text-xs font-medium text-slate-300">Aliases</label>
+            <label class="mb-1 block text-md font-medium font-semibold text-default">Aliases</label>
             <input v-model="modalForm.garageAliasesText" type="text"
               placeholder="Comma-separated, e.g. public-assets,cdn-bucket"
               class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1" />
-            <p class="mt-1 text-xs text-muted">
+            <p class="mt-1 text-md text-muted">
               Each alias will be created with
               <code>garage bucket alias &lt;bucket&gt; &lt;alias&gt;</code>.
             </p>
@@ -219,11 +227,11 @@
         <div v-if="backend === 'ceph'" class="md:col-span-2 mt-2 border-t border-slate-800 pt-3 space-y-4">
           <div class="space-y-2">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-medium text-slate-300">Object Locking</label>
+              <label class="text-md font-medium font-semibold text-default">Object Locking</label>
               <div class="flex items-center gap-2">
                 <input id="cephObjectLockEnabled" v-model="modalForm.cephObjectLockEnabled" type="checkbox"
                   :disabled="mode === 'edit'" class="h-4 w-4 rounded border-slate-600 bg-default" />
-                <label for="cephObjectLockEnabled" class="text-xs text-slate-300">Enable</label>
+                <label for="cephObjectLockEnabled" class="text-md font-semibold text-default">Enable</label>
               </div>
             </div>
             <p class="text-xs text-muted">
@@ -232,8 +240,8 @@
             </p>
 
             <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label class="flex flex-col gap-1 text-xs">
-                <span class="font-medium text-slate-300">Mode</span>
+              <label class="flex flex-col gap-1 text-md">
+                <span class="font-medium font-semibold text-default">Mode</span>
                 <select v-model="modalForm.cephObjectLockMode"
                   :disabled="!modalForm.cephObjectLockEnabled || mode === 'edit'"
                   class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1 disabled:opacity-60">
@@ -242,8 +250,8 @@
                 </select>
               </label>
 
-              <label class="flex flex-col gap-1 text-xs">
-                <span class="font-medium text-slate-300">Days</span>
+              <label class="flex flex-col gap-1 text-md">
+                <span class="font-medium font-semibold text-default">Days</span>
                 <input v-model="modalForm.cephObjectLockRetentionDays" type="number" min="1"
                   :disabled="!modalForm.cephObjectLockEnabled || mode === 'edit'" placeholder="e.g. 30"
                   class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1 disabled:opacity-60" />
@@ -253,21 +261,21 @@
 
           <div class="space-y-1">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-medium text-slate-300">Versioning</label>
+              <label class="text-md font-medium font-semibold text-default">Versioning</label>
               <div class="flex items-center gap-2">
                 <input id="cephVersioningEnabled" v-model="modalForm.cephVersioningEnabled" type="checkbox"
                   :disabled="cephVersioningLocked" class="h-4 w-4 rounded border-slate-600 bg-default" />
-                <label for="cephVersioningEnabled" class="text-xs text-slate-300">Enable</label>
+                <label for="cephVersioningEnabled" class="text-md font-semibold text-default">Enable</label>
               </div>
             </div>
-            <p class="text-xs text-muted">
+            <p class="text-md text-muted">
               <span v-if="cephVersioningLocked">Versioning is required when Object Lock is enabled.</span>
-              <span v-else>Enable or disable versioning on this bucket.</span>
+              <span class="text-xs" v-else>Enable or disable versioning on this bucket.</span>
             </p>
           </div>
 
           <div class="space-y-2">
-            <label class="block text-xs font-medium text-slate-300">Encryption</label>
+            <label class="block text-md font-medium font-semibold text-default">Encryption</label>
             <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
               <select v-model="modalForm.cephEncryptionMode"
                 class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1">
@@ -280,7 +288,7 @@
                 placeholder="KMS key id / alias"
                 class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1" />
             </div>
-            <p class="text-xs text-muted">
+            <p class="text-md text-muted">
               SSE-S3 uses RGW-managed encryption keys. KMS mode connects to an external key management service.
             </p>
           </div>
@@ -288,7 +296,7 @@
           <!-- Bucket policy full width -->
           <div class="space-y-2 md:col-span-2">
             <div class="flex items-center justify-between gap-3">
-              <label class="block text-xs font-medium text-slate-300">
+              <label class="block text-md font-medium font-semibold text-default">
                 Bucket policy (JSON)
               </label>
 
@@ -296,17 +304,17 @@
             </div>
 
             <textarea v-model="modalForm.bucketPolicyText" rows="10" placeholder="Optional bucket policy JSON"
-              class="w-full rounded-md border border-default bg-default px-3 py-2 text-xs text-slate-100 outline-none focus:ring-1 font-mono" />
+              class="w-full rounded-md border border-default bg-default px-3 py-2 text-md text-slate-100 outline-none focus:ring-1 font-mono" />
 
-            <p v-if="bucketPolicyError" class="text-xs text-red-400">
+            <p v-if="bucketPolicyError" class="text-md text-red-400">
               {{ bucketPolicyError }}
             </p>
-            <p v-else class="text-xs text-muted">
+            <p v-else class="text-md text-muted">
               Leave empty for no bucket policy. If provided, it must be valid JSON.
             </p>
             <div class="flex items-center gap-2">
               <a href="https://awspolicygen.s3.amazonaws.com/policygen.html" target="_blank" rel="noopener noreferrer"
-                class="rounded-md border border-default bg-secondary px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800">
+                class="rounded-md border border-default bg-secondary px-2.5 py-1 text-md font-medium text-slate-100 hover:bg-slate-800">
                 <div class="flex">
                   <ArrowTopRightOnSquareIcon class="w-[1rem]"></ArrowTopRightOnSquareIcon>
                   Policy generator
@@ -316,7 +324,7 @@
 
               <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-bucket-policies.html?icmpid=docs_amazons3_console"
                 target="_blank" rel="noopener noreferrer"
-                class="rounded-md border border-default bg-secondary px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800">
+                class="rounded-md border border-default bg-secondary px-2.5 py-1 text-md font-medium text-slate-100 hover:bg-slate-800">
                 <div class="flex">
                   <ArrowTopRightOnSquareIcon class="w-[1rem]"></ArrowTopRightOnSquareIcon>
                   Examples
@@ -325,7 +333,7 @@
               </a>
 
               <button type="button"
-                class="rounded-md border border-default bg-primary px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800 disabled:opacity-50"
+                class="rounded-md border border-default bg-primary px-2.5 py-1 text-md font-medium text-slate-100 hover:bg-slate-800 disabled:opacity-50"
                 :disabled="!modalForm.bucketPolicyText?.trim()" @click="clearPolicy">
                 Clear
               </button>
@@ -333,11 +341,11 @@
           </div>
           <!-- Ceph ACL -->
           <div v-if="backend === 'ceph'" class="md:col-span-2 mt-2 border-t border-slate-800 pt-3 space-y-3">
-            <label class="block text-xs font-medium text-slate-300">Access control (ACL)</label>
+            <label class="block text-md font-medium font-semibold text-default">Access control (ACL)</label>
 
             <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label class="flex flex-col gap-1 text-xs">
-                <span class="font-medium text-slate-300">Grantee</span>
+              <label class="flex flex-col gap-1 text-md">
+                <span class="font-medium font-semibold text-default">Grantee</span>
                 <select v-model="modalForm.cephAclScope"
                   class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1">
                   <option value="owner">Owner</option>
@@ -346,8 +354,8 @@
                 </select>
               </label>
 
-              <label class="flex flex-col gap-1 text-xs">
-                <span class="font-medium text-slate-300">Permission</span>
+              <label class="flex flex-col gap-1 text-md">
+                <span class="font-medium font-semibold text-default">Permission</span>
                 <select v-model="modalForm.cephAclPermission"
                   class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1">
                   <option v-for="o in cephAclPermissionOptions" :key="o.value" :value="o.value">
@@ -357,20 +365,49 @@
               </label>
             </div>
 
-            <p class="text-xs text-muted">
+            <p class="text-md text-muted">
               Applies a simple ACL rule on create/edit.
             </p>
+
+            <div v-if="mode != 'edit'" class="space-y-2">
+    <label class="block text-md font-medium font-semibold text-default">Placement target</label>
+
+    <select
+      v-model="modalForm.cephPlacementTarget"
+      
+      class="w-full rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1 disabled:opacity-60"
+    >
+      <option value="">Default</option>
+      <option
+        v-for="t in (cephPlacementTargets || [])"
+        :key="t"
+        :value="t"
+      >
+        {{ t }}
+      </option>
+    </select>
+
+    <p v-if="loadingCephPlacementTargets" class="text-md text-muted">
+      Loading placement targets…
+    </p>
+    <p v-else-if="cephPlacementTargetsError" class="text-md text-red-400">
+      {{ cephPlacementTargetsError }}
+    </p>
+    <p v-else class="text-md text-muted">
+      When creating a bucket, a placement target can be provided as part of the LocationConstraint to override the default placement targets from the user and zonegroup.
+    </p>
+  </div>
           </div>
 
         </div>
         <!-- Footer buttons -->
         <div class="mt-2 flex items-center justify-end gap-2 md:col-span-2">
           <button type="button" @click="emit('close')"
-            class="rounded-md border border-default bg-danger px-3 py-1.5 text-xs font-medium text-white hover:bg-danger/90">
+            class="rounded-md border border-default bg-danger px-3 py-1.5 text-md font-medium text-white hover:bg-danger/90">
             Cancel
           </button>
           <button type="submit"
-            class="rounded-md px-3 py-1.5 text-xs font-medium text-white bg-success hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-950">
+            class="rounded-md px-3 py-1.5 text-md font-medium text-white bg-success hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-950">
             {{ mode === "create" ? "Create" : "Save changes" }}
           </button>
         </div>
@@ -407,6 +444,9 @@ const props = defineProps<{
   cephUsers: string[];
   loadingCephUsers: boolean;
   cephUsersError: string | null;
+  cephPlacementTargets?: string[];
+  loadingCephPlacementTargets?: boolean;
+  cephPlacementTargetsError?: string | null;
   bucketToEdit: S3Bucket | null;
   garageKeys?: GarageKeyDetail[];
   loadingGarageKeys?: boolean;
@@ -581,7 +621,8 @@ function initFromProps() {
 
   modalForm.cephAclScope = chosen.grantee;
   modalForm.cephAclPermission = chosen.permission
-
+    modalForm.cephObjectLockEnabled = !!props.bucketToEdit.objectLockEnabled;
+    
       modalForm.cephVersioningEnabled = props.bucketToEdit.versioning === "Enabled";
 
     } else {
@@ -805,6 +846,15 @@ const tagsLimitError = computed(() => {
     ? `You can add up to ${MAX_TAGS} tags.`
     : null;
 });
+
+function clearTagRow(index: number) {
+  const row = modalForm.tags[index];
+  if (!row) return;
+  row.key = "";
+  row.value = "";
+}
+
+
 watch(
   cephObjectLockActive,
   (locked) => {

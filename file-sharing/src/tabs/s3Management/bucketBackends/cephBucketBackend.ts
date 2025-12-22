@@ -33,7 +33,8 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
       aclRules: form.aclRules,
       objectLockEnabled: form.objectLockEnabled,
       objectLockMode: form.objectLockMode,
-      objectLockRetentionDays: form.objectLockRetentionDays
+      objectLockRetentionDays: form.objectLockRetentionDays,
+      placementTarget: form.placementTarget || undefined,
     });
   },
 
