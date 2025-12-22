@@ -1,7 +1,7 @@
 // backends/garageBucketBackend.ts
 import type { BucketBackend, BucketFormData, BackendContext } from "./bucketBackend";
 import type { GarageBucket } from "../types/types";
-import {listBucketsFromGarage,deleteBucketFromGarage,createGarageBucket,updateGarageBucket,
+import {listBucketsFromGarage,deleteBucketFromGarage,createGarageBucket,updateGarageBucket, listGarageKeysWithInfo,
 } from "../api/garageCliAdapter";
 import { parseList, parseQuotaSize, BINARY_MULTIPLIERS } from "./bucketUtils";
 
@@ -134,5 +134,15 @@ export const garageBucketBackend: BucketBackend<GarageBucket> = {
 
   async deleteBucket(bucket: GarageBucket): Promise<void> {
     await deleteBucketFromGarage(bucket.garageId!);
+  },
+
+  async prepareCreate(_ctx) {
+    const garageKeys = await listGarageKeysWithInfo();
+    return { garageKeys };
+  },
+
+  async prepareEdit(bucket, ctx) {
+    const deps = await this.prepareCreate!(ctx);
+    return { bucket, deps };
   },
 };

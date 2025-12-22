@@ -181,7 +181,7 @@
           v-if="histogramEntries.length"
           class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default"
         >
-          <p class="text-sm uppercase tracking-wide text-default mb-2">
+          <p class="text-sm uppercase tracking-wide text-default font-semibold mb-2">
             Object size distribution
           </p>
           <div class="space-y-1 text-xs text-default">

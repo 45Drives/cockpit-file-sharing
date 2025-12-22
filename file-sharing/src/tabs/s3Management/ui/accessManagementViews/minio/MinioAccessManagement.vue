@@ -16,25 +16,17 @@
 
       <!-- Center: title -->
       <div class="flex items-baseline justify-center gap-2">
+       <div>
         <h1 class="text-2xl font-semibold text-default">MinIO Access Management</h1>
           <p class="text-xs text-default mt-1">
             Manage users, policies, and groups for this MinIO deployment.
           </p>
+        </div>
       </div>
 
     </div>
     
     <div class="px-6 py-6 mx-auto box-border">
-      <!-- Page header -->
-      <header class="mb-4 flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-semibold text-default">MinIO Access Management</h1>
-          <p class="text-xs text-default mt-1">
-            Manage users, policies, and groups for this MinIO deployment.
-          </p>
-        </div>
-      </header>
-  
       <!-- Tab bar -->
       <div class="border-b border-default mb-4 text-sm">
         <nav class="-mb-px flex space-x-4">

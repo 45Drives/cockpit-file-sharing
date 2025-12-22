@@ -78,8 +78,19 @@ export function useBucketBackend<K extends BackendKind>(
   async function deleteBucket(bucket: BucketByKind<K>) {
     await backendImpl.value.deleteBucket(bucket, context.value);
   }
-
-  return {buckets,loading,error,loadBuckets,createBucketFromForm,updateBucketFromForm,deleteBucket,
+  async function prepareCreate() {
+    const impl = backendImpl.value;
+    if (!impl.prepareCreate) return {};
+    return impl.prepareCreate(context.value) as any;
+  }
+  
+  async function prepareEdit(bucket: BucketByKind<K>) {
+    const impl = backendImpl.value;
+    if (!impl.prepareEdit) return { bucket, deps: {} as any };
+    return impl.prepareEdit(bucket as any, context.value) as any;
+  }
+  
+  return {buckets,loading,error,loadBuckets,createBucketFromForm,updateBucketFromForm,deleteBucket,prepareEdit,prepareCreate
   };
   
 }

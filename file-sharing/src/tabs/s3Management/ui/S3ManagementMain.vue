@@ -1,3 +1,5 @@
+<!-- S3mAINmANAGEWMENTVIEW.vue -->
+
 <template>
   <div class="page">
     <div v-if="loadingConfig">

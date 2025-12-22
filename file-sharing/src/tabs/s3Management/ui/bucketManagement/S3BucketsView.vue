@@ -1,4 +1,4 @@
-<!-- S3BucketManagement.vue -->
+<!-- S3BUCKETSVIEW.vue -->
 <template>
   <div class="space-y-4 sm:px-4 lg:px-6 sm:rounded-lg bg-accent rounded-md border border-default">
     <!-- Header -->
@@ -195,7 +195,7 @@
             </div>
 
             <!-- Meta -->
-            <div>
+            <div v-if="backend!='minio'">
               <label class="mb-1 block text-xs font-medium text-slate-300">
                 Owner
               </label>
@@ -294,23 +294,39 @@ class="rounded-md border border-default bg-primary px-2.5 py-1 text-xs font-medi
 
     <!-- Create/Edit modal -->
     <BucketFormModal
+  v-if="backend === 'ceph'"
   :visible="showModal"
   :mode="modalMode"
-  :backend="backend"
+  backend="ceph"
   :cephGateway="cephGateway || null"
-  :cephUsers="cephUsers"
-  :loadingCephUsers="loadingCephUsers"
-  :cephUsersError="cephUsersError"
-  :cephPlacementTargets="cephPlacementTargets"
-  :loadingCephPlacementTargets="loadingCephPlacementTargets"
-  :cephPlacementTargetsError="cephPlacementTargetsError"
-  :bucketToEdit="editingBucket"
-  :garageKeys="garageKeys"
-  :loadingGarageKeys="loadingGarageKeys"
-  :garageKeysError="garageKeysError"
+  :bucketToEdit="cephEditingBucket"
+  :deps="cephModalDeps"
   @close="closeModal"
   @submit="handleFormSubmit"
 />
+
+<BucketFormModal
+  v-else-if="backend === 'minio'"
+  :visible="showModal"
+  :mode="modalMode"
+  backend="minio"
+  :bucketToEdit="minioEditingBucket"
+  :deps="minioModalDeps"
+  @close="closeModal"
+  @submit="handleFormSubmit"
+/>
+
+<BucketFormModal
+  v-else
+  :visible="showModal"
+  :mode="modalMode"
+  backend="garage"
+  :bucketToEdit="garageEditingBucket"
+  :deps="garageModalDeps"
+  @close="closeModal"
+  @submit="handleFormSubmit"
+/>
+
 
 
     <!-- Delete confirm modal -->
@@ -320,20 +336,17 @@ class="rounded-md border border-default bg-primary px-2.5 py-1 text-xs font-medi
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
-import { listRgwPlacementTargets, listRGWUserNames } from "../../api/s3CliAdapter";
-import type { RgwGateway, CephBucket, MinioBucket, GarageBucket } from "../../types/types";
+import type { RgwGateway, CephBucket, MinioBucket, GarageBucket,CephDeps, MinioDeps, GarageDeps, BackendKind } from "../../types/types";
 import { ArchiveBoxIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 import BucketFormModal from "./BucketFormModal.vue";
 import BucketDeleteModal from "./BucketDeleteModal.vue";
 import CephBucketDashboardView from "./CephBucketDashboardView.vue";
-import { useBucketBackend, type BackendKind } from "../../composables/useBucketBackend";
-import { hydrateCephBucket } from "../../bucketBackends/cephBucketBackend";
+import { useBucketBackend } from "../../composables/useBucketBackend";
 import MinioBucketDashboardView from "./MinioBucketDashboard.vue";
 import GarageBucketDashboardView from "./GarageBucketDashboard.vue";
-import { listGarageKeysWithInfo } from "../../api/garageCliAdapter";
-import type { GarageKeyDetail } from "../../types/types";
 import type { BackendContext } from "../../bucketBackends/bucketBackend";
 import { LoadingSpinner } from "@45drives/houston-common-ui";
+import type { ModalDeps } from "../../types/types";
 
 
 const props = defineProps<{
@@ -346,35 +359,55 @@ const emit = defineEmits<{
   (e: "backToViewSelection"): void;
 }>();
 
+
 const backendKind = computed<BackendKind>(() => props.backend);
 const backendCtx = computed<BackendContext>(() => ({
   cephGateway: props.cephGateway ?? null,
 }));
-type BucketType = CephBucket | MinioBucket | GarageBucket;
+type BucketType = (typeof buckets.value)[number];
 
-const { buckets, loading: loadingBuckets, error, loadBuckets, createBucketFromForm, updateBucketFromForm, deleteBucket,
+const { buckets, loading: loadingBuckets, error, loadBuckets, createBucketFromForm, updateBucketFromForm, deleteBucket,prepareCreate,prepareEdit
 } = useBucketBackend(backendKind, backendCtx);
 const showUsageDashboard = ref(false);
 const usageBucketName = ref<string | null>(null);
 const usageBucket = ref<BucketType | null>(null);
 const openingModal = ref(false);
-const cephPlacementTargets = ref<string[]>([]);
-const loadingCephPlacementTargets = ref(false);
-const cephPlacementTargetsError = ref<string | null>(null);
+const modalDeps = ref<ModalDeps | null>(null);
+  const cephEditingBucket = computed<CephBucket | null>(() => {
+  const b = editingBucket.value;
+  return b && b.backendKind === "ceph" ? (b as CephBucket) : null;
+});
 
+const minioEditingBucket = computed<MinioBucket | null>(() => {
+  const b = editingBucket.value;
+  return b && b.backendKind === "minio" ? (b as MinioBucket) : null;
+});
+
+const garageEditingBucket = computed<GarageBucket | null>(() => {
+  const b = editingBucket.value;
+  return b && b.backendKind === "garage" ? (b as GarageBucket) : null;
+});
+
+const cephModalDeps = computed<CephDeps | null>(() => {
+  if (props.backend !== "ceph") return null;
+  return (modalDeps.value as CephDeps | null) ?? null;
+});
+const minioModalDeps = computed<MinioDeps | null>(() => {
+  if (props.backend !== "minio") return null;
+  return (modalDeps.value as MinioDeps | null) ?? null;
+});
+const garageModalDeps = computed<GarageDeps | null>(() => {
+  if (props.backend !== "garage") return null;
+  return (modalDeps.value as GarageDeps | null) ?? null;
+});
 
 const pageSize = ref<number>(30);
 const page = ref<number>(1);
 const pageSizeInput = ref<string>(String(pageSize.value));
 
-const cephUsers = ref<string[]>([]);
-const loadingCephUsers = ref(false);
-const cephUsersError = ref<string | null>(null);
-
 // filters/sort
 const nameFilter = ref("");
 const regionFilter = ref<string>("all");
-const tagFilter = ref("");
 const sortKey = ref<"name" | "region" | "objects" | "size">("name");
 const sortDir = ref<"asc" | "desc">("asc");
 
@@ -387,9 +420,6 @@ const editingBucket = ref<BucketType | null>(null);
 const bucketToDelete = ref<BucketType | null>(null);
 
 
-const garageKeys = ref<GarageKeyDetail[]>([]);
-const loadingGarageKeys = ref(false);
-const garageKeysError = ref<string | null>(null);
 const backendLabel = computed(() => {
   if (props.backend === "minio") return "MinIO";
   if (props.backend === "ceph") return "Ceph RGW";
@@ -452,9 +482,13 @@ const filteredSortedBuckets = computed(() => {
   let result = [...buckets.value];
 
   if (nameFilter.value.trim()) {
-    const needle = nameFilter.value.trim().toLowerCase();
-    result = result.filter((b) => b.name.toLowerCase().includes(needle));
-  }
+  const needle = nameFilter.value.trim().toLowerCase();
+  result = result.filter((b: any) => {
+    const label = props.backend === "ceph" ? (b.adminRef ?? b.name) : b.name;
+    return String(label ?? "").toLowerCase().includes(needle);
+  });
+}
+
 
   if (regionFilter.value !== "all") {
     result = result.filter((b) => {
@@ -469,8 +503,8 @@ const filteredSortedBuckets = computed(() => {
     let bv: string | number = 0;
 
     if (sortKey.value === "name") {
-      av = a.name;
-      bv = b.name;
+      av = props.backend === "ceph" ? ((a as any).adminRef ?? a.name) : a.name;
+      bv = props.backend === "ceph" ? ((b as any).adminRef ?? b.name) : b.name;
     } else if (sortKey.value === "region") {
       av = a.region || "";
       bv = b.region || "";
@@ -511,9 +545,7 @@ const garageUsageBucket = computed<GarageBucket | null>(() => {
   return b && b.backendKind === "garage" ? (b as GarageBucket) : null;
 });
 
-function isCephBucket(b: BucketType): b is CephBucket {
-  return b.backendKind === "ceph";
-}
+
 
 function closeModal() {
   showModal.value = false;
@@ -523,6 +555,9 @@ function closeModal() {
 async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any }) {
   try {
     if (payload.mode === "create") {
+      console.log("UI submit payload:", payload);
+  console.log("UI submit name:", payload.form?.name);
+
       await createBucketFromForm(payload.form);
       await loadBuckets();
     } else if (payload.mode === "edit" && editingBucket.value) {
@@ -535,19 +570,7 @@ async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any })
     error.value = e?.message ?? "Failed to save bucket";
   }
 }
-async function loadGarageKeysIfNeeded() {
-  if (props.backend !== "garage") return;
-  loadingGarageKeys.value = true;
-  garageKeysError.value = null;
-  try {
-    garageKeys.value = await listGarageKeysWithInfo();
-  } catch (e: any) {
-    garageKeysError.value = e?.message ?? "Failed to list Garage keys";
-    garageKeys.value = [];
-  } finally {
-    loadingGarageKeys.value = false;
-  }
-}
+
 // delete flow
 function confirmDelete(bucket: BucketType) {
   bucketToDelete.value = bucket;
@@ -559,51 +582,30 @@ async function performDelete() {
   try {
     const toDelete = bucketToDelete.value;
 
-    await deleteBucket(toDelete as any); // see note below
-    buckets.value = buckets.value.filter((b) => b.name !== toDelete.name);
-
+    await deleteBucket(toDelete); // see note below
+    const keyOf = (x: any) => x.adminRef ?? x.id ?? x.name;
+    buckets.value = buckets.value.filter((b: any) => keyOf(b) !== keyOf(toDelete));
     bucketToDelete.value = null;
   } catch (e: any) {
     error.value = e?.message ?? "Failed to delete bucket";
   }
 }
 
-// Ceph users for owner dropdown
-async function loadCephUsersIfNeeded() {
-  if (props.backend !== "ceph") return;
-
-  loadingCephUsers.value = true;
-  cephUsersError.value = null;
-
-  try {
-    cephUsers.value = await listRGWUserNames();
-  } catch (e: any) {
-    cephUsersError.value = e?.message ?? "Failed to list Ceph users";
-    cephUsers.value = [];
-  } finally {
-    loadingCephUsers.value = false;
-  }
-}
 
 watch(
   () => props.backend,
   async (backend) => {
     nameFilter.value = "";
     regionFilter.value = "all";
-    tagFilter.value = "";
     sortKey.value = "name";
     sortDir.value = "asc";
 
     await loadBuckets();
-
-    if (backend === "garage") {
-      await loadGarageKeysIfNeeded();
-    }
   },
   { immediate: true },
 );
 
-watch([nameFilter, regionFilter, tagFilter, sortKey, sortDir], () => {
+watch([nameFilter, regionFilter, sortKey, sortDir], () => {
   page.value = 1;
 });
 
@@ -637,36 +639,10 @@ async function openCreateModal() {
     modalMode.value = "create";
     editingBucket.value = null;
 
-    if (props.backend === "ceph") {
-      await loadCephUsersIfNeeded();
-      await loadCephPlacementTargetsIfNeeded();
-
-    }
-    if (props.backend === "garage") {
-      await loadGarageKeysIfNeeded();
-    }
-
+    modalDeps.value = (await prepareCreate()) as ModalDeps | null;
     showModal.value = true;
   } finally {
     openingModal.value = false;
-  }
-}
-
-
-
-
-async function loadCephPlacementTargetsIfNeeded() {
-  if (props.backend !== "ceph") return;
-
-  loadingCephPlacementTargets.value = true;
-  cephPlacementTargetsError.value = null;
-  try {
-    cephPlacementTargets.value = await listRgwPlacementTargets(/* optional zonegroup */);
-  } catch (e: any) {
-    cephPlacementTargetsError.value = e?.message ?? "Failed to list placement targets";
-    cephPlacementTargets.value = [];
-  } finally {
-    loadingCephPlacementTargets.value = false;
   }
 }
 
@@ -675,22 +651,15 @@ async function openEditModal(bucket: BucketType) {
   try {
     modalMode.value = "edit";
 
-    if (backendKind.value === "ceph" && isCephBucket(bucket)) {
-      bucket = await hydrateCephBucket(bucket);
-      await loadCephUsersIfNeeded();
-    } else if (props.backend === "ceph") {
-      await loadCephUsersIfNeeded();
-      await loadCephPlacementTargetsIfNeeded();
-    }
+    const res = await prepareEdit(bucket);
+    editingBucket.value = res.bucket;
+    modalDeps.value = res.deps ;
 
-    if (props.backend === "garage") {
-      await loadGarageKeysIfNeeded();
-    }
-
-    editingBucket.value = bucket;
     showModal.value = true;
   } finally {
     openingModal.value = false;
   }
 }
+
+
 </script>

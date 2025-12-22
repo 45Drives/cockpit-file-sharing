@@ -3,7 +3,8 @@ import type { BucketBackend, BackendContext, BucketCreateForm, BucketEditForm } 
 import type { CephBucket } from "../types/types";
 import { parseTags } from "./bucketUtils";
 
-import {listBucketsFromCeph,createCephBucketViaS3,updateCephBucketViaS3,deleteBucketFromCeph,getCephBucketSecurity,rgwJson,getCephS3Connection,buildS3BucketFromRgwStats,
+import {listBucketsFromCeph,createCephBucketViaS3,updateCephBucketViaS3,deleteBucketFromCeph,getCephBucketSecurity,rgwJson,
+  buildS3BucketFromRgwStats,listRgwPlacementTargets, listRGWUserNames
 } from "../api/s3CliAdapter";
 
 
@@ -134,6 +135,21 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     console.log("shells ", shells)
     return shells;
   },
+
+  async prepareCreate(_ctx) {
+    const [cephUsers, cephPlacementTargets] = await Promise.all([
+      listRGWUserNames(),
+      listRgwPlacementTargets(),
+    ]);
+
+    return { cephUsers, cephPlacementTargets };
+  },
+  
+  async prepareEdit(bucket, ctx) {
+    const hydrated = await hydrateCephBucket(bucket);
+    const deps = await this.prepareCreate!(ctx);
+    return { bucket: hydrated, deps };
+  },
 };
 export async function hydrateCephBucket(
   bucket: CephBucket,
@@ -173,6 +189,8 @@ function shellCephBucket(name: string): CephBucket {
     policy: undefined,
     lastAccessed: undefined,
   };
+
+  
 }
 
 

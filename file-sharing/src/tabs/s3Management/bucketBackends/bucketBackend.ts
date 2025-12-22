@@ -1,5 +1,5 @@
 // backends/bucketBackend.ts
-import type { S3Bucket, RgwGateway } from "../types/types";
+import type { S3Bucket, RgwGateway, GarageKeyDetail } from "../types/types";
 import type { CephBucketCreateOptions, CephBucketUpdatePayload, GarageBucketOptions, GarageBucketKeyGrant, MinioBucketUpdateOptions,
 } from "../types/types";
 
@@ -19,6 +19,16 @@ export interface BackendContext {
   cephGateway?: RgwGateway | null;
 }
 
+export type BucketModalDepsByKind = {
+  ceph: {
+    cephUsers: string[];
+    cephPlacementTargets: string[];
+  };
+  garage: {
+    garageKeys: GarageKeyDetail[];
+  };
+  minio: {};
+};
 export interface BucketBackend<B extends S3Bucket = S3Bucket> {
   label: string;
 
@@ -31,5 +41,8 @@ export interface BucketBackend<B extends S3Bucket = S3Bucket> {
   deleteBucket(bucket: B, ctx: BackendContext): Promise<void>;
 
   listBucketsProgressive?( ctx: BackendContext, onUpdate: (bucket: B) => void,): Promise<B[]>;
+  prepareCreate?(ctx: BackendContext,): Promise<BucketModalDepsByKind[B["backendKind"]]>;
 
+  prepareEdit?(bucket: B,ctx: BackendContext,
+  ): Promise<{bucket: B;deps: BucketModalDepsByKind[B["backendKind"]];}>;
 }

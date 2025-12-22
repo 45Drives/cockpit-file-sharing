@@ -211,7 +211,11 @@ export async function listBucketsFromMinio(): Promise<MinioBucket[]> {
 
   return detailed.filter((b): b is MinioBucket => Boolean(b));
 }
-async function getMinioBucketQuotaBytes(bucketName: string): Promise<number | undefined> {
+
+
+async function getMinioBucketQuotaBytes(
+  bucketName: string
+): Promise<number | undefined> {
   try {
     const entry = await mcJsonSingle([
       "quota",
@@ -219,29 +223,18 @@ async function getMinioBucketQuotaBytes(bucketName: string): Promise<number | un
       `${MINIO_ALIAS}/${bucketName}`,
     ]);
 
-    // This shape may vary a bit across mc versions; adjust if your output looks different
-    const quota = entry.quota || entry.Quota || entry;
-    if (!quota || typeof quota !== "object") {
-      return undefined;
-    }
+    const quota = (entry as any).quota;
 
-    // Prefer a numeric hard-limit field if present
-    if (typeof quota.hard === "number") {
-      return quota.hard;
-    }
-
-    // Sometimes size might be reported under another field name
-    if (typeof quota.size === "number") {
-      return quota.size;
-    }
-
-    return undefined;
+    return typeof quota === "number" ? quota : undefined;
   } catch (err) {
-    // If quota is not configured or the command fails in a benign way, just treat as "no quota"
-    console.warn(`getMinioBucketQuotaBytes: quota not found for ${bucketName}`, err);
+    console.warn(
+      `getMinioBucketQuotaBytes: quota not found for ${bucketName}`,
+      err
+    );
     return undefined;
   }
 }
+
 /**
  * Object-level stats for a single bucket using `mc stat --json`.
  */
@@ -320,17 +313,15 @@ export async function createBucketFromMinio(
     throw new Error("createBucketFromMinio: bucketName is required");
   }
 
-  const {region,withLock,withVersioning,quotaSize,ignoreExisting,
+  const {region,withLock,withVersioning,quotaSize,
   } = options;
-
+console.log("minio options", options)
   const bucketPath = `${MINIO_ALIAS}/${bucketName}`;
 
   // 1) mc mb ...
   const mbArgs: string[] = ["mb"];
 
-  if (ignoreExisting) {
-    mbArgs.push("--ignore-existing");
-  }
+
   if (region && region.trim()) {
     mbArgs.push(`--region=${region.trim()}`);
   }
@@ -345,29 +336,21 @@ export async function createBucketFromMinio(
 
   await runMc(mbArgs);
 
-  // 2) Quota
-  const hasSizeQuota =
-    typeof quotaSize === "string" && quotaSize.trim().length > 0;
+const hasSizeQuota = typeof quotaSize === "string" && quotaSize.trim().length > 0;
 
-  if (hasSizeQuota) {
-    const quotaArgs: string[] = ["quota", "set"];
+if (hasSizeQuota) {
+  // Correct ordering per docs: TARGET first, then flags
+  const quotaArgs: string[] = ["quota", "set", bucketPath, "--size", quotaSize.trim()];
 
-    if (hasSizeQuota) {
-      quotaArgs.push("--size", quotaSize!.trim());
-    }
-
-    quotaArgs.push(bucketPath);
-
-    try {
-      await runMc(quotaArgs);
-    } catch (state: any) {
-      throw new Error(
-        `Bucket "${bucketPath}" created, but failed to set quota: ${errorString(
-          state
-        )}`
-      );
-    }
+  try {
+    await runMc(quotaArgs);
+  } catch (state: any) {
+    throw new Error(
+      `Bucket "${bucketPath}" created, but failed to set quota: ${errorString(state)}`
+    );
   }
+}
+
 }
 
 
@@ -544,9 +527,6 @@ export async function getMinioUserInfo(username: string): Promise<MinioUserDetai
       .filter(Boolean);
   }
 
-  const createDate: string | undefined =
-    info.createDate || info.createdAt || info.creationDate;
-
   const authentication: string | undefined =
     info.authentication || info.Authentication;
 
@@ -566,7 +546,6 @@ export async function getMinioUserInfo(username: string): Promise<MinioUserDetai
     username: accessKey || username,
     status,
     policies,
-    createDate,
     accessKey,
     authentication,
     memberOf,

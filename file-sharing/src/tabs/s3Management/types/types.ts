@@ -245,6 +245,7 @@ export type RgwDashboardS3Creds = {
     versioning?: boolean;
     quotaSize?: string | null;
     tags?: Record<string, string> | null;
+    objectLock?: boolean
   }
   
   export interface CephBucketUpdatePayload {
@@ -391,3 +392,26 @@ export type GarageBucketKeyGrant = {
   write: boolean;
   owner: boolean;
 };
+
+export type CephDeps = {
+  backend: "ceph";
+  cephUsers: string[];
+  cephPlacementTargets: string[];
+  usersLoading: boolean;
+  usersError: string | null;
+  placementLoading: boolean;
+  placementError: string | null;
+};
+
+export type GarageDeps = {
+  backend: "garage";
+  garageKeys: GarageKeyDetail[];
+  keysLoading: boolean;
+  keysError: string | null;
+};
+
+export type MinioDeps = {
+  backend: "minio";
+};
+
+export type ModalDeps = CephDeps | GarageDeps | MinioDeps;
