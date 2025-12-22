@@ -1,6 +1,5 @@
 // garageCliAdapter.ts
-// import type {S3Bucket,Endpoint,GarageBucketOptions,GarageKeyListEntry,GarageKeyDetail,GarageBucketDashboardStats,GarageBucketKeyAccess,
-// } from "../types/types";
+
 import type { GarageBucket, GarageBucketOptions, GarageKeyListEntry, GarageKeyDetail, GarageBucketDashboardStats, GarageBucketKeyAccess,
 } from "../types/types";
 const { errorString } = legacy; // useSpawn no longer needed
@@ -79,7 +78,6 @@ export async function listBucketsFromGarage(): Promise<GarageBucket[]> {
 
       name: displayName,
       createdAt: info?.createdAt ?? createdAtColumn,
-      region: "garage",
 
       objectCount: info?.objectCount ?? 0,
       sizeBytes: info?.totalSizeBytes ?? 0,
@@ -97,117 +95,6 @@ export async function listBucketsFromGarage(): Promise<GarageBucket[]> {
 
   return buckets;
 }
-
-export async function getGarageBucketStats(
-  bucketName: string
-): Promise<{
-createdAt?: string;
-objectCount: number;
-sizeBytes: number;
-quotaBytes?: number;
-maxObjects?: number;
-websiteEnabled?: boolean;
-websiteIndex?: string;
-websiteError?: string;
-}> {
-  const text = await runGarage(["bucket", "info", bucketName]);
-  console.log("garage bucket info raw:\n", text);
-
-  const lines = text.split(/\r?\n/);
-
-  let createdAt: string | undefined;
-  let objectCount = 0;
-  let sizeBytes = 0;
-
-  let quotaBytes: number | undefined;
-  let maxObjects: number | undefined;
-  let websiteEnabled: boolean | undefined;
-  let websiteIndex: string | undefined;
-  let websiteError: string | undefined;
-
-  const unitMultipliers: Record<string, number> = {
-    B: 1,
-    KIB: 1024,
-    MIB: 1024 ** 2,
-    GIB: 1024 ** 3,
-    TIB: 1024 ** 4,
-    KB: 1000,
-    MB: 1000 ** 2,
-    GB: 1000 ** 3,
-    TB: 1000 ** 4,
-  };
-
-  const toBytes = (numStr: string, unitStr?: string): number | undefined => {
-    const num = Number(numStr);
-    if (!Number.isFinite(num)) return undefined;
-    const unitRaw = (unitStr || "B").toUpperCase();
-    const factor = unitMultipliers[unitRaw] ?? 1;
-    return Math.round(num * factor);
-  };
-
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) continue;
-
-    // Created
-    if (/^Created:/i.test(line)) {
-      createdAt = line.replace(/^Created:\s*/i, "");
-      continue;
-    }
-
-    // Objects: 0
-    const objMatch = /^Objects:\s*(\d+)/i.exec(line);
-    if (objMatch) {
-      objectCount = Number(objMatch[1]);
-      continue;
-    }
-
-    // Size: 0 B (0 B)
-    const sizeMatch = /^Size:\s*([\d.]+)\s*([A-Za-z]+)/i.exec(line);
-    if (sizeMatch) {
-      const bytes = toBytes(sizeMatch[1], sizeMatch[2]);
-      if (bytes !== undefined) sizeBytes = bytes;
-      continue;
-    }
-
-    // Website access:  false
-    const webMatch = /^Website access:\s*(\w+)/i.exec(line);
-    if (webMatch) {
-      websiteEnabled = webMatch[1].toLowerCase() === "true";
-      continue;
-    }
-
-    // Quotas: enabled
-    //   maximum size:  50.0 GiB (53.7 GB)
-    const maxSizeMatch = /maximum size:\s*([\d.]+)\s*([A-Za-z]+)\b/i.exec(line);
-    if (maxSizeMatch) {
-      const bytes = toBytes(maxSizeMatch[1], maxSizeMatch[2]);
-      if (bytes !== undefined) {
-        quotaBytes = bytes;
-        console.log("parsed quotaBytes from garage info:", quotaBytes);
-      }
-      continue;
-    }
-
-    //   maximum objects:  100
-    const maxObjMatch = /maximum (?:number of )?objects:\s*([\d,]+)/i.exec(line);
-    if (maxObjMatch) {
-      const raw = maxObjMatch[1].replace(/,/g, "");
-      const n = Number(raw);
-      if (Number.isFinite(n)) {
-        maxObjects = n;
-        console.log("parsed maxObjects from garage info:", maxObjects);
-      } else {
-        console.log("maximum objects is non-numeric:", maxObjMatch[1]);
-      }
-      continue;
-    }
-  }
-
-  return {createdAt,objectCount,sizeBytes,quotaBytes,maxObjects,websiteEnabled,websiteIndex,websiteError,
-  };
-}
-
 
 export async function isGarageHealthy(): Promise<boolean> {
   try {
@@ -311,22 +198,19 @@ export async function createGarageBucket(
     await runGarage(args);
 
     // 2) quotas: size + max-objects
-    if (options.quota || options.maxObjects != null) {
-      const quotaArgs: string[] = ["bucket","set-quotas",bucketName,
-      ];
-
-      if (options.quota) {
-        quotaArgs.push(
-          ...options.quota.split(/\s+/).filter(Boolean)
-        );
+    if (options.quota != null || options.maxObjects != null) {
+      const quotaArgs: string[] = ["bucket", "set-quotas", bucketName];
+    
+      if (options.quota != null) {
+        quotaArgs.push("--max-size", String(options.quota).trim());
       }
-
       if (options.maxObjects != null) {
         quotaArgs.push("--max-objects", String(options.maxObjects));
       }
-
+    
       await runGarage(quotaArgs);
     }
+    
 
     // 3) website
     if (options.website?.enable) {
@@ -346,7 +230,9 @@ export async function createGarageBucket(
 
     // 4) aliases
     if (options.aliases?.length) {
-      await runGarage(["bucket", "alias", bucketName, ...options.aliases]);
+      for (const alias of options.aliases) {
+        await runGarage(["bucket", "alias", bucketName, alias]);
+      }
     }
   } catch (e: any) {
     const msg = errorString(e);
@@ -666,12 +552,9 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
         // size
         if (opts.quota !== undefined) {
           if (opts.quota === null) {
-            // clear max-size
             quotaArgs.push("--max-size", "0");
           } else {
-            quotaArgs.push(
-              ...opts.quota.split(" ").filter(Boolean)
-            );
+            quotaArgs.push("--max-size", String(opts.quota).trim());
           }
         }
     

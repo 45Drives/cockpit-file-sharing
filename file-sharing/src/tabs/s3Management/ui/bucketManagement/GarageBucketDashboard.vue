@@ -4,7 +4,7 @@
       <div class="flex items-center justify-between bg-well rounded-md shadow text-default my-2 ring-1 ring-black ring-opacity-5 p-4 m-4">
         <div>
           <h2 class="text-xl font-semibold">Bucket usage dashboard</h2>
-          <p class="text-sm text-muted">{{ bucketName }} (Garage)</p>
+          <p class="text-sm text-muted">{{ props.bucket.name }} (Garage)</p>
         </div>
   
         <div class="flex items-center gap-2">
@@ -83,8 +83,8 @@
   
               <div class="flex justify-between gap-2">
                 <dt class="text-default">Garage bucket ID</dt>
-                <dd class="font-medium truncate max-w-[240px]" :title="stats.garageId || ''">
-                  {{ stats.garageId || "—" }}
+                <dd class="font-medium truncate max-w-[240px]" :title="stats.bucketId || ''">
+                  {{ stats.bucketId || "—" }}
                 </dd>
               </div>
   
@@ -94,11 +94,6 @@
                   <span v-if="aliases.length">{{ aliases.join(", ") }}</span>
                   <span v-else>—</span>
                 </dd>
-              </div>
-  
-              <div class="flex justify-between gap-2">
-                <dt class="text-default">Region</dt>
-                <dd class="font-medium">{{ bucket.region || "garage" }}</dd>
               </div>
             </dl>
           </div>
@@ -183,16 +178,23 @@
   
   <script setup lang="ts">
   import { computed, onMounted, ref } from "vue";
-  import type { S3Bucket } from "../../types/types";
+  import type { GarageBucket } from "../../types/types";
   import type { GarageBucketDashboardStats } from "../../types/types";
   import { getGarageBucketDashboardStats } from "../../api/garageCliAdapter";
   import { formatBytes } from "../../bucketBackends/bucketUtils";
   
   const props = defineProps<{
-    bucketName: string;
-    bucket: S3Bucket;
-    showBackButton?: boolean;
-  }>();
+  bucket: GarageBucket;
+  showBackButton?: boolean;
+}>();
+const garageHandle = computed(() => {
+  return (
+    props.bucket.garageId ||
+    props.bucket.garageAliases?.[0] ||
+    props.bucket.name
+  );
+});
+
   
   defineEmits<{
     (e: "back"): void;
@@ -203,6 +205,7 @@
   const stats = ref<GarageBucketDashboardStats | null>(null);
   
   const aliases = computed(() => props.bucket.garageAliases ?? []);
+
   
   const rwKeyCount = computed(() => {
     const ks = stats.value?.keys ?? [];
@@ -240,7 +243,7 @@
     loading.value = true;
     error.value = null;
     try {
-      stats.value = await getGarageBucketDashboardStats(props.bucketName);
+      stats.value = await getGarageBucketDashboardStats(garageHandle.value);
     } catch (e: any) {
       error.value = e?.message ?? "Failed to load Garage bucket usage";
       stats.value = null;

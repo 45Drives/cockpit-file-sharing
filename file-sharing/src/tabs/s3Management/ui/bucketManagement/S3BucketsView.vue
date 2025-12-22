@@ -109,8 +109,9 @@
 
         <MinioBucketDashboardView v-else-if="backend === 'minio'" :bucket-name="usageBucketName" :bucket="minioUsageBucket!"
           :show-back-button="true" @back="closeUsageDashboard" />
-        <GarageBucketDashboardView v-else-if="backend === 'garage'" :bucket-name="garageUsageBucket"
-          :bucket="usageBucket!" :show-back-button="true" @back="closeUsageDashboard" />
+          <GarageBucketDashboardView v-else-if="backend === 'garage'" :bucket-name="garageUsageBucket?.garageId || usageBucketName"
+           :bucket="garageUsageBucket!" :show-back-button="true" @back="closeUsageDashboard"
+/>
       </div>
 
       <!-- Otherwise show buckets grid -->
@@ -195,7 +196,7 @@
             </div>
 
             <!-- Meta -->
-            <div v-if="backend!='minio'">
+            <div v-if="backend!='minio' || 'garage'">
               <label class="mb-1 block text-xs font-medium text-slate-300">
                 Owner
               </label>

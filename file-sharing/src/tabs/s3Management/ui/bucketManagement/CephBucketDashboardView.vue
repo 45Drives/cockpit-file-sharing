@@ -8,7 +8,7 @@
           <h2 class="text-xl font-semibold text-default">
             Bucket usage dashboard
           </h2>
-          <p class="text-sm text-muted">
+          <p class="text-md text-muted">
             {{ bucketName }} (Ceph RGW)
           </p>
         </div>
@@ -443,7 +443,7 @@
   <script setup lang="ts">
   import { computed, onMounted, ref } from "vue";
   // Adjust import paths to your project layout:
-  import type { BucketDashboardStats, BucketUserUsage, BucketDashboardOptions, CephAclRule, S3Bucket, CephBucket } from "../../types/types";
+  import type { BucketDashboardStats, BucketUserUsage, BucketDashboardOptions, CephAclRule, CephBucket } from "../../types/types";
   import { getBucketDashboardStats , isRgwUsageLogEnabled} from "../../api/s3CliAdapter";
   import { hydrateCephBucket } from "../../bucketBackends/cephBucketBackend";
   import { formatBytes } from "../../bucketBackends/bucketUtils";

@@ -144,7 +144,7 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
 
     return { cephUsers, cephPlacementTargets };
   },
-  
+
   async prepareEdit(bucket, ctx) {
     const hydrated = await hydrateCephBucket(bucket);
     const deps = await this.prepareCreate!(ctx);
@@ -188,6 +188,7 @@ function shellCephBucket(name: string): CephBucket {
     acl: undefined,
     policy: undefined,
     lastAccessed: undefined,
+    adminRef: ""
   };
 
   

@@ -8,8 +8,8 @@
           <h2 class="text-xl font-semibold text-slate-100">
             Bucket usage dashboard
           </h2>
-          <p class="text-sm text-slate-400">
-            {{ bucketName }} (MinIO)
+          <p class="text-md text-slate-400">
+            {{ bucketName }} 
           </p>
         </div>
   

@@ -53,14 +53,12 @@ export type S3Bucket = CephBucket | GarageBucket | MinioBucket;
 
 export type BucketByKind<K extends BackendKind> = Extract<S3Bucket, { backendKind: K }>;
 
-
 export type BucketAclPermission =| "FULL_CONTROL"| "READ"| "WRITE"| "READ_ACP"| "WRITE_ACP";
 
 export type BucketAclGrant = {
   grantee: string;
   permission: BucketAclPermission | string; // keep string for safety if unsure
 };
-
 
 export type BucketVersioningStatus = "Enabled" | "Suspended" | "Disabled";
 
@@ -116,12 +114,9 @@ export type RgwUser = {
     objectLimitPercent?: number | null;
     quotaMaxSizeKb?: number | null;
     quotaMaxObjects?: number | null;
-  
-    // Current usage (from user stats)
     quotaUsedSizeKb?: number | null;
     quotaUsedObjects?: number | null;
   
-    // Convenience (computed)
     quotaRemainingSizeKb?: number | null;
     quotaRemainingObjects?: number | null;
     quotaUsedSizePercent?: number | null;
