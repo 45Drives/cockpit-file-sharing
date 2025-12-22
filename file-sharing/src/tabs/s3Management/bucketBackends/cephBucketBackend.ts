@@ -24,7 +24,7 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
 
     await createCephBucketViaS3({
       bucketName: form.name,
-      endpoint: ctx.cephGateway?.endpoint ?? "http://192.168.85.64:8080",
+      endpoint: ctx.cephGateway?.endpoint ?? "",
       tags: Object.keys(tags).length ? tags : undefined,
       encryptionMode: form.encryptionMode,
       kmsKeyId: form.kmsKeyId || undefined,
@@ -77,7 +77,7 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
 
     const params: any = {
       bucketName: bucket.adminRef,
-      endpoint: ctx.cephGateway?.endpoint ?? "http://192.168.85.64:8080",
+      endpoint: ctx.cephGateway?.endpoint ?? "",
     };
 
     if (versioningChanged) {

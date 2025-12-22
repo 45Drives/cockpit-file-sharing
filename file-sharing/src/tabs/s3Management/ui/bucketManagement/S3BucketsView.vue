@@ -463,17 +463,6 @@ const filteredSortedBuckets = computed(() => {
     });
   }
 
-  if (tagFilter.value.trim()) {
-    const needle = tagFilter.value.trim().toLowerCase();
-    result = result.filter((b) => {
-      if (!b.tags) return false;
-      return Object.entries(b.tags).some(
-        ([k, v]) =>
-          k.toLowerCase().includes(needle) ||
-          String(v).toLowerCase().includes(needle),
-      );
-    });
-  }
 
   result.sort((a, b) => {
     let av: string | number = 0;

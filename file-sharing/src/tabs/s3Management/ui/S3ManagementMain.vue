@@ -42,40 +42,7 @@
     </button>
   </div>
 
-        <!-- Ceph gateway selector (only when backend is ceph) -->
-        <div v-if="selectedBackend === 'ceph'" class="gateway-block">
-          <div v-if="loadingGateways">
-            Detecting Ceph object gateways…
-          </div>
 
-          <div v-else-if="gatewayError" class="error">
-            {{ gatewayError }}
-          </div>
-
-          <div v-else-if="gateways.length === 0" class="error">
-            <!-- No Ceph gateways found for the selected cluster. -->
-          </div>
-
-          <div v-else-if="gateways.length === 1" class="backend-indicator">
-            Using gateway
-            {{ gatewayLabel(gateways[0]) }}
-          </div>
-
-          <div v-else class="backend-selector">
-            <label>
-              Gateway:
-              <select v-model="selectedGatewayId">
-                <option
-                  v-for="g in gateways"
-                  :key="g.id"
-                  :value="g.id"
-                >
-                  {{ gatewayLabel(g) }}
-                </option>
-              </select>
-            </label>
-          </div>
-        </div>
 
         <!-- view choice buttons -->
         <div class="grid grid-cols-2 gap-10 text-2xl w-9/12 mx-auto">
