@@ -181,6 +181,7 @@ import RgwUserCreateModal from "./RgwUserCreateModal.vue";
 import { ArrowPathIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 import { formatBytes } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 import RgwUserDetailsModal from "./RgwUserDetailsModal.vue";
+import { pushNotification, Notification } from "@45drives/houston-common-ui";
 
 const users = ref<RgwUser[]>([]);
 const loading = ref(false);
@@ -248,9 +249,12 @@ async function confirmDelete() {
 
     users.value = users.value.filter((u) => u.uid !== user.uid);
     closeDeleteDialog();
+    pushNotification(new Notification("Success", `User "${user.displayName}"deleted successfuly`, "success", 2000))
+
   } catch (e: any) {
-    error.value = e?.message || "Failed to delete user.";
+    pushNotification(new Notification("Failed to delete user", `${e.message}`, "error"));
   } finally {
+
     loading.value = false;
   }
 }
@@ -262,13 +266,20 @@ async function handleUserSubmit(payload: { mode: "create" | "edit"; data: Create
 
     if (payload.mode === "create") {
       await createRgwUser(payload.data);
+      pushNotification(new Notification("Success",  `User "${payload.data.uid}" created`, "success", 2000))
+
+
     } else {
       await updateRgwUser(payload.data);
+      pushNotification(new Notification("Success",  `User "${payload.data.uid}" updated`, "success", 2000))
+
     }
 
     await loadUsers();
     showUserDialog.value = false;
   } catch (e: any) {
+    pushNotification(new Notification( e.message, "error"));
+
     userDialogError.value = e?.message || "Failed to save RGW user.";
   } finally {
     loading.value = false;

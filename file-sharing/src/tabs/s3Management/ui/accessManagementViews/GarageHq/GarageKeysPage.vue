@@ -132,6 +132,8 @@
     <GarageKeyEditModal :open="showEditModal" :saving="saving" :key-detail="editingKey" @close="closeEditModal"
       @submit="handleEditSubmit" />
     </div>
+    <GarageKeyCreatedModal :open="showCreatedModal" :key-detail="createdKey" @close="closeCreatedModal"
+/>
 
   
 </template>
@@ -151,7 +153,8 @@ import { confirmBeforeAction, wrapActions } from "@45drives/houston-common-ui";
 import { ResultAsync } from "neverthrow";
 import { ProcessError } from "@45drives/houston-common-lib";
 import {  ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
-
+import { pushNotification,Notification } from "@45drives/houston-common-ui";
+import GarageKeyCreatedModal from "./GarageKeyCreatedModal.vue";
 
 const keys = ref<GarageKeyDetail[]>([]);
 const loading = ref<boolean>(true);
@@ -161,7 +164,7 @@ const saving = ref<boolean>(false);
 const showCreateModal = ref<boolean>(false);
 const showEditModal = ref<boolean>(false);
 const editingKey = ref<GarageKeyDetail | null>(null);
-
+const showCreatedModal = ref(false);
 // One-time credentials of newly created key
 const createdKey = ref<GarageKeyDetail | null>(null);
 
@@ -224,8 +227,9 @@ function closeCreateModal(): void {
 }
 
 async function handleCreateSubmit(payload: {
-  name: string;
+  name: string;  
   canCreateBuckets: boolean;
+
   expiresIn?: string;
 }): Promise<void> {
   const name = payload.name.trim();
@@ -235,18 +239,23 @@ async function handleCreateSubmit(payload: {
   error.value = null;
 
   try {
-    const key = await createGarageKey(name, payload.canCreateBuckets, payload.expiresIn);
+    const key = await createGarageKey(name,payload.canCreateBuckets, payload.expiresIn);
 
-    createdKey.value = key; // includes id + secretKey (only once, on creation)
+    createdKey.value = key; // includes secretKey (one-time)
     showCreateModal.value = false;
 
+    showCreatedModal.value = true;
+
+    pushNotification(new Notification("Key created successfully", "success"));
     await loadKeys();
   } catch (e: any) {
-    error.value = e?.message || "Failed to create key.";
+    pushNotification(new Notification("Failed to create key", e.message, "error"));
+    // error.value = e?.message || "Failed to create key.";
   } finally {
     saving.value = false;
   }
 }
+
 
 function openEditModal(key: GarageKeyDetail): void {
   editingKey.value = key;
@@ -276,13 +285,20 @@ async function handleEditSubmit(payload: {
     showEditModal.value = false;
     editingKey.value = null;
     await loadKeys();
-  } catch (e: any) {
-    error.value = e?.message || "Failed to update key.";
+    pushNotification(new Notification( `Updated key "${name}" sucessfully`, "success"));
+
+  } catch (e: any) {    
+    pushNotification(new Notification( `Failed to update key`,e.message, "error"));
+
+    // error.value = e?.message || "Failed to update key.";
   } finally {
     saving.value = false;
   }
 }
-
+function closeCreatedModal() {
+  showCreatedModal.value = false;
+  createdKey.value = null; // important: clear secret from memory
+}
 onMounted(() => {
   loadKeys();
 });

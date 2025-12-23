@@ -44,10 +44,7 @@
       <!-- STEP 2: choose view (after backend) -->
       <div v-else-if="step === 2 && selectedBackend">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-semibold">
-            Backend:
-            {{ availableBackends.find((b) => b.value === selectedBackend)?.label }}
-          </h2>
+
 
           <button type="button" class="primary-button" @click="goBackToBackendSelection">
             Back
@@ -194,6 +191,7 @@ import { CardContainer } from "@45drives/houston-common-ui";
 import { ArchiveBoxIcon } from "@heroicons/vue/20/solid";
 import AccIcon from "../images/AccIcon.vue";
 import type { RgwGateway } from "../types/types";
+import { pushNotification,Notification } from "@45drives/houston-common-ui";
 
 type Backend = "minio" | "ceph" | "garage";
 type View = "buckets" | "users";
@@ -280,7 +278,9 @@ async function loadGatewaysIfNeeded() {
     const defaultGw = list.find((g) => g.isDefault);
     selectedGatewayId.value = (defaultGw || list[0]).id;
   } catch (e: any) {
-    gatewayError.value = e?.message ?? "Failed to list Ceph gateways";
+    pushNotification(new Notification( `Failed to list Ceph gateways`,e?.message, "error"));
+
+    // gatewayError.value = e?.message ?? "Failed to list Ceph gateways";
     gateways.value = [];
     selectedGatewayId.value = null;
   } finally {
@@ -315,7 +315,9 @@ async function loadMinioAliasesIfNeeded() {
       selectedMinioAlias.value = minioAliases.value[0].alias;
     }
   } catch (e: any) {
-    minioAliasError.value = e?.message ?? "Failed to list MinIO aliases";
+    pushNotification(new Notification( `Failed to list MinIO aliases`,e?.message ,"error"));
+
+    // minioAliasError.value = e?.message ?? "Failed to list MinIO aliases";
   } finally {
     loadingMinioAliases.value = false;
   }

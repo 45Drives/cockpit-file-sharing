@@ -137,6 +137,8 @@
   } from "../../../api/minioCliAdapter";
   import MinioPolicyCreateModal from "./MinioPolicyCreateModal.vue";
   import MinioPolicyViewEditModal from "./MinioPolicyViewEditModal.vue";
+  import { pushNotification,Notification } from "@45drives/houston-common-ui";
+
   
   const policies = ref<string[]>([]);
   const loading = ref(false);
@@ -181,8 +183,12 @@
       await createOrUpdateMinioPolicy(payload.name, payload.json);
       await loadPolicies();
       showCreateDialog.value = false;
+      pushNotification(new Notification( `Pollicy "${payload.name} created successfully"`, "success"));
+
     } catch (e: any) {
-      createDialogError.value = e?.message || "Failed to create MinIO policy.";
+      pushNotification(new Notification( `Failed to create MinIO policy`,e?.message, "error"));
+
+      // createDialogError.value = e?.message || "Failed to create MinIO policy.";
     } finally {
       loading.value = false;
     }
@@ -198,7 +204,9 @@
     try {
       selectedPolicyJson.value = await getMinioPolicy(name);
     } catch (e: any) {
-      viewEditError.value = e?.message || `Failed to load policy "${name}".`;
+      pushNotification(new Notification( `Failed to load policy "${name}"`,e?.message, "error"));
+
+      // viewEditError.value = e?.message || `Failed to load policy "${name}".`;
     } finally {
       viewEditLoading.value = false;
     }
@@ -211,8 +219,12 @@
       await createOrUpdateMinioPolicy(payload.name, payload.json); // or updateMinioPolicy
       await loadPolicies();
       showViewEditDialog.value = false;
+      pushNotification(new Notification( `Policy updated successfully`, "success"));
+
     } catch (e: any) {
-      viewEditError.value = e?.message || "Failed to update MinIO policy.";
+      pushNotification(new Notification( `Failed to update MinIO policy`,e?.message, "error"));
+
+      // viewEditError.value = e?.message || "Failed to update MinIO policy.";
     } finally {
       viewEditLoading.value = false;
     }
@@ -238,8 +250,12 @@
       await deleteMinioPolicy(name);
       await loadPolicies();
       closeDeleteDialog();
+      pushNotification(new Notification( `Policy  "${name}". deleted succesfully`, "success"));
+
     } catch (e: any) {
-      error.value = e?.message || `Failed to delete policy "${name}".`;
+      pushNotification(new Notification( `Failed to delete policy "${name}".`,e?.message, "error"));
+
+      // error.value = e?.message || `Failed to delete policy "${name}".`;
     } finally {
       loading.value = false;
     }

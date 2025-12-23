@@ -348,7 +348,7 @@ import GarageBucketDashboardView from "./GarageBucketDashboard.vue";
 import type { BackendContext } from "../../bucketBackends/bucketBackend";
 import { LoadingSpinner } from "@45drives/houston-common-ui";
 import type { ModalDeps } from "../../types/types";
-
+import { pushNotification,Notification } from "@45drives/houston-common-ui";
 
 const props = defineProps<{
   backend: "minio" | "ceph" | "garage";
@@ -557,19 +557,24 @@ function closeModal() {
 async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any }) {
   try {
     if (payload.mode === "create") {
-      console.log("UI submit payload:", payload);
-  console.log("UI submit name:", payload.form?.name);
 
       await createBucketFromForm(payload.form);
+      pushNotification(new Notification("Success", `Bucket "${payload.form?.name}" created sucessfully.`, "success", 2000))
+
       await loadBuckets();
     } else if (payload.mode === "edit" && editingBucket.value) {
       await updateBucketFromForm(editingBucket.value, payload.form);
+      pushNotification(new Notification("Success", `Bucket "${payload.form?.name}" saved sucessfully`, "success", 2000))
+
       await loadBuckets();
+
     }
 
     closeModal();
   } catch (e: any) {
-    error.value = e?.message ?? "Failed to save bucket";
+    pushNotification(new Notification( `Failed to save bucket "${bucketToDelete.value?.name}"`,e?.message, "error"));
+
+    // error.value = e?.message ?? "Failed to save bucket";
   }
 }
 
@@ -587,9 +592,13 @@ async function performDelete() {
     await deleteBucket(toDelete); // see note below
     const keyOf = (x: any) => x.adminRef ?? x.id ?? x.name;
     buckets.value = buckets.value.filter((b: any) => keyOf(b) !== keyOf(toDelete));
+    pushNotification(new Notification( `Bucket "${bucketToDelete.value?.name}" deleted sucessfully`, "success"));
+
     bucketToDelete.value = null;
   } catch (e: any) {
-    error.value = e?.message ?? "Failed to delete bucket";
+    pushNotification(new Notification( `Failed to delete bucket "${bucketToDelete.value?.name}"`,e?.message, "error"));
+
+    // error.value = e?.message ?? "Failed to delete bucket";
   }
 }
 

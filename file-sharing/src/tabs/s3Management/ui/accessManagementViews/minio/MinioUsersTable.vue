@@ -187,6 +187,7 @@
     listMinioGroups,
   } from "../../../api/minioCliAdapter";
 import type { MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserUpdatePayload, } from "@/tabs/s3Management/types/types";
+import { pushNotification,Notification } from "@45drives/houston-common-ui";
   
 
   const users = ref<MinioUser[]>([]);
@@ -259,12 +260,16 @@ const editDialogError = ref<string | null>(null);
     error.value = null;
 
     await deleteMinioUser(username);
+    pushNotification(new Notification( `User "${username} deleted succesfully`, "success"));
+
   } catch (e: any) {
     const msg = (e?.message || "").toLowerCase();
 
     // If MinIO says the user doesn't exist, treat it as already deleted.
     if (!msg.includes("the specified user does not exist")) {
-      error.value = e?.message || "Failed to delete MinIO user.";
+      pushNotification(new Notification( `Failed to delete MinIO user."`,e?.message, "success"));
+
+      // error.value = e?.message || "Failed to delete MinIO user.";
       return;
     }
   } finally {
@@ -283,8 +288,12 @@ const editDialogError = ref<string | null>(null);
       await createMinioUser(payload);
       await loadUsers();
       showUserDialog.value = false;
+      pushNotification(new Notification( `Minio user created succesfully."`, "success"));
+
     } catch (e: any) {
-      userDialogError.value = e?.message || "Failed to create MinIO user.";
+      pushNotification(new Notification( `Failed to create MinIO user."`,e?.message, "error"));
+
+      // userDialogError.value = e?.message || "Failed to create MinIO user.";
     } finally {
       loading.value = false;
     }
@@ -299,7 +308,9 @@ const editDialogError = ref<string | null>(null);
   try {
     selectedUserDetails.value = await getMinioUserInfo(user.username);
   } catch (e: any) {
-    userDetailsError.value = e?.message || "Failed to load user details.";
+    pushNotification(new Notification( `Failed to load user details"`,e?.message, "error"));
+
+    // userDetailsError.value = e?.message || "Failed to load user details.";
   } finally {
     userDetailsLoading.value = false;
   }
@@ -316,7 +327,9 @@ function openEditDialog(user: MinioUser) {
       editTarget.value = details;
     })
     .catch((e: any) => {
-      editDialogError.value = e?.message || "Failed to load user for editing.";
+      pushNotification(new Notification( `Failed to load user for editing"`,e?.message, "error"));
+
+      // editDialogError.value = e?.message || "Failed to load user for editing.";
     })
     .finally(() => {
       userDetailsLoading.value = false;
@@ -330,8 +343,12 @@ async function handleUserUpdate(payload: MinioUserUpdatePayload) {
     await updateMinioUser(payload);
     await loadUsers();
     showEditDialog.value = false;
+    pushNotification(new Notification( `User updated succesfully"`, "success"));
+
   } catch (e: any) {
-    editDialogError.value = e?.message || "Failed to update MinIO user.";
+    pushNotification(new Notification( `Failed to update MinIO user"`,e?.message, "error"));
+
+    // editDialogError.value = e?.message || "Failed to update MinIO user.";
   } finally {
     loading.value = false;
   }

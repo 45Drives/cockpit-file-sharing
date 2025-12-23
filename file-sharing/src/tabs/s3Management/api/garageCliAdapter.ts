@@ -415,39 +415,41 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
   }
   
 
-  function parseGarageKeyInfoOutput(output: string): GarageKeyDetail {
-    const lines = output.split(/\r?\n/);
-    const fields: Record<string, string> = {};
+  export function parseGarageKeyInfoOutput(text: string): GarageKeyDetail {
+    const t = String(text ?? "").replace(/\r\n/g, "\n");
   
-    for (const raw of lines) {
-      const line = raw.trim();
-      if (!line) continue;
-      if (line.startsWith("====")) continue;
+    const pick = (label: string): string | undefined => {
+      const re = new RegExp(`^\\s*${label}\\s*:\\s*(.*)\\s*$`, "mi");
+      const m = t.match(re);
+      return m?.[1]?.trim() || undefined;
+    };
   
-      const m = line.match(/^([^:]+):\s*(.*)$/);
-      if (!m) continue;
+    const id = pick("Key ID");
+    const name = pick("Key name");
+    const secretKey = pick("Secret key");
   
-      const key = m[1].trim();
-      const value = m[2].trim();
-      fields[key] = value;
-    }
+    const created = pick("Created");
+    const validity = pick("Validity");
+    const expiration = pick("Expiration");
   
-    const id = fields["Key ID"] || "";
-    const name = fields["Key name"] || "";
-    const created = fields["Created"] || "";
-    const expiration = fields["Expiration"] || "";
-    const validity = fields["Validity"] || undefined;
+    const canCreateRaw = pick("Can create buckets");
+    const canCreateBuckets =
+      canCreateRaw == null
+        ? undefined
+        : canCreateRaw.toLowerCase() === "true"
+        ? true
+        : canCreateRaw.toLowerCase() === "false"
+        ? false
+        : undefined;
   
-    let canCreateBuckets: boolean | undefined;
-    if (fields["Can create buckets"] !== undefined) {
-      const v = fields["Can create buckets"].toLowerCase();
-      if (v === "true") canCreateBuckets = true;
-      else if (v === "false") canCreateBuckets = false;
-    }
-  
-    return {id,name,created,expiration,validity,canCreateBuckets,
-      // NEW: only present on `key create` output
-      secretKey: fields["Secret key"] || undefined,
+    return {
+      id: id ?? "",
+      name: name ?? "",
+      secretKey,
+      created: created ?? "",
+      validity: validity ?? "",
+      expiration: expiration ?? "",
+      canCreateBuckets,
     };
   }
       
@@ -456,51 +458,51 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
 
   export async function createGarageKey(
     name: string,
-    canCreateBuckets?: boolean,
+    canCreateBuckets: boolean,
     expiresIn?: string
   ): Promise<GarageKeyDetail> {
     if (creatingKeys.has(name)) {
-      console.warn("createGarageKey: duplicate call for", name);
       throw new Error(`Key creation already in progress for "${name}"`);
     }
   
     creatingKeys.add(name);
     try {
-      const args = ["key", "create"] as string[];
+      const args: string[] = ["key", "create"];
   
-      if (expiresIn) {
-        args.push("--expires-in", expiresIn);
-      }
-      if (name) {
-        args.push(name);
-      }
+      if (expiresIn) args.push("--expires-in", expiresIn);
+      if (name) args.push(name);
   
+      // 1) Create (this is the only place secretKey appears)
       const createOut = await runGarage(args);
       const created = parseGarageKeyInfoOutput(createOut);
-      const identifier = created.id || created.name || name;
   
+      const identifier = created.id || created.name || name;
+      if (!identifier) {
+        throw new Error("Garage did not return a key identifier.");
+      }
+  
+      // 2) Apply permission after creation (Garage v2.1.0)
+      // Only call allow when requested; default is false so deny is optional.
+      if (canCreateBuckets) {
+        await runGarage(["key", "allow", "--create-bucket", identifier]);
+      }
+  
+      // 3) Refresh info (preserve secretKey from create output)
       try {
         const infoOut = await runGarage(["key", "info", identifier]);
         const full = parseGarageKeyInfoOutput(infoOut);
-  
-        // preserve the one-time secret from the create output
-        return {
-          ...full,
-          secretKey: created.secretKey,
-        };
+        return { ...full, secretKey: created.secretKey };
       } catch {
-        // fall back to what we got from create, which includes secretKey
         return created;
       }
     } catch (e: any) {
       const msg = errorString(e);
-      console.error("Failed to create Garage key:", name, msg);
       throw new Error(`Failed to create Garage key "${name}": ${msg}`);
     } finally {
       creatingKeys.delete(name);
     }
   }
-      
+          
   export async function deleteGarageKey(
      
     id: string
@@ -538,8 +540,8 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
         if (typeof canCreateBuckets === "boolean" &&
             current.canCreateBuckets !== canCreateBuckets) {
           const args = canCreateBuckets
-            ? ["key", "allow", "--create-buckets", handle]
-            : ["key", "deny", "--create-buckets", handle];
+            ? ["key", "allow", "--create-bucket", handle]
+            : ["key", "deny", "--create-bucket", handle];
     
           await runGarage(args);
         }
