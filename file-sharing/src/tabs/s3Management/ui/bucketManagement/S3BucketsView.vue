@@ -592,7 +592,7 @@ async function performDelete() {
     await deleteBucket(toDelete); // see note below
     const keyOf = (x: any) => x.adminRef ?? x.id ?? x.name;
     buckets.value = buckets.value.filter((b: any) => keyOf(b) !== keyOf(toDelete));
-    pushNotification(new Notification( `Bucket "${bucketToDelete.value?.name}" deleted sucessfully`, "success"));
+    pushNotification(new Notification("Success", `Bucket "${bucketToDelete.value?.name}" deleted sucessfully`, "success",2000));
 
     bucketToDelete.value = null;
   } catch (e: any) {

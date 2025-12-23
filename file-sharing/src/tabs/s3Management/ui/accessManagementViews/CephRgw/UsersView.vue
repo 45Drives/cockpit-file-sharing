@@ -98,18 +98,25 @@
                     Details
                   </button>
 
-                  <button
-                    class="inline-flex items-center border border-default bg-secondary text-xs font-medium rounded px-2 py-1 mr-1"
-                    @click="onEdit(user)">
-                    Edit
-                  </button>
+                  <template v-if="!isProtectedUser(user)">
+                    <button
+                      class="inline-flex items-center border border-default bg-secondary text-xs font-medium rounded px-2 py-1 mr-1"
+                      @click="onEdit(user)">
+                      Edit
+                    </button>
 
-                  <button
-                    class="inline-flex items-center border border-red-600 bg-red-500 text-white text-xs font-medium rounded px-2 py-1 hover:bg-red-600"
-                    @click="openDeleteDialog(user)">
-                    Delete
-                  </button>
+                    <button
+                      class="inline-flex items-center border border-red-600 bg-red-500 text-white text-xs font-medium rounded px-2 py-1 hover:bg-red-600"
+                      @click="openDeleteDialog(user)">
+                      Delete
+                    </button>
+                  </template>
+
+                  <template v-else>
+                    <span class="text-xs text-default">Protected</span>
+                  </template>
                 </td>
+
               </tr>
             </tbody>
           </table>
@@ -222,11 +229,13 @@ function refresh() {
 }
 
 function openDeleteDialog(user: RgwUser) {
+  if (isProtectedUser(user)) return;
   deleteTarget.value = user;
   purgeData.value = false;
   purgeKeys.value = true;
   showDeleteDialog.value = true;
 }
+
 
 function closeDeleteDialog() {
   showDeleteDialog.value = false;
@@ -266,19 +275,19 @@ async function handleUserSubmit(payload: { mode: "create" | "edit"; data: Create
 
     if (payload.mode === "create") {
       await createRgwUser(payload.data);
-      pushNotification(new Notification("Success",  `User "${payload.data.uid}" created`, "success", 2000))
+      pushNotification(new Notification("Success", `User "${payload.data.uid}" created`, "success", 2000))
 
 
     } else {
       await updateRgwUser(payload.data);
-      pushNotification(new Notification("Success",  `User "${payload.data.uid}" updated`, "success", 2000))
+      pushNotification(new Notification("Success", `User "${payload.data.uid}" updated`, "success", 2000))
 
     }
 
     await loadUsers();
     showUserDialog.value = false;
   } catch (e: any) {
-    pushNotification(new Notification( e.message, "error"));
+    pushNotification(new Notification(e.message, "error"));
 
     userDialogError.value = e?.message || "Failed to save RGW user.";
   } finally {
@@ -294,6 +303,7 @@ function openCreateDialog() {
 }
 
 function onEdit(user: RgwUser) {
+  if (isProtectedUser(user)) return;
   userDialogMode.value = "edit";
   editingUser.value = user;
   userDialogError.value = null;
@@ -347,6 +357,10 @@ function quotaTooltipObjects(user: RgwUser): string {
     remaining != null ? `Available: ${remaining}` : `Available: ${max != null && max > 0 ? "-" : "Unlimited"}`;
 
   return `${usedLine}\n${availLine}\n${maxLine}`;
+}
+function isProtectedUser(user: RgwUser): boolean {
+  const uid = String(user?.uid ?? "").trim().toLowerCase();
+  return uid === "dashboard" || uid === "houstonui";
 }
 
 onMounted(() => {

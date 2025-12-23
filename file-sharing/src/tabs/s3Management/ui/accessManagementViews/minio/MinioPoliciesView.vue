@@ -219,7 +219,8 @@
       await createOrUpdateMinioPolicy(payload.name, payload.json); // or updateMinioPolicy
       await loadPolicies();
       showViewEditDialog.value = false;
-      pushNotification(new Notification( `Policy updated successfully`, "success"));
+
+      pushNotification(new Notification( "Success",`Policy updated successfully`, "success",2000));
 
     } catch (e: any) {
       pushNotification(new Notification( `Failed to update MinIO policy`,e?.message, "error"));
@@ -250,7 +251,7 @@
       await deleteMinioPolicy(name);
       await loadPolicies();
       closeDeleteDialog();
-      pushNotification(new Notification( `Policy  "${name}". deleted succesfully`, "success"));
+      pushNotification(new Notification( "Success",`Policy  "${name}". deleted succesfully`, "success",2000));
 
     } catch (e: any) {
       pushNotification(new Notification( `Failed to delete policy "${name}".`,e?.message, "error"));

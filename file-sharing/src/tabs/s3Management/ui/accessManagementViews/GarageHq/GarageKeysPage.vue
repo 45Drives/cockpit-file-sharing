@@ -246,7 +246,7 @@ async function handleCreateSubmit(payload: {
 
     showCreatedModal.value = true;
 
-    pushNotification(new Notification("Key created successfully", "success"));
+    pushNotification(new Notification("Success","Key created successfully", "success",2000));
     await loadKeys();
   } catch (e: any) {
     pushNotification(new Notification("Failed to create key", e.message, "error"));
@@ -285,7 +285,7 @@ async function handleEditSubmit(payload: {
     showEditModal.value = false;
     editingKey.value = null;
     await loadKeys();
-    pushNotification(new Notification( `Updated key "${name}" sucessfully`, "success"));
+    pushNotification(new Notification( "Success",`Updated key "${name}" sucessfully`, "success",2000));
 
   } catch (e: any) {    
     pushNotification(new Notification( `Failed to update key`,e.message, "error"));

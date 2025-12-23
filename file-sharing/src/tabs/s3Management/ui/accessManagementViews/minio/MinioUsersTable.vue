@@ -343,7 +343,7 @@ async function handleUserUpdate(payload: MinioUserUpdatePayload) {
     await updateMinioUser(payload);
     await loadUsers();
     showEditDialog.value = false;
-    pushNotification(new Notification( `User updated succesfully"`, "success"));
+    pushNotification(new Notification( "Success",`User updated succesfully"`, "success",2000));
 
   } catch (e: any) {
     pushNotification(new Notification( `Failed to update MinIO user"`,e?.message, "error"));
