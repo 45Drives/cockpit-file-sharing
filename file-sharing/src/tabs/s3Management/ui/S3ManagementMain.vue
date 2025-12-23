@@ -328,7 +328,7 @@ async function loadMinioAliasesIfNeeded() {
     minioAliases.value = normalized;
 
     if (minioAliases.value.length === 1) {
-      selectedMinioAlias.value = minioAliases.value[0].alias;
+      selectedMinioAlias.value = minioAliases.value[0]!.alias;
     }
   } catch (e: any) {
     pushNotification(new Notification( `Failed to list MinIO aliases`,e?.message ,"error"));

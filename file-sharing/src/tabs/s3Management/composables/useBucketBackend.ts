@@ -3,14 +3,15 @@ import { ref, computed } from "vue";
 import type { Ref } from "vue";
 
 import type { BucketByKind, BackendKind } from "../types/types";
-import type { BackendContext, BucketEditForm, BucketFormData } from "../bucketBackends/bucketBackend";
+import type {
+  BackendContext,
+  BucketEditForm,
+  BucketFormData,
+} from "../bucketBackends/bucketBackend";
 import type { BucketBackend } from "../bucketBackends/bucketBackend";
 import { getBucketBackend } from "../bucketBackends/bucketBackendRegistry";
 
-export function useBucketBackend<K extends BackendKind>(
-  backend: Ref<K>,
-  ctx: Ref<BackendContext>,
-) {
+export function useBucketBackend<K extends BackendKind>(backend: Ref<K>, ctx: Ref<BackendContext>) {
   const buckets = ref<BucketByKind<K>[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
@@ -26,33 +27,34 @@ export function useBucketBackend<K extends BackendKind>(
   async function loadBuckets() {
     loading.value = true;
     error.value = null;
-  
+
     try {
       const impl = backendImpl.value;
-  
+
       // micro-batch updates to avoid 2000 reactive thrashes
       let pending: BucketByKind<K>[] = [];
       let flushScheduled = false;
-  
+
       const updateOne = (updated: BucketByKind<K>) => {
         pending.push(updated);
         if (flushScheduled) return;
         flushScheduled = true;
-  
         queueMicrotask(() => {
           flushScheduled = false;
-  
-          for (const u of pending) {
-            const keyOf = (x: any) => x.adminRef ?? x.id ?? x.name;
 
+          const keyOf = (x: any) => x.adminRef ?? x.id ?? x.name;
+
+          for (const u of pending) {
             const i = buckets.value.findIndex((b: any) => keyOf(b) === keyOf(u));
-            
-            if (i >= 0) buckets.value[i] = u;
+            if (i >= 0) {
+              buckets.value.splice(i, 1, u as any);
+            }
           }
+
           pending = [];
         });
       };
-  
+
       if (impl.listBucketsProgressive) {
         buckets.value = await impl.listBucketsProgressive(context.value, updateOne);
       } else {
@@ -65,7 +67,6 @@ export function useBucketBackend<K extends BackendKind>(
       loading.value = false;
     }
   }
-  
 
   async function createBucketFromForm(form: BucketFormData) {
     await backendImpl.value.createBucket(form, context.value);
@@ -83,14 +84,22 @@ export function useBucketBackend<K extends BackendKind>(
     if (!impl.prepareCreate) return {};
     return impl.prepareCreate(context.value) as any;
   }
-  
+
   async function prepareEdit(bucket: BucketByKind<K>) {
     const impl = backendImpl.value;
     if (!impl.prepareEdit) return { bucket, deps: {} as any };
     return impl.prepareEdit(bucket as any, context.value) as any;
   }
-  
-  return {buckets,loading,error,loadBuckets,createBucketFromForm,updateBucketFromForm,deleteBucket,prepareEdit,prepareCreate
+
+  return {
+    buckets,
+    loading,
+    error,
+    loadBuckets,
+    createBucketFromForm,
+    updateBucketFromForm,
+    deleteBucket,
+    prepareEdit,
+    prepareCreate,
   };
-  
 }

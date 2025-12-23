@@ -419,7 +419,7 @@ function formatDate(value?: string): string {
 
 function openUsageDashboard(bucket: BucketType) {
   if (bucket.backendKind == "ceph") {
-    usageBucketName.value = bucket.adminRef
+    usageBucketName.value = bucket.adminRef!
   } else {
     usageBucketName.value = bucket.name;
 
