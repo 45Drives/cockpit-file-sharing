@@ -123,10 +123,9 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     void Promise.all(
       shells.map(async (b) => {
         try {
-          const stats = await rgwJson(["bucket", "stats", "--bucket", b.name]);
-          const adminRef = b.name;
+          const stats = await rgwJson(["bucket", "stats", "--bucket", b.adminRef]);
           const full = buildS3BucketFromRgwStats(stats);
-          onUpdate({ ...b, ...full ,adminRef});
+          onUpdate({ ...b, ...full });
         } catch {
           // leave shell
         }
@@ -167,7 +166,7 @@ function shellCephBucket(name: string): CephBucket {
   return {
     backendKind: "ceph",
     name,
-
+    adminRef: name,
     owner: undefined,
     createdAt: undefined,
     lastModifiedTime: undefined,
@@ -188,7 +187,6 @@ function shellCephBucket(name: string): CephBucket {
     acl: undefined,
     policy: undefined,
     lastAccessed: undefined,
-    adminRef: ""
   };
 
   

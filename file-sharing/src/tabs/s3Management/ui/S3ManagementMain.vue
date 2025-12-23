@@ -241,15 +241,32 @@ async function detectBackends() {
   loadingConfig.value = true;
 
   try {
-    const [minioOk, garageOk, cephOk] = await Promise.all([
+    const results = await Promise.allSettled([
       isMinioAvailable(),
       isGarageHealthy(),
       isCephRgwHealthy(),
     ]);
 
-    isMinioAvailableFlag.value = minioOk;
-    isCephAvailable.value = cephOk;
-    isGarageAvailable.value = garageOk;
+    const [minioRes, garageRes, cephRes] = results;
+
+    isMinioAvailableFlag.value =
+      minioRes.status === "fulfilled" ? !!minioRes.value : false;
+
+    isGarageAvailable.value =
+      garageRes.status === "fulfilled" ? !!garageRes.value : false;
+
+    isCephAvailable.value =
+      cephRes.status === "fulfilled" ? !!cephRes.value : false;
+
+    if (minioRes.status === "rejected") {
+      pushNotification(new Notification("MinIO detection failed", String(minioRes.reason), "error"));
+    }
+    if (garageRes.status === "rejected") {
+      pushNotification(new Notification("Garage detection failed", String(garageRes.reason), "error"));
+    }
+    if (cephRes.status === "rejected") {
+      pushNotification(new Notification("Ceph RGW detection failed", String(cephRes.reason), "error"));
+    }
 
     selectedBackend.value = null;
     selectedView.value = null;
@@ -259,6 +276,7 @@ async function detectBackends() {
   }
 }
 
+
 async function loadGatewaysIfNeeded() {
   if (selectedBackend.value !== "ceph") return;
   if (!isCephAvailable.value) return;
@@ -267,26 +285,27 @@ async function loadGatewaysIfNeeded() {
   gatewayError.value = null;
 
   try {
-    const list = await listRgwGateways();
+    const list = (await listRgwGateways()) ?? [];
     gateways.value = list;
 
-    if (list.length === 0) {
+    const first = list[0];
+    if (!first) {
       selectedGatewayId.value = null;
       return;
     }
 
     const defaultGw = list.find((g) => g.isDefault);
-    selectedGatewayId.value = (defaultGw || list[0]).id;
+    selectedGatewayId.value = (defaultGw ?? first).id;
   } catch (e: any) {
-    pushNotification(new Notification( `Failed to list Ceph gateways`,e?.message, "error"));
-
-    // gatewayError.value = e?.message ?? "Failed to list Ceph gateways";
+    pushNotification(new Notification("Failed to list Ceph gateways", e?.message, "error"));
     gateways.value = [];
     selectedGatewayId.value = null;
   } finally {
     loadingGateways.value = false;
   }
 }
+
+
 
 async function loadMinioAliasesIfNeeded() {
   if (selectedBackend.value !== "minio") return;

@@ -448,61 +448,6 @@ function shQuote(s: string): string {
   return `'${String(s).replace(/'/g, `'\\''`)}'`;
 }
 
-async function runAwsWithDashboardCreds(
-  args: string[],
-  endpointUrl: string,
-  opts?: {
-    verifyAfterError?: () => Promise<void>;
-  }
-): Promise<any> {
-  const isCreateBucket = args.length >= 2 && args[0] === "s3api" && args[1] === "create-bucket";
-
-  const creds = isCreateBucket
-    ? await getHoustonUiS3Creds() // you provide this
-    : await getDashboardS3Creds();
-
-  const cmdLine =
-    `AWS_ACCESS_KEY_ID=${shQuote(creds.accessKey)} ` +
-    `AWS_SECRET_ACCESS_KEY=${shQuote(creds.secretKey)} ` +
-    `AWS_DEFAULT_OUTPUT=${shQuote("json")} ` +
-    `aws --output json --endpoint-url ${shQuote(endpointUrl)} ` +
-    args.map(shQuote).join(" ");
-
-  const cmd = new Command(["bash", "-lc", cmdLine], { superuser: "try" });
-
-  try {
-    const proc = await unwrap(server.execute(cmd));
-    const stdout =
-      typeof (proc as any).getStdout === "function"
-        ? (proc as any).getStdout()
-        : ((proc as any).stdout ?? "").toString();
-
-    const text = (stdout ?? "").toString().trim();
-    if (text) {
-      return text;
-    }
-    return;
-  } catch (state: any) {
-    const stderr =
-      typeof state?.getStderr === "function" ? state.getStderr() : String(state.stderr ?? "");
-
-    if (isCreateBucket && opts?.verifyAfterError) {
-      try {
-        await opts.verifyAfterError();
-        return;
-      } catch {
-        // verification failed; throw original error below
-      }
-    }
-
-    console.error("runAwsWithDashboardCreds error", state);
-    console.error("runAwsWithDashboardCreds stderr =", stderr);
-    throw new Error(errorString(state));
-  }
-}
-
-
-
 export async function changeRgwBucketOwner(
   bucketName: string,
   newOwnerFromList: string // "uid" or "tenant$uid"
@@ -548,42 +493,35 @@ export async function changeRgwBucketOwner(
   // 4) CHOWN (docs-style)
   // - if target is tenanted: tenant/bucket
   // - else: bucket
-  let chownBucketRef ;
-  if(!targetUserId.includes("$")){
-      chownBucketRef = rawBucketName.split("/")[1]
+  const cleanBucketName = rawBucketName.replace(/^\/+/, ""); // if link used "/bucket"
+  const bucketPart = cleanBucketName.includes("/") ? cleanBucketName.split("/").slice(1).join("/") : cleanBucketName;
+  
+  let chownBucketRef: string;
+  if (targetUserId.includes("$")) {
+    // tenant user -> tenant/bucket
+    const { tenant } = splitTenantFromUid(targetUserId);
+    chownBucketRef = tenant ? `${tenant}/${bucketPart}` : bucketPart;
+  } else {
+    // non-tenant user -> bucket
+    chownBucketRef = bucketPart;
   }
-  else{
-     chownBucketRef = rawBucketName;
-
-  }
-
-  const chownArgs = ["bucket", "chown",  "--bucket", chownBucketRef,"--uid", targetUserId,];
+  
+  console.log("chownBucketRef", chownBucketRef);
+  
+  const chownArgs = ["bucket", "chown", "--bucket", chownBucketRef, "--uid", targetUserId];
   if (bucketId) chownArgs.push("--bucket-id", bucketId);
-
-  console.log("changeRgwBucketOwner: chown", {
-    rawBucketName,
-    sourceTenant,
-    chownBucketRef,
-    targetTenant: targetTenant ?? "",
-    targetUserId,
-    bucketId: bucketId ?? "",
-    cmd: `radosgw-admin ${chownArgs.join(" ")}`,
-  });
-
+  
   await rgwJson(chownArgs);
 }
-
 export async function createCephBucketViaS3(params: {
   bucketName: string;
   endpoint: string;
-  tenant?:string
-
+  tenant?: string;
   tags?: Record<string, string>;
   encryptionMode?: "none" | "sse-s3" | "kms";
   kmsKeyId?: string;
   bucketPolicy?: string | null;
   aclRules?: CephAclRule[];
-
   objectLockEnabled?: boolean;
   objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
   objectLockRetentionDays?: number;
@@ -596,185 +534,48 @@ export async function createCephBucketViaS3(params: {
     ? params.endpoint
     : `http://${params.endpoint}`;
 
-
-  const cannedAcl = deriveCannedAclFromRules(params.aclRules);
-
   const houstonCreds = await getRgwUserS3Creds("houstonUi");
-  const dashboardCreds = await getRgwUserS3Creds("dashboard");
 
-  // 1) create bucket using houstonUi creds
-  const createArgs = ["s3api", "create-bucket", "--bucket", params.bucketName];
-  if (params.placementTarget?.trim()) {
-    const zonegroupApi = await getRgwZonegroupApiName(); // returns "zonegroupy"
-    if (!zonegroupApi) throw new Error("Could not determine RGW zonegroup api_name");
-  
-    createArgs.push(
-      "--create-bucket-configuration",
-      `LocationConstraint=${zonegroupApi}:${params.placementTarget.trim()}`
-    );
-  }
-  
-  
-  
-  if (cannedAcl && cannedAcl !== "private") createArgs.push("--acl", cannedAcl);
-  if (params.objectLockEnabled) createArgs.push("--object-lock-enabled-for-bucket");
+  const ownerTenant =
+    params.owner && params.owner.includes("$") ? params.owner.split("$", 1)[0] : undefined;
+  const effectiveTenant = (params.tenant ?? ownerTenant ?? "").trim();
 
-  await runAwsWithCreds(createArgs, endpointUrl, houstonCreds);
+  const bucketForCreate = effectiveTenant
+    ? `${effectiveTenant}:${params.bucketName}`
+    : params.bucketName;
 
+  // 1) Create bucket using python helper
+  await cephCreateBucket(endpointUrl, houstonCreds, params.bucketName, {
+    objectLockEnabled: params.objectLockEnabled,
+  });
 
-  // 2) tags using dashboard creds
-  if (params.tags && Object.keys(params.tags).length) {
-    const TagSet = Object.entries(params.tags).map(([Key, Value]) => ({ Key, Value }));
-    const taggingJson = JSON.stringify({ TagSet });
-
-    log("put-bucket-tagging", { tagCount: TagSet.length });
-    await runAwsWithCreds(
-      ["s3api", "put-bucket-tagging", "--bucket", params.bucketName, "--tagging", taggingJson],
-      endpointUrl,
-      dashboardCreds
-    );
-  } else {
-  }
-
-  // 3) encryption using dashboard creds
-  if (params.encryptionMode && params.encryptionMode !== "none") {
-    const rules: any[] = [];
-
-    if (params.encryptionMode === "sse-s3") {
-      rules.push({ ApplyServerSideEncryptionByDefault: { SSEAlgorithm: "AES256" } });
-    } else if (params.encryptionMode === "kms") {
-      if (!params.kmsKeyId) throw new Error("KMS encryption selected but no kmsKeyId provided");
-      rules.push({
-        ApplyServerSideEncryptionByDefault: {
-          SSEAlgorithm: "aws:kms",
-          KMSMasterKeyID: params.kmsKeyId,
-        },
-      });
-    }
-
-    const encryptionJson = JSON.stringify({ Rules: rules });
-
-    log("put-bucket-encryption", { mode: params.encryptionMode });
-    await runAwsWithCreds(
-      [
-        "s3api",
-        "put-bucket-encryption",
-        "--bucket",
-        params.bucketName,
-        "--server-side-encryption-configuration",
-        encryptionJson,
-      ],
-      endpointUrl,
-      dashboardCreds
-    );
-  } else {
-    log("skipping encryption");
-  }
-
-  // 5) bucket policy using dashboard creds
-// 5) bucket policy using dashboard creds (SigV4; supports tenant:bucket)
-if (params.bucketPolicy !== undefined) {
-  const text = (params.bucketPolicy ?? "").trim();
-
-  const creds: CephCreds = {
-    accessKeyId: dashboardCreds.accessKey,
-    secretAccessKey: dashboardCreds.secretKey,
-  };
-
-  if (text) {
-    
-    await cephPutBucketPolicy(endpointUrl, creds, params.bucketName, text);
-  } else {
-    await cephDeleteBucketPolicy(endpointUrl, creds, params.bucketName);
-  }
-}
-else {
-    log("skipping bucket policy (undefined)");
-  }
-
-  // 6) object lock configuration using dashboard creds
-  if (params.objectLockEnabled && params.objectLockMode && params.objectLockRetentionDays) {
-    const lockConfig = JSON.stringify({
-      ObjectLockEnabled: "Enabled",
-      Rule: {
-        DefaultRetention: {
-          Mode: params.objectLockMode,
-          Days: params.objectLockRetentionDays,
-        },
-      },
-    });
-
-    log("put-object-lock-configuration", {
-      mode: params.objectLockMode,
-      days: params.objectLockRetentionDays,
-    });
-
-    await runAwsWithCreds(
-      [
-        "s3api",
-        "put-object-lock-configuration",
-        "--bucket",
-        params.bucketName,
-        "--object-lock-configuration",
-        lockConfig,
-      ],
-      endpointUrl,
-      dashboardCreds
-    );
-  } else {
-    log("skipping object lock config");
-  }
-
-  // 7) finally, change bucket owner via radosgw-admin
-  if (params.owner && params.owner.trim()) {
+  // 2) Chown to final owner
+  if (params.owner?.trim()) {
     const owner = params.owner.trim();
     log("changeRgwBucketOwner", { owner });
     await changeRgwBucketOwner(params.bucketName, owner);
-  } else {
-    log("skipping owner change");
   }
+
+  // 3) Apply all other settings through update
+  const bucketNameForUpdate = effectiveTenant
+    ? `${effectiveTenant}/${params.bucketName}`
+    : params.bucketName;
+
+  await updateCephBucketViaS3({
+    bucketName: bucketNameForUpdate,
+    endpoint: params.endpoint,
+    tags: params.tags ?? undefined,
+    encryptionMode: params.encryptionMode,
+    kmsKeyId: params.kmsKeyId,
+    bucketPolicy: params.bucketPolicy,
+    aclRules: params.aclRules,
+    objectLockMode: params.objectLockMode,
+    objectLockRetentionDays: params.objectLockRetentionDays,
+    owner: undefined,
+  });
 
   log("done");
 }
-
-
-async function runAwsWithCreds(
-  args: string[],
-  endpointUrl: string,
-  creds: RgwS3Creds,
-  opts?: { verifyAfterError?: () => Promise<void> }
-): Promise<any> {
-  const cmdLine =
-    `AWS_ACCESS_KEY_ID=${shQuote(creds.accessKey)} ` +
-    `AWS_SECRET_ACCESS_KEY=${shQuote(creds.secretKey)} ` +
-    `AWS_DEFAULT_OUTPUT=${shQuote("json")} ` +
-    `aws --output json --endpoint-url ${shQuote(endpointUrl)} ` +
-    args.map(shQuote).join(" ");
-
-  const cmd = new Command(["bash", "-lc", cmdLine], { superuser: "try" });
-
-  try {
-    const proc = await unwrap(server.execute(cmd));
-    const stdout =
-      typeof (proc as any).getStdout === "function"
-        ? (proc as any).getStdout()
-        : ((proc as any).stdout ?? "").toString();
-
-    const text = (stdout ?? "").toString().trim();
-    return text || undefined;
-  } catch (state: any) {
-    if (opts?.verifyAfterError) {
-      try {
-        await opts.verifyAfterError();
-        return;
-      } catch {
-        // fall through
-      }
-    }
-    throw new Error(errorString(state));
-  }
-}
-
 
 
 async function runRgwAdmin(args: string[]): Promise<{ stdout: string; stderr: string }> {
@@ -1832,14 +1633,19 @@ export async function cephCreateBucket(
     objectLockEnabled?: boolean;
   }
 ): Promise<void> {
-
-  // Note: create_bucket normally returns XML. Some RGW configs return JSON
-  // and botocore throws ResponseParserError. We treat that as success if
-  // head_bucket confirms bucket exists.
   const py =
     PY_SETUP +
     `
 import time
+import botocore.handlers
+
+# Disable bucket name validation (allows tenant:bucket)
+emitter = client.meta.events
+for ev in ("before-parameter-build.s3", "provide-client-params.s3"):
+  try: emitter.unregister(ev, botocore.handlers.validate_bucket_name)
+  except Exception: pass
+  try: emitter.unregister(ev, "botocore.handlers.validate_bucket_name")
+  except Exception: pass
 
 def head_ok():
   try:
@@ -1853,20 +1659,15 @@ params = {"Bucket": bucket}
 if os.environ.get("RGW_OBJECT_LOCK_ENABLED") == "true":
   params["ObjectLockEnabledForBucket"] = True
 
-
-
 try:
   client.create_bucket(**params)
   print("ok")
 except Exception as e:
   msg = str(e)
 
-  # Idempotency cases
   if "BucketAlreadyOwnedByYou" in msg or "BucketAlreadyExists" in msg:
     print("ok")
-  # If RGW returned invalid XML (often because it returned JSON), verify via head_bucket
   elif "ResponseParserError" in msg or "invalid XML" in msg or "Unable to parse response" in msg:
-    # small retry window for eventual consistency
     for _ in range(5):
       if head_ok():
         print("ok")
@@ -1889,7 +1690,7 @@ except Exception as e:
 
 
 export async function updateCephBucketViaS3(params: {
-  bucketName: string;
+  bucketName: string; // may be "bucket" or "tenant/bucket"
   endpoint: string;
 
   versioningEnabled?: boolean;
@@ -1903,13 +1704,60 @@ export async function updateCephBucketViaS3(params: {
 
   objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
   objectLockRetentionDays?: number;
-  owner?: string; // keep your radosgw-admin chown/link path separate if needed
+
+  owner?: string; // "uid" or "tenant$uid"
 }): Promise<void> {
-  const endpointUrl = params.endpoint.startsWith("http") ? params.endpoint : `http://${params.endpoint}`;
+  const endpointUrl = params.endpoint.startsWith("http")
+    ? params.endpoint
+    : `http://${params.endpoint}`;
 
   const { accessKey, secretKey } = await getDashboardS3Creds();
   const creds: CephCreds = { accessKeyId: accessKey, secretAccessKey: secretKey };
-  const bucketNameForAws = params.bucketName.replace("/",":")
+
+  // Normalize the incoming bucket into { tenant?, bucket } regardless of delimiter
+  const parseBucket = (raw: string): { tenant?: string; bucket: string } => {
+    const s = (raw ?? "").trim();
+    if (!s) return { bucket: "" };
+
+    // Prefer "tenant/bucket" form
+    if (s.includes("/")) {
+      const [t, ...rest] = s.split("/");
+      return { tenant: t || undefined, bucket: rest.join("/") };
+    }
+
+    // Also tolerate "tenant:bucket"
+    if (s.includes(":")) {
+      const [t, ...rest] = s.split(":");
+      return { tenant: t || undefined, bucket: rest.join(":") };
+    }
+
+    return { bucket: s };
+  };
+
+  const toAwsBucket = (p: { tenant?: string; bucket: string }): string => {
+    return p.tenant ? `${p.tenant}:${p.bucket}` : p.bucket;
+  };
+
+  // Track current bucket identity for subsequent S3 ops
+  let current = parseBucket(params.bucketName);
+  if (!current.bucket) throw new Error("bucketName is required");
+
+  // 0) Owner first (admin), and if this moves bucket into a tenant, update the bucket identity
+  if (params.owner && params.owner.trim()) {
+    const owner = params.owner.trim();
+
+    await changeRgwBucketOwner(current.bucket, owner);
+
+    // If owner is tenanted ("tenant$uid"), the bucket will now live under that tenant.
+    // Update the bucket identity we use for the rest of S3 operations.
+    if (owner.includes("$")) {
+      const newTenant = owner.split("$", 1)[0].trim();
+      if (newTenant) current = { tenant: newTenant, bucket: current.bucket };
+    }
+  }
+
+  const bucketNameForAws = toAwsBucket(current);
+
   // 1) Versioning
   if (typeof params.versioningEnabled === "boolean") {
     await cephPutBucketVersioning(endpointUrl, creds, bucketNameForAws, params.versioningEnabled);
@@ -1919,47 +1767,44 @@ export async function updateCephBucketViaS3(params: {
   if (params.tags !== undefined) {
     const tags = params.tags || {};
     if (Object.keys(tags).length > 0) {
-      await cephPutBucketTagging(endpointUrl, creds, bucketNameForAws, tags, );
+      await cephPutBucketTagging(endpointUrl, creds, bucketNameForAws, tags);
     } else {
-      await cephDeleteBucketTagging(endpointUrl, creds, bucketNameForAws, );
+      await cephDeleteBucketTagging(endpointUrl, creds, bucketNameForAws);
     }
   }
 
   // 3) Encryption
   if (params.encryptionMode !== undefined) {
     if (params.encryptionMode === "none") {
-      await cephDeleteBucketEncryption(endpointUrl, creds, bucketNameForAws, );
+      await cephDeleteBucketEncryption(endpointUrl, creds, bucketNameForAws);
     } else {
       await cephPutBucketEncryption(
         endpointUrl,
         creds,
         bucketNameForAws,
         params.encryptionMode,
-        params.kmsKeyId,
-        
+        params.kmsKeyId
       );
     }
   }
-  console.log("params.acl rules", params.aclRules)
-  // 4) ACL (canned ACL derived from rules)
+
+  // 4) ACL (canned)
   if (params.aclRules !== undefined) {
-    // empty array means "reset to private" (or whatever you want)
     const cannedAcl =
       (params.aclRules && params.aclRules.length > 0
         ? deriveCannedAclFromRules(params.aclRules)
         : "private") ?? "private";
-        console.log("cannedacl ",cannedAcl)
+
     await cephPutBucketAclCanned(endpointUrl, creds, bucketNameForAws, cannedAcl);
   }
-  
 
   // 5) Bucket policy
   if (params.bucketPolicy !== undefined) {
     const text = (params.bucketPolicy ?? "").trim();
     if (text) {
-      await cephPutBucketPolicy(endpointUrl, creds, bucketNameForAws, text, );
+      await cephPutBucketPolicy(endpointUrl, creds, bucketNameForAws, text);
     } else {
-      await cephDeleteBucketPolicy(endpointUrl, creds, bucketNameForAws, );
+      await cephDeleteBucketPolicy(endpointUrl, creds, bucketNameForAws);
     }
   }
 
@@ -1970,13 +1815,8 @@ export async function updateCephBucketViaS3(params: {
       creds,
       bucketNameForAws,
       params.objectLockMode,
-      params.objectLockRetentionDays,
-      
+      params.objectLockRetentionDays
     );
-  }
-
-  if (params.owner && params.owner.trim()) {
-    await changeRgwBucketOwner(params.bucketName, params.owner.trim());
   }
 }
 
