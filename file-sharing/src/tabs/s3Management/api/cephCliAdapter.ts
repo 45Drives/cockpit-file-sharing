@@ -50,7 +50,6 @@ export async function listBucketsFromCeph(): Promise<CephBucket[]> {
 export async function getBucketObjectStats(
   bucketName: string
 ): Promise<{ objectCount: number; sizeBytes: number }> {
-  console.log("bukcet name getbucketobjects", bucketName)
   const stats = await rgwJson(["bucket", "stats", "--bucket", bucketName]);
 
   const usage = stats.usage || {};
@@ -71,7 +70,6 @@ export async function isCephRgwHealthy(): Promise<boolean> {
     });
     return true;
   } catch (e) {
-    console.warn("Ceph RGW health check failed:", e);
     return false;
   }
 }
@@ -91,9 +89,8 @@ export async function deleteBucketFromCeph(
 
 async function execText(
   args: string[],
-  superuser: "try" | "required" | "none" = "try"
 ): Promise<string> {
-  const cmd = new Command(args, { superuser });
+  const cmd = new Command(args, { superuser: "try" });
 
   try {
     const proc = await unwrap(server.execute(cmd));
@@ -104,7 +101,6 @@ async function execText(
 
     return (stdout ?? "").toString().trim();
   } catch (state: any) {
-    console.error("execText error for", args, state);
     throw new Error(errorString(state));
   }
 }
@@ -226,13 +222,10 @@ async function cephJson(subArgs: string[]): Promise<any> {
 
     const text = (stdout ?? "").toString().trim();
 
-    console.log("cephJson args =", ["ceph", ...subArgs, "--format", "json"].join(" "));
-    console.log("cephJson stdout =", text);
 
     if (!text) return {};
     return JSON.parse(text);
   } catch (state: any) {
-    console.error("cephJson error for", subArgs, state);
     throw new Error(errorString(state));
   }
 }
@@ -339,7 +332,7 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
   async function worker() {
     while (index < uids.length) {
       const fullUid = uids[index++];
-      const { tenant, uid } = splitTenantFromUid(fullUid);
+      const { tenant, uid } = splitTenantFromUid(fullUid!);
 
       try {
         // 1) user info (limits live here)
@@ -385,7 +378,6 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
           quotaUsedObjectsPercent: computePercentOrNull(usedObjects, quotaMaxObjects),
         } satisfies RgwUser);
       } catch (e) {
-        console.warn("Failed to fetch info/stats for RGW user", fullUid, e);
         users.push({ uid, tenant } as RgwUser);
       }
     }
@@ -479,15 +471,6 @@ export async function changeRgwBucketOwner(
   const linkArgs = ["bucket", "link", "--bucket", linkBucketRef,  "--uid", targetUserId,];
   if (bucketId) linkArgs.push("--bucket-id", bucketId);
 
-  console.log("changeRgwBucketOwner: link", {
-    rawBucketName,
-    sourceTenant,
-    targetTenant: targetTenant ?? "",
-    targetUserId,
-    bucketId: bucketId ?? "",
-    cmd: `radosgw-admin ${linkArgs.join(" ")}`,
-  });
-
   await rgwJson(linkArgs);
 
   // 4) CHOWN (docs-style)
@@ -506,7 +489,6 @@ export async function changeRgwBucketOwner(
     chownBucketRef = bucketPart;
   }
   
-  console.log("chownBucketRef", chownBucketRef);
   
   const chownArgs = ["bucket", "chown", "--bucket", chownBucketRef, "--uid", targetUserId];
   if (bucketId) chownArgs.push("--bucket-id", bucketId);
@@ -594,13 +576,8 @@ async function runRgwAdmin(args: string[]): Promise<{ stdout: string; stderr: st
         ? (proc as any).getStderr()
         : ((proc as any).stderr ?? "").toString();
 
-    console.log("runRgwAdmin args =", ["radosgw-admin", ...args].join(" "));
-    if (stdout) console.log("runRgwAdmin stdout =", stdout);
-    if (stderr) console.log("runRgwAdmin stderr =", stderr);
-
     return { stdout, stderr };
   } catch (state: any) {
-    console.error("runRgwAdmin error for", args.join(" "), state);
     throw new Error(errorString(state));
   }
 }
@@ -665,7 +642,6 @@ async function rgwUserCreateBase(opts: CreateRgwUserOptions): Promise<CreatedRgw
         generatedSecretKey = keys.secret_key;
       }
     } catch (e) {
-      console.warn("rgwUserCreateBase: failed to parse JSON from user create:", e);
     }
   }
 
@@ -935,7 +911,6 @@ function mapCephVersioning(stats: any): BucketVersioningStatus {
 
 export function buildS3BucketFromRgwStats(stats: any): CephBucket {
   // usage
-  console.log("buildS3BucketFromRgwStats ", stats)
   const usage = stats.usage || {};
   const usageKey = "rgw.main" in usage ? "rgw.main" : Object.keys(usage)[0];
   const usageMain = usageKey ? usage[usageKey] || {} : {};
@@ -989,7 +964,6 @@ export async function getBucketDashboardStats(
   opts: BucketDashboardOptions
 ): Promise<{ stats: BucketDashboardStats; perUser: BucketUserUsage[] }> {
   const { bucket, uid, startDate, endDate, showLog } = opts;
-  console.log("getBucketDashboardStats ", opts);
 
   if (!bucket) {
     throw new Error("getBucketDashboardStats: bucket is required");
@@ -1253,14 +1227,13 @@ export type CephCreds = { accessKeyId: string; secretAccessKey: string };
 async function execPython(
   pythonSource: string,
   env: Record<string, string>,
-  superuser: "try" | "required" | "none" = "try"
 ): Promise<string> {
   const exports = Object.entries(env)
     .map(([k, v]) => `export ${k}=${shQuote(v)}`)
     .join("; ");
 
   const cmdLine = `${exports}; python3 - <<'PY'\n${pythonSource}\nPY`;
-  const cmd = new Command(["bash", "-lc", cmdLine], { superuser });
+  const cmd = new Command(["bash", "-lc", cmdLine],{ superuser: "try" });
 
   try {
     const proc = await unwrap(server.execute(cmd));
@@ -1573,7 +1546,6 @@ acl = os.environ["RGW_CANNED_ACL"]
 client.put_bucket_acl(Bucket=bucket, ACL=acl)
 print("ok")
 `;
-console.log("bucket acl", bucket)
   await execPython(py, {
     RGW_ENDPOINT: endpointUrl,
     RGW_BUCKET: bucket,
@@ -1751,7 +1723,7 @@ export async function updateCephBucketViaS3(params: {
     // If owner is tenanted ("tenant$uid"), the bucket will now live under that tenant.
     // Update the bucket identity we use for the rest of S3 operations.
     if (owner.includes("$")) {
-      const newTenant = owner.split("$", 1)[0].trim();
+      const newTenant = owner.split("$", 1)[0]!.trim();
       if (newTenant) current = { tenant: newTenant, bucket: current.bucket };
     }
   }
@@ -1850,7 +1822,6 @@ except Exception as e:
   if (!out) return undefined;
   try {
 
-    console.log("acl get", JSON.parse(out))
     return JSON.parse(out);
   } catch {
     return undefined;

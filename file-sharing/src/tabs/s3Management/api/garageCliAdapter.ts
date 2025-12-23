@@ -12,9 +12,6 @@ const GARAGE_CMD = process.env.GARAGE_CMD || "garage";
  */
 export async function runGarage(subArgs: string[]): Promise<string> {
   const cmd = new Command([GARAGE_CMD, ...subArgs]);
-  console.log("server", server);
-  console.log("cmd", cmd);
-
   const proc = await unwrap(server.execute(cmd));
 
   const stderr = proc.getStderr?.() ?? "";
@@ -23,7 +20,6 @@ export async function runGarage(subArgs: string[]): Promise<string> {
   }
 
   const stdout = proc.getStdout?.() ?? "";
-  console.log("stdoutresult", stdout);
 
   return stdout.trim();
 }
@@ -36,7 +32,7 @@ export async function listBucketsFromGarage(): Promise<GarageBucket[]> {
   const headerIndex = lines.findIndex((l) => l.trim().startsWith("ID"));
   if (headerIndex === -1) return buckets;
 
-  const header = lines[headerIndex];
+  const header = lines[headerIndex]!;
 
   const idStart = header.indexOf("ID");
   const createdStart = header.indexOf("Created");
@@ -61,7 +57,7 @@ export async function listBucketsFromGarage(): Promise<GarageBucket[]> {
     // Display name = first global alias if present, else bucket id
     let displayName = globalAliasesSlice.trim();
     if (displayName.includes(",")) {
-      displayName = displayName.split(",")[0].trim();
+      displayName = displayName.split(",")[0]!.trim();
     }
     if (!displayName) displayName = id;
 
@@ -137,7 +133,7 @@ export async function deleteBucketFromGarage(
   if (aliases.length === 1) {
     const alias = aliases[0];
     try {
-      await runGarage( ["bucket", "delete", alias, "--yes"]);
+      await runGarage( ["bucket", "delete", alias!, "--yes"]);
       return;
     } catch (e: any) {
       const msg = errorString(e);
@@ -163,7 +159,7 @@ export async function deleteBucketFromGarage(
   }
 
   try {
-    await runGarage( ["bucket", "delete", keep, "--yes"]);
+    await runGarage( ["bucket", "delete", keep!, "--yes"]);
   } catch (e: any) {
     const msg = errorString(e);
     console.error("Delete after unalias failed:", keep, msg);
@@ -265,7 +261,7 @@ async function getGarageBucketAliases(
 
     if (line.includes("Global alias:")) {
       inBlock = true;
-      const rest = line.split("Global alias:")[1].trim();
+      const rest = line.split("Global alias:")[1]!.trim();
       if (rest) {
         for (const token of rest.split(/\s+/)) {
           if (token) aliases.push(token);
@@ -276,7 +272,7 @@ async function getGarageBucketAliases(
 
     if (line.includes("Global aliases:")) {
       inBlock = true;
-      const rest = line.split("Global aliases:")[1].trim();
+      const rest = line.split("Global aliases:")[1]!.trim();
       if (rest) {
         for (const token of rest.split(/\s+/)) {
           if (token) aliases.push(token);
@@ -290,7 +286,7 @@ async function getGarageBucketAliases(
         break;
       }
 
-      const alias = line.split(/\s+/)[0].trim();
+      const alias = line.split(/\s+/)[0]!.trim();
       if (alias) {
         aliases.push(alias);
       }
@@ -325,9 +321,9 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
         continue;
       }
   
-      const id = parts[0];
-      const created = parts[1];
-      const expiration = parts[parts.length - 1];
+      const id = parts[0]!;
+      const created = parts[1]!;
+      const expiration = parts[parts.length - 1]!;
       const name = parts.slice(2, parts.length - 1).join(" ");
   
       entries.push({ id, created, name, expiration });
@@ -355,8 +351,8 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
       const m = trimmed.match(/^([^:]+):\s*(.*)$/);
       if (!m) continue;
   
-      const key = m[1].trim();
-      const value = m[2].trim();
+      const key = m[1]!.trim();
+      const value = m[2]!.trim();
       fields[key] = value;
     }
   
@@ -511,7 +507,6 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
       await runGarage( ["key", "delete", id, "--yes"]);
     } catch (e: any) {
       const msg = errorString(e);
-      console.error("Failed to delete Garage key:", id, msg);
       throw new Error(`Failed to delete Garage key "${id}": ${msg}`);
     }
   }
@@ -707,8 +702,8 @@ function parseGarageBucketInfo(output: string): GarageBucketDashboardStats {
       // RW           GK3...  backups-user
       const parts = t.split(/\s+/);
       if (parts.length >= 2) {
-        const permissions = parts[0];
-        const accessKey = parts[1];
+        const permissions = parts[0]!;
+        const accessKey = parts[1]!;
         const localAliases = parts.slice(2);
         keys.push({ permissions, accessKey, localAliases });
       }
@@ -732,7 +727,7 @@ function parseGarageBucketInfo(output: string): GarageBucketDashboardStats {
     {
       const m = /^Bucket:\s*(.+)$/i.exec(t);
       if (m) {
-        bucketId = m[1].trim();
+        bucketId = m[1]!.trim();
         continue;
       }
     }
@@ -741,7 +736,7 @@ function parseGarageBucketInfo(output: string): GarageBucketDashboardStats {
     {
       const m = /^Created:\s*(.+)$/i.exec(t);
       if (m) {
-        createdAt = m[1].trim();
+        createdAt = m[1]!.trim();
         continue;
       }
     }
@@ -750,7 +745,7 @@ function parseGarageBucketInfo(output: string): GarageBucketDashboardStats {
     {
       const m = /^Size:\s*([\d.]+)\s*([A-Za-z]+)/i.exec(t);
       if (m) {
-        const bytes = garageToBytes(m[1], m[2]);
+        const bytes = garageToBytes(m[1]!, m[2]);
         if (bytes !== undefined) totalSizeBytes = bytes;
         continue;
       }
@@ -769,7 +764,7 @@ function parseGarageBucketInfo(output: string): GarageBucketDashboardStats {
     {
       const m = /^Website access:\s*(\w+)/i.exec(t);
       if (m) {
-        websiteEnabled = m[1].toLowerCase() === "true";
+        websiteEnabled = m[1]!.toLowerCase() === "true";
         continue;
       }
     }
@@ -778,7 +773,7 @@ function parseGarageBucketInfo(output: string): GarageBucketDashboardStats {
     {
       const m = /maximum size:\s*([\d.]+)\s*([A-Za-z]+)\b/i.exec(t);
       if (m) {
-        const bytes = garageToBytes(m[1], m[2]);
+        const bytes = garageToBytes(m[1]!, m[2]);
         if (bytes !== undefined) quotaBytes = bytes;
         continue;
       }
@@ -788,7 +783,7 @@ function parseGarageBucketInfo(output: string): GarageBucketDashboardStats {
     {
       const m = /maximum (?:number of )?objects:\s*([\d,]+)/i.exec(t);
       if (m) {
-        const n = Number(m[1].replace(/,/g, ""));
+        const n = Number(m[1]!.replace(/,/g, ""));
         if (Number.isFinite(n)) maxObjects = n;
         continue;
       }
@@ -798,7 +793,7 @@ function parseGarageBucketInfo(output: string): GarageBucketDashboardStats {
     {
       const m = /^Global alias:\s*(.*)$/i.exec(t);
       if (m) {
-        const rest = m[1].trim();
+        const rest = m[1]!.trim();
         globalAliases = rest ? rest.split(/\s+/).filter(Boolean) : [];
         inGlobalAliasesBlock = true;
         continue;
@@ -809,7 +804,7 @@ function parseGarageBucketInfo(output: string): GarageBucketDashboardStats {
     {
       const m = /^Global aliases:\s*(.*)$/i.exec(t);
       if (m) {
-        const rest = m[1].trim();
+        const rest = m[1]!.trim();
         globalAliases = rest ? rest.split(/\s+/).filter(Boolean) : [];
         inGlobalAliasesBlock = true;
         continue;

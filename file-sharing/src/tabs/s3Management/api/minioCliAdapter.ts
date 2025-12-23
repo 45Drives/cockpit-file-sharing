@@ -430,7 +430,6 @@ export async function createBucketFromMinio(
 
   const {region,withLock,withVersioning,quotaSize,
   } = options;
-console.log("minio options", options)
   const bucketPath = `${MINIO_ALIAS}/${bucketName}`;
 
   // 1) mc mb ...
@@ -867,13 +866,11 @@ async function runCmd(args: string[]): Promise<{ stdout: string; stderr: string 
     const out = (stdout ?? "").toString();
     const err = (stderr ?? "").toString();
 
-    console.log("runCmd args =", args.join(" "));
     if (out) console.log("runCmd stdout =", out);
     if (err) console.log("runCmd stderr =", err);
 
     return { stdout: out, stderr: err };
   } catch (state: any) {
-    console.error("runCmd error for", args.join(" "), state);
     throw new Error(errorString(state));
   }
 }
@@ -904,7 +901,6 @@ export async function createOrUpdateMinioPolicy(
     if (!tmpFile) {
       throw new Error("Failed to create temporary policy file with mktemp");
     }
-    console.log("MinIO policy temp file =", tmpFile);
 
     // 2) Write JSON into the temp file
     const script = `cat << 'EOF' > "${tmpFile}"
@@ -920,7 +916,6 @@ EOF
     // 4) Clean up temp file
     if (tmpFile) {
       try {
-        console.log("Deleting MinIO policy temp file =", tmpFile);
         await runCmd(["sh", "-c", `rm -f -- "${tmpFile}"`]);
       } catch (e) {
         console.error("Failed to delete temp file", tmpFile, e);
@@ -1029,7 +1024,6 @@ export async function updateMinioBucket(
   }
 
   const bucketPath = `${MINIO_ALIAS}/${bucketName}`;
-  console.log("options ", options )
   // Versioning
   if (typeof options.versioning === "boolean") {
     const cmd = options.versioning ? "enable" : "suspend";
@@ -1054,8 +1048,6 @@ if (options.quotaSize !== undefined) {
     ]);
   }
 }
-
-  console.log("quota set")
 
   // Tags
   if ("tags" in options) {

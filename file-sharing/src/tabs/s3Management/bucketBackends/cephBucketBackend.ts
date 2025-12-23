@@ -123,7 +123,7 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     void Promise.all(
       shells.map(async (b) => {
         try {
-          const stats = await rgwJson(["bucket", "stats", "--bucket", b.adminRef]);
+          const stats = await rgwJson(["bucket", "stats", "--bucket", b.adminRef!]);
           const full = buildS3BucketFromRgwStats(stats);
           onUpdate({ ...b, ...full });
         } catch {
@@ -131,7 +131,6 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
         }
       }),
     );
-    console.log("shells ", shells)
     return shells;
   },
 
@@ -154,7 +153,7 @@ export async function hydrateCephBucket(
   bucket: CephBucket,
 ): Promise<CephBucket> {
 
-  const { acl, policy } = await getCephBucketSecurity(bucket.adminRef.replace("/",":"));
+  const { acl, policy } = await getCephBucketSecurity(bucket.adminRef!.replace("/",":"));
   return {
     ...bucket,
     acl,

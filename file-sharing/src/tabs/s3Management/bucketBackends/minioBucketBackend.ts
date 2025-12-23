@@ -18,8 +18,6 @@ export const minioBucketBackend: BucketBackend<MinioBucket> = {
 
   async createBucket(form: BucketCreateForm, _ctx: BackendContext): Promise<void> {
     if (form.backend !== "minio") return;
-    console.log("minio create bucket form ", form)
-
     const { versioning, quotaSize, tags,objectLock } = form.minio;
 
     await createBucketFromMinio(form.name, {

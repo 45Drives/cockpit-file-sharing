@@ -252,9 +252,9 @@ const userInitials = computed(() => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
 
   if (!parts.length) return "?";
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
 
-  return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+  return (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase();
 });
 
 // Secret reveal state

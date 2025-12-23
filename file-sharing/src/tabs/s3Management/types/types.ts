@@ -30,7 +30,7 @@ export interface CephBucket extends S3BucketBase {
   placementTarget?: string;
   zone?: string;
   zonegroup?: string;
-  adminRef: string
+  adminRef?: string
 }
 
 export interface GarageBucket extends S3BucketBase {
