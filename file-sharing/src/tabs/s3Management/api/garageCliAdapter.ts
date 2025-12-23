@@ -815,16 +815,8 @@ function parseGarageBucketInfo(output: string): GarageBucketDashboardStats {
     }
   }
 
-  return {
-    bucketId,
-    createdAt,
-    totalSizeBytes,
-    objectCount,
-    quotaBytes,
-    maxObjects,
-    websiteEnabled,
-    globalAliases: globalAliases.length ? globalAliases : undefined,
-    keys,
+  return {bucketId,createdAt,totalSizeBytes,objectCount,quotaBytes,maxObjects,websiteEnabled,
+    globalAliases: globalAliases.length ? globalAliases : undefined,keys,
     raw: output,
   };
 }

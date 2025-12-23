@@ -176,7 +176,7 @@
 <script lang="ts" setup>
 import { ref, onMounted } from "vue";
 import type { RgwUser, CreateRgwUserOptions, RgwUserDetails } from "@/tabs/s3Management/types/types";
-import { listRgwUsers, deleteRgwUser, createRgwUser, updateRgwUser, getRgwUserInfo } from "../../../api/s3CliAdapter";
+import { listRgwUsers, deleteRgwUser, createRgwUser, updateRgwUser, getRgwUserInfo } from "../../../api/cephCliAdapter";
 import RgwUserCreateModal from "./RgwUserCreateModal.vue";
 import { ArrowPathIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 import { formatBytes } from "@/tabs/s3Management/bucketBackends/bucketUtils";

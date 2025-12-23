@@ -1,32 +1,153 @@
 
-  // minioCliAdapter.ts
-import type {MinioBucket,BucketVersioningStatus, MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserGroupMembership, MinioUserUpdatePayload,
+// Key idea: keep your existing MINIO_ALIAS usage everywhere, but make it mutable
+// and set it from the UI via setMinioAlias(). This avoids changing all function signatures.
+
+import type {
+  MinioBucket,
+  BucketVersioningStatus,
+  MinioUser,
+  MinioUserCreatePayload,
+  MinioUserDetails,
+  MinioUserGroupMembership,
+  MinioUserUpdatePayload,
   MinioBucketDashboardStats,
   MinioReplicationUsage,
-  MinioGroupInfo
+  MinioGroupInfo,
+  McAliasCandidate,
 } from "../types/types";
+import pLimit from "p-limit";
 
-import { legacy } from "../../../../../houston-common/houston-common-lib";
 
-const { errorString, useSpawn } = legacy;
-const MINIO_ALIAS = process.env.MINIO_MC_ALIAS || "gw01";
+import { legacy, server, Command, unwrap } from "@45drives/houston-common-lib";
 
-async function runMc(args: string[]): Promise<{ stdout: string; stderr: string }> {
-  const fullArgs = ["mc", ...args];
-  const proc = useSpawn(fullArgs, { superuser: "try" });
+const bucketLimit = pLimit(6);
+const { errorString } = legacy;
+type RunMcOptions = {
+  allowFailure?: boolean; // if true, don't throw on non-zero exit
+};
+// Was: const MINIO_ALIAS = ...
+let MINIO_ALIAS = process.env.MINIO_MC_ALIAS || "gw01";
+
+// Expose setter so UI can select alias
+export function setMinioAlias(alias: string): void {
+  const trimmed = String(alias ?? "").trim();
+  if (!trimmed) return;
+  MINIO_ALIAS = trimmed;
+}
+
+export function getMinioAlias(): string {
+  return MINIO_ALIAS;
+}
+
+export async function listMinioAliasCandidates(): Promise<McAliasCandidate[]> {
+  const rows = await mcJsonLines(["alias", "list"]);
+
+  const candidates: McAliasCandidate[] = [];
+
+  const isTemplateOrPublic = (alias: string, url: string) => {
+    const a = alias.toLowerCase();
+    const u = url.toLowerCase();
+    if (a === "play") return true;
+    if (u.includes("play.min.io")) return true;
+
+    // Optional (recommended): also exclude these templates
+    if (a === "s3" || u.includes("s3.amazonaws.com")) return true;
+    if (a === "gcs" || u.includes("storage.googleapis.com")) return true;
+
+    return false;
+  };
+
+  const isPlaceholder = (s: string) => {
+    const v = s.trim();
+    return !v || v === "YOUR-ACCESS-KEY-HERE" || v === "YOUR-SECRET-KEY-HERE";
+  };
+
+  for (const r of rows) {
+    const alias = String((r as any)?.alias ?? "").trim();
+    const url = String((r as any)?.URL ?? (r as any)?.url ?? "").trim();
+    const api = String((r as any)?.API ?? (r as any)?.api ?? "").trim();
+
+    const accessKey = String((r as any)?.AccessKey ?? (r as any)?.accessKey ?? "").trim();
+    const secretKey = String((r as any)?.SecretKey ?? (r as any)?.secretKey ?? "").trim();
+
+    if (!alias) continue;
+    if (!url.startsWith("http")) continue;
+    if (isTemplateOrPublic(alias, url)) continue;
+
+    if (api && api.toLowerCase() !== "s3v4") continue;
+
+    // Exclude empty or placeholder creds
+    if (isPlaceholder(accessKey) || isPlaceholder(secretKey)) continue;
+
+    candidates.push({ alias });
+  }
+
+  // Verify admin access (you use mc admin heavily)
+  const verified: McAliasCandidate[] = [];
+  for (const c of candidates) {
+    try {
+      await mcJsonSingle(["admin", "info", c.alias]);
+      verified.push(c);
+    } catch {
+      // ignore
+    }
+  }
+
+  return verified;
+}
+
+// Availability should not depend on the currently selected MINIO_ALIAS
+export async function isMinioAvailable(): Promise<boolean> {
+  const cands = await listMinioAliasCandidates();
+  return cands.length > 0;
+}
+
+// Keep this for places still calling isMinioHealthy()
+// It now checks "current selected alias" (set by setMinioAlias)
+export async function isMinioHealthy(): Promise<boolean> {
+  try {
+    await mcJsonSingle(["admin", "info", MINIO_ALIAS]);
+    return true;
+  } catch (e) {
+    console.warn("MinIO health check failed:", e);
+    return false;
+  }
+}
+
+
+
+async function runMc(
+  args: string[],
+  opts: RunMcOptions = {}
+): Promise<{ stdout: string; stderr: string }> {
+  const cmd = new Command(["mc", ...args], { superuser: "try" });
 
   try {
-    const { stdout, stderr } = await proc.promise();
-    const out = stdout ? stdout.toString() : "";
-    const err = stderr ? stderr.toString() : "";
+    const proc = await unwrap(server.execute(cmd));
 
-    console.log("runMc args =", fullArgs.join(" "));
-    if (out) console.log("runMc stdout =", out);
-    if (err) console.log("runMc stderr =", err);
+    const stdout =
+      typeof (proc as any).getStdout === "function"
+        ? (proc as any).getStdout()
+        : ((proc as any).stdout ?? "").toString();
+
+    const stderr =
+      typeof (proc as any).getStderr === "function"
+        ? (proc as any).getStderr()
+        : ((proc as any).stderr ?? "").toString();
+
+    const out = (stdout ?? "").toString();
+    const err = (stderr ?? "").toString();
 
     return { stdout: out, stderr: err };
   } catch (state: any) {
-    console.error("runMc error for", args.join(" "), state);
+    if (opts.allowFailure) {
+      const stdout =
+        state?.stdout ? state.stdout.toString() : "";
+      const stderr =
+        state?.stderr ? state.stderr.toString() : "";
+      return { stdout, stderr };
+    }
+
     throw new Error(errorString(state));
   }
 }
@@ -68,20 +189,13 @@ async function getMinioBucketStats(bucketName: string): Promise<{
   versionsCount?: number;
   versioningStatus?: BucketVersioningStatus;
   objectLockEnabled?: boolean;
+  tagsFromStat?: Record<string, string>;
 }> {
-  const stat = await mcJsonSingle([
-    "stat",
-    `${MINIO_ALIAS}/${bucketName}`,
-  ]);
+  const stat = await mcJsonSingle(["stat", `${MINIO_ALIAS}/${bucketName}`]);
 
-  const createdAt: string | undefined =
-    stat.time ||
-    stat.lastModified ||
-    stat.LastModified ||
-    stat.Created ||
-    undefined;
+  const createdAt = stat.time || stat.lastModified || stat.LastModified || stat.Created || undefined;
 
-  const region: string | undefined =
+  const region =
     stat.Location ||
     stat.location ||
     (stat.Properties && (stat.Properties.Location || stat.Properties.location)) ||
@@ -90,11 +204,10 @@ async function getMinioBucketStats(bucketName: string): Promise<{
   const usage = stat.Usage || stat.usage || {};
   const sizeBytes: number = usage.totalSize ?? usage.size ?? 0;
   const objectCount: number = usage.objectsCount ?? usage.objects ?? 0;
-  const versionsCount: number | undefined =
-    usage.versionsCount ?? usage.versions ?? undefined;
+  const versionsCount: number | undefined = usage.versionsCount ?? usage.versions ?? undefined;
 
   const rawVersioning = stat.Versioning || stat.versioning || {};
-  const versioningStatus: BucketVersioningStatus | undefined =
+  const versioningStatus =
     typeof rawVersioning.status === "string" && rawVersioning.status
       ? (rawVersioning.status as BucketVersioningStatus)
       : undefined;
@@ -104,9 +217,12 @@ async function getMinioBucketStats(bucketName: string): Promise<{
     typeof rawObjectLock.enabled === "string" &&
     rawObjectLock.enabled.toLowerCase() === "enabled";
 
-  return { createdAt, region, objectCount, sizeBytes, versionsCount, versioningStatus, objectLockEnabled,
-  };
+  const tagsFromStat =
+    stat.tagging && typeof stat.tagging === "object" ? (stat.tagging as Record<string, string>) : undefined;
+
+  return { createdAt, region, objectCount, sizeBytes, versionsCount, versioningStatus, objectLockEnabled, tagsFromStat };
 }
+
 
 /**
  * Get bucket tags via `mc tag list --json <ALIAS>/<bucket>`.
@@ -114,41 +230,40 @@ async function getMinioBucketStats(bucketName: string): Promise<{
 async function getMinioBucketTags(
   bucketName: string
 ): Promise<Record<string, string> | undefined> {
-  const args = ["mc", "--json", "tag", "list", `${MINIO_ALIAS}/${bucketName}`];
-  const proc = useSpawn(args, { superuser: "try" });
+  const { stdout, stderr } = await runMc(
+    ["--json", "tag", "list", `${MINIO_ALIAS}/${bucketName}`],
+    { allowFailure: true }
+  );
 
-  try {
-    const { stdout, stderr } = await proc.promise();
-    const out = stdout ? stdout.toString() : "";
+  const text = (stdout || "").trim();
+  if (!text) return undefined;
 
-    if (!out.trim()) return undefined;
+  const lines = parseJsonLines(text);
 
-    const lines = parseJsonLines(out);
-    const aggregate: Record<string, string> = {};
+  // If mc returned an error JSON line, treat "No tags found" as empty.
+  for (const obj of lines) {
+    if (obj?.status === "error") {
+      const msg = String(obj?.error?.message ?? "").toLowerCase();
+      if (msg.includes("no tags found")) return undefined;
 
-    for (const entry of lines) {
-      const tags = entry.tags || entry.Tags || entry.tagset || {};
-      for (const [k, v] of Object.entries(tags)) {
-        aggregate[String(k)] = String(v);
-      }
+      // real error
+      throw new Error(obj?.error?.message ?? "mc tag list failed");
     }
-
-    return Object.keys(aggregate).length ? aggregate : undefined;
-  } catch (state: any) {
-    const out = state?.stdout ? state.stdout.toString() : "";
-
-    // If this is just "No tags found", treat it as no tags, not an error
-    if (out.includes("No tags found")) {
-      console.log(
-        `getMinioBucketTags: no tags for ${bucketName}, treating as empty`,
-      );
-      return undefined;
-    }
-
-    console.error("getMinioBucketTags: unexpected error", state);
-    throw new Error(errorString(state));
   }
+
+  // success path
+  const aggregate: Record<string, string> = {};
+  for (const obj of lines) {
+    const tags = obj.tagset || obj.tags || obj.Tags || obj.tagset || {};
+    for (const [k, v] of Object.entries(tags)) {
+      aggregate[String(k)] = String(v);
+    }
+  }
+
+  return Object.keys(aggregate).length ? aggregate : undefined;
 }
+
+
 
 
 /**
@@ -164,51 +279,59 @@ export async function listBucketsFromMinio(): Promise<MinioBucket[]> {
   );
 
   const detailed = await Promise.all(
-    bucketEntries.map(async (entry) => {
-      const rawName: string =
-        entry.key || entry.name || entry.bucket || entry.target || "";
-      const bucketName = rawName.replace(/\/$/, "");
-
-      if (!bucketName) {
-        console.warn("Skipping bucket entry with no name:", entry);
-        return undefined;
-      }
-
-      const {createdAt,region,objectCount,sizeBytes,versionsCount,versioningStatus,objectLockEnabled,
-      } = await getMinioBucketStats(bucketName);
-
-      const quotaBytes = await getMinioBucketQuotaBytes(bucketName);
-      const tags = await getMinioBucketTags(bucketName);
-
-      const owner: string | undefined =
-        (tags && (tags.owner || tags.Owner || tags.bucketOwner)) || undefined;
-
-      const policy: string | undefined = undefined;
-
-      // Fallback: if versioningStatus is missing, infer from versionsCount
-      const inferredVersioning: BucketVersioningStatus | undefined =
-        versioningStatus ??
-        (versionsCount && versionsCount > 0 ? "Enabled" : "Suspended");
-
-      const bucket: MinioBucket = {
-        backendKind: "minio",
-        name: bucketName,
-        createdAt,
-        region: region || "minio-default-region",
-        owner,
-        policy,
-        objectCount,
-        sizeBytes,
-        quotaBytes,              
-        versioning: inferredVersioning,
-        tags: tags || undefined,  
-        objectLockEnabled
-      };
-
-      return bucket;
-    })
+    bucketEntries.map((entry) =>
+      bucketLimit(async () => {
+        const rawName: string =
+          entry.key || entry.name || entry.bucket || entry.target || "";
+        const bucketName = String(rawName).replace(/\/$/, "");
+  
+        if (!bucketName) {
+          console.warn("Skipping bucket entry with no name:", entry);
+          return undefined;
+        }
+  
+        const [stats, quotaBytes] = await Promise.all([
+          getMinioBucketStats(bucketName),
+          getMinioBucketQuotaBytes(bucketName),
+        ]);
+  
+        const {
+          createdAt,
+          region,
+          objectCount,
+          sizeBytes,
+          versionsCount,
+          versioningStatus,
+          objectLockEnabled,
+          tagsFromStat
+        } = stats;
+        const tags = tagsFromStat
+        const owner: string | undefined =
+          (tags && (tags.owner || tags.Owner || tags.bucketOwner)) || undefined;
+  
+        const inferredVersioning: BucketVersioningStatus | undefined =
+          versioningStatus ??
+          (versionsCount && versionsCount > 0 ? "Enabled" : "Suspended");
+  
+        const bucket: MinioBucket = {
+          backendKind: "minio",
+          name: bucketName,
+          createdAt,
+          region: region || "minio-default-region",
+          owner,
+          policy: undefined,
+          objectCount,
+          sizeBytes,
+          quotaBytes,
+          versioning: inferredVersioning,
+          tags: tags || undefined,
+          objectLockEnabled,
+        };
+  
+        return bucket;
+      })
+    )
   );
-
   return detailed.filter((b): b is MinioBucket => Boolean(b));
 }
 
@@ -253,15 +376,7 @@ export async function getBucketObjectStatsFromMinio(
   return { objectCount, sizeBytes };
 }
 
-export async function isMinioHealthy(): Promise<boolean> {
-  try {
-    await mcJsonSingle(["admin", "info", MINIO_ALIAS]);
-    return true;
-  } catch (e) {
-    console.warn("MinIO health check failed:", e);
-    return false;
-  }
-}
+
 
 /**
  * deleteBucketFromMinio(bucketName, { force })
@@ -543,13 +658,7 @@ export async function getMinioUserInfo(username: string): Promise<MinioUserDetai
     : [];
 
   const details: MinioUserDetails = {
-    username: accessKey || username,
-    status,
-    policies,
-    accessKey,
-    authentication,
-    memberOf,
-    raw: info,
+    username: accessKey || username,status,policies,accessKey,authentication,memberOf,raw: info,
   };
 
   return details;
@@ -740,12 +849,23 @@ export async function getMinioPolicy(name: string): Promise<string> {
 }
 
 async function runCmd(args: string[]): Promise<{ stdout: string; stderr: string }> {
-  const proc = useSpawn(args, { superuser: "try" });
+  const cmd = new Command(args, { superuser: "try" });
 
   try {
-    const { stdout, stderr } = await proc.promise();
-    const out = stdout ? stdout.toString() : "";
-    const err = stderr ? stderr.toString() : "";
+    const proc = await unwrap(server.execute(cmd));
+
+    const stdout =
+      typeof (proc as any).getStdout === "function"
+        ? (proc as any).getStdout()
+        : ((proc as any).stdout ?? "").toString();
+
+    const stderr =
+      typeof (proc as any).getStderr === "function"
+        ? (proc as any).getStderr()
+        : ((proc as any).stderr ?? "").toString();
+
+    const out = (stdout ?? "").toString();
+    const err = (stderr ?? "").toString();
 
     console.log("runCmd args =", args.join(" "));
     if (out) console.log("runCmd stdout =", out);
@@ -757,6 +877,7 @@ async function runCmd(args: string[]): Promise<{ stdout: string; stderr: string 
     throw new Error(errorString(state));
   }
 }
+
 
 export async function createOrUpdateMinioPolicy(
   name: string,
@@ -1074,27 +1195,7 @@ export async function getMinioBucketDashboardStats(
 
   const quotaBytes = await getMinioBucketQuotaBytes(bucketName);
 
-  return {
-    bucket: bucketName,
-    totalSizeBytes,
-    objectCount,
-    versionCount,
-    deleteMarkersCount,
-    lastModified,
-    location,
-    versioningStatus,
-    objectLockEnabled,
-    objectLockMode,
-    objectLockValidity,
-    policyType,
-    replicationEnabled,
-    replicationRole,
-    encryptionConfigured,
-    ilmConfigured,
-    quotaBytes,
-    sizeHistogram,
-    versionsHistogram,
-    replicationUsage,
-    raw: stat,
+  return {bucket: bucketName,totalSizeBytes,objectCount,versionCount,deleteMarkersCount,lastModified,location,versioningStatus,
+    objectLockEnabled,objectLockMode,objectLockValidity,policyType,replicationEnabled,replicationRole,encryptionConfigured,ilmConfigured,quotaBytes,sizeHistogram,versionsHistogram,replicationUsage,raw: stat,
   };
 }

@@ -3,7 +3,7 @@ import type {CephAclRule,RgwGateway,RgwUser,RgwDashboardS3Creds,CreatedRgwUserKe
   BucketDashboardStats,BucketUserUsage,BucketDashboardOptions,BucketVersioningStatus,CephBucket,
   CephAclPermission,
 } from "../types/types";
-import { legacy, server, Command, unwrap } from "../../../../../houston-common/houston-common-lib";
+import { legacy, server, Command, unwrap } from "@45drives/houston-common-lib";
 import pLimit from "p-limit";
 
 

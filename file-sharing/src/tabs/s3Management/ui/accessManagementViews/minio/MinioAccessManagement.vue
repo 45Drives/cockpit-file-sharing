@@ -93,6 +93,8 @@
   
   const activeTab = ref<"users" | "policies" | "groups">("users");
   const emit = defineEmits<{ (e: "backToViewSelection"): void }>();
-
+  const props = defineProps<{
+  minioAlias?: string | null;
+}>();
   </script>
   

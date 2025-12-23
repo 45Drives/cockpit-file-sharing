@@ -5,7 +5,7 @@ import { parseTags } from "./bucketUtils";
 
 import {listBucketsFromCeph,createCephBucketViaS3,updateCephBucketViaS3,deleteBucketFromCeph,getCephBucketSecurity,rgwJson,
   buildS3BucketFromRgwStats,listRgwPlacementTargets, listRGWUserNames
-} from "../api/s3CliAdapter";
+} from "../api/cephCliAdapter";
 
 
 

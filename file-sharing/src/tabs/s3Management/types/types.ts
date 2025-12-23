@@ -419,3 +419,7 @@ export type GarageBucketKeyGrant = {
   write: boolean;
   owner: boolean;
 };
+
+export type McAliasCandidate = {
+  alias: string;
+};

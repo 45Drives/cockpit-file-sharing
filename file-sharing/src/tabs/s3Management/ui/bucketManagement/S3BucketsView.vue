@@ -354,6 +354,7 @@ const props = defineProps<{
   backend: "minio" | "ceph" | "garage";
   cephGateway?: RgwGateway | null;
   showBackButton?: boolean;
+  minioAlias?: string | null;
 }>();
 
 const emit = defineEmits<{
