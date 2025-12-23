@@ -18,13 +18,13 @@ export const garageBucketBackend: BucketBackend<GarageBucket> = {
   async createBucket(form: BucketCreateForm, _ctx: BackendContext): Promise<void> {
     if (form.backend !== "garage") return;
 
-    await createGarageBucket(form.name, form.garage);
+    await createGarageBucket(form.name, form.garage, form.grants ?? []);
   },
 
   async updateBucket(bucket: GarageBucket, form: BucketEditForm, _ctx: BackendContext): Promise<void> {
     if (form.backend !== "garage") return;
 
-    await updateGarageBucket(bucket.garageId!, form.garage);
+    await updateGarageBucket(bucket.garageId!, form.garage,form.grants ?? []);
 
     // Optional local sync if you want optimistic updates:
     const g = form.garage;

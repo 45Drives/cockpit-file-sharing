@@ -1,6 +1,6 @@
 // garageCliAdapter.ts
 
-import type { GarageBucket, GarageBucketOptions, GarageKeyListEntry, GarageKeyDetail, GarageBucketDashboardStats, GarageBucketKeyAccess,
+import type { GarageBucket, GarageBucketOptions, GarageKeyListEntry, GarageKeyDetail, GarageBucketDashboardStats, GarageBucketKeyAccess, GarageBucketKeyGrant
 } from "../types/types";
 const { errorString } = legacy; // useSpawn no longer needed
 import { legacy, server, Command, unwrap } from "@45drives/houston-common-lib";
@@ -173,7 +173,8 @@ export async function deleteBucketFromGarage(
         
 export async function createGarageBucket(
   bucketName: string,
-  options: GarageBucketOptions = {}
+  options: GarageBucketOptions = {},
+  grants: GarageBucketKeyGrant[] = []
 ): Promise<void> {
   const args: string[] = ["bucket", "create", bucketName];
 
@@ -229,11 +230,18 @@ export async function createGarageBucket(
     }
 
     // 4) aliases
-    if (options.aliases?.length) {
-      for (const alias of options.aliases) {
-        await runGarage(["bucket", "alias", bucketName, alias]);
-      }
-    }
+    const aliases = normalizeAliases(options.aliases)
+    .map((a) => a.trim())
+    .filter(Boolean);
+  
+  for (const alias of aliases) {
+    await runGarage(["bucket", "alias", bucketName, alias]);
+  }
+  // 5) grants (keys permissions)
+if (grants.length) {
+  await applyGarageBucketGrants(bucketName, grants);
+}
+
   } catch (e: any) {
     const msg = errorString(e);
     console.error("Failed to create Garage bucket:", bucketName, msg);
@@ -400,6 +408,12 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
     return results;
   }
   
+  function normalizeAliases(input: unknown): string[] {
+    if (Array.isArray(input)) return input;
+    if (typeof input === "string") return [input];
+    return [];
+  }
+  
 
   function parseGarageKeyInfoOutput(output: string): GarageKeyDetail {
     const lines = output.split(/\r?\n/);
@@ -544,28 +558,20 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
     export async function updateGarageBucket(
       garageId: string,
       opts: GarageBucketOptions,
+      grants: GarageBucketKeyGrant[] = []
     ): Promise<void> {
       // 1) QUOTAS: size + max-objects (both optional, can clear)
       if (opts.quota !== undefined || opts.maxObjects !== undefined) {
         const quotaArgs: string[] = ["bucket", "set-quotas", garageId];
     
-        // size
         if (opts.quota !== undefined) {
-          if (opts.quota === null) {
-            quotaArgs.push("--max-size", "0");
-          } else {
-            quotaArgs.push("--max-size", String(opts.quota).trim());
-          }
+          if (opts.quota === null) quotaArgs.push("--max-size", "0");
+          else quotaArgs.push("--max-size", String(opts.quota).trim());
         }
     
-        // max-objects
         if (opts.maxObjects !== undefined) {
-          if (opts.maxObjects === null) {
-            // clear max-objects
-            quotaArgs.push("--max-objects", "0");
-          } else {
-            quotaArgs.push("--max-objects", String(opts.maxObjects));
-          }
+          if (opts.maxObjects === null) quotaArgs.push("--max-objects", "0");
+          else quotaArgs.push("--max-objects", String(opts.maxObjects));
         }
     
         await runGarage(quotaArgs);
@@ -577,13 +583,8 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
     
         if (opts.website.enable) {
           args.push("--allow");
-    
-          if (opts.website.indexDocument) {
-            args.push("--index-document", opts.website.indexDocument);
-          }
-          if (opts.website.errorDocument) {
-            args.push("--error-document", opts.website.errorDocument);
-          }
+          if (opts.website.indexDocument) args.push("--index-document", opts.website.indexDocument);
+          if (opts.website.errorDocument) args.push("--error-document", opts.website.errorDocument);
         } else {
           args.push("--deny");
         }
@@ -592,15 +593,31 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
         await runGarage(args);
       }
     
-      // 3) ALIASES (naive add-only, as before)
-      if (opts.aliases !== undefined && opts.aliases !== null) {
-        for (const alias of opts.aliases) {
-          await runGarage(["bucket", "alias", garageId, alias]);
-        }
+      // 3) ALIASES: remove first, then add
+      const aliasesToRemove = normalizeAliases(opts.garageAliasesRemove)
+        .map((a) => a.trim())
+        .filter(Boolean);
+    
+      for (const alias of aliasesToRemove) {
+        // IMPORTANT: use the correct Garage CLI subcommand for removal in your environment
+        // Common patterns are: ["bucket","unalias", ...] or ["bucket","alias","--delete", ...]
+        await runGarage(["bucket", "unalias", alias]);
       }
+    
+      const aliasesToAdd = normalizeAliases(opts.aliases)
+        .map((a) => a.trim())
+        .filter(Boolean);
+    
+      for (const alias of aliasesToAdd) {
+        await runGarage(["bucket", "alias", garageId, alias]);
+      }
+      if (grants.length) {
+        await applyGarageBucketGrants(garageId, grants);
+      }
+      
+
     }
     
-
 // Shared unit multipliers + helper (drop in near top of file, above functions)
 const GARAGE_UNIT_MULTIPLIERS: Record<string, number> = {
   B: 1,
@@ -830,4 +847,36 @@ export async function getBucketObjectStatsFromGarage(
     objectCount: info.objectCount,
     sizeBytes: info.totalSizeBytes,
   };
+}
+
+async function applyGarageBucketGrants(
+  bucketHandle: string,
+  grants: GarageBucketKeyGrant[]
+): Promise<void> {
+  for (const g of grants) {
+    const key = (g.keyIdOrName || "").trim();
+    if (!key) continue;
+
+    const wantsAny = !!g.owner || !!g.read || !!g.write;
+
+    // Clear everything first so "RW -> R" actually removes write
+    // We deny each permission explicitly because the CLI expects a flag.
+    await runGarage(["bucket", "deny", bucketHandle, "--key", key, "--read"]);
+    await runGarage(["bucket", "deny", bucketHandle, "--key", key, "--write"]);
+    await runGarage(["bucket", "deny", bucketHandle, "--key", key, "--owner"]);
+
+    // If nothing desired, this is a full revoke.
+    if (!wantsAny) continue;
+
+    // Apply desired permissions
+    if (g.owner) {
+      await runGarage(["bucket", "allow", bucketHandle, "--key", key, "--owner"]);
+    }
+    if (g.read) {
+      await runGarage(["bucket", "allow", bucketHandle, "--key", key, "--read"]);
+    }
+    if (g.write) {
+      await runGarage(["bucket", "allow", bucketHandle, "--key", key, "--write"]);
+    }
+  }
 }

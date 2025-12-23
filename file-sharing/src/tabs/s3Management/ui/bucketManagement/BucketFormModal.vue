@@ -14,7 +14,7 @@
             class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1 disabled:opacity-60" />
         </div>
 
-        <div class="w-full min-w-0">
+        <div v-if="backend !== 'garage'" class="w-full min-w-0">
           <label class="mb-1 block text-md font-medium text-slate-300">Region</label>
           <input v-model="modalForm.region" type="text" placeholder="optional"
             class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1" />
@@ -136,12 +136,146 @@
         </div>
 
         <!-- Garage -->
-        <GarageBucketFields
-            v-if="backend === 'garage'"
-            :form="modalForm"
-            :deps="garageDeps"
-          />
+        <div v-if="backend === 'garage'" class="md:col-span-2 mt-2 border-t border-slate-800 pt-3 space-y-3">
+          <div class="flex gap-2">
+            <div class="flex-1">
+              <label class="mb-1 block text-md font-medium font-semibold text-default">Max size</label>
+              <input v-model="modalForm.garageMaxSize" type="number" min="0" placeholder="e.g. 30"
+                class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1" />
+            </div>
+            <div class="w-24">
+              <label class="mb-1 block text-md font-medium font-semibold text-default">Unit</label>
+              <select v-model="modalForm.garageMaxSizeUnit"
+                class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1">
+                <option value="MiB">MiB</option>
+                <option value="GiB">GiB</option>
+                <option value="TiB">TiB</option>
+              </select>
+            </div>
+          </div>
 
+          <div>
+            <label class="mb-1 block text-md font-medium font-semibold text-default">Max objects</label>
+            <input v-model="modalForm.garageMaxObjects" type="number" min="0" placeholder="e.g. 100000"
+              class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1" />
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-md font-medium font-semibold text-default">Grant access keys</label>
+
+            <p v-if="garageDeps?.keysLoading" class="text-md text-muted">Loading Garage keys…</p>
+            <p v-else-if="garageDeps?.keysError" class="text-md text-red-400">{{ garageDeps.keysError }}</p>
+
+            <div v-else class="space-y-2">
+              <div class="text-md text-muted">
+                Select keys that should access this bucket, then set permissions.
+              </div>
+
+              <div v-for="k in (garageDeps?.garageKeys ?? [])" :key="k.id"
+                class="flex items-center justify-between gap-3 rounded-md border border-default bg-default px-3 py-2">
+                <div class="min-w-0">
+                  <div class="text-md font-medium text-slate-200 truncate">{{ k.name || k.id }}</div>
+                  <div class="text-sm text-muted font-mono truncate">{{ k.id }}</div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <input type="checkbox" class="h-4 w-4 rounded border-slate-600 bg-default"
+                    :checked="isGranted(k.id)"
+                    @change="toggleGrant(k.id, k.name, ($event.target as HTMLInputElement).checked)" />
+
+                    <div v-if="getGrant(k.id)" class="flex items-center gap-2 text-md">
+                                        <label class="flex items-center gap-1">
+                                          <input
+  type="checkbox"
+  class="h-4 w-4 rounded border-slate-600 bg-default"
+  :checked="!!getGrant(k.id)?.read"
+  @change="() => { const g = getGrant(k.id); if (g) g.read = !g.read; }"
+/>
+
+                      <span>Read</span>
+                    </label>
+
+                    <label class="flex items-center gap-1">
+                      <input type="checkbox" class="h-4 w-4 rounded border-slate-600 bg-default"
+                        v-model="grantFor(k.id).write" />
+                      <span>Write</span>
+                    </label>
+
+                    <label class="flex items-center gap-1">
+                      <input type="checkbox" class="h-4 w-4 rounded border-slate-600 bg-default"
+                        v-model="grantFor(k.id).owner" />
+                      <span>Owner</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-md text-muted">
+              Owner is required for some bucket admin actions (example: website config via S3 APIs).
+            </p>
+          </div>
+
+          <div class="space-y-2">
+  <label class="mb-1 block text-md font-medium font-semibold text-default">Aliases</label>
+
+  <div class="space-y-2">
+    <!-- Required / base alias (bucket name) -->
+    <div class="flex gap-2">
+      <input
+        :value="modalForm.name"
+        disabled
+        class="flex-1 rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1 disabled:opacity-60"
+      />
+      <span class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-slate-300">
+        Required
+      </span>
+    </div>
+
+    <!-- Additional aliases -->
+    <div
+      v-for="(a, index) in modalForm.garageAliases"
+      :key="index"
+      class="flex gap-2"
+    >
+      <input
+        v-model="a.value"
+        type="text"
+        placeholder="e.g. public-assets"
+        class="flex-1 rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1"
+      />
+
+      <button
+        type="button"
+        @click="removeGarageAliasRow(index)"
+        class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-slate-100 hover:bg-slate-800"
+      >
+        Remove
+      </button>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        @click="addGarageAliasRow"
+        class="rounded-md border border-default bg-secondary px-3 py-2 text-md font-medium text-slate-100 hover:bg-slate-900"
+      >
+        Add alias
+      </button>
+
+      <span class="text-sm text-muted">
+        {{ modalForm.garageAliases.length }}
+      </span>
+    </div>
+  </div>
+
+  <p class="text-md text-muted">
+    The bucket name is always the primary alias. Add optional additional aliases below.
+  </p>
+</div>
+
+
+        </div>
 
         <!-- Ceph -->
         <div v-if="backend === 'ceph'" class="md:col-span-2 mt-2 border-t border-slate-800 pt-3 space-y-4">
@@ -343,12 +477,12 @@ import type {
   ModalDeps,CephBucket,MinioBucket,GarageBucket,
   CephDeps,
   MinioDeps,
-  GarageDeps
+  GarageDeps,GarageBucketKeyAccess
 } from "../../types/types";
 import type { BucketFormData, BucketCreateForm, BucketEditForm } from "../../bucketBackends/bucketBackend";
-import GarageBucketFields from "./GarageBucketFields.vue";
 import { splitBytesBinary } from "../../bucketBackends/bucketUtils";
 import { ArrowTopRightOnSquareIcon } from "@heroicons/vue/20/solid";
+import { getGarageBucketDashboardStats } from "../../api/garageCliAdapter";
 const bucketPolicyError = ref<string | null>(null);
 const MAX_TAGS = 10;
 const cephObjectLockActive = computed(() => {
@@ -362,6 +496,8 @@ const cephVersioningLocked = computed(() => cephObjectLockActive.value);
 
 const cephDeps = computed<CephDeps | null>(() => (props.backend === "ceph" ? props.deps : null));
 const garageDeps = computed<GarageDeps | null>(() => (props.backend === "garage" ? props.deps : null));
+  const originalGarageAliases = ref<string[]>([]);
+    const garageBucketKeyAccess = ref<GarageBucketKeyAccess[]>([]);
 
 type BucketFormModalProps =
   | {
@@ -416,7 +552,9 @@ const modalForm = reactive({
   garageWebsiteEnabled: false,
   garageWebsiteIndex: "index.html",
   garageWebsiteError: "",
-  garageAliasesText: "",
+  garageAliases: [] as Array<{ value: string }>,
+  garageAliasesRemove: [] as Array<{ value: string }>,
+
   garageGrants: [] as GarageBucketKeyGrant[],
 
   cephObjectLockEnabled: false,
@@ -460,8 +598,10 @@ function resetForm() {
   modalForm.garageWebsiteEnabled = false;
   modalForm.garageWebsiteIndex = "index.html";
   modalForm.garageWebsiteError = "";
-  modalForm.garageAliasesText = "";
+  modalForm.garageAliases = [];
   modalForm.garageGrants = [];
+  modalForm.garageAliasesRemove = [];
+
 
   modalForm.cephObjectLockEnabled = false;
   modalForm.cephObjectLockMode = "COMPLIANCE";
@@ -475,6 +615,8 @@ function resetForm() {
 modalForm.cephAclPermission = "FULL_CONTROL";
 
   bucketPolicyError.value = null;
+  originalGarageAliases.value = [];
+
 }
 
 function initFromProps() {
@@ -545,37 +687,46 @@ function initFromProps() {
       }
       return;
     }
-
+  
     // garage
-    {
-      const b = props.bucketToEdit;
+    // garage
+{
+  const b = props.bucketToEdit;
 
-      modalForm.name = b.name;
-      modalForm.region = b.region ?? "";
-      modalForm.owner = b.owner ?? "";
-      modalForm.tags = tagsObjectToArray(b.tags);
+  modalForm.name = b.name;
+  modalForm.owner = b.owner ?? "";
+  modalForm.tags = tagsObjectToArray(b.tags);
 
-      modalForm.garageMaxObjects = b.garageMaxObjects != null ? String(b.garageMaxObjects) : "";
+  modalForm.garageMaxObjects = b.garageMaxObjects != null ? String(b.garageMaxObjects) : "";
 
-      const quotaBytes = b.quotaBytes;
-      if (typeof quotaBytes === "number" && quotaBytes > 0) {
-        const { value, unit } = splitBytesBinary(quotaBytes);
-        modalForm.garageMaxSize = String(value);
-        modalForm.garageMaxSizeUnit = unit;
-      } else {
-        modalForm.garageMaxSize = "";
-        modalForm.garageMaxSizeUnit = "GiB";
-      }
-
-      modalForm.garageWebsiteEnabled = !!b.garageWebsiteEnabled;
-      modalForm.garageWebsiteIndex = b.garageWebsiteIndex || "index.html";
-      modalForm.garageWebsiteError = b.garageWebsiteError || "";
-
-      const aliases = b.garageAliases;
-      modalForm.garageAliasesText = aliases && aliases.length ? aliases.join(",") : "";
-    }
+  const quotaBytes = b.quotaBytes;
+  if (typeof quotaBytes === "number" && quotaBytes > 0) {
+    const { value, unit } = splitBytesBinary(quotaBytes);
+    modalForm.garageMaxSize = String(value);
+    modalForm.garageMaxSizeUnit = unit;
+  } else {
+    modalForm.garageMaxSize = "";
+    modalForm.garageMaxSizeUnit = "GiB";
   }
+
+  modalForm.garageWebsiteEnabled = !!b.garageWebsiteEnabled;
+  modalForm.garageWebsiteIndex = b.garageWebsiteIndex || "index.html";
+  modalForm.garageWebsiteError = b.garageWebsiteError || "";
+
+  const base = b.name.trim();
+const extras = Array.from(
+  new Set((b.garageAliases ?? []).map((x) => x.trim()).filter(Boolean).filter((x) => x !== base))
+);
+
+originalGarageAliases.value = extras;              
+modalForm.garageAliases = extras.map((x) => ({ value: x }));
+modalForm.garageAliasesRemove = [];                
+
+
 }
+}
+}
+
 
 watch(() => [props.visible, props.mode, props.bucketToEdit, props.backend], initFromProps, { immediate: true });
 
@@ -725,36 +876,81 @@ function onSubmit() {
       minio,
     } satisfies BucketFormData;
   } else {
-    const quota = modalForm.garageMaxSize ? `${modalForm.garageMaxSize}${modalForm.garageMaxSizeUnit}` : null;
+  const quota = modalForm.garageMaxSize
+    ? `${modalForm.garageMaxSize}${modalForm.garageMaxSizeUnit}`
+    : null;
 
-    const garage: GarageBucketOptions = {
-      quota,
-      maxObjects: modalForm.garageMaxObjects ? Number(modalForm.garageMaxObjects) : null,
-      website: {
-        enable: !!modalForm.garageWebsiteEnabled,
-        indexDocument: modalForm.garageWebsiteIndex || undefined,
-        errorDocument: modalForm.garageWebsiteError || undefined,
-      },
-      aliases: modalForm.garageAliasesText
-        ? modalForm.garageAliasesText.split(",").map((s) => s.trim()).filter(Boolean)
-        : null,
-      allow: null,
-      deny: null,
-      extraArgs: null,
-    };
+  const base = modalForm.name.trim();
+  const aliasList = Array.from(
+    new Set(
+      modalForm.garageAliases
+        .map((x) => x.value.trim())
+        .filter(Boolean)
+        .filter((x) => x !== base)
+    )
+  );
+  const desiredSet = new Set(aliasList);
+const removed = originalGarageAliases.value.filter((a) => !desiredSet.has(a));
 
-    form = {
-      backend: "garage",
-      name: modalForm.name,
-      garage,
-      grants: modalForm.garageGrants,
-    } satisfies BucketFormData;
-  }
+
+  const garage: GarageBucketOptions = {
+    quota,
+    maxObjects: modalForm.garageMaxObjects ? Number(modalForm.garageMaxObjects) : null,
+    website: {
+      enable: !!modalForm.garageWebsiteEnabled,
+      indexDocument: modalForm.garageWebsiteIndex || undefined,
+      errorDocument: modalForm.garageWebsiteError || undefined,
+    },
+    aliases: aliasList.length ? aliasList : null,
+    garageAliasesRemove: removed.length ? removed : null,
+    allow: null,
+    deny: null,
+    extraArgs: null,
+  };
+
+  form = {
+    backend: "garage",
+    name: modalForm.name,
+    garage,
+    grants: modalForm.garageGrants,
+  } satisfies BucketFormData;
+}
+
 
   emit("submit", { mode: props.mode, form });
 }
 
+function keyHandle(id: string) {
+  return id.trim();
+}
 
+function isGranted(id: string) {
+  const h = keyHandle(id);
+  return modalForm.garageGrants.some((g) => g.keyIdOrName === h);
+}
+
+
+function grantFor(id: string) {
+  const h = keyHandle(id);
+  let g = modalForm.garageGrants.find((x) => x.keyIdOrName === h);
+  if (!g) {
+    g = { keyIdOrName: h, read: true, write: false, owner: false };
+    modalForm.garageGrants.push(g);
+  }
+  return g;
+}
+
+
+function toggleGrant(id: string, _name: string | undefined, checked: boolean) {
+  const h = keyHandle(id);
+  if (checked) {
+    if (!modalForm.garageGrants.some((g) => g.keyIdOrName === h)) {
+      modalForm.garageGrants.push({ keyIdOrName: h, read: true, write: false, owner: false });
+    }
+  } else {
+    modalForm.garageGrants = modalForm.garageGrants.filter((g) => g.keyIdOrName !== h);
+  }
+}
 function clearPolicy() {
   modalForm.bucketPolicyText = "";
   bucketPolicyError.value = null;
@@ -809,5 +1005,63 @@ watch(
   },
   { immediate: true },
 );
+function addGarageAliasRow() {
+  modalForm.garageAliases.push({ value: "" });
+}
+function removeGarageAliasRow(index: number) {
+  if (index < 0 || index >= modalForm.garageAliases.length) return;
+  modalForm.garageAliases.splice(index, 1);
+  
+}
+
+function normPerm(p: string | undefined): string {
+  return (p ?? "").trim().toUpperCase();
+}
+
+function accessToGrant(accessKey: string, permissions: string): GarageBucketKeyGrant {
+  const p = normPerm(permissions);
+
+  // "RW", "R", "W" from the CLI table
+  const read = p.includes("R");
+  const write = p.includes("W");
+
+  // If your CLI does not expose owner here, keep false.
+  // If it ever does (eg "O" or "OWNER"), this will start working.
+  const owner = p.includes("O") || p.includes("OWNER");
+
+  return { keyIdOrName: accessKey.trim(), read, write, owner };
+}
+watch(
+  () => [props.visible, props.mode, props.backend, props.bucketToEdit],
+  async () => {
+    if (!props.visible) return;
+    if (props.backend !== "garage") return;
+    if (props.mode !== "edit") return;
+
+    const b = props.bucketToEdit;
+    if (!b) return;
+
+    try {
+      // Use ID if you have it; otherwise name/alias works if CLI accepts it
+      const handle = ((b as any).garageId ?? b.name).trim();
+      const stats = await getGarageBucketDashboardStats(handle);
+
+      garageBucketKeyAccess.value = stats.keys;
+
+      // Prefill UI state so checkboxes reflect current permissions
+      modalForm.garageGrants = stats.keys.map((k) => accessToGrant(k.accessKey, k.permissions));
+    } catch {
+      garageBucketKeyAccess.value = [];
+      modalForm.garageGrants = [];
+    }
+  },
+  { immediate: true }
+);
+
+function getGrant(id: string) {
+  const h = keyHandle(id);
+  return modalForm.garageGrants.find((g) => g.keyIdOrName === h) ?? null;
+}
+
 
 </script>

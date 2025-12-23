@@ -15,20 +15,34 @@
 
     <div v-else>
       <!-- STEP 1: choose backend -->
-      <div v-if="step === 1">
-        <h2>Select backend</h2>
-        <div class="button-row">
-          <button
-            v-for="b in availableBackends"
-            :key="b.value"
-            type="button"
-            class="primary-button"
-            @click="chooseBackend(b.value)"
-          >
-            {{ b.label }}
-          </button>
-        </div>
+<!-- STEP 1: choose backend -->
+<div v-if="step === 1">
+  <h2 class="text-3xl font-semibold mb-6">Select backend</h2>
+
+  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <button
+      v-for="b in availableBackends"
+      :key="b.value"
+      type="button"
+      :disabled="loadingConfig"
+      @click="chooseBackend(b.value)"
+      class="w-full text-left rounded-2xl border border-default bg-accent p-6 transition
+             hover:-translate-y-0.5 hover:shadow-lg
+             disabled:opacity-60 disabled:cursor-not-allowed"
+      :class="selectedBackend === b.value
+        ? 'ring-2 ring-primary ring-offset-2 ring-offset-accent'
+        : 'ring-0'"
+    >
+      <div class="text-2xl font-semibold">
+        {{ b.label }}
       </div>
+      <div class="mt-2 text-base opacity-80">
+        Click to manage buckets and access
+      </div>
+    </button>
+  </div>
+</div>
+
 
       <!-- STEP 2: choose view (after backend) -->
       <div v-else-if="step === 2 && selectedBackend">

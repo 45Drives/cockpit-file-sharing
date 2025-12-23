@@ -74,6 +74,8 @@ export interface GarageBucketOptions {
       errorDocument?: string;
     } | null;
     aliases?: string[] | null;
+    garageAliasesRemove?: string[] | null
+
   }
   
   export interface CephBucketCreateOptions {
@@ -381,12 +383,7 @@ export type GarageBucketDashboardStats = {
   raw: string;
 };
 
-export type GarageBucketKeyGrant = {
-  keyIdOrName: string;   
-  read: boolean;
-  write: boolean;
-  owner: boolean;
-};
+
 
 export type CephDeps = {
   backend: "ceph";
@@ -410,3 +407,15 @@ export type MinioDeps = {
 };
 
 export type ModalDeps = CephDeps | GarageDeps | MinioDeps;
+
+export type GarageBucketAliasPatch = {
+  aliasesAdd?: string[];
+  aliasesRemove?: string[];
+};
+
+export type GarageBucketKeyGrant = {
+  keyIdOrName: string;   
+  read: boolean;
+  write: boolean;
+  owner: boolean;
+};
