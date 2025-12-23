@@ -44,11 +44,6 @@
       <!-- STEP 2: choose view (after backend) -->
       <div v-else-if="step === 2 && selectedBackend">
         <div class="flex items-center justify-between mb-4">
-
-
-          <button type="button" class="primary-button" @click="goBackToBackendSelection">
-            Back
-          </button>
         </div>
 
         <!-- MinIO alias selector -->
@@ -271,6 +266,8 @@ async function detectBackends() {
     selectedBackend.value = null;
     selectedView.value = null;
     step.value = 1;
+    await autoSelectSingleBackendIfAny();
+
   } finally {
     loadingConfig.value = false;
   }
@@ -387,6 +384,14 @@ function goBackToBackendSelection() {
   selectedMinioAlias.value = "";
   minioAliasError.value = null;
 }
+async function autoSelectSingleBackendIfAny() {
+  const list = availableBackends.value;
+  const [only] = list;
+  if (!only || list.length !== 1) return;
+
+  await chooseBackend(only.value);
+}
+
 
 // This is the glue that makes your existing minioCliAdapter (which uses MINIO_ALIAS internally)
 // follow the UI selection without refactoring every function signature right now.

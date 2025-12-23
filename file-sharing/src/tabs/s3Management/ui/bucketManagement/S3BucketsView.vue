@@ -179,7 +179,7 @@
             </div>
 
             <!-- Meta -->
-            <div v-if="backend != 'minio' || 'garage'">
+            <div v-if="backend === 'ceph'">
               <label class="mb-1 block text-xs font-medium text-slate-300">
                 Owner
               </label>
@@ -316,7 +316,7 @@ const emit = defineEmits<{
   (e: "backToViewSelection"): void;
 }>();
 
-
+const bucketKey = (b: any) => String(b?.adminRef ?? b?.name ?? b?.id ?? "");
 const backendKind = computed<BackendKind>(() => props.backend);
 const backendCtx = computed<BackendContext>(() => ({
   cephGateway: props.cephGateway ?? null,
@@ -512,26 +512,63 @@ function closeModal() {
 async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any }) {
   try {
     if (payload.mode === "create") {
-
       await createBucketFromForm(payload.form);
-      pushNotification(new Notification("Success", `Bucket "${payload.form?.name}" created sucessfully.`, "success", 2000))
 
-      await loadBuckets();
+      // Optimistic insert: add a minimal row so the UI updates without a full reload.
+      // If your backend returns richer info somewhere else, you can enhance this later.
+      const key = props.backend === "ceph"
+        ? String(payload.form?.name ?? "")
+        : String(payload.form?.name ?? "");
+
+      const already = buckets.value.some((b: any) => bucketKey(b) === key);
+      if (!already) {
+        const newRow: any = {
+          backendKind: props.backend,
+          name: props.backend === "ceph" ? "" : key,
+          adminRef: props.backend === "ceph" ? key : undefined,
+          region: payload.form?.region ?? "",
+          owner: payload.form?.ownerUid ?? payload.form?.owner ?? "",
+          tags: payload.form?.minio?.tags ?? payload.form?.tags ?? undefined,
+          objectCount: undefined,
+          sizeBytes: undefined,
+        };
+
+        buckets.value = [newRow, ...buckets.value];
+      }
+
+      pushNotification(new Notification("Success", `Bucket "${payload.form?.name}" created sucessfully.`, "success", 2000));
     } else if (payload.mode === "edit" && editingBucket.value) {
+      const beforeKey = bucketKey(editingBucket.value);
+
       await updateBucketFromForm(editingBucket.value, payload.form);
-      pushNotification(new Notification("Success", `Bucket "${payload.form?.name}" saved sucessfully`, "success", 2000))
 
-      await loadBuckets();
+      const idx = buckets.value.findIndex((b: any) => bucketKey(b) === beforeKey);
+      if (idx !== -1) {
+        const current: any = buckets.value[idx];
 
+        const nextTags = formTagsToObject(payload.form);
+
+        const patched: any = {
+          ...current,
+          region: payload.form?.region ?? current.region,
+          owner: payload.form?.ownerUid ?? payload.form?.owner ?? current.owner,
+          // important: replace tags object so Vue definitely re-renders
+          tags: nextTags ?? {},
+        };
+
+        buckets.value.splice(idx, 1, patched);
+      }
+
+      pushNotification(new Notification("Success", `Bucket "${payload.form?.name}" saved sucessfully`, "success", 2000));
     }
+
 
     closeModal();
   } catch (e: any) {
     pushNotification(new Notification(`Failed to save bucket "${bucketToDelete.value?.name}"`, e?.message, "error"));
-
-    // error.value = e?.message ?? "Failed to save bucket";
   }
 }
+
 
 // delete flow
 function confirmDelete(bucket: BucketType) {
@@ -610,6 +647,37 @@ async function openCreateModal() {
   } finally {
     openingModal.value = false;
   }
+}
+function tagsTextToObject(tagsText?: string | null): Record<string, string> | undefined {
+  const text = (tagsText ?? "").trim();
+  if (!text) return undefined;
+
+  const out: Record<string, string> = {};
+  for (const part of text.split(",")) {
+    const p = part.trim();
+    if (!p) continue;
+    const eq = p.indexOf("=");
+    if (eq <= 0) continue;
+
+    const k = p.slice(0, eq).trim();
+    const v = p.slice(eq + 1).trim();
+    if (k && v) out[k] = v;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+function formTagsToObject(form: any): Record<string, string> | undefined {
+  if (props.backend === "minio") {
+    const t = form?.minio?.tags;
+    return t && typeof t === "object" ? t : undefined;
+  }
+
+  if (props.backend === "ceph") {
+    // Depending on your BucketFormData shape this might be form.tagsText or form.ceph.tagsText.
+    return tagsTextToObject(form?.tagsText ?? form?.ceph?.tagsText ?? "");
+  }
+
+  return undefined;
 }
 
 async function openEditModal(bucket: BucketType) {

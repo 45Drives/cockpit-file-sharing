@@ -27,7 +27,8 @@
             "libc-bin",
             "systemd",
             "nfs-kernel-server",
-            "samba-common-bin"
+            "samba-common-bin",
+            "python3-botocore"
         ],
         "rocky_common": [
             "cockpit-bridge",
@@ -39,7 +40,8 @@
             "glibc-common",
             "systemd",
             "nfs-utils",
-            "samba-common-tools"
+            "samba-common-tools",
+            "python3-botocore"
         ]
     },
     "builds": [
