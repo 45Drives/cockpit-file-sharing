@@ -1,17 +1,11 @@
 <template>
-  <div
-    v-if="modelValue"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
-  >
-    <div
-      class="bg-default rounded-lg shadow-xl max-w-2xl w-full mx-4 overflow-hidden border border-default"
-    >
+  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div class="bg-default rounded-lg shadow-xl max-w-2xl w-full mx-4 overflow-hidden border border-default">
       <!-- Header -->
       <div class="px-5 py-4 border-b border-default flex items-center justify-between bg-default">
         <div class="flex items-center space-x-3">
           <div
-            class="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-sm font-semibold text-blue-700 uppercase"
-          >
+            class="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-sm font-semibold text-blue-700 uppercase">
             {{ userInitials }}
           </div>
 
@@ -28,9 +22,7 @@
 
         <button
           class="text-sm px-3 py-1.5 rounded border border-default bg-secondary hover:bg-accent disabled:opacity-60"
-          @click="close"
-          :disabled="loading"
-        >
+          @click="close" :disabled="loading">
           Close
         </button>
       </div>
@@ -48,14 +40,10 @@
         <div v-else-if="user">
           <!-- Top badges -->
           <div class="flex flex-wrap items-center gap-2 text-sm mb-1">
-            <span
-              class="inline-flex items-center rounded-full px-2 py-0.5 border text-sm"
-              :class="user.suspended ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'"
-            >
-              <span
-                class="mr-1 h-1.5 w-1.5 rounded-full"
-                :class="user.suspended ? 'bg-red-500' : 'bg-emerald-500'"
-              ></span>
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 border text-sm"
+              :class="user.suspended ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
+              <span class="mr-1 h-1.5 w-1.5 rounded-full"
+                :class="user.suspended ? 'bg-red-500' : 'bg-emerald-500'"></span>
               {{ user.suspended ? "Suspended" : "Active" }}
             </span>
 
@@ -67,7 +55,8 @@
           <!-- Basic -->
           <section class="mt-2">
             <h4 class="text-sm font-semibold uppercase text-default mb-2">Basic information</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm bg-accent border border-default rounded-lg px-3 py-3">
+            <div
+              class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm bg-accent border border-default rounded-lg px-3 py-3">
               <div>
                 <div class="text-default font-semibold">Username</div>
                 <div class="font-medium break-all">{{ user.uid }}</div>
@@ -106,7 +95,8 @@
                   </div>
                   <div>
                     <span class="text-default">Available:</span>
-                    <span class="ml-1 font-medium">{{ fmtKiBAvailable(user.quotaRemainingSizeKb, user.quotaMaxSizeKb) }}</span>
+                    <span class="ml-1 font-medium">{{ fmtKiBAvailable(user.quotaRemainingSizeKb, user.quotaMaxSizeKb)
+                      }}</span>
                   </div>
                   <div>
                     <span class="text-default">Used %:</span>
@@ -129,7 +119,8 @@
                   </div>
                   <div>
                     <span class="text-default">Available:</span>
-                    <span class="ml-1 font-medium">{{ fmtNumAvailable(user.quotaRemainingObjects, user.quotaMaxObjects) }}</span>
+                    <span class="ml-1 font-medium">{{ fmtNumAvailable(user.quotaRemainingObjects, user.quotaMaxObjects)
+                      }}</span>
                   </div>
                   <div>
                     <span class="text-default">Used %:</span>
@@ -150,11 +141,8 @@
             </div>
 
             <div class="space-y-2 text-sm">
-              <div
-                v-for="(k, idx) in user.keys"
-                :key="k.accessKey + ':' + idx"
-                class="border border-default rounded-lg px-3 py-2"
-              >
+              <div v-for="(k, idx) in user.keys" :key="k.accessKey + ':' + idx"
+                class="border border-default rounded-lg px-3 py-2">
                 <div class="flex items-center justify-between gap-2">
                   <div class="min-w-0">
                     <div class="text-default font-semibold">Access key</div>
@@ -162,23 +150,21 @@
                   </div>
 
                   <div class="flex items-center gap-2 shrink-0">
-                    <span class="inline-flex items-center rounded-full px-2 py-0.5 border border-default bg-accent text-[10px] text-default">
+                    <span
+                      class="inline-flex items-center rounded-full px-2 py-0.5 border border-default bg-accent text-[10px] text-default">
                       Key {{ idx + 1 }}
                     </span>
 
-                    <button
-                      v-if="k.secretKey"
-                      type="button"
+                    <button v-if="k.secretKey" type="button"
                       class="text-sm px-2 py-1 rounded border border-default bg-secondary hover:bg-accent"
-                      @click="toggleSecret(k.accessKey, idx)"
-                    >
+                      @click="toggleSecret(k.accessKey, idx)">
                       {{ isSecretVisible(k.accessKey, idx) ? "Hide secret" : "Show secret" }}
                     </button>
                   </div>
                 </div>
 
                 <div v-if="k.secretKey" class="mt-2">
-                  <div class="text-default font-semibold" >Secret key</div>
+                  <div class="text-default font-semibold">Secret key</div>
                   <div class="font-mono text-sm break-all">
                     <span v-if="isSecretVisible(k.accessKey, idx)">{{ k.secretKey }}</span>
                     <span v-else>••••••••••••••••••••••••••••••••</span>
@@ -206,11 +192,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr
-                    v-for="(c, idx) in user.caps"
-                    :key="c.type + ':' + c.perm + ':' + idx"
-                    class="even:bg-accent"
-                  >
+                  <tr v-for="(c, idx) in user.caps" :key="c.type + ':' + c.perm + ':' + idx" class="even:bg-accent">
                     <td class="border-b border-default px-3 py-1.5">{{ c.type }}</td>
                     <td class="border-b border-default px-3 py-1.5">{{ c.perm }}</td>
                   </tr>

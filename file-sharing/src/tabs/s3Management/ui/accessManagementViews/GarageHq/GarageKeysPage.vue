@@ -22,11 +22,11 @@
 
       <!-- Right -->
       <div class="justify-self-end">
-      <button type="button"
-        class="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-default shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60"
-        @click="openCreateModal" :disabled="loading">
-        New key
-      </button>
+        <button type="button"
+          class="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-default shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60"
+          @click="openCreateModal" :disabled="loading">
+          New key
+        </button>
       </div>
     </div>
     <!-- Loding -->
@@ -131,11 +131,10 @@
 
     <GarageKeyEditModal :open="showEditModal" :saving="saving" :key-detail="editingKey" @close="closeEditModal"
       @submit="handleEditSubmit" />
-    </div>
-    <GarageKeyCreatedModal :open="showCreatedModal" :key-detail="createdKey" @close="closeCreatedModal"
-/>
+  </div>
+  <GarageKeyCreatedModal :open="showCreatedModal" :key-detail="createdKey" @close="closeCreatedModal" />
 
-  
+
 </template>
 
 <script setup lang="ts">
@@ -152,8 +151,8 @@ import GarageKeyEditModal from "./GarageKeyEditModal.vue";
 import { confirmBeforeAction, wrapActions } from "@45drives/houston-common-ui";
 import { ResultAsync } from "neverthrow";
 import { ProcessError } from "@45drives/houston-common-lib";
-import {  ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
-import { pushNotification,Notification } from "@45drives/houston-common-ui";
+import { ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
+import { pushNotification, Notification } from "@45drives/houston-common-ui";
 import GarageKeyCreatedModal from "./GarageKeyCreatedModal.vue";
 
 const keys = ref<GarageKeyDetail[]>([]);
@@ -227,7 +226,7 @@ function closeCreateModal(): void {
 }
 
 async function handleCreateSubmit(payload: {
-  name: string;  
+  name: string;
   canCreateBuckets: boolean;
 
   expiresIn?: string;
@@ -239,14 +238,14 @@ async function handleCreateSubmit(payload: {
   error.value = null;
 
   try {
-    const key = await createGarageKey(name,payload.canCreateBuckets, payload.expiresIn);
+    const key = await createGarageKey(name, payload.canCreateBuckets, payload.expiresIn);
 
     createdKey.value = key; // includes secretKey (one-time)
     showCreateModal.value = false;
 
     showCreatedModal.value = true;
 
-    pushNotification(new Notification("Success","Key created successfully", "success",2000));
+    pushNotification(new Notification("Success", "Key created successfully", "success", 2000));
     await loadKeys();
   } catch (e: any) {
     pushNotification(new Notification("Failed to create key", e.message, "error"));
@@ -285,10 +284,10 @@ async function handleEditSubmit(payload: {
     showEditModal.value = false;
     editingKey.value = null;
     await loadKeys();
-    pushNotification(new Notification( "Success",`Updated key "${name}" sucessfully`, "success",2000));
+    pushNotification(new Notification("Success", `Updated key "${name}" sucessfully`, "success", 2000));
 
-  } catch (e: any) {    
-    pushNotification(new Notification( `Failed to update key`,e.message, "error"));
+  } catch (e: any) {
+    pushNotification(new Notification(`Failed to update key`, e.message, "error"));
 
     // error.value = e?.message || "Failed to update key.";
   } finally {

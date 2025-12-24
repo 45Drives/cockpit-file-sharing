@@ -1,8 +1,5 @@
 <template>
-  <div
-    v-if="modelValue"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
-  >
+  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
     <div class="bg-accent rounded-lg shadow-lg max-w-lg w-full mx-4">
       <!-- Header -->
       <div class="px-5 py-4 border-b border-default flex items-center justify-between">
@@ -14,11 +11,8 @@
             Authentication: {{ user.authentication }}
           </p>
         </div>
-        <button
-          class="text-xs px-2 py-1 rounded border border-default bg-secondary hover:bg-gray-50"
-          @click="close"
-          :disabled="loading"
-        >
+        <button class="text-xs px-2 py-1 rounded border border-default bg-secondary hover:bg-gray-50" @click="close"
+          :disabled="loading">
           Close
         </button>
       </div>
@@ -50,12 +44,9 @@
               </div>
               <div>
                 <span class="font-medium">Status:</span>
-                <span
-                  class="ml-1 inline-flex items-center rounded-full px-2 py-0.5 text-sm font-medium"
-                  :class="user.status === 'enabled'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-red-50 text-red-700'"
-                >
+                <span class="ml-1 inline-flex items-center rounded-full px-2 py-0.5 text-sm font-medium" :class="user.status === 'enabled'
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : 'bg-red-50 text-red-700'">
                   {{ user.status === "enabled" ? "Enabled" : "Disabled" }}
                 </span>
               </div>
@@ -68,11 +59,8 @@
               Direct policies
             </h4>
             <div v-if="user.policies && user.policies.length" class="flex flex-wrap gap-1 text-xs">
-              <span
-                v-for="p in user.policies"
-                :key="p"
-                class="inline-flex items-center rounded-full border border-default bg-default px-2 py-0.5"
-              >
+              <span v-for="p in user.policies" :key="p"
+                class="inline-flex items-center rounded-full border border-default bg-default px-2 py-0.5">
                 {{ p }}
               </span>
             </div>
@@ -87,22 +75,16 @@
               Group membership
             </h4>
             <div v-if="user.memberOf && user.memberOf.length" class="space-y-2 text-xs">
-              <div
-                v-for="group in user.memberOf"
-                :key="group.name"
-                class="border border-default rounded px-2 py-2 bg-default"
-              >
+              <div v-for="group in user.memberOf" :key="group.name"
+                class="border border-default rounded px-2 py-2 bg-default">
                 <div class="font-medium">
                   {{ group.name || "(unnamed group)" }}
                 </div>
                 <div v-if="group.policies && group.policies.length" class="mt-1">
                   <span class="text-sm text-default mb-2">Policies:</span>
                   <div class="mt-0.5 flex flex-wrap gap-1">
-                    <span
-                      v-for="p in group.policies"
-                      :key="group.name + ':' + p"
-                      class="inline-flex items-center rounded-full border border-default bg-accent px-2 py-0.5"
-                    >
+                    <span v-for="p in group.policies" :key="group.name + ':' + p"
+                      class="inline-flex items-center rounded-full border border-default bg-accent px-2 py-0.5">
                       {{ p }}
                     </span>
                   </div>

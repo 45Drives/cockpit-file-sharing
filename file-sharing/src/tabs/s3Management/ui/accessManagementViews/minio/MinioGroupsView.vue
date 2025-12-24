@@ -121,7 +121,7 @@ import {
 import MinioGroupCreateModal from "./MinioGroupCreateModal.vue";
 import type { MinioUser, MinioGroupInfo } from "@/tabs/s3Management/types/types";
 import MinioGroupModal from "./MinioGroupModal.vue";
-import { pushNotification,Notification } from "@45drives/houston-common-ui";
+import { pushNotification, Notification } from "@45drives/houston-common-ui";
 
 const groups = ref<string[]>([]);
 const users = ref<MinioUser[]>([]);
@@ -155,7 +155,7 @@ async function loadGroups() {
   try {
     groups.value = await listMinioGroups();
   } catch (e: any) {
-    pushNotification(new Notification( `Failed to load MinIO groups`,e?.message, "error"));
+    pushNotification(new Notification(`Failed to load MinIO groups`, e?.message, "error"));
 
     // error.value = e?.message || "Failed to load MinIO groups.";
   } finally {
@@ -167,7 +167,7 @@ async function loadUsers() {
   try {
     users.value = await listMinioUsers();
   } catch (e) {
-    pushNotification(new Notification( `Failed to load MinIO users for group creation`,e as any, "error"));
+    pushNotification(new Notification(`Failed to load MinIO users for group creation`, e as any, "error"));
   }
 }
 
@@ -183,10 +183,10 @@ async function handleGroupCreate(payload: { name: string; members: string[] }) {
     await createMinioGroup(payload.name, payload.members);
     await loadGroups();
     showCreateDialog.value = false;
-    pushNotification(new Notification( "Success",`MinIO group "${payload.name} created"`, "success",2000));
+    pushNotification(new Notification("Success", `MinIO group "${payload.name} created"`, "success", 2000));
 
   } catch (e: any) {
-    pushNotification(new Notification( `Failed to create MinIO group`,e?.message, "error"));
+    pushNotification(new Notification(`Failed to create MinIO group`, e?.message, "error"));
 
     // createDialogError.value = e?.message || "Failed to create MinIO group.";
   } finally {
@@ -201,7 +201,7 @@ async function handleGroupUpdate(payload: { name: string; members: string[]; pol
     await loadGroups();
     showGroupDialog.value = false;
   } catch (e: any) {
-    pushNotification(new Notification( `Failed to update MinIO group"`,e?.message, "error"));
+    pushNotification(new Notification(`Failed to update MinIO group"`, e?.message, "error"));
 
     // groupDialogError.value = e?.message || "Failed to update MinIO group.";
   } finally {
@@ -219,7 +219,7 @@ async function openGroupDialog(name: string, mode: "view" | "edit") {
   try {
     selectedGroup.value = await getMinioGroupInfo(name);
   } catch (e: any) {
-    pushNotification(new Notification( `Failed to load group details"`,e?.message, "error"));
+    pushNotification(new Notification(`Failed to load group details"`, e?.message, "error"));
 
     // groupDialogError.value = e?.message || "Failed to load group details.";
   } finally {
@@ -254,9 +254,9 @@ async function confirmDeleteGroup() {
     await deleteMinioGroup(name);
     await loadGroups();
     closeDeleteDialog();
-    pushNotification(new Notification( "Success",`Deleted MinIo group "${name}"`, "success",2000));
+    pushNotification(new Notification("Success", `Deleted MinIo group "${name}"`, "success", 2000));
   } catch (e: any) {
-    pushNotification(new Notification( `Failed to delete MinIo group "{$name}"`,e?.message, "error"));
+    pushNotification(new Notification(`Failed to delete MinIo group "{$name}"`, e?.message, "error"));
 
     // error.value = e?.message || "Failed to delete MinIO group.";
   } finally {
@@ -267,8 +267,8 @@ async function confirmDeleteGroup() {
 async function loadPolicies() {
   try {
     availablePolicies.value = await listMinioPolicies();
-  } catch (e : any) {
-    pushNotification(new Notification( `Failed to load MinIO policies for groups"`,e?.message, "error"));
+  } catch (e: any) {
+    pushNotification(new Notification(`Failed to load MinIO policies for groups"`, e?.message, "error"));
 
   }
 }

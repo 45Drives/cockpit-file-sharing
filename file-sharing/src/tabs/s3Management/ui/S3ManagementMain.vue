@@ -18,19 +18,12 @@
         <h2 class="text-3xl font-semibold mb-6">Select backend</h2>
 
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <button
-            v-for="b in availableBackends"
-            :key="b.value"
-            type="button"
-            :disabled="loadingConfig"
-            @click="chooseBackend(b.value)"
-            class="w-full text-left rounded-2xl border border-default bg-accent p-6 transition
+          <button v-for="b in availableBackends" :key="b.value" type="button" :disabled="loadingConfig"
+            @click="chooseBackend(b.value)" class="w-full text-left rounded-2xl border border-default bg-accent p-6 transition
                    hover:-translate-y-0.5 hover:shadow-lg
-                   disabled:opacity-60 disabled:cursor-not-allowed"
-            :class="selectedBackend === b.value
-              ? 'ring-2 ring-primary ring-offset-2 ring-offset-accent'
-              : 'ring-0'"
-          >
+                   disabled:opacity-60 disabled:cursor-not-allowed" :class="selectedBackend === b.value
+                    ? 'ring-2 ring-primary ring-offset-2 ring-offset-accent'
+                    : 'ring-0'">
             <div class="text-2xl font-semibold">
               {{ b.label }}
             </div>
@@ -51,12 +44,8 @@
           <div class="flex items-center justify-between mb-2">
             <h3 class="text-xl font-semibold">MinIO alias</h3>
 
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="loadMinioAliasesIfNeeded"
-              :disabled="loadingMinioAliases"
-            >
+            <button type="button" class="btn btn-secondary" @click="loadMinioAliasesIfNeeded"
+              :disabled="loadingMinioAliases">
               Refresh
             </button>
           </div>
@@ -74,10 +63,7 @@
           </div>
 
           <div v-else>
-            <select
-              v-model="selectedMinioAlias"
-              class="w-full rounded-lg border border-default bg-accent px-4 py-3"
-            >
+            <select v-model="selectedMinioAlias" class="w-full rounded-lg border border-default bg-accent px-4 py-3">
               <option disabled value="">Select an alias…</option>
               <option v-for="a in minioAliases" :key="a.alias" :value="a.alias">
                 {{ a.alias }}{{ a.url ? ` (${a.url})` : "" }}
@@ -104,12 +90,8 @@
             </div>
 
             <template #footer>
-              <button
-                type="button"
-                class="btn btn-secondary w-full text-6xl"
-                @click="chooseView('buckets')"
-                :disabled="selectedBackend === 'minio' && !selectedMinioAlias"
-              >
+              <button type="button" class="btn btn-secondary w-full text-6xl" @click="chooseView('buckets')"
+                :disabled="selectedBackend === 'minio' && !selectedMinioAlias">
                 Bucket Management
               </button>
             </template>
@@ -121,12 +103,8 @@
             </div>
 
             <template #footer>
-              <button
-                type="button"
-                class="btn btn-secondary w-full text-6xl"
-                @click="chooseView('users')"
-                :disabled="selectedBackend === 'minio' && !selectedMinioAlias"
-              >
+              <button type="button" class="btn btn-secondary w-full text-6xl" @click="chooseView('users')"
+                :disabled="selectedBackend === 'minio' && !selectedMinioAlias">
                 Access Management
               </button>
             </template>
@@ -136,33 +114,21 @@
 
       <!-- STEP 3: actual views -->
       <div v-else-if="step === 3 && selectedBackend && selectedView">
-        <S3BucketsView
-          v-if="selectedView === 'buckets'"
-          :backend="selectedBackend"
-          :cephGateway="selectedGateway"
-          :minioAlias="selectedMinioAlias"
-          :showBackButton="true"
-          @backToViewSelection="() => { step = 2; selectedView = null; }"
-        />
+        <S3BucketsView v-if="selectedView === 'buckets'" :backend="selectedBackend" :cephGateway="selectedGateway"
+          :minioAlias="selectedMinioAlias" :showBackButton="true"
+          @backToViewSelection="() => { step = 2; selectedView = null; }" />
 
         <template v-else-if="selectedView === 'users'">
-          <UsersView
-            v-if="selectedBackend === 'ceph'"
-            :showBackButton="true"
-            @backToViewSelection="() => { step = 2; selectedView = null; }"
-          />
+          <UsersView v-if="selectedBackend === 'ceph'" :showBackButton="true"
+            @backToViewSelection="() => { step = 2; selectedView = null; }" />
 
           <div v-else-if="selectedBackend === 'minio'">
-            <MinioAccessManagement
-              :minioAlias="selectedMinioAlias"
-              @backToViewSelection="() => { step = 2; selectedView = null; }"
-            />
+            <MinioAccessManagement :minioAlias="selectedMinioAlias"
+              @backToViewSelection="() => { step = 2; selectedView = null; }" />
           </div>
 
-          <GarageKeysPage
-            v-else-if="selectedBackend === 'garage'"
-            @backToViewSelection="() => { step = 2; selectedView = null; }"
-          />
+          <GarageKeysPage v-else-if="selectedBackend === 'garage'"
+            @backToViewSelection="() => { step = 2; selectedView = null; }" />
         </template>
       </div>
     </div>
@@ -186,7 +152,7 @@ import { CardContainer } from "@45drives/houston-common-ui";
 import { ArchiveBoxIcon } from "@heroicons/vue/20/solid";
 import AccIcon from "../images/AccIcon.vue";
 import type { RgwGateway } from "../types/types";
-import { pushNotification,Notification } from "@45drives/houston-common-ui";
+import { pushNotification, Notification } from "@45drives/houston-common-ui";
 
 type Backend = "minio" | "ceph" | "garage";
 type View = "buckets" | "users";
@@ -331,7 +297,7 @@ async function loadMinioAliasesIfNeeded() {
       selectedMinioAlias.value = minioAliases.value[0]!.alias;
     }
   } catch (e: any) {
-    pushNotification(new Notification( `Failed to list MinIO aliases`,e?.message ,"error"));
+    pushNotification(new Notification(`Failed to list MinIO aliases`, e?.message, "error"));
 
     // minioAliasError.value = e?.message ?? "Failed to list MinIO aliases";
   } finally {
@@ -391,10 +357,6 @@ async function autoSelectSingleBackendIfAny() {
 
   await chooseBackend(only.value);
 }
-
-
-// This is the glue that makes your existing minioCliAdapter (which uses MINIO_ALIAS internally)
-// follow the UI selection without refactoring every function signature right now.
 watch(
   () => selectedMinioAlias.value,
   (alias) => {

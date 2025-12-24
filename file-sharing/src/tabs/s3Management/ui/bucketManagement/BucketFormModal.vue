@@ -193,7 +193,7 @@ function initFromProps() {
 
   if (props.backend === "ceph") {
     const b = props.bucketToEdit as CephBucket;
-    modalForm.name = b.adminRef!; // or b.name if you want that
+    modalForm.name = b.adminRef!; 
     modalForm.region = b.region ?? "";
     modalForm.owner = b.owner ?? "";
     modalForm.tags = tagsObjectToArray(b.tags);

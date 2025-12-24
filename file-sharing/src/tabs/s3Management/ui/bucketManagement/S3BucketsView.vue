@@ -205,7 +205,7 @@
                 </p>
                 <p class="text-sm font-semibold">
                   <LoadingSpinner v-if="bucket.sizeBytes === undefined" />
-                  {{ bucket.sizeBytes }}
+                  {{ formatBytes(bucket.sizeBytes!) }}
                 </p>
               </div>
 
@@ -304,6 +304,7 @@ import type { BackendContext } from "../../bucketBackends/bucketBackend";
 import { LoadingSpinner } from "@45drives/houston-common-ui";
 import type { ModalDeps } from "../../types/types";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
+import { formatBytes } from "../../bucketBackends/bucketUtils";
 
 const props = defineProps<{
   backend: "minio" | "ceph" | "garage";
