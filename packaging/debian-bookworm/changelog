@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.5.1-1bookworm) bookworm; urgency=medium
+
+  * added S3 management
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 24 Dec 2025 05:06:06 -0400
+
 cockpit-file-sharing (4.4.0-1bookworm) bookworm; urgency=medium
 
   * Added smbpasswd management

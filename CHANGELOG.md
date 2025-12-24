@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.4.1-8
+## Cockpit File Sharing 4.5.1-1
 
-* fixed edge case of targetname having colon
+* added S3 management
