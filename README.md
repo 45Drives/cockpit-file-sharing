@@ -27,7 +27,6 @@ User and group management was removed from cockpit-file-sharing in favour of man
 - Export and import of configuration (same format as `/etc/exports`)
 
 # Installation
-Recommended: [cockpit-identities](https://github.com/45drives/cockpit-identities) for managing Samba password.
 ## Ubuntu 20.04
 ### From 45Drives Repo (Recommended, Ubuntu 20.04 only)
 ```bash
@@ -38,8 +37,8 @@ sudo apt install cockpit-file-sharing
 ### Direct from .deb
 Installing this way may work for other versions of Ubuntu and Debian, but it is unsupported. You won't get automatic updates this way.
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.3.2/cockpit-file-sharing_4.3.2-2focal_all.deb
-sudo apt install ./cockpit-file-sharing_4.3.2-2focal_all.deb
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.4.0/cockpit-file-sharing_4.4.0-1focal_all.deb
+sudo apt install ./cockpit-file-sharing_4.4.0-1focal_all.deb
 ```
 ## Rocky 8
 ### From 45Drives Repo (Recommended, Rocky 8 only)
@@ -51,7 +50,7 @@ sudo dnf install cockpit-file-sharing
 Installing this way may work for other versions of Rocky/Centos/RHEL/Fedora/etc, but it is unsupported. You won't get automatic updates this way.
 ```bash
 # dnf or yum
-sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.3.2/cockpit-file-sharing-4.3.2-2.el8.noarch.rpm
+sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.4.0/cockpit-file-sharing-4.4.0-1.el8.noarch.rpm
 ```
 ## Generic Installation
 1. Install Dependencies
