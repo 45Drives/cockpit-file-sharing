@@ -11,7 +11,8 @@
     "license": "GPL-3.0+",
     "architecture": {
         "ubuntu": "all",
-        "rocky": "noarch"
+        "rocky": "noarch",
+        "debain": "all"
     },
     "defaults": {
         "change_urgency": "medium"
