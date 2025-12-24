@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect, defineProps, computed, defineEmits } from "vue";
+import { ref, watchEffect, computed } from "vue";
 import {
   InputField,
   InputLabelWrapper,
@@ -14,6 +14,7 @@ import {
 } from "@45drives/houston-common-ui";
 import { KeyValueSyntax, SambaGlobalConfig } from "@45drives/houston-common-lib";
 import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
+import ManageSambaPasswordsButton from '@/tabs/samba/ui/ManageSambaPasswordsButton.vue';
 
 const _ = cockpit.gettext;
 
@@ -114,17 +115,20 @@ const logLevelOptions: SelectMenuOption<number>[] = [5, 4, 3, 2, 1, 0].map((n) =
     </div>
 
     <template v-slot:footer>
-      <div class="button-group-row justify-end grow">
-        <button class="btn btn-secondary" @click="resetChanges" v-if="modified">
-          {{ _("Cancel") }}
-        </button>
-        <button
-          class="btn btn-primary"
-          @click="() => tempGlobalConfig && emit('apply', tempGlobalConfig)"
-          :disabled="!modified"
-        >
-          {{ _("Apply") }}
-        </button>
+      <div class="button-group-row justify-between grow flex-wrap">
+        <ManageSambaPasswordsButton />
+        <div class="button-group-row">
+          <button class="btn btn-secondary" @click="resetChanges" v-if="modified">
+            {{ _("Cancel") }}
+          </button>
+          <button
+            class="btn btn-primary"
+            @click="() => tempGlobalConfig && emit('apply', tempGlobalConfig)"
+            :disabled="!modified"
+          >
+            {{ _("Apply") }}
+          </button>
+        </div>
       </div>
     </template>
   </CardContainer>

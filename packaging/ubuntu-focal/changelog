@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.4.0-1focal) focal; urgency=medium
+
+  * Added smbpasswd management
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 12 Dec 2025 13:21:36 -0400
+
 cockpit-file-sharing (4.4.1-9focal) focal; urgency=medium
 
   * fixed table long name bug + hiding unwanted vgs + changed ocf directory name
