@@ -102,7 +102,6 @@ export async function isMinioAvailable(): Promise<boolean> {
   return cands.length > 0;
 }
 
-// Keep this for places still calling isMinioHealthy()
 // It now checks "current selected alias" (set by setMinioAlias)
 export async function isMinioHealthy(): Promise<boolean> {
   try {
@@ -262,9 +261,6 @@ async function getMinioBucketTags(
 
   return Object.keys(aggregate).length ? aggregate : undefined;
 }
-
-
-
 
 /**
  * List buckets from MinIO and enrich them with usage, region, tags, etc.
@@ -758,7 +754,7 @@ export async function listMinioGroups(): Promise<string[]> {
 
     // Your stdout example: { "status": "success", "groups": ["newGroup"] }
     if (Array.isArray(data.groups)) {
-      return data.groups.filter((g) => typeof g === "string");
+      return data.groups.filter((g: any) => typeof g === "string");
     }
 
     // Fallbacks if mc ever returns something slightly different

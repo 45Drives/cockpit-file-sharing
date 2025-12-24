@@ -933,8 +933,15 @@ export function buildS3BucketFromRgwStats(stats: any): CephBucket {
     stats.bucket_quota.max_size_kb > 0
       ? stats.bucket_quota.max_size_kb * 1024
       : undefined;
+    let adminRef = ""
+    if(stats.tenant){
+      adminRef = stats.tenant + "/" + stats.bucket 
+    }else{
+      adminRef =  stats.bucket 
+    }
+   
   return {backendKind: "ceph",name: stats.bucket,owner: stats.owner,createdAt: stats.creation_time,lastModifiedTime: stats.mtime,sizeBytes,
-    objectCount,versionCount,quotaBytes,objectLockEnabled,versioning,tags,zone: stats.zone,zonegroup: stats.zonegroup
+    objectCount,versionCount,quotaBytes,objectLockEnabled,versioning,tags,zone: stats.zone,zonegroup: stats.zonegroup, adminRef: adminRef
     // leave these undefined for now; you can fill them in lateracl: undefined,policy: undefined,lastAccessed: undefined,placementTarget: stats.placement_rule,
   };
 }
