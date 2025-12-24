@@ -12,7 +12,7 @@
     "architecture": {
         "ubuntu": "all",
         "rocky": "noarch",
-        "debain": "all"
+        "debian": "all"
     },
     "defaults": {
         "change_urgency": "medium"
