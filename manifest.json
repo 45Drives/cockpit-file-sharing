@@ -5,7 +5,7 @@
     "description": "A cockpit module to make file sharing with Samba and NFS easier.",
     "version": "4.5.1",
     "build_number": "1",
-    "stable": false,
+    "stable": true,
     "author": "Josh Boudreau <jboudreau@45drives.com>",
     "git_url": "https://github.com/45Drives/cockpit-file-sharing",
     "license": "GPL-3.0+",
