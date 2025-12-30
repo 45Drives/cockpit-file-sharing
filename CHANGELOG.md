@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.1-1
+## Cockpit File Sharing 4.5.1-2
 
-* added S3 management
+* building pacakge for s3 testing
