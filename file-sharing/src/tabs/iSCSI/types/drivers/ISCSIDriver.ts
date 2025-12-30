@@ -8,7 +8,7 @@ import type { LogicalUnitNumber } from "@/tabs/iSCSI/types/LogicalUnitNumber";
 import type { Portal } from "@/tabs/iSCSI/types/Portal";
 import type { Session } from "@/tabs/iSCSI/types/Session";
 import type { Target } from "@/tabs/iSCSI/types/Target";
-import type { ProcessError } from "@45drives/houston-common-lib";
+import type { ProcessError, Server } from "@45drives/houston-common-lib";
 
 export abstract class ISCSIDriver {
     abstract initialize(): ResultAsync<ISCSIDriver, ProcessError>;
@@ -30,7 +30,11 @@ export abstract class ISCSIDriver {
     abstract addInitiatorToGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<void, ProcessError>;
     abstract removeInitiatorFromGroup(initiatorGroup: InitiatorGroup, initiator: Initiator): ResultAsync<void, ProcessError>;
 
-    abstract addLogicalUnitNumberToGroup(initiatorGroup: InitiatorGroup, logicalUnitNumber: LogicalUnitNumber): ResultAsync<void, ProcessError>;
+    abstract addLogicalUnitNumberToGroup(
+        initiatorGroup: InitiatorGroup,
+        logicalUnitNumber: LogicalUnitNumber
+      ): ResultAsync<void | Server , ProcessError>;
+      
     abstract removeLogicalUnitNumberFromGroup(initiatorGroup: InitiatorGroup, logicalUnitNumber: LogicalUnitNumber): ResultAsync<void, ProcessError>;
 
     abstract addCHAPConfigurationToTarget(target: Target, chapConfiguration: CHAPConfiguration): ResultAsync<void, ProcessError>;
@@ -48,4 +52,5 @@ export abstract class ISCSIDriver {
 
     abstract getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<LogicalUnitNumber[], ProcessError>;
     abstract getInitiatorsOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<Initiator[], ProcessError>;
+    abstract getnode(): ResultAsync<Server | undefined, ProcessError>;
 }

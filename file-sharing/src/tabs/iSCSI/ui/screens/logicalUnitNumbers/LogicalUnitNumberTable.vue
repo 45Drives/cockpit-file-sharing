@@ -9,15 +9,15 @@
     >
       <div class="card">
         <LogicalUnitNumberEditor
-        v-if="showEditor"
+          v-if="showEditor"
           ref="logicalUnitNumberEditor"
           :initiatorGroup="initiatorGroup"
           @close-editor="
             () => {
               showEditor = false;
-              actions.refreshTable();
             }
           "
+          @created="actions.refreshTable()"  
         />
       </div>
     </div>
@@ -34,7 +34,7 @@
               <th scope="col">Device</th>
               <th scope="col">Number</th>
               <th scope="col" class="flex flex-row justify-end">
-                <span class="sr-only">Delete</span>
+                <span class="sr-only">Add Lun</span>
                 <button @click="toggleEditor">
                   <PlusIcon class="size-icon icon-default" />
                 </button>
@@ -48,6 +48,7 @@
               :logicalUnitNumber="lun"
               :initiatorGroup="initiatorGroup"
               @deleteEntry="actions.refreshTable"
+              @lunDeleted="removeVirtualDevice"
             />
           </template>
         </Table>
@@ -71,37 +72,57 @@ import LogicalUnitNumberEditor from "@/tabs/iSCSI/ui/screens/logicalUnitNumbers/
 const showEditor = ref(false);
 
 const props = defineProps<{ initiatorGroup: InitiatorGroup }>();
-
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
-const devices = inject<Ref<VirtualDevice[]>>("virtualDevices");
+const virtualDevices = inject<Ref<VirtualDevice[]>>("virtualDevices");
 
 const logicalUnitNumberEditor = ref<InstanceType<typeof LogicalUnitNumberEditor>>();
 
-if (devices === undefined) {
+if (virtualDevices === undefined) {
   throw new Error("Virtual Device list is null");
 }
 
-watch(devices, () => {
+watch(virtualDevices, () => {
   refreshTable();
 });
 
-const refreshTable = () => {
-  return driver.andThen((driver) => {
-    return driver.getLogicalUnitNumbersOfInitiatorGroup(props.initiatorGroup).map((luns) => {
-      props.initiatorGroup.logicalUnitNumbers = luns;
-    });
-  });
-};
+function removeVirtualDevice(deviceName?: string) {
+  if (!deviceName) return;
 
+  const index = virtualDevices.value.findIndex(
+    (device) => device.deviceName === deviceName
+  );
+  if (index !== -1) {
+    virtualDevices.value.splice(index, 1);
+  }
+}
+
+
+const refreshTable = () => {
+  return driver.andThen((driver) =>
+    driver.getLogicalUnitNumbersOfInitiatorGroup(props.initiatorGroup)
+      .map((luns) => {
+        props.initiatorGroup.logicalUnitNumbers.splice(
+          0,
+          props.initiatorGroup.logicalUnitNumbers.length,
+          ...luns
+        );
+      })
+      .andThen(() =>
+        driver.getVirtualDevices().map((devices) => {
+          virtualDevices.value.splice(0, virtualDevices.value.length, ...devices);
+
+        })
+      )
+  );
+};
 const toggleEditor = () => {
   showEditor.value = !showEditor.value;
-
   if (logicalUnitNumberEditor.value !== undefined)
     logicalUnitNumberEditor.value.populateNextNumber();
 }
 
 const actions = wrapActions({ refreshTable: refreshTable });
 
-actions.refreshTable();
+//actions.refreshTable();
 </script>

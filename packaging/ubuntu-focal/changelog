@@ -1,8 +1,70 @@
+cockpit-file-sharing (4.5.1-2focal) focal; urgency=medium
+
+  * building pacakge for s3 testing
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 30 Dec 2025 11:28:26 -0400
+
+cockpit-file-sharing (4.5.1-1focal) focal; urgency=medium
+
+  * added S3 management
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 24 Dec 2025 05:06:06 -0400
+
 cockpit-file-sharing (4.4.0-1focal) focal; urgency=medium
 
   * Added smbpasswd management
 
  -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 12 Dec 2025 13:21:36 -0400
+
+cockpit-file-sharing (4.4.1-8focal) focal; urgency=medium
+
+  * fixed edge case of targetname having colon
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 13 Nov 2025 13:35:53 -0400
+
+cockpit-file-sharing (4.4.1-7focal) focal; urgency=medium
+
+  * fixed deletion race condition causiong issue for multiple lun deletion
+  * updated ip of lun added to group
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 10 Nov 2025 08:17:34 -0400
+
+cockpit-file-sharing (4.4.1-6focal) focal; urgency=medium
+
+  * fixed deletion race condition causiong issue for multiple lun deletion
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 10 Nov 2025 05:49:54 -0400
+
+cockpit-file-sharing (4.4.1-5focal) focal; urgency=medium
+
+  * shell escaping colons
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 06 Nov 2025 07:23:45 -0400
+
+cockpit-file-sharing (4.4.1-4focal) focal; urgency=medium
+
+  * fixed deletion of incrorect lun
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 05 Nov 2025 15:31:48 -0400
+
+cockpit-file-sharing (4.4.1-3focal) focal; urgency=medium
+
+  * removed reference to heartbeat1
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 04 Nov 2025 13:21:24 -0400
+
+cockpit-file-sharing (4.4.1-2focal) focal; urgency=medium
+
+  * changed the commands of addition groups
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 30 Oct 2025 14:00:03 -0300
+
+cockpit-file-sharing (4.4.1-1focal) focal; urgency=medium
+
+  * improved speed of iscsi module + added functionality f adding multiple groups
+    to target + build package
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 26 Sep 2025 08:34:55 -0300
 
 cockpit-file-sharing (4.3.2-2focal) focal; urgency=medium
 

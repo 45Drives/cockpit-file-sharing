@@ -17,9 +17,8 @@ PLUGIN_SRCS=file-sharing
 
 # For installing to a remote machine for testing with `make install-remote`
 # REMOTE_TEST_HOST=192.168.206.100
-REMOTE_TEST_HOST=192.168.101.16
+REMOTE_TEST_HOST=192.168.85.64
 REMOTE_TEST_USER=root
-
 # Restarts cockpit after install
 RESTART_COCKPIT?=0
 

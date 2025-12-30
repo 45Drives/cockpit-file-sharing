@@ -10,6 +10,10 @@
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
+      <button @click="promptDeletion">
+        <span class="sr-only">Delete</span>
+        <TrashIcon class="size-icon icon-danger" />
+      </button>
     </td>
   </tr>
   <tr></tr>
@@ -24,7 +28,6 @@
     </td>
   </tr>
 </template>
-
 <script setup lang="ts">
 import { TrashIcon, WrenchIcon } from "@heroicons/vue/20/solid";
 import { wrapActions, confirmBeforeAction } from "@45drives/houston-common-ui";
@@ -41,19 +44,34 @@ import { useUserSettings } from "@/common/user-settings";
 
 const props = defineProps<{ target: Target; initiatorGroup: InitiatorGroup }>();
 
-const emit = defineEmits(["deleteEntry"]);
+// NOTE: add 'groupWillDelete' to your emits
+const emit = defineEmits(["deleteEntry", "groupWillDelete"]);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
-
 const showEditor = ref(false);
 
 const deleteEntry = () => {
   return driver
-    .andThen((driver) => driver.deleteInitiatorGroupFromTarget(props.target, props.initiatorGroup))
+    .andThen((d) =>
+      // 1) Gather LUN filePaths and tell parent
+      d.getLogicalUnitNumbersOfInitiatorGroup(props.initiatorGroup)
+        .map((luns) =>
+          luns
+            .map((l) => l.blockDevice?.filePath)
+            .filter((p): p is string => typeof p === "string")
+        )
+        .andThen((paths) => {
+          emit("groupWillDelete", paths);
+          // 2) Delete the group
+          return d.deleteInitiatorGroupFromTarget(props.target, props.initiatorGroup);
+        })
+    )
     .map(() => emit("deleteEntry"))
     .mapErr(
       (error) =>
-        new ProcessError(`Unable to Initiator Group ${props.initiatorGroup.name}: ${error.message}`)
+        new ProcessError(
+          `Unable to delete Initiator Group ${props.initiatorGroup.name}: ${error.message}`
+        )
     );
 };
 

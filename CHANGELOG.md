@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.4.0-1
+## Cockpit File Sharing 4.5.1-2
 
-* Added smbpasswd management
+* building pacakge for s3 testing

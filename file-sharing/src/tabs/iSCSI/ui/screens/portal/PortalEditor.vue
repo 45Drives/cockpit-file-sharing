@@ -55,7 +55,7 @@ const _ = cockpit.gettext;
 
 const props = defineProps<{ target: Target }>();
 
-const emit = defineEmits(["closeEditor"]);
+const emit = defineEmits(["closeEditor", "created"]);
 
 const newPortal = ref<Portal>(new Portal(""));
 
@@ -85,7 +85,7 @@ const handleClose = () => {
 const createPortal = () => {
   return driver
     .andThen((driver) => driver.addPortalToTarget(props.target, tempPortal.value))
-    .map(() => handleClose())
+    .map(() => {handleClose(), emit("created")})
     .mapErr(
       (error) =>
         new ProcessError(`Unable to create portal ${tempPortal.value.address}: ${error.message}`)
