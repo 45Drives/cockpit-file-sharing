@@ -156,7 +156,7 @@
         </div>
 
         <div v-if="pagedBuckets.length" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3 bg-accent m-4">
-          <article v-for="bucket in pagedBuckets" :key="bucket.name"
+          <article v-for="bucket in pagedBuckets" :key="bucketKey(bucket)"
             class="flex flex-col gap-3 rounded-lg border border-default bg-default p-4 shadow transition hover:shadow-md">
             <!-- Header with bucket logo -->
             <div class="flex items-start justify-between gap-3">
@@ -273,14 +273,14 @@
     </div>
 
     <!-- Create/Edit modal -->
-    <BucketFormModal v-if="backend === 'ceph'" :visible="showModal" :mode="modalMode" backend="ceph"
+    <BucketFormModal :submitting="submittingBucket"  v-if="backend === 'ceph'" :visible="showModal" :mode="modalMode" backend="ceph"
       :cephGateway="cephGateway || null" :bucketToEdit="cephEditingBucket" :deps="cephModalDeps" @close="closeModal"
       @submit="handleFormSubmit" />
 
-    <BucketFormModal v-else-if="backend === 'minio'" :visible="showModal" :mode="modalMode" backend="minio"
+    <BucketFormModal  :submitting="submittingBucket" v-else-if="backend === 'minio'" :visible="showModal" :mode="modalMode" backend="minio"
       :bucketToEdit="minioEditingBucket" :deps="minioModalDeps" @close="closeModal" @submit="handleFormSubmit" />
 
-    <BucketFormModal v-else :visible="showModal" :mode="modalMode" backend="garage" :bucketToEdit="garageEditingBucket"
+    <BucketFormModal  :submitting="submittingBucket" v-else :visible="showModal" :mode="modalMode" backend="garage" :bucketToEdit="garageEditingBucket"
       :deps="garageModalDeps" @close="closeModal" @submit="handleFormSubmit" />
 
 
@@ -335,6 +335,7 @@ const cephEditingBucket = computed<CephBucket | null>(() => {
   const b = editingBucket.value;
   return b && b.backendKind === "ceph" ? (b as CephBucket) : null;
 });
+const submittingBucket = ref(false);
 
 const minioEditingBucket = computed<MinioBucket | null>(() => {
   const b = editingBucket.value;
@@ -511,32 +512,12 @@ function closeModal() {
 }
 
 async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any }) {
+  if (submittingBucket.value) return;
+
+  submittingBucket.value = true;
   try {
     if (payload.mode === "create") {
-      await createBucketFromForm(payload.form);
-
-      // Optimistic insert: add a minimal row so the UI updates without a full reload.
-      // If your backend returns richer info somewhere else, you can enhance this later.
-      const key = props.backend === "ceph"
-        ? String(payload.form?.name ?? "")
-        : String(payload.form?.name ?? "");
-
-      const already = buckets.value.some((b: any) => bucketKey(b) === key);
-      if (!already) {
-        const newRow: any = {
-          backendKind: props.backend,
-          name: props.backend === "ceph" ? "" : key,
-          adminRef: props.backend === "ceph" ? key : undefined,
-          region: payload.form?.region ?? "",
-          owner: payload.form?.ownerUid ?? payload.form?.owner ?? "",
-          tags: payload.form?.minio?.tags ?? payload.form?.tags ?? undefined,
-          objectCount: undefined,
-          sizeBytes: undefined,
-        };
-
-        buckets.value = [newRow, ...buckets.value];
-      }
-
+     await createBucketFromForm(payload.form);
       pushNotification(new Notification("Success", `Bucket "${payload.form?.name}" created sucessfully.`, "success", 2000));
     } else if (payload.mode === "edit" && editingBucket.value) {
       const beforeKey = bucketKey(editingBucket.value);
@@ -567,6 +548,9 @@ async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any })
     closeModal();
   } catch (e: any) {
     pushNotification(new Notification(`Failed to save bucket "${bucketToDelete.value?.name}"`, e?.message, "error"));
+  }
+  finally {
+    submittingBucket.value = false;
   }
 }
 
@@ -674,7 +658,6 @@ function formTagsToObject(form: any): Record<string, string> | undefined {
   }
 
   if (props.backend === "ceph") {
-    // Depending on your BucketFormData shape this might be form.tagsText or form.ceph.tagsText.
     return tagsTextToObject(form?.tagsText ?? form?.ceph?.tagsText ?? "");
   }
 

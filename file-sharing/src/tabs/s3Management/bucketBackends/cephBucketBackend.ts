@@ -4,7 +4,8 @@ import type { CephBucket } from "../types/types";
 import { parseTags } from "./bucketUtils";
 
 import {listBucketsFromCeph,createCephBucketViaS3,updateCephBucketViaS3,deleteBucketFromCeph,getCephBucketSecurity,rgwJson,
-  buildS3BucketFromRgwStats,listRgwPlacementTargets, listRGWUserNames
+  buildS3BucketFromRgwStats,listRgwPlacementTargets, listRGWUserNames,
+  getCephBucketFromStats
 } from "../api/cephCliAdapter";
 
 
@@ -133,7 +134,9 @@ export const cephBucketBackend: BucketBackend<CephBucket> = {
     );
     return shells;
   },
-
+  async getBucket(ref: string, _ctx: BackendContext): Promise<CephBucket> {
+    return getCephBucketFromStats(ref);
+  },
   async prepareCreate(_ctx) {
     const [cephUsers, cephPlacementTargets] = await Promise.all([
       listRGWUserNames(),
@@ -160,6 +163,7 @@ export async function hydrateCephBucket(
     policy,
   };
 }
+
 
 function shellCephBucket(name: string): CephBucket {
   return {

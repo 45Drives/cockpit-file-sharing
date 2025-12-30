@@ -93,3 +93,16 @@ export function parseTags(text: string): Record<string, string> {
     if (bytes % GiB === 0) return { value: String(bytes / GiB), unit: "GiB" };
     return { value: String(Math.round(bytes / MiB)), unit: "MiB" };
   }
+
+  export function generateSecret(length = 32): string {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    const array = new Uint32Array(length);
+  
+    window.crypto.getRandomValues(array);
+  
+    let result = "";
+    for (let i = 0; i < length; i++) {
+      result += chars[array[i]! % chars.length];
+    }
+    return result;
+  }

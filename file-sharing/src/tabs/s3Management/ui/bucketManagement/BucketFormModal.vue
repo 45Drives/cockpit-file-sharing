@@ -88,11 +88,17 @@
 
         <div class="mt-2 flex items-center justify-end gap-2 md:col-span-2">
           <button type="button" @click="emit('close')"
-            class="rounded-md border border-default bg-danger px-3 py-1.5 text-md font-medium text-white hover:bg-danger/90">
+           :disabled="submitting"
+            class="rounded-md border border-default bg-danger px-3 py-1.5 text-md font-medium text-white hover:bg-danger/90 
+            disabled:opacity-60 disabled:cursor-not-allowed ">
             Cancel
           </button>
           <button type="submit"
-            class="rounded-md px-3 py-1.5 text-md font-medium text-white bg-success hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-950">
+          :disabled="submitting"
+          class="rounded-md px-3 py-1.5 text-md font-medium text-white bg-success
+         hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500
+         focus:ring-offset-2 focus:ring-offset-slate-950
+         disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-success">
             {{ mode === "create" ? "Create" : "Save changes" }}
           </button>
         </div>
@@ -126,6 +132,7 @@ type BucketFormModalProps =
   | {
     visible: boolean;
     mode: "create" | "edit";
+    submitting: boolean;
     backend: "ceph";
     cephGateway?: RgwGateway | null;
     bucketToEdit: CephBucket | null;
@@ -134,6 +141,7 @@ type BucketFormModalProps =
   | {
     visible: boolean;
     mode: "create" | "edit";
+    submitting: boolean;
     backend: "minio";
     bucketToEdit: MinioBucket | null;
     deps: MinioDeps | null;
@@ -141,13 +149,14 @@ type BucketFormModalProps =
   | {
     visible: boolean;
     mode: "create" | "edit";
+    submitting: boolean;
     backend: "garage";
     bucketToEdit: GarageBucket | null;
     deps: GarageDeps | null;
   };
 
 const props = defineProps<BucketFormModalProps>();
-
+const submitting = computed(() => props.submitting);
 const emit = defineEmits<{
   (e: "close"): void;
   (e: "submit", payload: { mode: "create" | "edit"; form: BucketFormData }): void;
@@ -240,6 +249,7 @@ const tagsLimitError = computed(() => {
 
 // BucketFormModal.vue submit()
 function submit() {
+  if (props.submitting) return;
   if (props.backend === "garage") {
     const api = garageRef.value;
     if (!api) return;

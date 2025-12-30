@@ -596,7 +596,6 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
         .filter(Boolean);
     
       for (const alias of aliasesToRemove) {
-        // IMPORTANT: use the correct Garage CLI subcommand for removal in your environment
         // Common patterns are: ["bucket","unalias", ...] or ["bucket","alias","--delete", ...]
         await runGarage(["bucket", "unalias", alias]);
       }
@@ -837,6 +836,34 @@ export async function getBucketObjectStatsFromGarage(
     sizeBytes: info.totalSizeBytes,
   };
 }
+export async function getGarageBucket(bucketNameOrId: string): Promise<GarageBucket> {
+  const info = await getGarageBucketDashboardStats(bucketNameOrId);
+
+  // Prefer the true bucket id when available
+  const garageId = info.bucketId || bucketNameOrId;
+
+  // Display name: first global alias if any, else id
+  const displayName =
+    (info.globalAliases && info.globalAliases.length ? info.globalAliases[0] : "") || garageId;
+
+  return {
+    backendKind: "garage",
+    garageId,
+
+    name: displayName,
+    createdAt: info.createdAt ?? "",
+
+    objectCount: info.objectCount ?? 0,
+    sizeBytes: info.totalSizeBytes ?? 0,
+    quotaBytes: info.quotaBytes,
+
+    garageMaxObjects: info.maxObjects,
+    garageWebsiteEnabled: info.websiteEnabled,
+
+    garageAliases: info.globalAliases ?? [],
+  };
+}
+
 
 async function applyGarageBucketGrants(
   bucketHandle: string,

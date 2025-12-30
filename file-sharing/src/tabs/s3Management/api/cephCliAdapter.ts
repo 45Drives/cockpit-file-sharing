@@ -41,7 +41,6 @@ export async function rgwJson(subArgs: string[]): Promise<any> {
 }
 
 export async function listBucketsFromCeph(): Promise<CephBucket[]> {
-  // RGW returns an array of bucket stats; we treat it as unknown/any here
   const statsList: any[] = await rgwJson(["bucket", "stats"]);
 
   return statsList.map((stats) => buildS3BucketFromRgwStats(stats));
@@ -335,7 +334,7 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
       const { tenant, uid } = splitTenantFromUid(fullUid!);
 
       try {
-        // 1) user info (limits live here)
+        // 1) user info
         const infoArgs = ["user", "info", "--uid", uid];
         if (tenant) infoArgs.push("--tenant", tenant);
         const info = await rgwJson(infoArgs);
@@ -346,7 +345,7 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
         const quotaMaxObjects =
           typeof userQuota.max_objects === "number" ? userQuota.max_objects : null;
 
-        // 2) user stats (usage lives here)
+        // 2) user stats 
         const statsArgs = ["user", "stats", "--uid", uid];
         if (tenant) statsArgs.push("--tenant", tenant);
         const stats = await rgwJson(statsArgs);
@@ -909,6 +908,17 @@ function mapCephVersioning(stats: any): BucketVersioningStatus {
   return "Disabled";
 }
 
+export async function getCephBucketFromStats(adminRefOrName: string): Promise<CephBucket> {
+  const rgwBucket = String(adminRefOrName ?? "").trim();
+  if (!rgwBucket) throw new Error("getCephBucketFromStats: bucket name is required");
+
+  // rgw-admin expects tenant:bucket (not tenant/bucket). Your hydrate uses replace("/",":") too.
+
+  const stats: any = await rgwJson(["bucket", "stats", "--bucket", rgwBucket]);
+  return buildS3BucketFromRgwStats(stats);
+}
+
+
 export function buildS3BucketFromRgwStats(stats: any): CephBucket {
   // usage
   const usage = stats.usage || {};
@@ -942,7 +952,6 @@ export function buildS3BucketFromRgwStats(stats: any): CephBucket {
    
   return {backendKind: "ceph",name: stats.bucket,owner: stats.owner,createdAt: stats.creation_time,lastModifiedTime: stats.mtime,sizeBytes,
     objectCount,versionCount,quotaBytes,objectLockEnabled,versioning,tags,zone: stats.zone,zonegroup: stats.zonegroup, adminRef: adminRef
-    // leave these undefined for now; you can fill them in lateracl: undefined,policy: undefined,lastAccessed: undefined,placementTarget: stats.placement_rule,
   };
 }
 
@@ -1669,7 +1678,7 @@ except Exception as e:
 
 
 export async function updateCephBucketViaS3(params: {
-  bucketName: string; // may be "bucket" or "tenant/bucket"
+  bucketName: string; 
   endpoint: string;
 
   versioningEnabled?: boolean;

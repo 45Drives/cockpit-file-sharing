@@ -1,19 +1,6 @@
 
-// Key idea: keep your existing MINIO_ALIAS usage everywhere, but make it mutable
-// and set it from the UI via setMinioAlias(). This avoids changing all function signatures.
-
-import type {
-  MinioBucket,
-  BucketVersioningStatus,
-  MinioUser,
-  MinioUserCreatePayload,
-  MinioUserDetails,
-  MinioUserGroupMembership,
-  MinioUserUpdatePayload,
-  MinioBucketDashboardStats,
-  MinioReplicationUsage,
-  MinioGroupInfo,
-  McAliasCandidate,
+import type {MinioBucket,BucketVersioningStatus,MinioUser,MinioUserCreatePayload,MinioUserDetails,MinioUserGroupMembership,MinioUserUpdatePayload,
+  MinioBucketDashboardStats,MinioReplicationUsage,MinioGroupInfo,McAliasCandidate,
 } from "../types/types";
 import pLimit from "p-limit";
 
@@ -25,7 +12,6 @@ const { errorString } = legacy;
 type RunMcOptions = {
   allowFailure?: boolean; // if true, don't throw on non-zero exit
 };
-// Was: const MINIO_ALIAS = ...
 let MINIO_ALIAS = process.env.MINIO_MC_ALIAS || "gw01";
 
 // Expose setter so UI can select alias
@@ -50,7 +36,6 @@ export async function listMinioAliasCandidates(): Promise<McAliasCandidate[]> {
     if (a === "play") return true;
     if (u.includes("play.min.io")) return true;
 
-    // Optional (recommended): also exclude these templates
     if (a === "s3" || u.includes("s3.amazonaws.com")) return true;
     if (a === "gcs" || u.includes("storage.googleapis.com")) return true;
 
@@ -82,7 +67,6 @@ export async function listMinioAliasCandidates(): Promise<McAliasCandidate[]> {
     candidates.push({ alias });
   }
 
-  // Verify admin access (you use mc admin heavily)
   const verified: McAliasCandidate[] = [];
   for (const c of candidates) {
     try {
@@ -102,7 +86,6 @@ export async function isMinioAvailable(): Promise<boolean> {
   return cands.length > 0;
 }
 
-// It now checks "current selected alias" (set by setMinioAlias)
 export async function isMinioHealthy(): Promise<boolean> {
   try {
     await mcJsonSingle(["admin", "info", MINIO_ALIAS]);
@@ -180,7 +163,7 @@ async function mcJsonSingle(subArgs: string[]): Promise<any> {
  * Get bucket-level stats from `mc stat <ALIAS>/<bucket> --json`
  * Uses MinIO’s internal usage metrics.
  */
-async function getMinioBucketStats(bucketName: string): Promise<{
+export async function getMinioBucketStats(bucketName: string): Promise<{
   createdAt?: string;
   region?: string;
   objectCount: number;
@@ -291,15 +274,7 @@ export async function listBucketsFromMinio(): Promise<MinioBucket[]> {
           getMinioBucketQuotaBytes(bucketName),
         ]);
   
-        const {
-          createdAt,
-          region,
-          objectCount,
-          sizeBytes,
-          versionsCount,
-          versioningStatus,
-          objectLockEnabled,
-          tagsFromStat
+        const {createdAt,region,objectCount,sizeBytes,versionsCount,versioningStatus,objectLockEnabled,tagsFromStat
         } = stats;
         const tags = tagsFromStat
         const owner: string | undefined =
@@ -332,7 +307,7 @@ export async function listBucketsFromMinio(): Promise<MinioBucket[]> {
 }
 
 
-async function getMinioBucketQuotaBytes(
+export async function getMinioBucketQuotaBytes(
   bucketName: string
 ): Promise<number | undefined> {
   try {
@@ -428,7 +403,6 @@ export async function createBucketFromMinio(
   } = options;
   const bucketPath = `${MINIO_ALIAS}/${bucketName}`;
 
-  // 1) mc mb ...
   const mbArgs: string[] = ["mb"];
 
 
@@ -752,7 +726,6 @@ export async function listMinioGroups(): Promise<string[]> {
   try {
     const data = JSON.parse(output);
 
-    // Your stdout example: { "status": "success", "groups": ["newGroup"] }
     if (Array.isArray(data.groups)) {
       return data.groups.filter((g: any) => typeof g === "string");
     }
@@ -764,7 +737,6 @@ export async function listMinioGroups(): Promise<string[]> {
 
     return [];
   } catch {
-    // If for some reason it isn't valid JSON, just return empty or log it
     return [];
   }
 }
@@ -833,8 +805,6 @@ export async function getMinioPolicy(name: string): Promise<string> {
   if (!trimmed) {
     throw new Error(`MinIO policy "${name}" not found or empty output`);
   }
-
-  // Try to pretty-print JSON; fall back to raw text if it’s not valid JSON.
   try {
     const parsed = JSON.parse(trimmed);
     return JSON.stringify(parsed, null, 2);

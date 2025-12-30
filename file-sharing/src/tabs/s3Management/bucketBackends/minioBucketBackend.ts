@@ -7,6 +7,8 @@ import {
   deleteBucketFromMinio,
   updateMinioBucket,
   type UpdateMinioBucketOptions,
+  getMinioBucketStats,
+  getMinioBucketQuotaBytes,
 } from "../api/minioCliAdapter";
 
 export const minioBucketBackend: BucketBackend<MinioBucket> = {
@@ -63,7 +65,43 @@ export const minioBucketBackend: BucketBackend<MinioBucket> = {
     bucket.tags = form.minio.tags ?? undefined;
     // quotaBytes cannot be derived from quotaSize without parsing, so leave it or refresh from API.
   },
+  async getBucket(ref: string, _ctx: BackendContext): Promise<MinioBucket> {
+    const bucketName = String(ref || "").trim();
+    if (!bucketName) throw new Error("getBucket(minio): bucket name is required");
 
+    const [stats, quotaBytes] = await Promise.all([
+      getMinioBucketStats(bucketName),
+      getMinioBucketQuotaBytes(bucketName),
+    ]);
+
+    const {
+      createdAt,
+      region,
+      objectCount,
+      sizeBytes,
+      objectLockEnabled,
+      tagsFromStat,
+    } = stats;
+
+    const tags = tagsFromStat;
+    const owner: string | undefined =
+      (tags && (tags.owner || tags.Owner || tags.bucketOwner)) || undefined;
+
+    return {
+      backendKind: "minio",
+      name: bucketName,
+      createdAt,
+      region: region || "minio-default-region",
+      owner,
+      policy: undefined,
+      objectCount,
+      sizeBytes,
+      quotaBytes,
+      versioning: undefined,
+      tags: tags || undefined,
+      objectLockEnabled: !!objectLockEnabled,
+    };
+  },
   async deleteBucket(bucket: MinioBucket, _ctx: BackendContext): Promise<void> {
     await deleteBucketFromMinio(bucket.name);
   },

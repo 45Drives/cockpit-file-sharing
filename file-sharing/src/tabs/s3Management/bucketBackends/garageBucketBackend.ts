@@ -6,6 +6,7 @@ import {
   createGarageBucket,
   updateGarageBucket,
   listGarageKeysWithInfo,
+  getGarageBucket,
 } from "../api/garageCliAdapter";
 
 export const garageBucketBackend: BucketBackend<GarageBucket> = {
@@ -26,7 +27,6 @@ export const garageBucketBackend: BucketBackend<GarageBucket> = {
 
     await updateGarageBucket(bucket.garageId!, form.garage,form.grants ?? []);
 
-    // Optional local sync if you want optimistic updates:
     const g = form.garage;
 
     if ("maxObjects" in g) {
@@ -38,8 +38,9 @@ export const garageBucketBackend: BucketBackend<GarageBucket> = {
     if ("aliases" in g && Array.isArray(g.aliases)) {
       bucket.garageAliases = g.aliases ?? [];
     }
-    // quotaBytes: you can’t safely derive bytes from "30GiB" here unless you parse it;
-    // either leave it or refresh stats after update.
+  },
+  async getBucket(ref: string, _ctx: BackendContext): Promise<GarageBucket> {
+    return getGarageBucket(ref);
   },
 
   async deleteBucket(bucket: GarageBucket, _ctx: BackendContext): Promise<void> {

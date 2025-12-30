@@ -74,7 +74,6 @@
                   Edit
                 </button>
 
-                <!-- You can add Edit / View later if you want -->
                 <button
                   class="inline-flex items-center border border-red-600 bg-red-500 text-white text-xs font-medium rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
                   @click="openDeleteDialog(u)">
@@ -140,15 +139,7 @@ import MinioUserCreateModal from "./MinioUserCreateModal.vue";
 import MinioUserDetailsModal from "./MinioUserDetailsModal.vue";
 import MinioUserEditModal from "./MinioUserEditModal.vue";
 
-// Adjust this import path and function names to match your backend adapter.
-import {
-  listMinioUsers,
-  deleteMinioUser,
-  createMinioUser,
-  listMinioPolicies,
-  getMinioUserInfo,
-  updateMinioUser,
-  listMinioGroups,
+import {listMinioUsers,deleteMinioUser,createMinioUser,listMinioPolicies,getMinioUserInfo,updateMinioUser,listMinioGroups,
 } from "../../../api/minioCliAdapter";
 import type { MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserUpdatePayload, } from "@/tabs/s3Management/types/types";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";

@@ -16,8 +16,6 @@ export interface S3BucketBase {
 
   lastAccessed?: string;
   lastModifiedTime?: string;
-
-  // policy/tags (not all backends support equally)
   policy?: string;
   tags?: S3BucketTagMap;
 }
@@ -46,7 +44,6 @@ export interface GarageBucket extends S3BucketBase {
 
 export interface MinioBucket extends S3BucketBase {
   backendKind: "minio";
-  // add MinIO-only fields later if/when needed
 }
 
 export type S3Bucket = CephBucket | GarageBucket | MinioBucket;
@@ -108,7 +105,7 @@ export type RgwUser = {
     uid: string;
     displayName?: string;
     tenant?: string ;
-    fullName?: string | null;  // Full name / display name
+    fullName?: string | null;
     email?: string | null;
     suspended?: boolean;
     maxBuckets?: number | null;
@@ -146,7 +143,7 @@ export type RgwDashboardS3Creds = {
   
     // User quota
     userQuotaEnabled?: boolean;
-    userQuotaMaxSizeKb?: number;    // already converted to KB
+    userQuotaMaxSizeKb?: number;   
     userQuotaMaxObjects?: number;
   
     // Bucket quota defaults
@@ -201,7 +198,7 @@ export type RgwDashboardS3Creds = {
     accessKey?: string;
     authentication?: string;
     memberOf?: MinioUserGroupMembership[];
-    raw?: any; // keep raw for debugging / future use
+    raw?: any;
   }
 
   export interface MinioUserUpdatePayload {
@@ -334,7 +331,7 @@ export type MinioBucketDashboardStats = {
   objectLockMode?: string;
   objectLockValidity?: string;
 
-  policyType?: string; // "none" etc
+  policyType?: string; 
 
   replicationEnabled?: boolean;
   replicationRole?: string;
@@ -343,14 +340,11 @@ export type MinioBucketDashboardStats = {
 
   ilmConfigured?: boolean;
 
-  // Optional: quota
   quotaBytes?: number;
 
-  // Distributions
   sizeHistogram?: Record<string, number>;
   versionsHistogram?: Record<string, number>;
 
-  // Replication usage (when enabled)
   replicationUsage?: MinioReplicationUsage;
 
   raw: any;
@@ -376,7 +370,7 @@ export type GarageBucketDashboardStats = {
 
   websiteEnabled?: boolean;
 
-  globalAliases?: string[]; // <-- array, not single
+  globalAliases?: string[];
   keys: GarageBucketKeyAccess[];
 
   raw: string;

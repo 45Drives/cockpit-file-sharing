@@ -95,7 +95,7 @@
 
               <div class="border border-default rounded px-2 py-2 max-h-40 overflow-y-auto bg-default">
                 <label v-for="g in availableGroups" :key="g" class="flex items-center space-x-2 text-xs mb-1">
-                  <input type="checkbox" :value="g" v-model="localGroups" />
+                  <input type="checkbox bg-default" :value="g" v-model="localGroups" />
                   <span>{{ g }}</span>
                 </label>
 
@@ -127,13 +127,13 @@
               </label>
 
               <input type="text"
-                class="w-full border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                class="w-full border rounded bg-default text-default px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                 v-model="localSecret" placeholder="Enter a secret key or generate one" />
 
               <div class="flex items-center justify-between mt-2">
                 <button type="button"
                   class="inline-flex items-center border border-default bg-primary text-default text-sm font-medium rounded px-2.5 py-1 hover:bg-primary disabled:opacity-60"
-                  @click="generateSecret">
+                @click="localSecret = generateSecret()">
                   Generate key
                 </button>
                 <p class="text-xs text-muted text-right max-w-xs">
@@ -145,7 +145,7 @@
           </div>
 
           <p class="text-sm text-default font-semibold">
-            Username and creation date cannot be changed.
+            Username cannot be changed.
           </p>
         </div>
       </div>
@@ -169,6 +169,7 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
 import type { MinioUserDetails, MinioUserUpdatePayload } from "@/tabs/s3Management/types/types";
+import { generateSecret } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 
 interface Props {
   modelValue: boolean;
@@ -215,16 +216,7 @@ watch(
 
 const errorMessage = computed(() => props.errorMessage);
 
-function generateSecret() {
-  const length = 32;
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < length; i += 1) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  localSecret.value = result;
-}
+
 
 function onSubmit() {
   if (!props.user) return;

@@ -402,7 +402,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-// Adjust import paths to your project layout:
 import type { BucketDashboardStats, BucketUserUsage, BucketDashboardOptions, CephAclRule, CephBucket } from "../../types/types";
 import { getBucketDashboardStats, isRgwUsageLogEnabled } from "../../api/cephCliAdapter";
 import { hydrateCephBucket } from "../../bucketBackends/cephBucketBackend";

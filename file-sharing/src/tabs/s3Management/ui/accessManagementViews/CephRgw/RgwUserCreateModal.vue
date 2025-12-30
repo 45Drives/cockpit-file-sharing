@@ -319,7 +319,6 @@ function close() {
 }
 function isValidEmail(email: string): boolean {
   const e = email.trim();
-  // Lightweight, practical check (not fully RFC strict)
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
 }
 
@@ -367,14 +366,12 @@ function loadFromInitialUser(user: RgwUser) {
   form.value.maxBuckets = user.maxBuckets!;
 
   form.value.suspended = !!user.suspended;
-  // If you have a systemUser flag on RgwUser, map it here
 
   // When editing, do NOT rotate keys by default
   form.value.autoGenerateKey = false;
   form.value.accessKey = "";
   form.value.secretKey = "";
 
-  // Map user quota (you said these are actually absolute limits)
   if (typeof user.capacityLimitPercent === "number") {
     form.value.userQuotaEnabled = true;
     form.value.userQuotaUnlimitedSize = false;
@@ -430,7 +427,7 @@ function submit() {
     }
   }
 
-  // Only send key fields when we actually want to touch keys
+  // Only send key fields when actually want to touch keys
   let autoGenerateKey: boolean | undefined;
   let accessKey: string | undefined;
   let secretKey: string | undefined;
@@ -455,7 +452,6 @@ function submit() {
       accessKey = form.value.accessKey || undefined;
       secretKey = form.value.secretKey || undefined;
     } else {
-      // no rotation -> leave undefined so backend ignores keys
       autoGenerateKey = undefined;
       accessKey = undefined;
       secretKey = undefined;

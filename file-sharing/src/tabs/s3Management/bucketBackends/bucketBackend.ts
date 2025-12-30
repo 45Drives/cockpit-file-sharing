@@ -39,6 +39,7 @@ export interface BucketBackend<B extends S3Bucket = S3Bucket> {
   updateBucket(bucket: B, form: BucketEditForm, ctx: BackendContext): Promise<void>;
   
   deleteBucket(bucket: B, ctx: BackendContext): Promise<void>;
+  getBucket(ref: string, ctx: BackendContext): Promise<B>;
 
   listBucketsProgressive?( ctx: BackendContext, onUpdate: (bucket: B) => void,): Promise<B[]>;
   prepareCreate?(ctx: BackendContext,): Promise<BucketModalDepsByKind[B["backendKind"]]>;

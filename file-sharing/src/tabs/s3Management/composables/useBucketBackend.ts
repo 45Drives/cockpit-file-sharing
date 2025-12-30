@@ -68,8 +68,35 @@ export function useBucketBackend<K extends BackendKind>(backend: Ref<K>, ctx: Re
     }
   }
 
-  async function createBucketFromForm(form: BucketFormData) {
-    await backendImpl.value.createBucket(form, context.value);
+  const keyOf = (x: any) => String(x?.adminRef ?? x?.id ?? x?.name ?? "");
+
+  function refFromCreateForm(form: BucketFormData): string {
+    if (form.backend === "ceph") {
+      const owner = String((form as any).ownerUid ?? (form as any).owner ?? "").trim();
+      if (owner.includes("$")) {
+        const tenant = owner.split("$", 1)[0]?.trim();
+        if (tenant) return `${tenant}/${form.name}`;
+      }
+      return form.name;
+    }
+    return form.name;
+  }
+  async function createBucketFromForm(form: BucketFormData): Promise<BucketByKind<K>> {
+    const impl = backendImpl.value;
+
+    await impl.createBucket(form, context.value);
+
+    const ref = refFromCreateForm(form);
+    const created = (await impl.getBucket(ref, context.value)) as BucketByKind<K>;
+
+    const k = keyOf(created);
+    console.log("key of ", k )
+    const i = buckets.value.findIndex((b: any) => keyOf(b) === k);
+    console.log("key found ", i)
+    if (i >= 0) buckets.value.splice(i, 1, created as any);
+    else buckets.value.unshift(created as any);
+
+    return created;
   }
 
   async function updateBucketFromForm(bucket: BucketByKind<K>, form: BucketEditForm) {

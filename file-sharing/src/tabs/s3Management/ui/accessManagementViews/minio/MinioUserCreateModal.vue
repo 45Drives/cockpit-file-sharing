@@ -54,7 +54,7 @@
             </span>
             <button type="button"
               class="text-xs px-2 py-1 rounded border border-default bg-primary text-white hover:bg-primary disabled:opacity-60"
-              @click="generateSecret" :disabled="loading">
+              @click="form.secretKey = generateSecret()" :disabled="loading">
               Generate
             </button>
           </div>
@@ -189,6 +189,7 @@
 
 <script lang="ts" setup>
 import { ref, watch } from "vue";
+import { generateSecret } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 
 export interface MinioUserCreatePayload {
   username: string;
@@ -249,18 +250,7 @@ function close() {
   emit("update:modelValue", false);
 }
 
-function generateSecret() {
-  const length = 32;
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-  let result = "";
-  const array = new Uint32Array(length);
-  window.crypto.getRandomValues(array);
-  for (let i = 0; i < length; i += 1) {
-    result += chars[array[i]! % chars.length];
-  }
-  form.value.secretKey = result;
-}
+
 
 function submit() {
   localError.value = null;
