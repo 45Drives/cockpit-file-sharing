@@ -288,10 +288,6 @@ export class PCSResourceManager {
         return this.fetchResources().map((resources) => resources.find((resource) => resource.name === resourceName));
     }
 
-    getTargetGroups(){
-    
-    }
-
     fetchResources(): ResultAsync<PCSResource[], ProcessError> {
         if (this.currentResources !== undefined) {
           return okAsync(this.currentResources);
@@ -348,12 +344,6 @@ export class PCSResourceManager {
         }
 
         return undefined;
-    }
-
-    getGenerationCommandForPCSResource(resource: PCSResourceConfigJson) {
-        return okAsync(undefined);
-        // return this.server.execute(new BashCommand(`pcs resource config '${resource.id}' --output-format cmd`))
-        // .map((proc) => new BashCommand(proc.getStdout().replace(/\\\n/g, "").replace(/\n/g, "")));
     }
 }
  type PCSResourceConfigJson = {

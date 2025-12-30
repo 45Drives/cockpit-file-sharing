@@ -143,60 +143,7 @@ export class RBDManager {
             ))
             .map((results) => results.filter((result): result is Pool => result !== undefined));
     }
-    // fetchAvaliableRadosBlockDevices() {
-    //     const self = this;
-    //     return ResultAsync.combine([
-    //       this.server.execute(new BashCommand(`rbd showmapped --format json`))
-    //         .map((proc) => proc.getStdout())
-    //         .andThen(safeJsonParse<MappedRBDJson>)
-    //         .mapErr((err) => new ProcessError(`Unable to get current mapped Rados Block Devices: ${err}`)),
-      
-    //       this.server.execute(new BashCommand(`pvs --reportformat json -o pv_name,vg_name`))
-    //         .map((proc) => proc.getStdout())
-    //         .andThen(safeJsonParse<PVToVGJson>)
-    //         .map((parsed) => {
-    //           const map = new Map<string, string>();
-    //           parsed.report.forEach(report => {
-    //             report.pv.forEach(entry => {
-    //               if (entry.vg_name) {
-    //                 map.set(entry.pv_name, entry.vg_name);
-    //               }
-    //             });
-    //           });
-    //           return map;
-    //         })
-    //     ])
-    //     .andThen(([rbdEntries, pvToVGMap]) => {
-    //       return ResultAsync.combine(
-    //         rbdEntries.filter(Boolean).map((entry) => {
-    //           return new ResultAsync(safeTry(async function* () {
-    //             const devicePath = entry.device;
-    //             const vgName = pvToVGMap.get(devicePath); // ✅ Map device to VG (if exists)
-      
-    //             const blockSize = yield* self.getBlockSizeFromDevicePath(devicePath).safeUnwrap();
-    //             const maximumSize = yield* self.getMaximumSizeFromRBDName(entry.name).safeUnwrap();
-      
-    //             const parentPool = yield* self.fetchAvaliablePools()
-    //               .map(pools => pools.find(pool => pool.name === entry.pool))
-    //               .safeUnwrap();
-      
-    //             if (parentPool) {
-    //               if (parentPool.poolType === PoolType.Replication) {
-    //                 return ok(new RadosBlockDevice(entry.name, devicePath, blockSize, maximumSize, parentPool, undefined, vgName));
-    //               } else if (parentPool.poolType === PoolType.ErasureCoded) {
-    //                 const dataPool = yield* self.getDataPoolForRBDName(entry.name, parentPool).safeUnwrap();
-    //                 if (dataPool) {
-    //                   return ok(new RadosBlockDevice(entry.name, devicePath, blockSize, maximumSize, parentPool, dataPool, vgName));
-    //                 }
-    //               }
-    //             }
-      
-    //             return err(new ProcessError("Unable to get Block Device information."));
-    //           }));
-    //         })
-    //       );
-    //     });
-    //   }
+
 
     private cachedRBDs: RadosBlockDevice[] | null = null;
 
