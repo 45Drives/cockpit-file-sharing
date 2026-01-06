@@ -77,9 +77,9 @@
     "changelog": {
         "urgency": "medium",
         "version": "4.5.1",
-        "build_number": "1",
-        "date": null,
-        "packager": "Josh Boudreau <jboudreau@45drives.com>",
+        "build_number": "2",
+        "date": "2026-01-06T15:51:32.585478",
+        "packager": "Rachit Hans <rhans@45drives.com>",
         "changes": []
     }
 }
