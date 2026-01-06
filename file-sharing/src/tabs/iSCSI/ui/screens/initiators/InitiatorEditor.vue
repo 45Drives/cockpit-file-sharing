@@ -85,13 +85,11 @@ const actions = wrapActions({ createConfiguration });
 const creationBody = computed(() => {
   const base = `Add "${tempInitiator.value.name}" initiator to the group ${props.initiatorGroup.name}?`;
 
-  const clusteredWarning = `
-Changing iSCSI initiator group configuration can cause related targets or resources to restart and may disrupt active sessions using this target.
-It is recommended to perform this action during a planned maintenance window or other downtime if it could impact production workloads.`
+  const clusteredWarning = `Changing this initiator group may restart related resources and disrupt active sessions. Recommended to perform during a maintenance window.`
 
   const isClustered = useUserSettings().value.iscsi.clusteredServer === true;
 
-  return isClustered ? `${base}\n\n${clusteredWarning.trim()}` : base;
+  return isClustered ? `${base}\n${clusteredWarning.trim()}` : base;
 });
 
 

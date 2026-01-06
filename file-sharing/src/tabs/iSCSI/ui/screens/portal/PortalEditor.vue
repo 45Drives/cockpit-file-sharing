@@ -94,13 +94,11 @@ const actions = wrapActions({ createPortal });
 const creationBody = computed(() => {
   const base = `Create portal ${tempPortal.value.address}?`;
 
-  const clusteredWarning = `
-Changing iSCSI portal configuration can cause related targets or resources to restart and may disrupt active sessions using this target. 
-It is strongly recommended to perform this action during a planned maintenance window or other\n downtime if there is any chance it could affect production workloads.`
+  const clusteredWarning = `Changing this portal may restart related resources and disrupt active sessions. Recommended to perform during a maintenance window.`
 
   const isClustered = useUserSettings().value.iscsi.clusteredServer === true;
 
-  return isClustered ? `${base}\n\n${clusteredWarning.trim()}` : base;
+  return isClustered ? `${base}\n${clusteredWarning.trim()}` : base;
 });
 
 

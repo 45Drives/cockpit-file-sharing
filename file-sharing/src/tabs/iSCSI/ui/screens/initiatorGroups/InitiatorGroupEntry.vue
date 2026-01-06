@@ -78,13 +78,11 @@ const actions = wrapActions({ deleteEntry });
 const deletionBody = computed(() => {
   const base = `Delete initiator group "${props.initiatorGroup.name}"?`;
 
-  const clusteredWarning = `
-Deleting an iSCSI initiator group can cause related targets or resources to restart, which may impact other sessions using this target.
-It is strongly recommended to perform this action during a planned maintenance window or other downtime if it could affect production workloads.`;
+  const clusteredWarning = `Deleting this initiator group may restart related resources and impact active sessions. Recommended to perform during a maintenance window.`;
 
   const isClustered = useUserSettings().value.iscsi.clusteredServer === true;
 
-  return isClustered ? `${base}\n\n${clusteredWarning.trim()}` : base;
+  return isClustered ? `${base}\n${clusteredWarning.trim()}` : base;
 });
 
 const promptDeletion = confirmBeforeAction(
