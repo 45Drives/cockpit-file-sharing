@@ -13,9 +13,9 @@
           @close-editor="
             () => {
               showEditor = false;
-              actions.refreshTable();
             }
           "
+          @created="actions.refreshTable()"
         />
       </div>
     </div>
@@ -30,7 +30,7 @@
           <template #thead>
             <tr>
               <th scope="col">Name</th>
-              <th scope="col" class="flex flex-row justify-end">
+              <th scope="col" class="flex flex-row justify-end ">
                 <span class="sr-only">Delete</span>
                 <button @click="showEditor = !showEditor">
                   <PlusIcon class="size-icon icon-default" />
@@ -73,12 +73,13 @@ const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 const refreshTable = () => {
   return driver.andThen((driver) => {
     return driver.getInitiatorsOfInitiatorGroup(props.initiatorGroup).map((initiators) => {
-      props.initiatorGroup.initiators = initiators;
+     props.initiatorGroup.initiators = initiators;
+
     });
   });
 };
 
 const actions = wrapActions({ refreshTable: refreshTable });
 
-actions.refreshTable();
+//actions.refreshTable();
 </script>

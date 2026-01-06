@@ -30,6 +30,8 @@ import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/
 import { HookedSambaManager as SambaManager } from "@/tabs/samba/samba-manager";
 import { okAsync } from "neverthrow";
 
+import { sambaManagerInjectionKey } from "@/tabs/samba/ui/injectionKeys";
+
 const _ = cockpit.gettext;
 
 const userSettings = useUserSettings();
@@ -43,6 +45,7 @@ provide(cephClientNameInjectionKey, cephClientName);
 const server = getServer();
 
 const sambaManager = server.map((server) => new SambaManager(server));
+provide(sambaManagerInjectionKey, sambaManager);
 
 const [globalConf, reloadGlobalConf] = computedResult(() =>
   sambaManager.andThen((sm) => sm.getGlobalConfig())

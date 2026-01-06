@@ -1,13 +1,8 @@
-<template> 
+<template>
     <CardContainer>
-        <div
-            v-if="tempInitiatorGroup"
-            class="space-y-content"
-        >
+        <div v-if="tempInitiatorGroup" class="space-y-content">
             <div class="space-y-content text-base">
-                <div
-                    class="text-header"
-                >{{ _("New Initiator Group") }}</div>
+                <div class="text-header">{{ _("New Initiator Group") }}</div>
             </div>
 
             <InputLabelWrapper>
@@ -15,72 +10,102 @@
                     {{ _("Group Name") }}
                 </template>
 
-                <InputField
-                    :placeholder="'The name for your Initiator Group'"
-                    v-model="tempInitiatorGroup.name"
-                />
+                <InputField :placeholder="'The name for your Initiator Group'" v-model="tempInitiatorGroup.name" />
                 <ValidationResultView v-bind="initiatorGroupNameValidationResult" />
             </InputLabelWrapper>
         </div>
 
         <template v-slot:footer>
             <div class="button-group-row justify-end grow">
-                <button
-                    class="btn btn-secondary"
-                    @click="handleClose"
-                >{{ ("Cancel") }}</button>
-                <button
-                    class="btn btn-primary"
-                    @click="actions.createInitiatorGroup"
-                    :disabled="!validationScope.isValid() || !modified"
-                >{{ ("Create") }}</button>
+                <button class="btn btn-secondary" @click="handleClose">{{ ("Cancel") }}</button>
+                <button class="btn btn-primary" @click="promptCreateInitiatorGroup"
+                    :disabled="!validationScope.isValid() || !modified || !canCreate">{{ ("Create") }}</button>
             </div>
         </template>
     </CardContainer>
 </template>
 
 <script setup lang="ts">
-    import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, validationSuccess, validationError, ValidationResultView, ValidationScope } from '@45drives/houston-common-ui';
-    import type { ResultAsync } from 'neverthrow';
-    import { inject, ref } from 'vue';
-    import { ProcessError } from '@45drives/houston-common-lib';
-    import type { Target } from '@/tabs/iSCSI/types/Target';
-    import { InitiatorGroup } from '@/tabs/iSCSI/types/InitiatorGroup';
-    import type { ISCSIDriver } from '@/tabs/iSCSI/types/drivers/ISCSIDriver';
+import { CardContainer, InputLabelWrapper, InputField, useTempObjectStaging, wrapActions, validationSuccess, validationError, ValidationResultView, ValidationScope, confirmBeforeAction } from '@45drives/houston-common-ui';
+import type { ResultAsync } from 'neverthrow';
+import { inject, ref, computed, type Ref } from 'vue';
+import { ProcessError } from '@45drives/houston-common-lib';
+import type { Target } from '@/tabs/iSCSI/types/Target';
+import { InitiatorGroup } from '@/tabs/iSCSI/types/InitiatorGroup';
+import type { ISCSIDriver } from '@/tabs/iSCSI/types/drivers/ISCSIDriver';
+import { useUserSettings } from '@/common/user-settings';
 
-    const _ = cockpit.gettext;
 
-    const props = defineProps<{target: Target}>();
+const _ = cockpit.gettext;
 
-    const emit = defineEmits(['closeEditor']);
+const props = defineProps<{
+    target: Target
+}>();
 
-    const newInitiatorGroup = ref<InitiatorGroup>(InitiatorGroup.empty());
+const emit = defineEmits(['closeEditor', 'created']);
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+const canCreate = computed(() => canEditIscsi.value);
+const newInitiatorGroup = ref<InitiatorGroup>(InitiatorGroup.empty());
+const norm = (s: string | undefined | null) => (s ?? "").trim()
+const { tempObject: tempInitiatorGroup, modified, resetChanges } = useTempObjectStaging(newInitiatorGroup);
 
-    const { tempObject: tempInitiatorGroup, modified, resetChanges } = useTempObjectStaging(newInitiatorGroup);
+const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
-    const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
+const handleClose = () => {
+    emit("closeEditor");
+    resetChanges();
+}
 
-    const handleClose = () => {
-        emit("closeEditor");
-        resetChanges();
+const createInitiatorGroup = () => {
+    return driver.andThen((driver) => driver.addInitiatorGroupToTarget(props.target, tempInitiatorGroup.value))
+        .map(() => { emit("created"), handleClose() })
+        .mapErr((error) => new ProcessError(`Unable to create group ${tempInitiatorGroup.value.name}: ${error.message}`))
+}
+
+const actions = wrapActions({ createInitiatorGroup });
+
+const creationBody = computed(() => {
+    console.log("name at click:", tempInitiatorGroup.value.name);
+    const base = `Create "${tempInitiatorGroup.value.name}" initiator group?`;
+
+    const clusteredWarning = `Changing this initiator group may restart related resources and disrupt active sessions. Recommended to perform during a maintenance window.`
+
+    const isClustered = useUserSettings().value.iscsi.clusteredServer === true;
+
+    return isClustered ? `${base}\n${clusteredWarning.trim()}` : base;
+});
+
+
+const promptCreateInitiatorGroup = () => {
+    return confirmBeforeAction(
+        {
+            header: _("Confirm"),
+            body: creationBody.value,
+            dangerous: true,
+        },
+        actions.createInitiatorGroup
+    )();
+};
+
+const validationScope = new ValidationScope();
+
+const { validationResult: initiatorGroupNameValidationResult } = validationScope.useValidator(() => {
+    if (!tempInitiatorGroup.value.name) {
+        return validationError("A group name is required.");
     }
+    if (duplicateName.value) return validationError("That group name already exists on this target.");
 
-    const createInitiatorGroup = () => {
-        return driver.andThen((driver) => driver.addInitiatorGroupToTarget(props.target, tempInitiatorGroup.value))
-                        .map(() => handleClose())
-                        .mapErr((error) => new ProcessError(`Unable to create group ${tempInitiatorGroup.value.name}: ${error.message}`))
-    }
+    return validationSuccess();
+});
 
-    const actions = wrapActions({createInitiatorGroup});
+const duplicateName = computed(() => {
+    const wanted = norm(tempInitiatorGroup.value?.name);
+    if (!wanted) return false;
+    return (props.target.initiatorGroups ?? []).some(g => norm(g?.name) === wanted);
+});
 
-    const validationScope = new ValidationScope();
 
-    const { validationResult: initiatorGroupNameValidationResult } = validationScope.useValidator(() => {
-        if (!tempInitiatorGroup.value.name) {
-            return validationError("A group name is required.");
-        }
 
-        return validationSuccess();
-    });
-    
+
 </script>

@@ -1,3 +1,79 @@
+cockpit-file-sharing (4.4.1-10jammy) jammy; urgency=medium
+
+  * building package internal for repo
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 24 Dec 2025 05:28:08 -0400
+
+cockpit-file-sharing (4.4.0-1jammy) jammy; urgency=medium
+
+  * Added smbpasswd management
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 12 Dec 2025 13:21:36 -0400
+
+cockpit-file-sharing (4.4.1-9jammy) jammy; urgency=medium
+
+  * fixed table long name bug + hiding unwanted vgs + changed ocf directory name
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 02 Dec 2025 08:09:33 -0400
+
+cockpit-file-sharing (4.4.1-8jammy) jammy; urgency=medium
+
+  * fixed edge case of targetname having colon
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 13 Nov 2025 13:35:53 -0400
+
+cockpit-file-sharing (4.4.1-7jammy) jammy; urgency=medium
+
+  * fixed deletion race condition causiong issue for multiple lun deletion
+  * updated ip of lun added to group
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 10 Nov 2025 08:17:34 -0400
+
+cockpit-file-sharing (4.4.1-6jammy) jammy; urgency=medium
+
+  * fixed deletion race condition causiong issue for multiple lun deletion
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 10 Nov 2025 05:49:54 -0400
+
+cockpit-file-sharing (4.4.1-5jammy) jammy; urgency=medium
+
+  * shell escaping colons
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 06 Nov 2025 07:23:45 -0400
+
+cockpit-file-sharing (4.4.1-4jammy) jammy; urgency=medium
+
+  * fixed deletion of incrorect lun
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 05 Nov 2025 15:31:48 -0400
+
+cockpit-file-sharing (4.4.1-3jammy) jammy; urgency=medium
+
+  * removed reference to heartbeat1
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 04 Nov 2025 13:21:24 -0400
+
+cockpit-file-sharing (4.4.1-2jammy) jammy; urgency=medium
+
+  * changed the commands of addition groups
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 30 Oct 2025 14:00:03 -0300
+
+cockpit-file-sharing (4.4.1-1jammy) jammy; urgency=medium
+
+  * improved speed of iscsi module + added functionality f adding multiple groups
+    to target + build package
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 26 Sep 2025 08:34:55 -0300
+
+cockpit-file-sharing (4.3.2-2jammy) jammy; urgency=medium
+
+  * Fix bug causing nfs server crash during export removal with ceph by removing
+    ceph remount after removing share instead of before
+  * Fix bug causing NFS hooks to be run multiple times for clustered environments
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 19 Sep 2025 11:33:07 -0300
+
 cockpit-file-sharing (4.3.2-1jammy) jammy; urgency=medium
 
   * Fix bug causing nfs server crash during export removal with ceph by removing
@@ -9,6 +85,11 @@ cockpit-file-sharing (4.3.1-2jammy) jammy; urgency=medium
 
   * Fix os release display in app info popup on EL8/EL9
   * Enable AD accounts what's new popup for v4.3.1
+ -- Rachit Hans <rhans@45drives.com>  Tue, 26 Aug 2025 08:41:09 -0300
+
+cockpit-file-sharing (4.2.14-14jammy) jammy; urgency=medium
+
+  * getting first unstandby node evrytime 
 
  -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 25 Aug 2025 08:31:47 -0300
 
@@ -48,6 +129,81 @@ cockpit-file-sharing (4.2.13-2jammy) jammy; urgency=medium
   * fixing dropdown values getting hidden
 
  -- Rachit Hans <rhans@45drives.com>  Mon, 11 Aug 2025 07:56:53 -0300
+
+cockpit-file-sharing (4.2.14-15jammy) jammy; urgency=medium
+
+  * building package fetching data from all servrs of cluster
+
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 06 Aug 2025 12:52:15 -0300
+
+cockpit-file-sharing (4.2.14-13jammy) jammy; urgency=medium
+
+  * createRadosBlockDevice updated to update cachedRBDS
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 05 Aug 2025 21:45:31 -0300
+
+cockpit-file-sharing (4.2.14-12jammy) jammy; urgency=medium
+
+  * cached rbds for improving spped in iscsi cluter
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 05 Aug 2025 21:03:34 -0300
+
+cockpit-file-sharing (4.2.14-10jammy) jammy; urgency=medium
+
+  * building package
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 04 Aug 2025 11:58:58 -0300
+
+cockpit-file-sharing (4.2.14-9jammy) jammy; urgency=medium
+
+  * package build + fix selectmenu options
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 01 Aug 2025 14:14:33 -0300
+
+cockpit-file-sharing (4.2.14-8jammy) jammy; urgency=medium
+
+  * package build + fix rbdreactivity bug
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 31 Jul 2025 20:16:56 -0300
+
+cockpit-file-sharing (4.2.14-6jammy) jammy; urgency=medium
+
+  * build package + fixed deletion
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 31 Jul 2025 10:41:16 -0300
+
+cockpit-file-sharing (4.2.14-5jammy) jammy; urgency=medium
+
+  * fixed rbd's removal
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 30 Jul 2025 22:11:58 -0300
+
+cockpit-file-sharing (4.2.14-4jammy) jammy; urgency=medium
+
+  * build package
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 30 Jul 2025 09:51:09 -0300
+
+cockpit-file-sharing (4.2.14-3jammy) jammy; urgency=medium
+
+  * build package
+  * added logic to add LVM's to pcs target even after page refresh
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 29 Jul 2025 12:19:36 -0300
+
+cockpit-file-sharing (4.2.14-2jammy) jammy; urgency=medium
+
+  * building
+  * package
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 25 Jul 2025 11:46:22 -0300
+
+cockpit-file-sharing (4.2.14-1jammy) jammy; urgency=medium
+
+  * building package
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 24 Jul 2025 10:49:27 -0300
 
 cockpit-file-sharing (4.2.13-1jammy) jammy; urgency=medium
 

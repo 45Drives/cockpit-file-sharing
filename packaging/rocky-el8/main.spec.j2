@@ -28,9 +28,39 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el8 install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Dec 24 2025 Rachit Hans <rhans@45drives.com> 4.4.1-10
+- building package internal for repo
+* Fri Dec 12 2025 Joshua Boudreau <jboudreau@45drives.com> 4.4.0-1
+- Added smbpasswd management
+* Tue Dec 02 2025 Rachit Hans <rhans@45drives.com> 4.4.1-9
+- fixed table long name bug + hiding unwanted vgs + changed ocf directory name
+* Thu Nov 13 2025 Rachit Hans <rhans@45drives.com> 4.4.1-8
+- fixed edge case of targetname having colon
+* Mon Nov 10 2025 Rachit Hans <rhans@45drives.com> 4.4.1-7
+- fixed deletion race condition causiong issue for multiple lun deletion
+- updated ip of lun added to group
+* Mon Nov 10 2025 Rachit Hans <rhans@45drives.com> 4.4.1-6
+- fixed deletion race condition causiong issue for multiple lun deletion
+* Thu Nov 06 2025 Rachit Hans <rhans@45drives.com> 4.4.1-5
+- shell escaping colons
+* Wed Nov 05 2025 Rachit Hans <rhans@45drives.com> 4.4.1-4
+- fixed deletion of incrorect lun
+* Tue Nov 04 2025 Rachit Hans <rhans@45drives.com> 4.4.1-3
+- removed reference to heartbeat1
+* Thu Oct 30 2025 Rachit Hans <rhans@45drives.com> 4.4.1-2
+- changed the commands of addition groups
+* Fri Sep 26 2025 Rachit Hans <rhans@45drives.com> 4.4.1-1
+- improved speed of iscsi module + added functionality f adding multiple groups to
+  target + build package
+* Fri Sep 19 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.2-2
+- Fix bug causing nfs server crash during export removal with ceph by removing ceph
+  remount after removing share instead of before
+- Fix bug causing NFS hooks to be run multiple times for clustered environments
 * Mon Sep 08 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.2-1
 - Fix bug causing nfs server crash during export removal with ceph by removing ceph
   remount after removing share instead of before
+  * Tue Aug 26 2025 Rachit Hans <rhans@45drives.com> 4.2.14-15
+- building package fetching data from all servrs of cluster
 * Mon Aug 25 2025 Joshua Boudreau <jboudreau@45drives.com> 4.3.1-2
 - Fix os release display in app info popup on EL8/EL9
 - Enable AD accounts what's new popup for v4.3.1
@@ -51,6 +81,33 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el8 install
 - build package
 * Mon Aug 11 2025 Rachit Hans <rhans@45drives.com> 4.2.13-2
 - fixing dropdown values getting hidden
+* Wed Aug 06 2025 Rachit Hans <rhans@45drives.com> 4.2.14-14
+- getting first unstandby node evrytime 
+* Tue Aug 05 2025 Rachit Hans <rhans@45drives.com> 4.2.14-13
+- createRadosBlockDevice updated to update cachedRBDS
+* Tue Aug 05 2025 Rachit Hans <rhans@45drives.com> 4.2.14-12
+- cached rbds for improving spped in iscsi cluter
+* Mon Aug 04 2025 Rachit Hans <rhans@45drives.com> 4.2.14-10
+- building package
+* Fri Aug 01 2025 Rachit Hans <rhans@45drives.com> 4.2.14-9
+- package build + fix selectmenu options
+* Thu Jul 31 2025 Rachit Hans <rhans@45drives.com> 4.2.14-8
+- package build + fix rbdreactivity bug
+* Thu Jul 31 2025 Rachit Hans <rhans@45drives.com> 4.2.14-6
+- build package + fixed deletion
+* Wed Jul 30 2025 Rachit Hans <rhans@45drives.com> 4.2.14-5
+- fixed rbd's removal
+* Wed Jul 30 2025 Rachit Hans <rhans@45drives.com> 4.2.14-4
+- build package
+* Tue Jul 29 2025 Rachit Hans <rhans@45drives.com> 4.2.14-3
+- build package
+- [200~added logic to add LVM's to pcs target even after page refresh
+- added logic to add LVM's to pcs target even after page refresh
+* Fri Jul 25 2025 Rachit Hans <rhans@45drives.com> 4.2.14-2
+- building
+- package
+* Thu Jul 24 2025 Rachit Hans <rhans@45drives.com> 4.2.14-1
+- building package
 * Tue Jul 08 2025 Jordan Keough <jkeough@45drives.com> 4.2.13-1
 - Removes conditional flag on group add/delete for iscsi initiator groups
 * Thu May 29 2025 Jordan Keough <jkeough@45drives.com> 4.2.12-1

@@ -1,3 +1,79 @@
+cockpit-file-sharing (4.4.1-10bookworm) bookworm; urgency=medium
+
+  * building package internal for repo
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 24 Dec 2025 05:28:08 -0400
+
+cockpit-file-sharing (4.4.0-1bookworm) bookworm; urgency=medium
+
+  * Added smbpasswd management
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 12 Dec 2025 13:21:36 -0400
+
+cockpit-file-sharing (4.4.1-9bookworm) bookworm; urgency=medium
+
+  * fixed table long name bug + hiding unwanted vgs + changed ocf directory name
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 02 Dec 2025 08:09:33 -0400
+
+cockpit-file-sharing (4.4.1-8bookworm) bookworm; urgency=medium
+
+  * fixed edge case of targetname having colon
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 13 Nov 2025 13:35:53 -0400
+
+cockpit-file-sharing (4.4.1-7bookworm) bookworm; urgency=medium
+
+  * fixed deletion race condition causiong issue for multiple lun deletion
+  * updated ip of lun added to group
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 10 Nov 2025 08:17:34 -0400
+
+cockpit-file-sharing (4.4.1-6bookworm) bookworm; urgency=medium
+
+  * fixed deletion race condition causiong issue for multiple lun deletion
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 10 Nov 2025 05:49:54 -0400
+
+cockpit-file-sharing (4.4.1-5bookworm) bookworm; urgency=medium
+
+  * shell escaping colons
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 06 Nov 2025 07:23:45 -0400
+
+cockpit-file-sharing (4.4.1-4bookworm) bookworm; urgency=medium
+
+  * fixed deletion of incrorect lun
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 05 Nov 2025 15:31:48 -0400
+
+cockpit-file-sharing (4.4.1-3bookworm) bookworm; urgency=medium
+
+  * removed reference to heartbeat1
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 04 Nov 2025 13:21:24 -0400
+
+cockpit-file-sharing (4.4.1-2bookworm) bookworm; urgency=medium
+
+  * changed the commands of addition groups
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 30 Oct 2025 14:00:03 -0300
+
+cockpit-file-sharing (4.4.1-1bookworm) bookworm; urgency=medium
+
+  * improved speed of iscsi module + added functionality f adding multiple groups
+    to target + build package
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 26 Sep 2025 08:34:55 -0300
+
+cockpit-file-sharing (4.3.2-2bookworm) bookworm; urgency=medium
+
+  * Fix bug causing nfs server crash during export removal with ceph by removing
+    ceph remount after removing share instead of before
+  * Fix bug causing NFS hooks to be run multiple times for clustered environments
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 19 Sep 2025 11:33:07 -0300
+
 cockpit-file-sharing (4.3.2-1bookworm) bookworm; urgency=medium
 
   * Fix bug causing nfs server crash during export removal with ceph by removing

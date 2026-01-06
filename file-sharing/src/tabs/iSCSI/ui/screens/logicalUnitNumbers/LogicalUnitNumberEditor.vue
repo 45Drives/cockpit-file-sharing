@@ -27,11 +27,7 @@
     <template v-slot:footer>
       <div class="button-group-row justify-end grow">
         <button class="btn btn-secondary" @click="handleClose">{{ "Cancel" }}</button>
-        <button
-          class="btn btn-primary"
-          @click="actions.createLun"
-          :disabled="!validationScope.isValid()"
-        >
+        <button class="btn btn-primary" @click="actions.createLun" :disabled="!validationScope.isValid() || !canCreate">
           {{ "Create" }}
         </button>
       </div>
@@ -54,9 +50,9 @@ import {
   wrapActions,
   type SelectMenuOption
 } from "@45drives/houston-common-ui";
-import type { ResultAsync } from "neverthrow";
-import { computed, inject, ref, type ComputedRef, type Ref } from "vue";
-import type { ISCSIDriver } from "../../../types/drivers/ISCSIDriver";
+import { ResultAsync, okAsync, errAsync } from "neverthrow";
+import { computed, inject, ref, toRaw, type ComputedRef, type Ref } from "vue";
+import { ISCSIDriver } from "../../../types/drivers/ISCSIDriver";
 import type { InitiatorGroup } from "../../../types/InitiatorGroup";
 import { LogicalUnitNumber } from "../../../types/LogicalUnitNumber";
 import { VirtualDevice } from "../../../types/VirtualDevice";
@@ -66,16 +62,19 @@ const _ = cockpit.gettext;
 
 const props = defineProps<{ initiatorGroup: InitiatorGroup }>();
 
-const emit = defineEmits(["closeEditor"]);
+const emit = defineEmits(["closeEditor", "created"]);
 
-defineExpose({populateNextNumber})
+defineExpose({ populateNextNumber })
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const devices = inject<Ref<VirtualDevice[]>>("virtualDevices")!;
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+const canCreate = computed(() => canEditIscsi.value);
 
 const deviceOptions: ComputedRef<SelectMenuOption<string>[]> = computed(() =>
-  devices.value.filter((device) => !props.initiatorGroup.logicalUnitNumbers.find((lun) => lun.blockDevice === device)).map((device) => ({ label: device.deviceName, value: device.deviceName }))
+  devices.value.filter((device) => !device.vgName && !device.assigned && !props.initiatorGroup.logicalUnitNumbers.find((lun) => lun.blockDevice === device)).map((device) => ({ label: device.deviceName, value: device.deviceName }))
 );
 
 const newLun = ref<LogicalUnitNumber>(LogicalUnitNumber.empty());
@@ -105,24 +104,48 @@ const handleClose = () => {
 };
 
 const createLun = () => {
-  tempLun.value.blockDevice = devices.value.find((device) => device.deviceName === tempLun.value.name);
+  const dev = devices.value.find(d => d.deviceName === tempLun.value.name);
+  if (!dev) {
+    return errAsync(new ProcessError(`Device ${tempLun.value.name} not found`));
+  }
+  dev.assigned = true;
+
+  const payload = {
+    ...toRaw(tempLun.value),
+    blockDevice: toRaw(dev),
+  };
 
   return driver
-    .andThen((driver) => driver.addLogicalUnitNumberToGroup(props.initiatorGroup, tempLun.value))
-    .map(() => handleClose())
+    .andThen((d) =>
+      d.addLogicalUnitNumberToGroup(props.initiatorGroup, payload)
+        .map((pinnedNode) => ({ d, pinnedNode }))
+    )
+    .map(({ d, pinnedNode }) => {
+      if (pinnedNode) dev.server = pinnedNode;
+      return d;
+    })
     .mapErr(
       (error) =>
         new ProcessError(
           `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
         )
-    );
+    )
+    .andThen((d) => {
+      const fn = (d as any).getnode;
+      return typeof fn === "function" ? fn.call(d) : okAsync(undefined);
+    })
+    .map(() => {
+      emit("created");
+      handleClose();
+    });
 };
+
 
 function populateNextNumber() {
   let nextNumber = 0;
 
   const existingNumbers = props.initiatorGroup.logicalUnitNumbers.map((lun) => lun.unitNumber);
-  
+
   while (existingNumbers.includes(nextNumber)) {
     nextNumber += 1;
   }
@@ -159,4 +182,6 @@ const { validationResult: deviceValidationResult } = validationScope.useValidato
 });
 
 const actions = wrapActions({ createLun });
+
+
 </script>

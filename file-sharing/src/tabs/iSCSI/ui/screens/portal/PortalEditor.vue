@@ -19,11 +19,7 @@
     <template v-slot:footer>
       <div class="button-group-row justify-end grow">
         <button class="btn btn-secondary" @click="handleClose">{{ "Cancel" }}</button>
-        <button
-          class="btn btn-primary"
-          @click="actions.createPortal"
-          :disabled="!validationScope.isValid() || !modified"
-        >
+        <button class="btn btn-primary" @click="promptCreatePortal" :disabled="!validationScope.isValid() || !modified">
           {{ "Create" }}
         </button>
       </div>
@@ -41,10 +37,10 @@ import {
   ValidationResultView,
   validationError,
   validationSuccess,
-  ValidationScope,
+  ValidationScope, confirmBeforeAction
 } from "@45drives/houston-common-ui";
 import { ResultAsync } from "neverthrow";
-import { inject, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import { BashCommand, getServerCluster, ProcessError } from "@45drives/houston-common-lib";
 import type { Target } from "@/tabs/iSCSI/types/Target";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
@@ -55,15 +51,16 @@ const _ = cockpit.gettext;
 
 const props = defineProps<{ target: Target }>();
 
-const emit = defineEmits(["closeEditor"]);
+const emit = defineEmits(["closeEditor", "created"]);
 
 const newPortal = ref<Portal>(new Portal(""));
 
 const { tempObject: tempPortal, modified, resetChanges } = useTempObjectStaging(newPortal);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
-
-let usedAddresses: string[] = [];
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+const canCreate = computed(() => canEditIscsi.value); let usedAddresses: string[] = [];
 
 useUserSettings(true).then((userSettings) => {
   if (userSettings.value.iscsi.clusteredServer) {
@@ -85,7 +82,7 @@ const handleClose = () => {
 const createPortal = () => {
   return driver
     .andThen((driver) => driver.addPortalToTarget(props.target, tempPortal.value))
-    .map(() => handleClose())
+    .map(() => { handleClose(), emit("created") })
     .mapErr(
       (error) =>
         new ProcessError(`Unable to create portal ${tempPortal.value.address}: ${error.message}`)
@@ -94,6 +91,28 @@ const createPortal = () => {
 
 const actions = wrapActions({ createPortal });
 
+const creationBody = computed(() => {
+  const base = `Create portal ${tempPortal.value.address}?`;
+
+  const clusteredWarning = `Changing this portal may restart related resources and disrupt active sessions. Recommended to perform during a maintenance window.`
+
+  const isClustered = useUserSettings().value.iscsi.clusteredServer === true;
+
+  return isClustered ? `${base}\n${clusteredWarning.trim()}` : base;
+});
+
+
+
+const promptCreatePortal = () => {
+  return confirmBeforeAction(
+    {
+      header: "Confirm",
+      body: creationBody.value,
+      dangerous: true
+    },
+    actions.createPortal
+  )();
+}
 const validationScope = new ValidationScope();
 
 const { validationResult: portalAddressValidationResult } = validationScope.useValidator(() => {
