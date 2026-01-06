@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.5.1-1bookworm) bookworm; urgency=medium
+
+  * building pacakge with iscsi cluster changes and single server UI changes
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 06 Jan 2026 07:59:44 -0400
+
 cockpit-file-sharing (4.4.1-10bookworm) bookworm; urgency=medium
 
   * building package internal for repo
