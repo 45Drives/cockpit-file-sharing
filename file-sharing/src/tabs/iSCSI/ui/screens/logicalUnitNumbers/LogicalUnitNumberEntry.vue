@@ -3,7 +3,7 @@
     <td>{{ logicalUnitNumber.name }}</td>
     <td>{{ logicalUnitNumber.unitNumber }}</td>
     <td class="button-group-row justify-end">
-      <button @click="promptDeletion">
+      <button @click="promptDeletion" :disabled="!canCreate">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
@@ -14,7 +14,7 @@
 <script setup lang="ts">
 import { TrashIcon } from "@heroicons/vue/20/solid";
 import { wrapActions, confirmBeforeAction } from "@45drives/houston-common-ui";
-import { inject } from "vue";
+import { computed, inject, type Ref } from "vue";
 import { ResultAsync } from "neverthrow";
 import { ProcessError } from "@45drives/houston-common-lib";
 import type { LogicalUnitNumber } from "@/tabs/iSCSI/types/LogicalUnitNumber";
@@ -29,14 +29,20 @@ const props = defineProps<{
 const emit = defineEmits(["deleteEntry"]);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+const canCreate = computed(() => canEditIscsi.value);
 
 const deleteEntry = () => {
+
   return driver
     .andThen((driver) =>
       driver.removeLogicalUnitNumberFromGroup(props.initiatorGroup, props.logicalUnitNumber)
     )
-    .map(() => emit("deleteEntry"))
-    .mapErr(
+    .map(() => {
+      emit("deleteEntry");
+      emit("lunDeleted", props.logicalUnitNumber.blockDevice?.deviceName);
+    }).mapErr(
       (error) =>
         new ProcessError(
           `Unable to remove LUN ${props.logicalUnitNumber.unitNumber} from group ${props.initiatorGroup.name} : ${error.message}`
@@ -50,6 +56,7 @@ const promptDeletion = confirmBeforeAction(
   {
     header: "Confirm",
     body: `Delete LUN ${props.logicalUnitNumber.unitNumber} from group ${props.initiatorGroup.name}?`,
+    dangerous: true
   },
   actions.deleteEntry
 );

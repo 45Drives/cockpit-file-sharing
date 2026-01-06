@@ -40,7 +40,7 @@
         <button
           class="btn btn-primary"
           @click="actions.createConfiguration"
-          :disabled="!validationScope.isValid() || !modified"
+          :disabled="!validationScope.isValid() || !modified || !canCreate"
         >
           {{ "Create" }}
         </button>
@@ -64,7 +64,7 @@ import {
   validationWarning,
 } from "@45drives/houston-common-ui";
 import type { ResultAsync } from "neverthrow";
-import { computed, inject, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import { type Target } from "../../../types/Target";
 import { ProcessError } from "@45drives/houston-common-lib";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
@@ -76,6 +76,9 @@ const _ = cockpit.gettext;
 const props = defineProps<{ target: Target; outgoingUserPresent: boolean }>();
 
 const emit = defineEmits(["closeEditor"]);
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+  if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+  const canCreate = computed(() => canEditIscsi.value);
 
 const chapTypeOptions = computed(() => {
   let chapTypes;

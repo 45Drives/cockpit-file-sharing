@@ -3,13 +3,11 @@ import type { Command } from "@45drives/houston-common-lib";
 
 export class PCSResource {
     name: string;
-    generationCommand: Command;
     resourceType: PCSResourceType;
     resourceGroup: PCSResourceGroup | undefined;
 
-    constructor(name: string, generationCommand: Command, type: PCSResourceType, group?: PCSResourceGroup) {
+    constructor(name: string, type: PCSResourceType, group?: PCSResourceGroup) {
         this.name = name;
-        this.generationCommand = generationCommand;
         this.resourceType = type
         this.resourceGroup = group;
     }
@@ -44,7 +42,7 @@ export const PCSResourceTypeInfo: { [key in PCSResourceType]: PCSResourceInfo } 
     },
     [PCSResourceType.LVM]: {
         namePrefix: "iscsi_lvm",
-        internalTypeName: "LVM_activate",
+        internalTypeName: "LVM-activate",
         orderInGroup: 2,
     },
     [PCSResourceType.TARGET]: {

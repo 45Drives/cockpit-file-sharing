@@ -126,14 +126,38 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
     }
-
-    getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
+    private getUsedByIscsiDeviceNames(): ResultAsync<Set<string>, ProcessError> {
+        return this.server
+          .execute(
+            new Command(["bash","-lc","cat /sys/kernel/scst_tgt/targets/iscsi/*/ini_groups/*/luns/*/device/prod_id 2>/dev/null || true",
+            ])
+          )
+          .map((proc) => {
+            const names = proc
+              .getStdout()
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            return new Set(names);
+          });
+      }
+      
+      getVirtualDevices(): ResultAsync<VirtualDevice[], ProcessError> {
         const deviceTypesToCheck = [DeviceType.BlockIO, DeviceType.FileIO];
-
-        const results = deviceTypesToCheck.map((deviceType) => this.getVirtualDevicesOfDeviceType(deviceType));
-
-        return ResultAsync.combine(results).map((devices) => devices.flat());
-    }
+        const results = deviceTypesToCheck.map((t) => this.getVirtualDevicesOfDeviceType(t));
+      
+        return ResultAsync.combine(results)
+          .map((devices) => devices.flat())
+          .andThen((devices) =>
+            this.getUsedByIscsiDeviceNames().map((usedSet) => {
+              for (const d of devices) {
+                d.assigned = usedSet.has(d.deviceName);
+              }
+              return devices;
+            })
+          );
+      }
+      
 
     getVirtualDevicesOfDeviceType(deviceType: DeviceType): ResultAsync<VirtualDevice[], ProcessError> { 
         return this.server.execute(new Command(["find", this.deviceTypeToHandlerDirectory[deviceType], ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")])).map(
@@ -163,7 +187,6 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
 
                     return ok(filePathString);
                 });  
-
                 return ResultAsync.combine([blockSizeResult, filePathResult]).map(([blockSize, filePath]) => {
                     return new VirtualDevice(virtualDeviceName, filePath, blockSize, deviceType);
                 });

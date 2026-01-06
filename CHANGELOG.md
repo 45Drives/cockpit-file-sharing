@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.4.0-1
+## Cockpit File Sharing 4.4.1-10
 
-* Added smbpasswd management
+* building package internal for repo

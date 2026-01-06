@@ -18,11 +18,8 @@
     <template v-slot:footer>
       <div class="button-group-row justify-end grow">
         <button class="btn btn-secondary" @click="handleClose">{{ "Cancel" }}</button>
-        <button
-          class="btn btn-primary"
-          @click="actions.createConfiguration"
-          :disabled="!validationScope.isValid() || !modified"
-        >
+        <button class="btn btn-primary" @click="promptCreateInitiator"
+          :disabled="!validationScope.isValid() || !modified || !canCreate">
           {{ "Create" }}
         </button>
       </div>
@@ -40,27 +37,28 @@ import {
   validationSuccess,
   ValidationResultView,
   wrapActions,
-  ValidationScope,
+  ValidationScope, confirmBeforeAction
 } from "@45drives/houston-common-ui";
 import type { ResultAsync } from "neverthrow";
-import { inject, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import { ProcessError } from "@45drives/houston-common-lib";
 import type { InitiatorGroup } from "@/tabs/iSCSI/types/InitiatorGroup";
 import { Initiator } from "@/tabs/iSCSI/types/Initiator";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
+import { useUserSettings } from "@/common/user-settings";
 
 const _ = cockpit.gettext;
 
 const props = defineProps<{ initiatorGroup: InitiatorGroup }>();
 
-const emit = defineEmits(["closeEditor"]);
+const emit = defineEmits(["closeEditor", "created"]);
 
 const newInitiator = ref<Initiator>(Initiator.empty());
 
 const { tempObject: tempInitiator, modified, resetChanges } = useTempObjectStaging(newInitiator);
-
-const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
-
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+const canCreate = computed(() => canEditIscsi.value); const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 const handleClose = () => {
   emit("closeEditor");
   resetChanges();
@@ -69,7 +67,10 @@ const handleClose = () => {
 const createConfiguration = () => {
   return driver
     .andThen((driver) => driver.addInitiatorToGroup(props.initiatorGroup, tempInitiator.value))
-    .map(() => handleClose())
+    .map(() => {
+      emit("created")
+      handleClose()
+    })
     .mapErr(
       (error) =>
         new ProcessError(
@@ -80,6 +81,31 @@ const createConfiguration = () => {
 
 const actions = wrapActions({ createConfiguration });
 
+
+const creationBody = computed(() => {
+  const base = `Add "${tempInitiator.value.name}" initiator to the group ${props.initiatorGroup.name}?`;
+
+  const clusteredWarning = `Changing this initiator group may restart related resources and disrupt active sessions. Recommended to perform during a maintenance window.`
+
+  const isClustered = useUserSettings().value.iscsi.clusteredServer === true;
+
+  return isClustered ? `${base}\n${clusteredWarning.trim()}` : base;
+});
+
+
+
+const promptCreateInitiator = () => {
+  return confirmBeforeAction(
+    {
+      header: _("Confirm"),
+      body:
+        creationBody.value,
+      dangerous: true
+    },
+    actions.createConfiguration
+  )();
+
+}
 const validationScope = new ValidationScope();
 
 const { validationResult: initiatorNameValidationResult } = validationScope.useValidator(() => {
