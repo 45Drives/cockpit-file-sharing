@@ -27,11 +27,7 @@
     <template v-slot:footer>
       <div class="button-group-row justify-end grow">
         <button class="btn btn-secondary" @click="handleClose">{{ "Cancel" }}</button>
-        <button
-          class="btn btn-primary"
-          @click="actions.createLun"
-        :disabled="!validationScope.isValid() || !canCreate"
-        >
+        <button class="btn btn-primary" @click="actions.createLun" :disabled="!validationScope.isValid() || !canCreate">
           {{ "Create" }}
         </button>
       </div>
@@ -54,7 +50,7 @@ import {
   wrapActions,
   type SelectMenuOption
 } from "@45drives/houston-common-ui";
-import type { ResultAsync } from "neverthrow";
+import { ResultAsync, okAsync, errAsync } from "neverthrow";
 import { computed, inject, ref, toRaw, type ComputedRef, type Ref } from "vue";
 import { ISCSIDriver } from "../../../types/drivers/ISCSIDriver";
 import type { InitiatorGroup } from "../../../types/InitiatorGroup";
@@ -66,17 +62,17 @@ const _ = cockpit.gettext;
 
 const props = defineProps<{ initiatorGroup: InitiatorGroup }>();
 
-const emit = defineEmits(["closeEditor","created"]);
+const emit = defineEmits(["closeEditor", "created"]);
 
-defineExpose({populateNextNumber})
+defineExpose({ populateNextNumber })
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const devices = inject<Ref<VirtualDevice[]>>("virtualDevices")!;
-  const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
-  if (!canEditIscsi) throw new Error("canEditIscsi not provided");
-  const canCreate = computed(() => canEditIscsi.value);
-  
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+const canCreate = computed(() => canEditIscsi.value);
+
 const deviceOptions: ComputedRef<SelectMenuOption<string>[]> = computed(() =>
   devices.value.filter((device) => !device.vgName && !device.assigned && !props.initiatorGroup.logicalUnitNumbers.find((lun) => lun.blockDevice === device)).map((device) => ({ label: device.deviceName, value: device.deviceName }))
 );
@@ -110,7 +106,7 @@ const handleClose = () => {
 const createLun = () => {
   const dev = devices.value.find(d => d.deviceName === tempLun.value.name);
   if (!dev) {
-    return Result.err(new ProcessError(`Device ${tempLun.value.name} not found`));
+    return errAsync(new ProcessError(`Device ${tempLun.value.name} not found`));
   }
   dev.assigned = true;
 
@@ -120,32 +116,36 @@ const createLun = () => {
   };
 
   return driver
-  .andThen(d => d.addLogicalUnitNumberToGroup(props.initiatorGroup, payload))
-  .map((pinnedNode ) => {
-    console.log("execServer:", pinnedNode);
-    if(pinnedNode){
-      dev.server = pinnedNode;
-    }
-    console.log("dev server", dev.server)
-  })
-  
-  .mapErr(error => new ProcessError(
-    `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
-  ))
-  .andThen(() =>
-      driver.andThen(d => d.getnode())
-      )
-      .map(() => {
-        emit("created")
-        handleClose();
-})
+    .andThen((d) =>
+      d.addLogicalUnitNumberToGroup(props.initiatorGroup, payload)
+        .map((pinnedNode) => ({ d, pinnedNode }))
+    )
+    .map(({ d, pinnedNode }) => {
+      if (pinnedNode) dev.server = pinnedNode;
+      return d;
+    })
+    .mapErr(
+      (error) =>
+        new ProcessError(
+          `Unable to add LUN to group ${props.initiatorGroup.name}: ${error.message}`
+        )
+    )
+    .andThen((d) => {
+      const fn = (d as any).getnode;
+      return typeof fn === "function" ? fn.call(d) : okAsync(undefined);
+    })
+    .map(() => {
+      emit("created");
+      handleClose();
+    });
 };
+
 
 function populateNextNumber() {
   let nextNumber = 0;
 
   const existingNumbers = props.initiatorGroup.logicalUnitNumbers.map((lun) => lun.unitNumber);
-  
+
   while (existingNumbers.includes(nextNumber)) {
     nextNumber += 1;
   }

@@ -1,12 +1,14 @@
 <template>
   <tr>
-    <td class="max-w-40 truncate" :title="device.deviceName" >{{ device.deviceName }}</td>
-    <td class="max-w-40 truncate":title="device.filePath" >{{ device.filePath }}</td>
-    <td>{{ `${_cockpit.format_bytes(device.maximumSize)} total` }}</td>
-        <td>{{ getDeviceType() }}</td>
-    <td v-if="useUserSettings().value.iscsi.clusteredServer">{{ device.assigned ? 'Yes' : 'No' }}</td>
+    <td class="max-w-40 truncate" :title="device.deviceName">{{ device.deviceName }}</td>
+    <td class="max-w-40 truncate" :title="device.filePath">{{ device.filePath }}</td>
+    <td v-if="useUserSettings().value.iscsi.clusteredServer">{{ `${_cockpit.format_bytes(device.maximumSize)} ` }}</td>
+    <td v-else>{{ device.blockSize }}</td>
 
-    <td v-if="useUserSettings().value.iscsi.clusteredServer " >  {{ displayServerAddress(device.server) }}</td>
+    <td>{{ getDeviceType() }}</td>
+    <td>{{ device.assigned ? 'Yes' : 'No' }}</td>
+
+    <td v-if="useUserSettings().value.iscsi.clusteredServer"> {{ displayServerAddress(device.server) }}</td>
     <td v-if="useUserSettings().value.iscsi.clusteredServer" class="button-group-row justify-end">
       <button @click="showExpandScreen = true">
         <span class="sr-only">Resize</span>
@@ -26,7 +28,7 @@
   </tr>
 
   <Modal :show="showExpandScreen" @click-outside="showExpandScreen = false">
-    <RBDExpansionScreen :device="device" @close="showExpandScreen = false; emit('update');"/>
+    <RBDExpansionScreen :device="device" @close="showExpandScreen = false; emit('update');" />
   </Modal>
 
 </template>
@@ -35,7 +37,7 @@
 import { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 import { TrashIcon } from "@heroicons/vue/20/solid";
 import { wrapActions, confirmBeforeAction } from "@45drives/houston-common-ui";
-import { inject, ref,reactive } from "vue";
+import { inject, ref, reactive } from "vue";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import { ResultAsync } from "neverthrow";
 import { ProcessError } from "@45drives/houston-common-lib";
@@ -55,7 +57,7 @@ const _cockpit = cockpit;
 const _ = cockpit.gettext;
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!
-  const serverAddr = reactive(new Map<object, string>());
+const serverAddr = reactive(new Map<object, string>());
 const showExpandScreen = ref(false);
 
 const emit = defineEmits<{
@@ -74,7 +76,7 @@ function displayServerAddress(s?: any /* Server */): string {
   return cached || host; // fallback to host until we resolve
 }
 
-  const deleteDevice = () => {
+const deleteDevice = () => {
   return driver
     .andThen(d => d.removeVirtualDevice(props.device))
     .map(() => {

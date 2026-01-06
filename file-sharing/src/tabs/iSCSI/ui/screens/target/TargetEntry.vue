@@ -64,7 +64,7 @@ const deleteTarget = () => {
 const actions = wrapActions({ deleteTarget: deleteTarget });
 
 const promptDeletion = confirmBeforeAction(
-  { header: "Confirm", body: `Delete target ${props.target.name}?` },
+  { header: "Confirm", body: `Delete target ${props.target.name}?`, dangerous: true },
   actions.deleteTarget
 );
 </script>

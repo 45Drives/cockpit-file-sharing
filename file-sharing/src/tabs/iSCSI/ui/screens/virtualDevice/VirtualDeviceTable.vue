@@ -32,7 +32,7 @@
               <th scope="col">File Path</th>
               <th scope="col">Block Size</th>
               <th scope="col">Type</th>
-              <th v-if="useUserSettings().value.iscsi.clusteredServer" scope=" col">In Use</th>
+              <th scope=" col">In Use</th>
               <th v-if="useUserSettings().value.iscsi.clusteredServer" scope="col"> Node IP
               </th>
               <th scope="col" class="flex flex-row justify-end">

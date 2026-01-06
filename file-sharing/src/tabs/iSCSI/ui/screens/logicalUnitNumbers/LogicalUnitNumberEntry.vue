@@ -29,7 +29,7 @@ const props = defineProps<{
 const emit = defineEmits(["deleteEntry"]);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
-  const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
 if (!canEditIscsi) throw new Error("canEditIscsi not provided");
 const canCreate = computed(() => canEditIscsi.value);
 
@@ -42,7 +42,7 @@ const deleteEntry = () => {
     .map(() => {
       emit("deleteEntry");
       emit("lunDeleted", props.logicalUnitNumber.blockDevice?.deviceName);
-    })    .mapErr(
+    }).mapErr(
       (error) =>
         new ProcessError(
           `Unable to remove LUN ${props.logicalUnitNumber.unitNumber} from group ${props.initiatorGroup.name} : ${error.message}`
@@ -56,6 +56,7 @@ const promptDeletion = confirmBeforeAction(
   {
     header: "Confirm",
     body: `Delete LUN ${props.logicalUnitNumber.unitNumber} from group ${props.initiatorGroup.name}?`,
+    dangerous: true
   },
   actions.deleteEntry
 );

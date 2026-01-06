@@ -52,5 +52,5 @@ export abstract class ISCSIDriver {
 
     abstract getLogicalUnitNumbersOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<LogicalUnitNumber[], ProcessError>;
     abstract getInitiatorsOfInitiatorGroup(initiatorGroup: InitiatorGroup): ResultAsync<Initiator[], ProcessError>;
-    abstract getnode(): ResultAsync<Server | undefined, ProcessError>;
+    abstract getnode?(): ResultAsync<Server | undefined, ProcessError>;
 }

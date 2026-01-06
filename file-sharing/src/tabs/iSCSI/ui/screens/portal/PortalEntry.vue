@@ -2,7 +2,8 @@
   <tr>
     <td>{{ portal.address }}</td>
     <td class="button-group-row justify-end">
-      <button v-if="!(useUserSettings().value.iscsi.clusteredServer && target.portals.length <= 1)" @click="promptDeletion" :disabled="!canCreate">
+      <button v-if="!(useUserSettings().value.iscsi.clusteredServer && target.portals.length <= 1)"
+        @click="promptDeletion" :disabled="!canCreate">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
@@ -26,7 +27,7 @@ const props = defineProps<{ target: Target; portal: Portal }>();
 const emit = defineEmits(["deletePortal"]);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
-  const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
 if (!canEditIscsi) throw new Error("canEditIscsi not provided");
 const canCreate = computed(() => canEditIscsi.value);
 
@@ -42,14 +43,22 @@ const deletePortal = () => {
 
 const actions = wrapActions({ deletePortal });
 
+const deletionBody = computed(() => {
+  const base = `Delete initiator group "${props.portal.address}"?`;
+
+  const clusteredWarning = `
+Deleting an iSCSI portal can cause related targets or resources to restart and may disrupt active sessions using this target. It is strongly recommended to perform this
+ action during a planned maintenance window or other downtime if there is any chance it could affect production workloads.`;
+  const isClustered = useUserSettings().value.iscsi.clusteredServer === true;
+
+  return isClustered ? `${base}\n\n${clusteredWarning.trim()}` : base;
+});
+
 const promptDeletion = confirmBeforeAction(
   {
     header: "Confirm",
-    body: `Delete portal ${props.portal.address}?
-
-Deleting an iSCSI portal can cause related targets or resources to restart and may disrupt active sessions using this target. It is strongly recommended to perform this
- action during a planned maintenance window or other downtime if there is any chance it could affect production workloads.`,
- dangerous: true
+    body: deletionBody.value,
+    dangerous: true
   },
   actions.deletePortal
 );

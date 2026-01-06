@@ -33,6 +33,7 @@ import { ProcessError } from '@45drives/houston-common-lib';
 import type { Target } from '@/tabs/iSCSI/types/Target';
 import { InitiatorGroup } from '@/tabs/iSCSI/types/InitiatorGroup';
 import type { ISCSIDriver } from '@/tabs/iSCSI/types/drivers/ISCSIDriver';
+import { useUserSettings } from '@/common/user-settings';
 
 
 const _ = cockpit.gettext;
@@ -64,19 +65,30 @@ const createInitiatorGroup = () => {
 
 const actions = wrapActions({ createInitiatorGroup });
 
-const promptCreateInitiatorGroup = confirmBeforeAction(
-    {
-        header: _("Confirm"),
-        body: _(
-            `Create this initiator group?
-      
+const creationBody = computed(() => {
+    console.log("name at click:", tempInitiatorGroup.value.name);
+    const base = `Create "${tempInitiatorGroup.value.name}" initiator group?`;
+
+    const clusteredWarning = `
 Changing iSCSI initiator group configuration can cause related targets or resources to restart and may disrupt active sessions using this target.
 It is recommended to perform this action during a planned maintenance window or other downtime if it could impact production workloads.`
-        ),
-        dangerous: true
-    },
-    actions.createInitiatorGroup
-);
+
+    const isClustered = useUserSettings().value.iscsi.clusteredServer === true;
+
+    return isClustered ? `${base}\n\n${clusteredWarning.trim()}` : base;
+});
+
+
+const promptCreateInitiatorGroup = () => {
+    return confirmBeforeAction(
+        {
+            header: _("Confirm"),
+            body: creationBody.value,
+            dangerous: true,
+        },
+        actions.createInitiatorGroup
+    )();
+};
 
 const validationScope = new ValidationScope();
 

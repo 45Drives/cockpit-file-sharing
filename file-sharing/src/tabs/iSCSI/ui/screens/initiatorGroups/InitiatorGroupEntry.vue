@@ -6,10 +6,6 @@
         <span class="sr-only">Edit</span>
         <WrenchIcon class="size-icon icon-default" />
       </button>
-      <button v-if="!useUserSettings().value.iscsi.clusteredServer" @click="promptDeletion" >
-        <span class="sr-only">Delete</span>
-        <TrashIcon class="size-icon icon-danger" />
-      </button>
       <button @click="promptDeletion" :disabled="!canCreate">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
@@ -43,7 +39,6 @@ import type { Target } from "@/tabs/iSCSI/types/Target";
 import { useUserSettings } from "@/common/user-settings";
 
 const props = defineProps<{ target: Target; initiatorGroup: InitiatorGroup }>();
-
 // NOTE: add 'groupWillDelete' to your emits
 const emit = defineEmits(["deleteEntry", "groupWillDelete"]);
 
@@ -80,14 +75,24 @@ const deleteEntry = () => {
 
 const actions = wrapActions({ deleteEntry });
 
+const deletionBody = computed(() => {
+  const base = `Delete initiator group "${props.initiatorGroup.name}"?`;
+
+  const clusteredWarning = `
+Deleting an iSCSI initiator group can cause related targets or resources to restart, which may impact other sessions using this target.
+It is strongly recommended to perform this action during a planned maintenance window or other downtime if it could affect production workloads.`;
+
+  const isClustered = useUserSettings().value.iscsi.clusteredServer === true;
+
+  return isClustered ? `${base}\n\n${clusteredWarning.trim()}` : base;
+});
+
 const promptDeletion = confirmBeforeAction(
   {
     header: "Confirm Deletion",
-    body: `Delete initiator group "${props.initiatorGroup.name}"?
-
-Deleting an iSCSI initiator group can cause related targets or resources to  restart, which may impact other sessions using this target.
-It is strongly recommended to perform this action during a planned maintenance window or other downtime if it could affect production workloads.`,
-  dangerous: true},
+    body: deletionBody.value,
+    dangerous: true
+  },
   actions.deleteEntry
 );
 
