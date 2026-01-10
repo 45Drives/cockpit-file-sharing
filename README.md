@@ -31,7 +31,7 @@ User and group management was removed from cockpit-file-sharing in favour of man
 ### From 45Drives Repo (Recommended, Ubuntu 20.04 only)
 ```bash
 curl -sSL https://repo.45drives.com/setup | sudo bash
-sudo apt-get update
+sudo apt update
 sudo apt install cockpit-file-sharing
 ```
 ### Direct from .deb
