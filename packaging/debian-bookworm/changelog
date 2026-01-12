@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.5.2-1bookworm) bookworm; urgency=medium
+
+  * building test package for s3 management
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 12 Jan 2026 09:10:33 -0400
+
 cockpit-file-sharing (4.5.1-2bookworm) bookworm; urgency=medium
 
   * building pacakge for s3 testing
