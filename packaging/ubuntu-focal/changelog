@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.5.2-1focal) focal; urgency=medium
+
+  * Fix Windows ACLs toggle switch in Samba share editor - now stays on when extra
+    vfs objects are added
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 21 Jan 2026 07:18:09 -0400
+
 cockpit-file-sharing (4.5.1-4focal) focal; urgency=medium
 
   * build package
