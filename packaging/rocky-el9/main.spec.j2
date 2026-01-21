@@ -28,6 +28,9 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el9 install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Jan 21 2026 Joshua Boudreau <jboudreau@45drives.com> 4.5.2-1
+- Fix Windows ACLs toggle switch in Samba share editor - now stays on when extra
+  vfs objects are added
 * Tue Jan 06 2026 Rachit Hans <rhans@45drives.com> 4.5.1-4
 - build package
 * Tue Jan 06 2026 Rachit Hans <rhans@45drives.com> 4.5.1-1
