@@ -8,6 +8,7 @@ A Cockpit plugin for managing Samba and NFS shares.
     - Server description, workgroup, log level
     - Any other settings can be configured through the *Advanced Settings* dropdown
     - One-click advanced configuration global MacOS share optimization
+    - Manage user Samba passwords
 - Manage shares
     - Create, edit, and remove shares
     - Manage allow-list of valid users and groups
@@ -20,15 +21,16 @@ A Cockpit plugin for managing Samba and NFS shares.
         - Cephfs remount for properly reporting quota to client
     - Export and import of configuration (same format as `/etc/samba/smb.conf`)  
 
-User and group management was removed from cockpit-file-sharing in favour of managing Samba users through the new [cockpit-identities](https://github.com/45drives/cockpit-identities) plugin. Install that plugin to manage groups and Samba passwords.
+~~User and group management was removed from cockpit-file-sharing in favour of managing Samba users through the new [cockpit-identities](https://github.com/45drives/cockpit-identities) plugin. Install that plugin to manage groups and Samba passwords.~~
+
 ### NFS
 - Create, edit, and remove shares
 - Manage individual client settings
 - Export and import of configuration (same format as `/etc/exports`)
 
 # Installation
-## Ubuntu 20.04
-### From 45Drives Repo (Recommended, Ubuntu 20.04 only)
+## Ubuntu 20.04, Ubuntu 22.04
+### From 45Drives Repo (Recommended)
 ```bash
 curl -sSL https://repo.45drives.com/setup | sudo bash
 sudo apt-get update
@@ -37,11 +39,11 @@ sudo apt install cockpit-file-sharing
 ### Direct from .deb
 Installing this way may work for other versions of Ubuntu and Debian, but it is unsupported. You won't get automatic updates this way.
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.4.0/cockpit-file-sharing_4.4.0-1focal_all.deb
-sudo apt install ./cockpit-file-sharing_4.4.0-1focal_all.deb
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.4.2/cockpit-file-sharing_4.4.2-1jammy_all.deb
+sudo apt install ./cockpit-file-sharing_4.4.2-1jammy_all.deb
 ```
-## Rocky 8
-### From 45Drives Repo (Recommended, Rocky 8 only)
+## Rocky 8, Rocky 9
+### From 45Drives Repo (Recommended)
 ```bash
 curl -sSL https://repo.45drives.com/setup | sudo bash
 sudo dnf install cockpit-file-sharing
@@ -50,7 +52,7 @@ sudo dnf install cockpit-file-sharing
 Installing this way may work for other versions of Rocky/Centos/RHEL/Fedora/etc, but it is unsupported. You won't get automatic updates this way.
 ```bash
 # dnf or yum
-sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.4.0/cockpit-file-sharing-4.4.0-1.el8.noarch.rpm
+sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.4.2/cockpit-file-sharing-4.4.2-1.el9.noarch.rpm
 ```
 ## Generic Installation
 1. Install Dependencies

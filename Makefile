@@ -154,6 +154,11 @@ clean-all: clean FORCE
 	rm .yarnrc.yml .yarn/ -rf
 	find . -name node_modules -type d -exec rm -rf {} \; -prune
 
+README.md: README.md.j2 manifest.json
+	j2 README.md.j2 manifest.json > README.md
+
+readme: README.md
+
 help:
 	@echo 'make usage'
 	@echo
