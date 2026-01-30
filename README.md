@@ -33,7 +33,7 @@ A Cockpit plugin for managing Samba and NFS shares.
 ### From 45Drives Repo (Recommended)
 ```bash
 curl -sSL https://repo.45drives.com/setup | sudo bash
-sudo apt-get update
+sudo apt update
 sudo apt install cockpit-file-sharing
 ```
 ### Direct from .deb
