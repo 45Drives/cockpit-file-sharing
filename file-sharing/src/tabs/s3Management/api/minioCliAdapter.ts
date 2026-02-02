@@ -3,12 +3,10 @@ import type {MinioBucket,BucketVersioningStatus,MinioUser,MinioUserCreatePayload
   MinioBucketDashboardStats,MinioReplicationUsage,MinioGroupInfo,McAliasCandidate,
   MinioServiceAccount,
   MinioServiceAccountCreatePayload,
+  MinioServiceAccountUpdatePayload,
 } from "../types/types";
 import pLimit from "p-limit";
-import fs from "fs";
-import os from "os";
-import path from "path";
-import crypto from "crypto";
+
 
 import { legacy, server, Command, unwrap } from "@45drives/houston-common-lib";
 
@@ -47,7 +45,7 @@ export async function listMinioAliasCandidates(): Promise<McAliasCandidate[]> {
 
   const isPlaceholder = (s: string) => {
     const v = s.trim();
-    return !v || v === "YOUR-ACCESS-KEY-HERE" || v === "YOUR-SECRET-KEY-HERE";
+    return !v || v === "ACCESS-KEY-HERE" || v === "SECRET-KEY-HERE";
   };
 
   for (const r of rows) {
@@ -100,9 +98,6 @@ export async function isMinioHealthy(): Promise<boolean> {
 }
 
 
-
-  ;
-
 type RunMcResult = {
   stdout: string;
   stderr: string;
@@ -111,7 +106,7 @@ type RunMcResult = {
 async function runMc(args: string[], allowFailure = false): Promise<RunMcResult> {
   const cmd = new Command(["mc", ...args], { superuser: "try" });
 
-  // Always return ExitedProcess so we can read stdout/stderr even on failure
+  // Always return ExitedProcess so can read stdout/stderr even on failure
   const proc = await unwrap(server.execute(cmd, false));
 
   const stdout = proc.getStdout();
@@ -130,10 +125,6 @@ async function runMc(args: string[], allowFailure = false): Promise<RunMcResult>
 
   return { stdout, stderr, exitStatus };
 }
-
-
-
-
 
 function extractAdminCode(obj: any): string | undefined {
   const code = obj?.error?.cause?.error?.Code ;
@@ -452,7 +443,6 @@ export async function listMinioUsers(): Promise<MinioUser[]> {
     const username: string =
       obj.accessKey || obj.user || obj.userName || obj.username;
     if (!username) continue;
-    console.log("obj users", obj)
     const rawStatus: string =
       obj.userStatus || obj.status || obj.statusValue || "enabled";
 
@@ -471,7 +461,6 @@ export async function listMinioUsers(): Promise<MinioUser[]> {
       policies = [obj.policy];
     }
 
-    // Handle the JSON you just showed:
     // "policyName": "backups-full,consoleAdmin,diagnostics,readonly,readwrite,writeonly"
     if (!policies && typeof obj.policyName === "string") {
       policies = obj.policyName
@@ -655,7 +644,7 @@ export async function updateMinioUser(payload: MinioUserUpdatePayload): Promise<
     throw new Error("updateMinioUser: username is required");
   }
 
-  // 1) Fetch current state so we can diff policies & groups and get accessKey
+  // 1) Fetch current state so can diff policies & groups and get accessKey
   const current: MinioUserDetails = await getMinioUserInfo(username);
 
   const currentPolicies: string[] = (current.policies ?? []) as string[];
@@ -838,62 +827,45 @@ async function runCmd(args: string[]): Promise<{ stdout: string; stderr: string 
     const out = (stdout ?? "").toString();
     const err = (stderr ?? "").toString();
 
-    if (out) console.log("runCmd stdout =", out);
-    if (err) console.log("runCmd stderr =", err);
-
     return { stdout: out, stderr: err };
   } catch (state: any) {
     throw new Error(errorString(state));
   }
 }
 
-
-export async function createOrUpdateMinioPolicy(
-  name: string,
-  policyJson: string
-): Promise<void> {
-  let parsed;
+async function withTempJsonFile<T>(json: string, fn: (path: string) => Promise<T>): Promise<T> {
+  let parsed: any;
   try {
-    parsed = JSON.parse(policyJson);
+    parsed = JSON.parse(json);
   } catch (err) {
-    throw new Error(`Policy JSON for "${name}" is invalid: ${(err as Error).message}`);
+    throw new Error(`Policy JSON is invalid: ${(err as Error).message}`);
   }
-  const normalizedJson = JSON.stringify(parsed, null, 2);
+
+  const normalized = JSON.stringify(parsed, null, 2);
 
   let tmpFile: string | null = null;
-
   try {
-    // 1) Create temp file
-    const { stdout: tmpOut } = await runCmd([
-      "mktemp",
-      "/tmp/minio-policy-XXXXXX.json",
-    ]);
+    const { stdout } = await runCmd(["mktemp", "/tmp/minio-json-XXXXXX.json"]);
+    tmpFile = stdout.trim();
+    if (!tmpFile) throw new Error("Failed to create temp file with mktemp");
 
-    tmpFile = tmpOut.trim();
-    if (!tmpFile) {
-      throw new Error("Failed to create temporary policy file with mktemp");
-    }
-
-    // 2) Write JSON into the temp file
     const script = `cat << 'EOF' > "${tmpFile}"
-${normalizedJson}
+${normalized}
 EOF
 `;
     await runCmd(["sh", "-c", script]);
 
-    // 3) Create/update policy
-    await runMc(["admin","policy","create",MINIO_ALIAS,name,tmpFile,
-    ]);
+    return await fn(tmpFile);
   } finally {
-    // 4) Clean up temp file
     if (tmpFile) {
-      try {
-        await runCmd(["sh", "-c", `rm -f -- "${tmpFile}"`]);
-      } catch (e) {
-        console.error("Failed to delete temp file", tmpFile, e);
-      }
+      try { await runCmd(["sh", "-c", `rm -f -- "${tmpFile}"`]); } catch {}
     }
   }
+}
+export async function createOrUpdateMinioPolicy(name: string, policyJson: string): Promise<void> {
+  await withTempJsonFile(policyJson, async (tmpFile) => {
+    await runMc(["admin", "policy", "create", MINIO_ALIAS, name, tmpFile]);
+  });
 }
 
 export async function deleteMinioPolicy(name: string): Promise<void> {
@@ -1026,7 +998,6 @@ if (options.quotaSize !== undefined) {
     const { tags } = options;
 
     if (tags === null) {
-      // Clear all tags. If there were none, it's ok – ignore that specific error.
       try {
         await runMc(["tag", "remove", bucketPath]);
       } catch (state: any) {
@@ -1128,7 +1099,6 @@ export async function getMinioBucketDashboardStats(
   const ilmConfigured: boolean | undefined =
     ilm && typeof ilm === "object" ? (Object.keys(ilm).length > 0) : undefined;
 
-  // Histograms (these keys match your JSON output)
   const sizeHistogramSrc =
     usage.objectsSizesHistogram || usage.ObjectSizesHistogram || usage.objectSizesHistogram || null;
 
@@ -1173,69 +1143,33 @@ export async function getMinioBucketDashboardStats(
 }
 
 
-function writeTempPolicyFile(policyJson: string): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "minio-policy-"));
-  const file = path.join(dir, `policy-${crypto.randomBytes(8).toString("hex")}.json`);
-  fs.writeFileSync(file, policyJson, { encoding: "utf8" });
-  return file;
-}
-
 export async function createMinioServiceAccount(payload: MinioServiceAccountCreatePayload) {
   const username = payload.username?.trim();
   if (!username) throw new Error("createMinioServiceAccount: username is required");
 
   const args = ["admin", "accesskey", "create", MINIO_ALIAS, username];
-
   if (payload.name) args.push("--name", payload.name);
   if (payload.description) args.push("--description", payload.description);
-  if (payload.expiry) args.push("--expiry-duration", payload.expiry);
+  if (payload.expiresAt) args.push("--expiry", payload.expiresAt);
   if (payload.accessKey) args.push("--access-key", payload.accessKey);
   if (payload.secretKey) args.push("--secret-key", payload.secretKey);
-  let tempPolicyPath: string | null = null;
 
-  try {
-    const policyPath =
-      payload.policyFilePath ??
-      (payload.policyJson ? (tempPolicyPath = writeTempPolicyFile(payload.policyJson)) : null);
-
-    if (policyPath) args.push("--policy", policyPath);
-
+  if (payload.policyFilePath) {
+    args.push("--policy", payload.policyFilePath);
     const out = await runMc(args);
-
-    const accessKey = out.stdout.match(/Access Key:\s*(\S+)/)?.[1];
-    const secretKey = out.stdout.match(/Secret Key:\s*(\S+)/)?.[1];
-    const expiration = out.stdout.match(/Expiration:\s*(.*)$/m)?.[1]?.trim() ?? null;
-
-    if (!accessKey || !secretKey) {
-      throw new Error("createMinioServiceAccount: failed to parse created credentials");
-    }
-
-    return { accessKey, secretKey, expiresAt: expiration };
-  } finally {
-    if (tempPolicyPath) {
-      try { fs.unlinkSync(tempPolicyPath); } catch {}
-      try { fs.rmdirSync(path.dirname(tempPolicyPath)); } catch {}
-    }
+    return parseCreatedCreds(out.stdout);
   }
+
+  if (payload.policyJson?.trim()) {
+    return await withTempJsonFile(payload.policyJson, async (p) => {
+      const out = await runMc([...args, "--policy", p]);
+      return parseCreatedCreds(out.stdout);
+    });
+  }
+
+  const out = await runMc(args);
+  return parseCreatedCreds(out.stdout);
 }
-
-export type MinioServiceAccountUpdatePayload = {
-  accessKey: string;
-
-  name?: string;
-  description?: string;
-
-  // Same format you used on create: e.g. "30d", "12h", "1y"
-  expiry?: string;
-
-  // Either provide a path, or JSON and we create a temp file
-  policyFilePath?: string;
-  policyJson?: string;
-
-  // Optional status update in same call
-  status?: "enabled" | "disabled";
-};
-
 export async function updateMinioServiceAccount(payload: MinioServiceAccountUpdatePayload): Promise<void> {
   const accessKey = payload.accessKey?.trim();
   if (!accessKey) throw new Error("updateMinioServiceAccount: accessKey is required");
@@ -1244,30 +1178,75 @@ export async function updateMinioServiceAccount(payload: MinioServiceAccountUpda
 
   if (payload.name) args.push("--name", payload.name);
   if (payload.description) args.push("--description", payload.description);
-  if (payload.expiry) args.push("--expiry-duration", payload.expiry);
 
-  if (payload.status) {
-    args.push("--status", payload.status);
+  if (payload.clearExpiry) {
+  } else if (payload.expiresAt) {
+    args.push("--expiry", normalizeExpiryForMc(payload.expiresAt));
   }
 
-  let tempPolicyPath: string | null = null;
-
-  try {
-    const policyPath =
-      payload.policyFilePath ??
-      (payload.policyJson ? (tempPolicyPath = writeTempPolicyFile(payload.policyJson)) : null);
-
-    if (policyPath) args.push("--policy", policyPath);
-
-    await runMc(args);
-  } finally {
-    if (tempPolicyPath) {
-      try { fs.unlinkSync(tempPolicyPath); } catch {}
-      try { fs.rmdirSync(path.dirname(tempPolicyPath)); } catch {}
-    }
+  if (payload.policyFilePath) {
+    await runMc([...args, "--policy", payload.policyFilePath]);
+    return;
   }
+
+  if (payload.policyJson?.trim()) {
+    await withTempJsonFile(payload.policyJson, async (p) => {
+      await runMc([...args, "--policy", p]);
+    });
+    return;
+  }
+
+  await runMc(args);
 }
 
+
+function normalizeExpiryForMc(iso: string): string {
+  return iso.replace(/\.\d{3}Z$/, "Z");
+}
+function normalizeExpiry(s: string | null): string | null {
+  if (!s) return null;
+  const v = s.trim();
+  if (!v) return null;
+  if (v.toLowerCase() === "never") return null;
+  return v;
+}
+function pickExpiryIso(obj: any): string | null {
+  const v = obj?.expiration ?? null;
+  if (v == null) return null;
+
+  // numeric timestamps
+  if (typeof v === "number") {
+    if (v <= 0) return null;
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return null;
+    if (d.getTime() === 0) return null;
+    return d.toISOString().replace(/\.\d{3}Z$/, "Z");
+  }
+
+  const s = String(v).trim();
+  if (!s) return null;
+  if (s.toLowerCase() === "never") return null;
+
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+
+  if (d.getTime() === 0) return null;
+
+  if (d.getUTCFullYear() <= 1971) return null;
+
+  return s;
+}
+
+function parseCreatedCreds(stdout: string) {
+  const accessKey = stdout.match(/Access Key:\s*(\S+)/)?.[1];
+  const secretKey = stdout.match(/Secret Key:\s*(\S+)/)?.[1];
+
+  const expirationRaw = stdout.match(/Expiration:\s*(.*)$/m)?.[1]?.trim() ?? null;
+  const expiresAt = normalizeExpiry(expirationRaw);
+
+  if (!accessKey || !secretKey) throw new Error("Failed to parse created credentials");
+  return { accessKey, secretKey, expiresAt };
+}
 
 export async function disableMinioServiceAccount(accessKey: string) {
   await runMc(["admin", "accesskey", "disable", MINIO_ALIAS, accessKey]);
@@ -1289,11 +1268,12 @@ export async function getMinioServiceAccountInfo(accessKey: string): Promise<{
   status?: "enabled" | "disabled";
   expiresAt?: string | null;
   parentUser?: string;
+  policyJson?: string;    
   errorCode?: string;
 }> {
   const { stdout, stderr, exitStatus } = await runMc(
     ["admin", "accesskey", "info", MINIO_ALIAS, accessKey, "--json"],
-   true 
+    true
   );
 
   const payloadText = stdout.trim() || stderr.trim();
@@ -1301,7 +1281,6 @@ export async function getMinioServiceAccountInfo(accessKey: string): Promise<{
 
   const obj = tryParseJson(payloadText);
   if (!obj) return { accessKey };
-
   if (exitStatus !== 0 || obj.status === "error") {
     const code = extractAdminCode(obj);
     if (code === "XMinioAdminNoSuchAccessKey") {
@@ -1310,28 +1289,27 @@ export async function getMinioServiceAccountInfo(accessKey: string): Promise<{
     return { accessKey, errorCode: code };
   }
 
-  const s = String(obj?.accountStatus ??"").toLowerCase();
+  const s = String(obj?.accountStatus ?? "").toLowerCase();
   const status =
-    s === "off" || s === "disabled"
-      ? "disabled"
-      : s === "on" || s === "enabled"
-      ? "enabled"
-      : undefined;
-  console.log("obj getaccount: ", obj)
+    s === "off" || s === "disabled" ? "disabled" :
+    s === "on" || s === "enabled" ? "enabled" :
+    undefined;
+
   return {
-    accessKey: obj?.accessKey ,
-    name: obj?.name ,
-    description: obj?.description ,
+    accessKey: obj?.accessKey ?? accessKey,
+    name: obj?.name,
+    description: obj?.description,
     status,
-    expiresAt: obj?.expiration ?? null,
-    parentUser: obj?.parentUser ,
+    expiresAt: pickExpiryIso(obj) ?? null,
+
+    parentUser: obj?.parentUser,
+    policyJson: obj?.policy ? JSON.stringify(obj.policy, null, 2) : undefined, // here
   };
 }
-
 export async function listMinioServiceAccounts(username: string): Promise<MinioServiceAccount[]> {
   const { stdout } = await runMc(
     ["admin", "accesskey", "list", MINIO_ALIAS, username, "--json"],
-     false 
+    false
   );
 
   const text = (stdout ?? "").trim();
@@ -1343,7 +1321,7 @@ export async function listMinioServiceAccounts(username: string): Promise<MinioS
   const base = svcaccs
     .map((x) => ({
       accessKey: x?.accessKey,
-      expiresAt: x?.expiration ?? null,
+      expiresAt: pickExpiryIso(x),
     }))
     .filter((x) => x.accessKey);
 
@@ -1351,19 +1329,18 @@ export async function listMinioServiceAccounts(username: string): Promise<MinioS
     base.map(async (x) => {
       const info = await getMinioServiceAccountInfo(x.accessKey);
 
-      // Important: don't default to "enabled" when we couldn't verify.
-      // If info says disabled via NoSuchAccessKey -> disabled.
-      // If info is unknown -> keep undefined or mark as "enabled" ONLY if you want optimistic UI.
       const status =
         info.status ??
         (info.errorCode === "XMinioAdminNoSuchAccessKey" ? "disabled" : undefined);
 
+      const mergedExpiresAt =
+        info.errorCode ? (x.expiresAt ?? null) : (info.expiresAt ?? null);
       return {
         accessKey: x.accessKey,
-        expiresAt: info.expiresAt ?? x.expiresAt ?? null,
+        expiresAt: mergedExpiresAt,
         name: info.name,
         description: info.description,
-        status: status ?? "enabled", // change to "unknown" if your type allows it
+        status: status ?? "enabled",
       } satisfies MinioServiceAccount;
     })
   );

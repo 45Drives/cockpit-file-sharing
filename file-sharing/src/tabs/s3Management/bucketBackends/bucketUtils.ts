@@ -106,3 +106,31 @@ export function parseTags(text: string): Record<string, string> {
     }
     return result;
   }
+
+  // datetime.ts
+export function formatIsoLocal(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  return new Intl.DateTimeFormat(undefined, {
+    timeZone: tz,
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZoneName: "short",
+  }).format(d);
+}
+
+export function tryFormatExpiryLocal(expiresAt?: string | null): string {
+  if (!expiresAt) return "";
+  return formatIsoLocal(expiresAt);
+}
+
+export function localTimeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}

@@ -431,7 +431,7 @@ export interface MinioServiceAccountCreatePayload {
   username: string; // parent user
   name?: string;
   description?: string;
-  expiry?: string; 
+  expiresAt?: string; 
   accessKey: string; 
   secretKey: string; 
   policyFilePath?: string; 
@@ -439,3 +439,16 @@ export interface MinioServiceAccountCreatePayload {
   comment?: string    
 
 }
+
+export type MinioServiceAccountUpdatePayload = {
+  accessKey: string;
+  name?: string;
+  description?: string;
+
+  expiresAt?: string;      // set absolute expiry
+  clearExpiry?: boolean;   // explicitly clear expiry
+
+  policyFilePath?: string;
+  policyJson?: string;
+  status?: "enabled" | "disabled";
+};
