@@ -427,7 +427,7 @@ async function getRgwUserS3Creds(uid: string): Promise<RgwS3Creds> {
 
 // Backwards-compatible wrappers (optional, keep call sites unchanged if you want)
 async function getDashboardS3Creds(): Promise<RgwS3Creds> {
-  return getRgwUserS3Creds("dashboard");
+  return getRgwUserS3Creds("ceph-dashboard");
 }
 
 async function getHoustonUiS3Creds(): Promise<RgwS3Creds> {

@@ -416,3 +416,26 @@ export type GarageBucketKeyGrant = {
 export type McAliasCandidate = {
   alias: string;
 };
+
+export type MinioAccessKeyStatus = "enabled" | "disabled";
+
+export interface MinioServiceAccount {
+  accessKey: string;
+  name?: string;
+  description?: string;
+  expiresAt?: string | null;
+  status?: MinioAccessKeyStatus;
+}
+
+export interface MinioServiceAccountCreatePayload {
+  username: string; // parent user
+  name?: string;
+  description?: string;
+  expiry?: string; 
+  accessKey: string; 
+  secretKey: string; 
+  policyFilePath?: string; 
+  policyJson?: string;      
+  comment?: string    
+
+}

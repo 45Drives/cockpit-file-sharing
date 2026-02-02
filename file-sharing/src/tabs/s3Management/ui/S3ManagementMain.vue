@@ -219,15 +219,6 @@ async function detectBackends() {
     isCephAvailable.value =
       cephRes.status === "fulfilled" ? !!cephRes.value : false;
 
-    if (minioRes.status === "rejected") {
-      pushNotification(new Notification("MinIO detection failed", String(minioRes.reason), "error"));
-    }
-    if (garageRes.status === "rejected") {
-      pushNotification(new Notification("Garage detection failed", String(garageRes.reason), "error"));
-    }
-    if (cephRes.status === "rejected") {
-      pushNotification(new Notification("Ceph RGW detection failed", String(cephRes.reason), "error"));
-    }
 
     selectedBackend.value = null;
     selectedView.value = null;

@@ -13,6 +13,7 @@
           <label class="mb-1 block text-md font-medium text-slate-300">Bucket name</label>
           <input v-model="modalForm.name" :disabled="mode === 'edit'" type="text" required
             class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1 disabled:opacity-60" />
+          <p v-if="nameError" class="mt-1 text-sm text-red-400">{{ nameError }}</p>
         </div>
 
         <div v-if="backend !== 'garage'" class="w-full min-w-0">
@@ -87,20 +88,17 @@
 
 
         <div class="mt-2 flex items-center justify-end gap-2 md:col-span-2">
-          <button type="button" @click="emit('close')"
-           :disabled="submitting"
-            class="rounded-md border border-default bg-danger px-3 py-1.5 text-md font-medium text-white hover:bg-danger/90 
+          <button type="button" @click="emit('close')" :disabled="submitting" class="rounded-md border border-default bg-danger px-3 py-1.5 text-md font-medium text-white hover:bg-danger/90 
             disabled:opacity-60 disabled:cursor-not-allowed ">
             Cancel
           </button>
-          <button type="submit"
-          :disabled="submitting"
-          class="rounded-md px-3 py-1.5 text-md font-medium text-white bg-success
+          <button type="submit" :disabled="submitting || !!nameError" class="rounded-md px-3 py-1.5 text-md font-medium text-white bg-success
          hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500
          focus:ring-offset-2 focus:ring-offset-slate-950
          disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-success">
             {{ mode === "create" ? "Create" : "Save changes" }}
           </button>
+
         </div>
       </form>
     </div>
@@ -127,7 +125,9 @@ type CephFormApi = {
 };
 const cephRef = ref<CephFormApi | null>(null);
 const MAX_TAGS = 10;
-
+const nameError = computed(() => {
+  return bucketNameError(modalForm.name);
+});
 type BucketFormModalProps =
   | {
     visible: boolean;
@@ -200,14 +200,14 @@ function initFromProps() {
   if (props.mode === "edit" && props.bucketToEdit) {
     resetForm();
 
-  if (props.backend === "ceph") {
-    const b = props.bucketToEdit as CephBucket;
-    modalForm.name = b.adminRef!; 
-    modalForm.region = b.region ?? "";
-    modalForm.owner = b.owner ?? "";
-    modalForm.tags = tagsObjectToArray(b.tags);
-    return;
-  }
+    if (props.backend === "ceph") {
+      const b = props.bucketToEdit as CephBucket;
+      modalForm.name = b.adminRef!;
+      modalForm.region = b.region ?? "";
+      modalForm.owner = b.owner ?? "";
+      modalForm.tags = tagsObjectToArray(b.tags);
+      return;
+    }
     if (props.backend === "minio") {
       const b = props.bucketToEdit;
 
@@ -250,6 +250,7 @@ const tagsLimitError = computed(() => {
 // BucketFormModal.vue submit()
 function submit() {
   if (props.submitting) return;
+  if (nameError.value) return;
   if (props.backend === "garage") {
     const api = garageRef.value;
     if (!api) return;
@@ -310,6 +311,25 @@ function submit() {
     return;
   }
 }
+
+function bucketNameError(name: string): string | null {
+  const n = (name ?? "").trim();
+
+  if (!n) return "Bucket name is required.";
+  if (n !== n.toLowerCase()) return "Bucket name must be lowercase.";
+  if (n.length < 3 || n.length > 63) return "Bucket name must be 3–63 characters.";
+  if (!/^[a-z0-9.-]+$/.test(n)) return "Use lowercase letters, numbers, dots (.) and hyphens (-) only.";
+  if (!/^[a-z0-9]/.test(n) || !/[a-z0-9]$/.test(n)) return "Must start and end with a letter or number.";
+  if (n.includes("..")) return "Cannot contain consecutive dots (..).";
+  if (n.includes(".-") || n.includes("-.")) return "Cannot contain '.-' or '-.'.";
+
+  // Optional but recommended to avoid AWS-incompatible names
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(n)) return "Cannot look like an IP address.";
+
+  return null;
+}
+
+
 
 watch(
   () => props.deps,
