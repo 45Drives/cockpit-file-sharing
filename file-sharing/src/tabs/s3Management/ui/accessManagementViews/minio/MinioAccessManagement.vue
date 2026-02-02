@@ -38,14 +38,14 @@
 
           <button type="button" class="px-3 py-2 border-b-2" :class="activeTab === 'policies'
               ? 'border-default text-default font-medium'
-              : 'border-transparent text-secondary hover:text-gray-700'
+              : 'border-transparent text-secondary hover:text-default'
             " @click="activeTab = 'policies'">
             Policies
           </button>
 
           <button type="button" class="px-3 py-2 border-b-2" :class="activeTab === 'groups'
               ? 'border-default text-default font-medium'
-              : 'border-transparent text-secondary hover:text-gray-700'
+              : 'border-transparent text-secondary hover:text-default'
             " @click="activeTab = 'groups'">
             Groups
           </button>
