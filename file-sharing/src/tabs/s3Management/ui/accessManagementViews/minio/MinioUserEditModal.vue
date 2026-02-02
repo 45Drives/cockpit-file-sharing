@@ -64,8 +64,8 @@
                 </div>
               </div>
 
-              <!-- Tabs -->
-              <div class="px-4 pt-3">
+              <!-- Tabs + New service account button -->
+              <div class="px-4 pt-3 flex items-center justify-between gap-3">
                 <div class="inline-flex rounded-md border border-default bg-accent p-1 text-xs">
                   <button type="button" class="rounded-md px-3 py-1.5" :class="activeAccessTab === 'policies'
                     ? 'bg-default text-default font-medium'
@@ -81,11 +81,16 @@
 
                   <button type="button" class="rounded-md px-3 py-1.5" :class="activeAccessTab === 'serviceAccounts'
                     ? 'bg-default text-default font-medium'
-                    : 'text-muted hover:text-default'"
-                    @click="activeAccessTab = 'serviceAccounts'; loadServiceAccounts()">
+                    : 'text-muted hover:text-default'" @click="activeAccessTab = 'serviceAccounts'; loadServiceAccounts()">
                     Service accounts
                   </button>
                 </div>
+
+                <button v-if="activeAccessTab === 'serviceAccounts'" type="button"
+                  class="inline-flex items-center justify-center rounded-md border border-default bg-primary px-3 py-1.5 text-xs text-default disabled:opacity-60"
+                  @click="openCreateServiceAccountModal()" :disabled="loading || !user">
+                  New access key
+                </button>
               </div>
 
               <!-- Policies -->
@@ -141,19 +146,6 @@
 
               <!-- Service accounts -->
               <div v-else class="px-4 py-4 space-y-4">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div class="text-sm text-default">
-                    Create and manage access keys for this user.
-                    <div class="text-xs text-default">Secret keys are only shown once after creation.</div>
-                  </div>
-
-                  <button type="button"
-                    class="inline-flex items-center justify-center rounded-md border border-default bg-primary px-3 py-1.5 text-xs text-default disabled:opacity-60"
-                    @click="openCreateServiceAccountModal()" :disabled="loading || !user">
-                    New access key
-                  </button>
-                </div>
-
                 <div v-if="saLoading" class="text-xs text-muted">Loading...</div>
 
                 <div v-else class="rounded-md border border-default overflow-hidden">
@@ -181,7 +173,7 @@
 
 
                           <span v-if="sa.status"> | Status: </span><span class="text-muted">{{ sa.status
-                            }}</span>
+                          }}</span>
                         </td>
                         <td class="px-3 py-2">
                           <div class="flex justify-end gap-2">
@@ -449,10 +441,5 @@ function closeServiceAccountModal() {
   saModalOpen.value = false;
   saModalServiceAccount.value = null;
 }
-const tzLabel = computed(() => localTimeZone());
 
-function getExpiryIso(sa: MinioServiceAccount): string {
-  const x = (sa as any)?.expiresAt ?? (sa as any)?.expiration ?? "";
-  return x ? String(x) : "";
-}
 </script>

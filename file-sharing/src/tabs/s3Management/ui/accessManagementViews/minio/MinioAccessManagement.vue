@@ -71,6 +71,7 @@ import { ref } from "vue";
 import MinioUsersTable from "./MinioUsersTable.vue";
 import MinioPoliciesView from "./MinioPoliciesView.vue";
 import MinioGroupsView from "./MinioGroupsView.vue";
+import { ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 
 const activeTab = ref<"users" | "policies" | "groups">("users");
 const emit = defineEmits<{ (e: "backToViewSelection"): void }>();
