@@ -1,3 +1,4 @@
-## Cockpit File Sharing 4.5.2-1
+## Cockpit File Sharing 4.5.3-1
 
-* building test package for s3 management
+*  added service account creation for minio users + building test pacakge
+*  added service account creation for minio users + building pacakge
