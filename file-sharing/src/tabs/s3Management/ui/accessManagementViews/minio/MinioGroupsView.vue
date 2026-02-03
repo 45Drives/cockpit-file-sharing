@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between mb-3">
       <div>
         <h2 class="text-lg font-semibold">Groups</h2>
-        <p class="text-xs text-gray-500">
+        <p class="text-xs text-muted">
           Manage MinIO groups that can hold multiple users and shared policies.
         </p>
       </div>
@@ -62,7 +62,7 @@
       </table>
     </div>
 
-    <div v-else class="py-3 text-sm text-gray-500">
+    <div v-else class="py-3 text-sm text-muted">
       No groups found.
     </div>
 

@@ -48,12 +48,12 @@
             </label>
           </div>
 
-          <p v-else class="text-sm text-gray-500 italic mt-1">
+          <p v-else class="text-sm text-muted italic mt-1">
             No users available. At least one user is required to create a group.
           </p>
         </div>
 
-        <p class="text-sm text-gray-500">
+        <p class="text-sm text-muted">
           Groups are used to attach shared policies to multiple users. MinIO requires
           at least one member when creating a group.
         </p>

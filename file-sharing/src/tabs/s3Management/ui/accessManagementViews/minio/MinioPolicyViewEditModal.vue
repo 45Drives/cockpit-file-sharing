@@ -32,7 +32,7 @@
             </label>
             <input type="text" :value="policyName || ''"
               class="w-full border border-default bg-default rounded px-2 py-1 text-sm text-default" disabled />
-            <p class="text-sm text-gray-500 mt-1">
+            <p class="text-sm text-muted mt-1">
               Policy names are managed in MinIO and cannot be changed here.
             </p>
           </div>
@@ -61,7 +61,7 @@
               class="w-full border border-default bg-default rounded px-2 py-2 text-xs font-mono min-h-[260px]"
               placeholder="Policy JSON will appear here" />
 
-            <p class="text-sm text-gray-500 mt-1">
+            <p class="text-sm text-muted mt-1">
               Edit the JSON to change actions, resources, or conditions. Make sure it stays
               valid JSON and compatible with S3-style policies.
             </p>

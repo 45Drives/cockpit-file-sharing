@@ -85,7 +85,7 @@
         </table>
       </div>
 
-      <div v-else class="py-3 text-sm text-gray-500">
+      <div v-else class="py-3 text-sm text-muted">
         No MinIO users found.
       </div>
     </section>

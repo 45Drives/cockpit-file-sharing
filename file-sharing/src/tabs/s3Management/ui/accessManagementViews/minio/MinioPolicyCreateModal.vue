@@ -31,7 +31,7 @@
           <input v-model.trim="name" type="text"
             class="w-full border border-default bg-default rounded px-2 py-1 text-sm"
             placeholder="e.g. backups-readwrite" />
-          <p class="text-xs text-gray-500 mt-1">
+          <p class="text-xs text-muted mt-1">
             This is the name MinIO will use for the policy (e.g. in
             <span class="font-mono">mc admin policy attach</span>.
           </p>
@@ -70,7 +70,7 @@
     ]
   }' />
 
-          <p class="text-xs text-gray-500 mt-1">
+          <p class="text-xs text-muted mt-1">
             Policy syntax is S3-compatible JSON. You can paste an existing policy or
             start from the template and adjust bucket name, actions, and resources.
           </p>

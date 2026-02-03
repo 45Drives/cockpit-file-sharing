@@ -46,7 +46,7 @@
                 <span class="font-mono">{{ u }}</span>
               </label>
 
-              <p v-if="!availableUsers.length" class="text-xs italic text-gray-500">
+              <p v-if="!availableUsers.length" class="text-xs italic text-muted">
                 No users available.
               </p>
             </div>
@@ -69,14 +69,14 @@
                 <span>{{ p }}</span>
               </label>
 
-              <p v-if="!availablePolicies.length" class="text-xs italic text-gray-500">
+              <p v-if="!availablePolicies.length" class="text-xs italic text-muted">
                 No policies available.
               </p>
             </div>
           </section>
         </div>
 
-        <div v-else class="text-xs text-gray-500">
+        <div v-else class="text-xs text-muted">
           No group selected.
         </div>
       </div>

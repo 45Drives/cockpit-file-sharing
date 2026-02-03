@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between mb-3">
       <div>
         <h2 class="text-lg font-semibold">Policies</h2>
-        <p class="text-xs text-gray-500">
+        <p class="text-xs text-muted">
           Manage MinIO policies that can be attached to users and groups.
         </p>
       </div>
@@ -58,7 +58,7 @@
       </table>
     </div>
 
-    <div v-else class="py-3 text-sm text-gray-500">
+    <div v-else class="py-3 text-sm text-muted">
       No policies found.
     </div>
 

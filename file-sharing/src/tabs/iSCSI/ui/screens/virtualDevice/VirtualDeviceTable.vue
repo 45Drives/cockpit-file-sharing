@@ -57,7 +57,7 @@
     </template>
   </template>
   <tr v-else>
-    <td colspan="6" class="p-4 text-gray-500 text-sm text-center">Loading devices...</td>
+    <td colspan="6" class="p-4 text-muted text-sm text-center">Loading devices...</td>
   </tr>
 </template>
 

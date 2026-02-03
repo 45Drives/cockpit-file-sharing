@@ -58,7 +58,7 @@
               <div class="flex items-center justify-between border-b border-default px-4 py-3">
                 <div>
                   <div class="text-xs font-semibold uppercase tracking-wide text-default">Access</div>
-                  <div class="mt-0.5 text-xs text-secondary">
+                  <div class="mt-0.5 text-xs text-muted">
                     Configure policies, groups, and service accounts for this user.
                   </div>
                 </div>
@@ -221,7 +221,7 @@
               <div class="flex items-center justify-between">
                 <div>
                   <div class="text-sm font-medium text-default">Reset user secret key</div>
-                  <div class="text-xs text-default">
+                  <div class="text-xs text-muted">
                     If enabled, the user must use the new secret key for MinIO access.
                   </div>
                 </div>
