@@ -81,7 +81,8 @@
 
                   <button type="button" class="rounded-md px-3 py-1.5" :class="activeAccessTab === 'serviceAccounts'
                     ? 'bg-default text-default font-medium'
-                    : 'text-muted hover:text-default'" @click="activeAccessTab = 'serviceAccounts'; loadServiceAccounts()">
+                    : 'text-muted hover:text-default'"
+                    @click="activeAccessTab = 'serviceAccounts'; loadServiceAccounts()">
                     Service accounts
                   </button>
                 </div>
@@ -164,16 +165,20 @@
                         <td class="px-3 py-2 text-muted">
                           <span v-if="sa.name" class="text-default">Name: </span><span class="text-muted">{{
                             sa.name }}</span>
-                          <span v-if="sa.description" class="text-default"> | Description: </span><span
-                            class="text-muted">{{ sa.description }}</span>
+                          <span v-if="sa.description" class="text-default"> | Description: </span>
+                          <span v-if="sa.description"
+                            class="text-muted inline-block align-bottom max-w-[240px] truncate" :title="sa.description">
+                            {{ sa.description }}
+                          </span>
                           <span v-if="sa.expiresAt !== undefined" class="text-default">
                             | Expires: </span><span class="text-muted">{{ sa.expiresAt ? formatIsoLocal(sa.expiresAt) :
                               "No expiry" }}
                           </span>
 
 
-                          <span v-if="sa.status"> | Status: </span><span class="text-muted">{{ sa.status
-                          }}</span>
+                          <span v-if="sa.status" class="text-default"> | Status: </span><span class="text-muted">{{
+                            sa.status
+                            }}</span>
                         </td>
                         <td class="px-3 py-2">
                           <div class="flex justify-end gap-2">
