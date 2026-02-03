@@ -83,14 +83,14 @@
 
       <!-- Footer -->
       <div class="px-5 py-3 border-t border-default flex justify-end space-x-2 ">
-        <button class="px-3 py-1.5 text-xs rounded border border-default hover:bg-default"
+        <button class="px-3 py-1.5 text-xs bg-secondary rounded border border-default hover:bg-default"
           @click="$emit('update:modelValue', false)" :disabled="loading">
           {{ isViewMode ? "Close" : "Cancel" }}
         </button>
 
         <!-- Only show Save in edit mode -->
         <button v-if="!isViewMode"
-          class="px-3 py-1.5 text-xs rounded border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+          class="px-3 py-1.5 text-xs rounded border bg-primary text-default hover:bg-primary disabled:opacity-60"
           @click="onSubmit" :disabled="loading || !groupName">
           Save changes
         </button>

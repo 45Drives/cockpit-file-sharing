@@ -45,7 +45,7 @@
             </label>
             <div class="flex items-center space-x-2">
               <button type="button"
-                class="px-2 py-1 text-sm rounded border border-default bg-secondary hover:bg-gray-100"
+                class="px-2 py-1 text-sm rounded border border-default bg-primary hover:bg-gray-100"
                 @click="insertTemplate">
                 Insert bucket template
               </button>
@@ -58,7 +58,7 @@
           </div>
 
           <textarea v-model="json"
-            class="w-full border border-default bg-accent rounded px-2 py-2 text-xs font-mono min-h-[220px]"
+            class="w-full border border-default bg-default rounded px-2 py-2 text-xs font-mono min-h-[220px]"
             placeholder='{
     "Version": "2012-10-17",
     "Statement": [
@@ -84,7 +84,7 @@
           Cancel
         </button>
         <button
-          class="px-3 py-1.5 text-xs rounded border border-green-600 bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
+          class="px-3 py-1.5 text-xs rounded border border-green-600 bg-green-600 text-white hover:bg-green-700disabled:opacity-60"
           @click="submit" :disabled="loading">
           Create policy
         </button>

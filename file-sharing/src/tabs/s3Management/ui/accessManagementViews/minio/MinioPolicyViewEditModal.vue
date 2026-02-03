@@ -76,7 +76,7 @@
           Cancel
         </button>
         <button
-          class="px-3 py-1.5 text-xs rounded border border-danger bg-danger text-white hover:bg-danger disabled:opacity-60"
+          class="px-3 py-1.5 text-xs rounded border border-danger bg-danger text-default hover:bg-danger disabled:opacity-60"
           @click="save" :disabled="loading || !policyName">
           Save changes
         </button>
