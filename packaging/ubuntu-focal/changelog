@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.5.3-2focal) focal; urgency=medium
+
+  * fixed light mode view + added view mode for minio service accounts  + building
+    test package
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 04 Feb 2026 08:14:59 -0400
+
 cockpit-file-sharing (4.5.3-1focal) focal; urgency=medium
 
   *  added service account creation for minio users + building test pacakge

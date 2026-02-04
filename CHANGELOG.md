@@ -1,4 +1,3 @@
-## Cockpit File Sharing 4.5.3-1
+## Cockpit File Sharing 4.5.3-2
 
-*  added service account creation for minio users + building test pacakge
-*  added service account creation for minio users + building pacakge
+* fixed light mode view + added view mode for minio service accounts  + building test package
