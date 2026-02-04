@@ -21,7 +21,7 @@
                 <label class="flex flex-col gap-1 text-md">
                     <span class="font-medium font-semibold text-default">Mode</span>
                     <select v-model="form.objectLockMode" :disabled="!form.objectLockEnabled || mode === 'edit'"
-                        class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1 disabled:opacity-60">
+                        class="rounded-md border border-default bg-default px-3 py-2 text-sm text-default outline-none focus:ring-1 disabled:opacity-60">
                         <option value="GOVERNANCE">GOVERNANCE</option>
                         <option value="COMPLIANCE">COMPLIANCE</option>
                     </select>
@@ -31,7 +31,7 @@
                     <span class="font-medium font-semibold text-default">Days</span>
                     <input v-model="form.objectLockRetentionDays" type="number" min="1"
                         :disabled="!form.objectLockEnabled || mode === 'edit'" placeholder="e.g. 30"
-                        class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1 disabled:opacity-60" />
+                        class="rounded-md border border-default bg-default px-3 py-2 text-sm text-default outline-none focus:ring-1 disabled:opacity-60" />
                 </label>
             </div>
         </div>
@@ -56,7 +56,7 @@
             <label class="block text-md font-medium font-semibold text-default">Encryption</label>
             <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
                 <select v-model="form.encryptionMode"
-                    class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1">
+                    class="rounded-md border border-default bg-default px-3 py-2 text-sm text-default outline-none focus:ring-1">
                     <option value="none">No default encryption</option>
                     <option value="sse-s3">SSE-S3 Encryption</option>
                     <option value="kms">External KMS (SSE-KMS)</option>
@@ -64,7 +64,7 @@
 
                 <input v-if="form.encryptionMode === 'kms'" v-model="form.kmsKeyId" type="text"
                     placeholder="KMS key id / alias"
-                    class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1" />
+                    class="rounded-md border border-default bg-default px-3 py-2 text-sm text-default outline-none focus:ring-1" />
             </div>
 
             <p class="text-md text-muted">
@@ -78,7 +78,7 @@
             </div>
 
             <textarea v-model="form.bucketPolicyText" rows="10" placeholder="Optional bucket policy JSON"
-                class="w-full rounded-md border border-default bg-default px-3 py-2 text-md text-slate-100 outline-none focus:ring-1 font-mono" />
+                class="w-full rounded-md border border-default bg-default px-3 py-2 text-md text-default outline-none focus:ring-1 font-mono" />
 
             <p v-if="policyError" class="text-md text-red-400">{{ policyError }}</p>
             <p v-else class="text-md text-muted">Leave empty for no bucket policy. If provided, it must be valid JSON.
@@ -86,7 +86,7 @@
 
             <div class="flex items-center gap-2">
                 <a href="https://awspolicygen.s3.amazonaws.com/policygen.html" target="_blank" rel="noopener noreferrer"
-                    class="rounded-md border border-default bg-secondary px-2.5 py-1 text-md font-medium text-slate-100 hover:bg-slate-800">
+                    class="rounded-md btn-secondary px-2.5 py-1 text-md font-medium text-default hover:bg-slate-800">
                     <span class="inline-flex items-center gap-2">
                         <ArrowTopRightOnSquareIcon class="w-[1rem]" />
                         Policy generator
@@ -95,7 +95,7 @@
 
                 <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-bucket-policies.html?icmpid=docs_amazons3_console"
                     target="_blank" rel="noopener noreferrer"
-                    class="rounded-md border border-default bg-secondary px-2.5 py-1 text-md font-medium text-slate-100 hover:bg-slate-800">
+                    class="rounded-md btn-secondary px-2.5 py-1 text-md font-medium text-default hover:bg-slate-800">
                     <span class="inline-flex items-center gap-2">
                         <ArrowTopRightOnSquareIcon class="w-[1rem]" />
                         Examples
@@ -103,7 +103,7 @@
                 </a>
 
                 <button type="button"
-                    class="rounded-md border border-default bg-primary px-2.5 py-1 text-md font-medium text-slate-100 hover:bg-slate-800 disabled:opacity-50"
+                    class="rounded-md btn-primary px-2.5 py-1 text-md font-medium text-default hover:bg-slate-800 disabled:opacity-50"
                     :disabled="!form.bucketPolicyText?.trim()" @click="clearPolicy">
                     Clear
                 </button>
@@ -117,7 +117,7 @@
                 <label class="flex flex-col gap-1 text-md">
                     <span class="font-medium font-semibold text-default">Grantee</span>
                     <select v-model="form.aclScope"
-                        class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1">
+                        class="rounded-md border border-default bg-default px-3 py-2 text-sm text-default outline-none focus:ring-1">
                         <option value="owner">Owner</option>
                         <option value="authenticated-users">Authenticated users</option>
                         <option value="all-users">All users (public)</option>
@@ -127,7 +127,7 @@
                 <label class="flex flex-col gap-1 text-md">
                     <span class="font-medium font-semibold text-default">Permission</span>
                     <select v-model="form.aclPermission"
-                        class="rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1">
+                        class="rounded-md border border-default bg-default px-3 py-2 text-sm text-default outline-none focus:ring-1">
                         <option v-for="o in aclPermissionOptions" :key="o.value" :value="o.value">
                             {{ o.label }}
                         </option>
@@ -142,7 +142,7 @@
             <label class="block text-md font-medium font-semibold text-default">Placement target</label>
 
             <select v-model="form.placementTarget"
-                class="w-full rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1 disabled:opacity-60">
+                class="w-full rounded-md border border-default bg-default px-3 py-2 text-sm text-default outline-none focus:ring-1 disabled:opacity-60">
                 <option value="">Default</option>
                 <option v-for="t in (deps?.cephPlacementTargets ?? [])" :key="t" :value="t">
                     {{ t }}

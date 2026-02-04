@@ -7,7 +7,7 @@
 
         <div class="flex items-center space-x-2">
           <button
-            class="inline-flex items-center border border-default bg-primary text-default text-xs font-medium rounded px-3 py-1.5 hover:bg-green-700 disabled:opacity-60 disabled:cursor-default"
+            class="inline-flex items-center btn-primary text-default text-xs font-medium rounded px-3 py-1.5 hover:bg-green-700 disabled:opacity-60 disabled:cursor-default"
             @click="openCreateDialog" :disabled="loading">
             Create user
           </button>
@@ -64,18 +64,18 @@
               </td>
               <td class="px-3 py-2 border-b border-default whitespace-nowrap">
                 <button
-                  class="inline-flex items-center border border-default bg-primary text-xs text-default font-medium rounded px-2 py-1 mr-1"
+                  class="inline-flex items-center btn-primary text-xs text-default font-medium rounded px-2 py-1 mr-1"
                   @click="onViewUser(u)">
                   View
                 </button>
                 <button
-                  class="inline-flex items-center border border-default bg-secondary text-default text-xs font-medium rounded px-2 py-1 mr-1"
+                  class="inline-flex items-center btn-secondary text-default text-xs font-medium rounded px-2 py-1 mr-1"
                   @click="openEditDialog(u)">
                   Edit
                 </button>
 
                 <button
-                  class="inline-flex items-center border border-red-600 bg-red-500 text-white text-xs font-medium rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
+                  class="inline-flex items-center text-white border border-red-600 bg-red-500 text-default text-xs font-medium rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
                   @click="openDeleteDialog(u)">
                   Delete
                 </button>
@@ -110,12 +110,12 @@
         </div>
 
         <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-          <button class="px-3 py-1.5 text-xs rounded border border-default bg-secondary" @click="closeDeleteDialog"
+          <button class="px-3 py-1.5 text-xs rounded btn-secondary" @click="closeDeleteDialog"
             :disabled="loading">
             Cancel
           </button>
           <button
-            class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
+            class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60"
             @click="confirmDelete" :disabled="loading">
             Delete
           </button>

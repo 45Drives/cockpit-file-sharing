@@ -4,18 +4,19 @@
     <div
       class="flex items-center justify-between bg-well rounded-md shadow text-default my-2 ring-1 ring-black ring-opacity-5 p-4 m-4">
       <div>
-        <h2 class="text-xl font-semibold text-slate-100">
+        <h2 class="text-xl font-semibold text-default">
           Bucket usage dashboard
         </h2>
-        <p class="text-md text-slate-400">
+        <p class="text-md text-default">
           {{ bucketName }}
         </p>
       </div>
 
       <div class="flex items-center gap-2">
         <button v-if="showBackButton" type="button"
-          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
+          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
           @click="$emit('back')">
+          <ArrowUturnLeftIcon class="size-icon" />
           Back
         </button>
       </div>
@@ -23,7 +24,7 @@
 
     <!-- Loading / error -->
     <div v-if="loading"
-      class="mx-4 rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-slate-300">
+      class="mx-4 rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-default">
       Loading bucket usage…
     </div>
 
@@ -36,44 +37,44 @@
     <div v-else-if="stats" class="space-y-4 m-4">
       <!-- Summary cards -->
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">Total Size</label>
           <p class="mt-1 text-lg font-semibold">{{ formatBytes(stats.totalSizeBytes) }}</p>
-          <p v-if="stats.quotaBytes" class="text-sm text-slate-500 mt-0.5">
+          <p v-if="stats.quotaBytes" class="text-sm text-default mt-0.5">
             Quota: {{ formatBytes(stats.quotaBytes) }}
           </p>
         </div>
 
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">Objects</label>
           <p class="mt-1 text-lg font-semibold">{{ stats.objectCount.toLocaleString() }}</p>
         </div>
 
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">Versions</label>
           <p class="mt-1 text-lg font-semibold">
             {{ stats.versionCount != null ? stats.versionCount.toLocaleString() : "n/a" }}
           </p>
         </div>
 
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">Delete markers</label>
           <p class="mt-1 text-lg font-semibold">
             {{ stats.deleteMarkersCount != null ? stats.deleteMarkersCount.toLocaleString() : "n/a" }}
           </p>
         </div>
 
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">Versioning</label>
           <p class="mt-1 text-lg font-semibold">{{ versioningLabel }}</p>
         </div>
 
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">Object lock</label>
           <p class="mt-1 text-lg font-semibold">
             {{ stats.objectLockEnabled ? "Enabled" : "Disabled" }}
           </p>
-          <p v-if="stats.objectLockMode" class="text-sm text-slate-500 mt-0.5">
+          <p v-if="stats.objectLockMode" class="text-sm text-default mt-0.5">
             Mode: {{ stats.objectLockMode }}
           </p>
         </div>
@@ -82,7 +83,7 @@
 
       <!-- Bucket configuration -->
       <div class="grid gap-4 md:grid-cols-2">
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">
             Bucket configuration
           </label>
@@ -202,7 +203,7 @@ import { computed, onMounted, ref } from "vue";
 import type { S3Bucket, MinioBucketDashboardStats } from "../../types/types";
 import { getMinioBucketDashboardStats } from "../../api/minioCliAdapter";
 import { formatBytes } from "../../bucketBackends/bucketUtils";
-
+import { ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 const props = defineProps<{
   bucketName: string;
   bucket: S3Bucket;

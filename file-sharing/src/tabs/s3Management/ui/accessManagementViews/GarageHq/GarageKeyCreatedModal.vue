@@ -4,7 +4,7 @@
             <div class="px-5 py-4 border-b border-default flex items-center justify-between">
                 <h3 class="text-base font-semibold">Key created</h3>
                 <button type="button"
-                    class="text-sm px-3 py-1.5 rounded border border-default bg-secondary hover:bg-accent disabled:opacity-60"
+                    class="text-sm px-3 py-1.5 rounded btn-secondary hover:bg-accent disabled:opacity-60"
                     @click="onClose">
                     Close
                 </button>
@@ -24,7 +24,7 @@
                   {{ keyDetail?.id ?? "-" }}
                 </code>
                             <button type="button"
-                                class="shrink-0 px-2 py-1 rounded border border-default bg-secondary hover:bg-accent text-xs"
+                                class="shrink-0 px-2 py-1 rounded btn-secondary hover:bg-accent text-xs"
                                 @click="copy(keyDetail?.id ?? '')" :disabled="!keyDetail?.id">
                                 Copy
                             </button>
@@ -46,7 +46,7 @@
                   {{ keyDetail?.secretKey ?? "Unavailable" }}
                 </code>
                             <button type="button"
-                                class="shrink-0 px-2 py-1 rounded border border-default bg-secondary hover:bg-accent text-xs"
+                                class="shrink-0 px-2 py-1 rounded btn-secondary hover:bg-accent text-xs"
                                 @click="copy(keyDetail?.secretKey ?? '')" :disabled="!keyDetail?.secretKey">
                                 Copy
                             </button>
@@ -61,7 +61,7 @@
 
             <div class="px-5 py-3 border-t border-default flex justify-end">
                 <button type="button"
-                    class="px-3 py-1.5 text-sm rounded border border-default bg-secondary hover:bg-accent"
+                    class="px-3 py-1.5 text-sm rounded btn-secondary hover:bg-accent"
                     @click="onClose">
                     Done
                 </button>

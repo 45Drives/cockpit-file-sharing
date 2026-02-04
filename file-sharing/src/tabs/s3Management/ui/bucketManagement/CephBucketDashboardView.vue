@@ -14,7 +14,7 @@
 
       <div class="flex items-center gap-2">
         <button v-if="showBackButton" type="button"
-          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
+          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
           @click="$emit('back')">
           Back
         </button>
@@ -48,7 +48,7 @@
             Start date
           </label>
           <input v-model="startDate" type="date"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1" />
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-default outline-none focus:ring-1" />
         </div>
 
         <!-- End date -->
@@ -57,7 +57,7 @@
             End date
           </label>
           <input v-model="endDate" type="date"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1" />
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-default outline-none focus:ring-1" />
         </div>
       </div>
 
@@ -65,17 +65,17 @@
 
         <div class="flex gap-2">
           <button type="button"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-800"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-xs font-medium text-default hover:bg-slate-800"
             @click="setLastDays(7)">
             Last 7 days
           </button>
           <button type="button"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-800"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-xs font-medium text-default hover:bg-slate-800"
             @click="setLastDays(30)">
             Last 30 days
           </button>
           <button type="button"
-            class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
+            class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
             @click="load">
             Refresh
           </button>
@@ -85,7 +85,7 @@
 
     <!-- Loading / error -->
     <div v-if="loading"
-      class="mx-4 rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-slate-300">
+      class="mx-4 rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-default">
       Loading bucket usage…
     </div>
 
@@ -103,7 +103,7 @@
     <div v-if="stats" class="space-y-4 m-4">
       <!-- Summary cards (traffic / ops) -->
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">
             Total bytes sent
           </label>
@@ -112,7 +112,7 @@
           </p>
         </div>
 
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <p class="text-label">
             Total bytes received
           </p>
@@ -121,7 +121,7 @@
           </p>
         </div>
 
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">
             Total operations
           </label>
@@ -130,7 +130,7 @@
           </p>
         </div>
 
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">
             Successful operations
           </label>
@@ -150,7 +150,7 @@
       <!-- NEW: Bucket-level stats from radosgw-admin bucket stats -->
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <!-- Objects / size / shards -->
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">
             Bucket data
           </label>
@@ -175,7 +175,7 @@
         </div>
 
         <!-- Versioning / object lock -->
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">
             Versioning / Object lock
           </label>
@@ -194,7 +194,7 @@
         </div>
 
         <!-- Zonegroup / placement / quota -->
-        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-slate-200">
+        <div class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-default">
           <label class="text-label">
             Layout & quota
           </label>
@@ -229,7 +229,7 @@
           </span>
         </span>
       </p>
-      <p v-else class="text-xs mt-1 text-slate-500">
+      <p v-else class="text-xs mt-1 text-default">
         No bucket quota configured.
       </p> -->
         </div>
@@ -237,7 +237,7 @@
 
       <!-- Per-user table (unchanged) -->
       <div class="rounded-lg border border-default bg-default overflow-hidden">
-        <div class="border-b border-slate-800 px-4 py-2 text-sm font-medium text-slate-100">
+        <div class="border-b border-slate-800 px-4 py-2 text-sm font-medium text-default">
           <label class="text-label"> Per-user usage</label>
         </div>
         <div v-if="perUser.length === 0" class="px-4 py-4 text-sm text-muted">

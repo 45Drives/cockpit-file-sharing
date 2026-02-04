@@ -5,7 +5,7 @@
       <!-- Left -->
       <div>
         <button type="button"
-          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
+          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
           @click="emit('backToViewSelection')">
           <ArrowUturnLeftIcon class="size-icon" />
           Back
@@ -30,7 +30,7 @@
       </div>
     </div>
     <!-- Loding -->
-    <section v-if="loading" class="rounded-lg border border-default  px-4 py-3 text-sm text-slate-700">
+    <section v-if="loading" class="rounded-lg border border-default  px-4 py-3 text-sm text-default">
       <p>Loading keys…</p>
     </section>
 

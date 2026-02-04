@@ -33,12 +33,12 @@
 
         <div class="mt-6 flex justify-end gap-2">
           <button type="button"
-            class="inline-flex items-center rounded-md border border-default bg-secondary px-3 py-1.5 text-sm font-medium text-default hover:bg-secondary"
+            class="inline-flex items-center rounded-md btn-secondary px-3 py-1.5 text-sm font-medium text-default hover:bg-secondary"
             @click="onClose" :disabled="saving">
             Cancel
           </button>
           <button type="submit"
-            class="inline-flex items-center rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-danger disabled:opacity-60"
+            class="inline-flex items-center rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-default shadow-sm hover:bg-danger disabled:opacity-60"
             :disabled="saving">
             Save
           </button>

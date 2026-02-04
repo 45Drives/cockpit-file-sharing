@@ -25,12 +25,11 @@ export async function rgwJson(subArgs: string[]): Promise<any> {
 
     try {
       const proc = await unwrap(server.execute(cmd));
-      const stdout =
-        typeof (proc as any).getStdout === "function"
-          ? (proc as any).getStdout()
-          : ((proc as any).stdout ?? "").toString();
+      
+      const stdout = proc.getStdout().toString()
 
       const text = (stdout ?? "").toString().trim();
+      const p: any = proc;
 
       if (!text) return {};
       return JSON.parse(text);
@@ -425,9 +424,37 @@ async function getRgwUserS3Creds(uid: string): Promise<RgwS3Creds> {
   return creds;
 }
 
+async function getFirstExistingRgwUserS3Creds(uids: string[]): Promise<RgwS3Creds> {
+  const tried: string[] = [];
+
+  for (const uid of uids) {
+    const key = (uid || "").trim();
+    if (!key) continue;
+
+    tried.push(key);
+    
+
+    try {
+      return await getRgwUserS3Creds(key);
+    } catch (e: any) {
+      if (!isRgwUserNotFoundError(e)) {
+        throw e;
+      }
+    }
+  }
+
+  throw new Error(`No RGW dashboard user found (tried: ${tried.join(", ")})`);
+}
+function isRgwUserNotFoundError(err: unknown): boolean {
+  const msg = String((err as any)?.message ?? err ?? "");
+  return (
+    /no user info saved/i.test(msg)
+  );
+}
+
 // Backwards-compatible wrappers (optional, keep call sites unchanged if you want)
 async function getDashboardS3Creds(): Promise<RgwS3Creds> {
-  return getRgwUserS3Creds("ceph-dashboard");
+  return getFirstExistingRgwUserS3Creds(["ceph-dashboard", "dashboard"]);
 }
 
 async function getHoustonUiS3Creds(): Promise<RgwS3Creds> {
@@ -565,15 +592,10 @@ async function runRgwAdmin(args: string[]): Promise<{ stdout: string; stderr: st
   try {
     const proc = await unwrap(server.execute(cmd));
 
-    const stdout =
-      typeof (proc as any).getStdout === "function"
-        ? (proc as any).getStdout()
-        : ((proc as any).stdout ?? "").toString();
+    const stdout = proc.getStdout()
 
-    const stderr =
-      typeof (proc as any).getStderr === "function"
-        ? (proc as any).getStderr()
-        : ((proc as any).stderr ?? "").toString();
+    const stderr =proc.getStderr()
+     
 
     return { stdout, stderr };
   } catch (state: any) {
@@ -1093,14 +1115,31 @@ export async function getCephBucketSecurity(
   bucketName: string
 ): Promise<{ acl?: CephAclRule[]; policy?: string }> {
   const { endpointUrl } = await getCephS3Connection();
-  const { accessKey, secretKey } = await getDashboardS3Creds();
+  let accessKey: string;
+  let secretKey: string;
+  try {
+    ({ accessKey, secretKey } = await getDashboardS3Creds());
+  } catch (e: any) {
+    console.error("getCephBucketSecurity: dashboard creds failed", e);
+    throw new Error(
+      `getCephBucketSecurity: failed to fetch dashboard creds for ${bucketName}: ${e?.message ?? e}`
+    );
+  }
 
   const creds: CephCreds = { accessKeyId: accessKey, secretAccessKey: secretKey };
 
-  const [aclJson, policyStr] = await Promise.all([
-    cephGetBucketAcl(endpointUrl, creds, bucketName),
-    cephGetBucketPolicy(endpointUrl, creds, bucketName),
-  ]);
+  let aclJson: any;
+  let policyStr: string | undefined;
+  try {
+    [aclJson, policyStr] = await Promise.all([
+      cephGetBucketAcl(endpointUrl, creds, bucketName),
+      cephGetBucketPolicy(endpointUrl, creds, bucketName),
+    ]);
+  } catch (e: any) {
+    throw new Error(
+      `getCephBucketSecurity: failed to fetch acl/policy for ${bucketName}: ${e?.message ?? e}`
+    );
+  }
 
   type RawAclPermission = "READ" | "WRITE" | "FULL_CONTROL" | string;
 

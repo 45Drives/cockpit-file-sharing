@@ -7,7 +7,7 @@
       <!-- Left: back button -->
       <div>
         <button v-if="showBackButton" type="button"
-          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
+          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
           @click="emit('backToViewSelection')">
           <ArrowUturnLeftIcon class="size-icon" />
           Back
@@ -16,17 +16,17 @@
 
       <!-- Center: title -->
       <div class="flex items-baseline justify-center gap-2">
-        <h2 class="text-xl font-semibold text-slate-100">
+        <h2 class="text-xl font-semibold text-default">
           S3 Bucket Management
         </h2>
-        <span class="text-sm text-slate-400">
+        <span class="text-sm text-default">
           ({{ backendLabel }})
         </span>
       </div>
 
       <!-- Right: new bucket -->
       <button type="button" @click="openCreateModal" :disabled="openingModal"
-        class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-60">
+        class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-60">
         <LoadingSpinner v-if="openingModal" />
         <ArchiveBoxIcon v-else class="size-icon" />
         New bucket
@@ -42,7 +42,7 @@
             Name
           </span>
           <input v-model="nameFilter" type="text" placeholder="Filter by name"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:ring-1" />
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-default placeholder:text-default outline-none focus:ring-1" />
         </label>
 
         <label v-if="backend != 'ceph'" class="flex min-w-[180px] flex-1 flex-col gap-1">
@@ -50,7 +50,7 @@
             Region / Zone
           </span>
           <select v-model="regionFilter"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1">
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-default outline-none focus:ring-1">
             <option value="all">All regions</option>
             <option v-for="r in regions" :key="r || 'none'" :value="r || 'none'">
               {{ r || "Unknown" }}
@@ -78,7 +78,7 @@
             Direction
           </span>
           <select v-model="sortDir"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1">
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-default outline-none focus:ring-1">
             <option value="asc">Ascending</option>
             <option value="desc">Descending</option>
           </select>
@@ -88,7 +88,7 @@
 
     <!-- Loading / error -->
     <div v-if="loadingBuckets"
-      class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-slate-300">
+      class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-default">
       Loading buckets…
     </div>
 
@@ -115,7 +115,7 @@
       <template v-else>
         <div
           class="mx-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default bg-plugin-header p-3 text-sm">
-          <div class="text-slate-300">
+          <div class="text-default">
             Showing
             <span class="font-semibold">{{ totalItems ? pageStart + 1 : 0 }}</span>
             –
@@ -126,28 +126,28 @@
           </div>
 
           <div class="flex items-center gap-3">
-            <label class="flex items-center gap-2 text-slate-300">
+            <label class="flex items-center gap-2 text-default">
               <span>Per page</span>
 
               <input v-model="pageSizeInput" type="number" min="1" step="1"
-                class="w-28 rounded-md border border-default bg-default px-2 py-1 text-sm text-slate-100 outline-none focus:ring-1"
+                class="w-28 rounded-md border border-default bg-default px-2 py-1 text-sm text-default outline-none focus:ring-1"
                 @keydown.enter.prevent="commitPageSize()" @blur="commitPageSize()" placeholder="30" />
             </label>
 
             <div class="flex items-center gap-2">
               <button type="button"
-                class="rounded-md border border-default bg-secondary px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800 disabled:opacity-50"
+                class="rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-50"
                 :disabled="page <= 1" @click="page = Math.max(1, page - 1)">
                 Prev
               </button>
 
-              <span class="text-slate-300">
+              <span class="text-default">
                 Page <span class="font-semibold">{{ page }}</span> /
                 <span class="font-semibold">{{ totalPages }}</span>
               </span>
 
               <button type="button"
-                class="rounded-md border border-default bg-secondary px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800 disabled:opacity-50"
+                class="rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-50"
                 :disabled="page >= totalPages" @click="page = Math.min(totalPages, page + 1)">
                 Next
               </button>
@@ -166,12 +166,12 @@
                 </div>
 
                 <div>
-                  <h3 class="text-base font-semibold text-slate-100">
+                  <h3 class="text-base font-semibold text-default">
 
                     <span v-if="bucket.backendKind === 'ceph'">{{ bucket.adminRef }}</span>
                     <span v-else>{{ bucket.name }}</span>
                   </h3>
-                  <p v-if="backend != 'ceph'" class="text-xs text-slate-400">
+                  <p v-if="backend != 'ceph'" class="text-xs text-default">
                     {{ bucket.region || "Unknown region" }}
                   </p>
                 </div>
@@ -180,11 +180,11 @@
 
             <!-- Meta -->
             <div v-if="backend === 'ceph'">
-              <label class="mb-1 block text-xs font-medium text-slate-300">
+              <label class="mb-1 block text-xs font-medium text-default">
                 Owner
               </label>
               <input v-model="bucket.owner" type="text" placeholder="optional / best-effort" disabled
-                class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-slate-100 outline-none focus:ring-1" />
+                class="w-full rounded-md border border-default bg-default px-3 py-1.5 text-sm text-default outline-none focus:ring-1" />
             </div>
 
             <!-- Stats -->
@@ -233,7 +233,7 @@
 
             <!-- Tags -->
             <div v-if="bucket.tags && Object.keys(bucket.tags).length" class="mt-1 space-y-1 text-xs">
-              <p class="text-sm font-medium uppercase tracking-wide text-slate-500">
+              <p class="text-sm font-medium uppercase tracking-wide text-default">
                 Tags
               </p>
               <div class="flex flex-wrap gap-1.5">
@@ -247,18 +247,18 @@
             <!-- Actions -->
             <div class="mt-3 flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
               <button type="button" @click="openEditModal(bucket)" :disabled="openingModal"
-                class="rounded-md border border-default bg-primary px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800 disabled:opacity-60">
+                class="rounded-md btn-primary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-60">
                 <LoadingSpinner v-if="openingModal" />
                 <span v-else>Edit</span>
               </button>
 
               <button v-if="backend === 'ceph' || backend === 'minio' || backend === 'garage'" type="button"
-                class="rounded-md border border-default bg-secondary px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800"
+                class="rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800"
                 @click="openUsageDashboard(bucket)">
                 Usage
               </button>
               <button type="button" @click="confirmDelete(bucket)"
-                class="rounded-md bg-red-600/90 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-500">
+                class="rounded-md bg-red-600/90 px-2.5 py-1 text-xs text-white font-medium text- hover:bg-red-500">
                 Delete
               </button>
             </div>
@@ -266,7 +266,7 @@
         </div>
 
         <p v-else
-          class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-6 text-center text-sm text-slate-400">
+          class="rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-6 text-center text-sm text-default">
           No buckets found.
         </p>
       </template>

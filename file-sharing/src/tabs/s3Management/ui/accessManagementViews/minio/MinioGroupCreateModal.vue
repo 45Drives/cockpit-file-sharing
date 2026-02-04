@@ -60,12 +60,12 @@
       </div>
 
       <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-        <button class="px-3 py-1.5 text-xs rounded border border-default bg-secondary hover:bg-gray-100" @click="close"
+        <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100" @click="close"
           :disabled="loading">
           Cancel
         </button>
         <button
-          class="px-3 py-1.5 text-xs rounded border border-green-600 bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
+          class="px-3 py-1.5 text-xs rounded border text-white border-green-600 bg-green-600 text-default hover:bg-green-700 disabled:opacity-60"
           @click="submit" :disabled="loading || !availableUsers.length">
           Create group
         </button>

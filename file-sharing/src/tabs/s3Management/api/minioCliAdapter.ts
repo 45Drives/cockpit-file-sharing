@@ -814,15 +814,9 @@ async function runCmd(args: string[]): Promise<{ stdout: string; stderr: string 
   try {
     const proc = await unwrap(server.execute(cmd));
 
-    const stdout =
-      typeof (proc as any).getStdout === "function"
-        ? (proc as any).getStdout()
-        : ((proc as any).stdout ?? "").toString();
+    const stdout = proc.getStdout()
 
-    const stderr =
-      typeof (proc as any).getStderr === "function"
-        ? (proc as any).getStderr()
-        : ((proc as any).stderr ?? "").toString();
+    const stderr = proc.getStderr()
 
     const out = (stdout ?? "").toString();
     const err = (stderr ?? "").toString();

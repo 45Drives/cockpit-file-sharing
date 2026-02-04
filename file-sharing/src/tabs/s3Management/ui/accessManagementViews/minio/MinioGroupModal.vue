@@ -10,7 +10,7 @@
         <div class="flex items-center space-x-2">
           <!-- Edit button only in view mode -->
           <button v-if="isViewMode"
-            class="text-sm px-2 py-1 rounded border border-default bg-primary text-white hover:bg-primary disabled:opacity-60"
+            class="text-sm px-2 py-1 rounded btn-primary text-default hover:bg-primary disabled:opacity-60"
             @click="switchToEdit" :disabled="loading || !groupName">
             Edit
           </button>

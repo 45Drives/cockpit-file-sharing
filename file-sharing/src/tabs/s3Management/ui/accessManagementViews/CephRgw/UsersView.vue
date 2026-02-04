@@ -5,7 +5,7 @@
       <!-- Left -->
       <div>
         <button type="button"
-          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
+          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
           @click="emit('backToViewSelection')">
           <ArrowUturnLeftIcon class="size-icon" />
           Back
@@ -20,7 +20,7 @@
       <!-- Right -->
       <div class="justify-self-end">
         <button
-          class="inline-flex items-center border border-default bg-primary text-white text-xs font-medium rounded px-3 py-1.5 hover:bg-primary disabled:opacity-60 disabled:cursor-default"
+          class="inline-flex items-center btn-primary text-default text-xs font-medium rounded px-3 py-1.5 hover:bg-primary disabled:opacity-60 disabled:cursor-default"
           @click="openCreateDialog" :disabled="loading">
           Create user
         </button>
@@ -100,13 +100,13 @@
 
                   <template v-if="!isProtectedUser(user)">
                     <button
-                      class="inline-flex items-center border border-default bg-secondary text-xs font-medium rounded px-2 py-1 mr-1"
+                      class="inline-flex items-center btn-secondary text-xs font-medium rounded px-2 py-1 mr-1"
                       @click="onEdit(user)">
                       Edit
                     </button>
 
                     <button
-                      class="inline-flex items-center border border-red-600 bg-red-500 text-white text-xs font-medium rounded px-2 py-1 hover:bg-red-600"
+                      class="inline-flex items-center border border-red-600 bg-red-500 text-default text-xs font-medium rounded px-2 py-1 hover:bg-red-600"
                       @click="openDeleteDialog(user)">
                       Delete
                     </button>
@@ -163,7 +163,7 @@
               Cancel
             </button>
             <button
-              class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
+              class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60"
               @click="confirmDelete" :disabled="loading">
               Delete
             </button>
@@ -360,7 +360,7 @@ function quotaTooltipObjects(user: RgwUser): string {
 }
 function isProtectedUser(user: RgwUser): boolean {
   const uid = String(user?.uid ?? "").trim().toLowerCase();
-  return uid === "dashboard" || uid === "houstonui";
+  return uid === "dashboard" || uid === "houstonui" || uid === "ceph-dashboard"  ;
 }
 
 onMounted(() => {

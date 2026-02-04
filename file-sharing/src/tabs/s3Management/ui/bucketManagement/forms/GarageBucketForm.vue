@@ -2,9 +2,9 @@
     <div class="space-y-3">
         <!-- Name -->
         <div class="w-full min-w-0">
-            <label class="mb-1 block text-md font-medium text-slate-300">Bucket name</label>
+            <label class="mb-1 block text-md font-medium text-default">Bucket name</label>
             <input v-model="form.name" :disabled="mode === 'edit'" type="text" required
-                class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1 disabled:opacity-60" />
+                class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-default outline-none focus:ring-1 disabled:opacity-60" />
         </div>
 
         <div class="mt-2 border-t border-slate-800 pt-3 space-y-3">
@@ -13,12 +13,12 @@
                 <div class="flex-1">
                     <label class="mb-1 block text-md font-medium font-semibold text-default">Max size</label>
                     <input v-model="form.garageMaxSize" type="number" min="0" placeholder="e.g. 30"
-                        class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1" />
+                        class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-default outline-none focus:ring-1" />
                 </div>
                 <div class="w-24">
                     <label class="mb-1 block text-md font-medium font-semibold text-default">Unit</label>
                     <select v-model="form.garageMaxSizeUnit"
-                        class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1">
+                        class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-default outline-none focus:ring-1">
                         <option value="MiB">MiB</option>
                         <option value="GiB">GiB</option>
                         <option value="TiB">TiB</option>
@@ -30,7 +30,7 @@
             <div>
                 <label class="mb-1 block text-md font-medium font-semibold text-default">Max objects</label>
                 <input v-model="form.garageMaxObjects" type="number" min="0" placeholder="e.g. 100000"
-                    class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1" />
+                    class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-default outline-none focus:ring-1" />
             </div>
 
             <!-- Grants -->
@@ -48,7 +48,7 @@
                     <div v-for="k in (deps?.garageKeys ?? [])" :key="k.id"
                         class="flex items-center justify-between gap-3 rounded-md border border-default bg-default px-3 py-2">
                         <div class="min-w-0">
-                            <div class="text-md font-medium text-slate-200 truncate">{{ k.name || k.id }}</div>
+                            <div class="text-md font-medium text-default truncate">{{ k.name || k.id }}</div>
                             <div class="text-sm text-muted font-mono truncate">{{ k.id }}</div>
                         </div>
 
@@ -92,26 +92,26 @@
                 <div class="space-y-2">
                     <div class="flex gap-2">
                         <input :value="form.name" disabled
-                            class="flex-1 rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1 disabled:opacity-60" />
+                            class="flex-1 rounded-md border border-default bg-default px-3 py-2.5 text-base text-default outline-none focus:ring-1 disabled:opacity-60" />
                         <span
-                            class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-slate-300">
+                            class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-default">
                             Required
                         </span>
                     </div>
 
                     <div v-for="(a, index) in form.garageAliases" :key="index" class="flex gap-2">
                         <input v-model="a.value" type="text" placeholder="e.g. public-assets"
-                            class="flex-1 rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1" />
+                            class="flex-1 rounded-md border border-default bg-default px-3 py-2.5 text-base text-default outline-none focus:ring-1" />
 
                         <button type="button" @click="removeAliasRow(index)"
-                            class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-slate-100 hover:bg-slate-800">
+                            class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-default hover:bg-slate-800">
                             Remove
                         </button>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2">
                         <button type="button" @click="addAliasRow"
-                            class="rounded-md border border-default bg-secondary px-3 py-2 text-md font-medium text-slate-100 hover:bg-slate-900">
+                            class="rounded-md btn-secondary px-3 py-2 text-md font-medium text-default hover:bg-slate-900">
                             Add alias
                         </button>
 

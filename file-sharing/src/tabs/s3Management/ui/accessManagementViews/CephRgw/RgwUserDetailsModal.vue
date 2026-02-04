@@ -21,7 +21,7 @@
         </div>
 
         <button
-          class="text-sm px-3 py-1.5 rounded border border-default bg-secondary hover:bg-accent disabled:opacity-60"
+          class="text-sm px-3 py-1.5 rounded btn-secondary hover:bg-accent disabled:opacity-60"
           @click="close" :disabled="loading">
           Close
         </button>
@@ -156,7 +156,7 @@
                     </span>
 
                     <button v-if="k.secretKey" type="button"
-                      class="text-sm px-2 py-1 rounded border border-default bg-secondary hover:bg-accent"
+                      class="text-sm px-2 py-1 rounded btn-secondary hover:bg-accent"
                       @click="toggleSecret(k.accessKey, idx)">
                       {{ isSecretVisible(k.accessKey, idx) ? "Hide secret" : "Show secret" }}
                     </button>

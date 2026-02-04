@@ -209,7 +209,7 @@
           Cancel
         </button>
         <button
-          class="px-3 py-1.5 text-sm rounded border border-green-600 bg-green-600 text-default hover:bg-green-700 disabled:opacity-60"
+          class="px-3 py-1.5 text-sm rounded border border-green-600 bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
           @click="submit" :disabled="loading">
           {{ isEdit ? "Save changes" : "Create" }}
         </button>

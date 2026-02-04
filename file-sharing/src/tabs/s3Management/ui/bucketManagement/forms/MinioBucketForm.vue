@@ -40,11 +40,11 @@
                 type="number"
                 min="0"
                 placeholder="e.g. 100"
-                class="w-full rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1"
+                class="w-full rounded-md border border-default bg-default px-3 py-2 text-sm text-default outline-none focus:ring-1"
               />
               <select
                 v-model="form.quotaUnit"
-                class="w-24 rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1"
+                class="w-24 rounded-md border border-default bg-default px-3 py-2 text-sm text-default outline-none focus:ring-1"
               >
                 <option value="MiB">MiB</option>
                 <option value="GiB">GiB</option>

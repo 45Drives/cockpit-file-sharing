@@ -21,7 +21,7 @@
           </div>
 
           <button type="button"
-            class="inline-flex items-center rounded-md border border-default bg-secondary px-3 py-1.5 text-xs text-default disabled:opacity-60"
+            class="inline-flex items-center rounded-md btn-secondary px-3 py-1.5 text-xs text-default disabled:opacity-60"
             @click="emit('update:modelValue', false)" :disabled="saving">
             Close
           </button>
@@ -129,7 +129,7 @@
                       <input v-model="form.accessKey"
                         class="w-full rounded-md border border-default bg-default px-2 py-1 text-xs font-mono text-default"
                         :disabled="saving || hasCreatedCreds" />
-                      <button type="button" class="rounded-md border border-default bg-secondary px-2 py-1 text-xs"
+                      <button type="button" class="rounded-md btn-secondary px-2 py-1 text-xs"
                         @click="form.accessKey = generateAccessKey()" :disabled="saving || hasCreatedCreds">
                         Generate
                       </button>
@@ -142,7 +142,7 @@
                       <input v-model="form.secretKey"
                         class="w-full rounded-md border border-default bg-default px-2 py-1 text-xs font-mono text-default"
                         :disabled="saving || hasCreatedCreds" />
-                      <button type="button" class="rounded-md border border-default bg-secondary px-2 py-1 text-xs"
+                      <button type="button" class="rounded-md btn-secondary px-2 py-1 text-xs"
                         @click="form.secretKey = generateSecret()" :disabled="saving || hasCreatedCreds">
                         Generate
                       </button>
@@ -198,7 +198,7 @@
                   placeholder='{"Version":"2012-10-17","Statement":[...]}' :disabled="saving || hasCreatedCreds" />
 
                 <div class="flex items-center justify-between gap-3">
-                  <button type="button" class="rounded-md border border-default bg-secondary px-2 py-1 text-xs"
+                  <button type="button" class="rounded-md btn-secondary px-2 py-1 text-xs"
                     @click="formatPolicyJson" :disabled="saving || hasCreatedCreds || !policyJson.trim()">
                     Format JSON
                   </button>
@@ -217,13 +217,13 @@
 
         <div class="flex justify-end gap-2 border-t border-default bg-accent px-6 py-4">
           <button type="button"
-            class="rounded-md border border-default bg-secondary px-3 py-1.5 text-xs disabled:opacity-60"
+            class="rounded-md btn-secondary px-3 py-1.5 text-xs disabled:opacity-60"
             @click="emit('update:modelValue', false)" :disabled="saving">
             {{ hasCreatedCreds ? "Done" : "Cancel" }}
           </button>
 
           <button v-if="!hasCreatedCreds" type="button"
-            class="rounded-md border border-default bg-primary px-3 py-1.5 text-xs text-default disabled:opacity-60"
+            class="rounded-md btn-primary px-3 py-1.5 text-xs text-default disabled:opacity-60"
             @click="submit" :disabled="saving || !username">
             {{ saving ? (isEdit ? "Updating..." : "Creating...") : (isEdit ? "Update" : "Create") }}
           </button>

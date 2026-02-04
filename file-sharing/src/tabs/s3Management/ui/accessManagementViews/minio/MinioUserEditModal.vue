@@ -18,7 +18,7 @@
           </div>
 
           <button type="button"
-            class="inline-flex items-center rounded-md border border-default bg-secondary px-3 py-1.5 text-xs text-default hover:opacity-90"
+            class="inline-flex items-center rounded-md btn-secondary px-3 py-1.5 text-xs text-default hover:opacity-90"
             @click="$emit('update:modelValue', false)" :disabled="loading">
             Close
           </button>
@@ -88,7 +88,7 @@
                 </div>
 
                 <button v-if="activeAccessTab === 'serviceAccounts'" type="button"
-                  class="inline-flex items-center justify-center rounded-md border border-default bg-primary px-3 py-1.5 text-xs text-default disabled:opacity-60"
+                  class="inline-flex items-center justify-center rounded-md btn-primary px-3 py-1.5 text-xs text-default disabled:opacity-60"
                   @click="openCreateServiceAccountModal()" :disabled="loading || !user">
                   New access key
                 </button>
@@ -183,19 +183,19 @@
                         <td class="px-3 py-2">
                           <div class="flex justify-end gap-2">
                             <button type="button"
-                              class="rounded-md border border-default bg-secondary px-2 py-1 text-xs"
+                              class="rounded-md btn-secondary px-2 py-1 text-xs"
                               @click="toggleServiceAccount(sa)" :disabled="saActionBusy">
                               {{ sa.status === "disabled" ? "Enable" : "Disable" }}
                             </button>
 
                             <button type="button"
-                              class="rounded-md border border-default bg-danger px-2 py-1 text-xs text-default"
+                              class="rounded-md border border-default bg-danger px-2 py-1 text-xs text-white"
                               @click="removeServiceAccount(sa)" :disabled="saActionBusy">
                               Delete
                             </button>
 
                             <button type="button"
-                              class="rounded-md border border-default bg-secondary px-2 py-1 text-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                              class="rounded-md btn-secondary px-2 py-1 text-xs disabled:opacity-60 disabled:cursor-not-allowed"
                               @click="openEditServiceAccountModal(sa)"
                               :disabled="saActionBusy || sa.status === 'disabled'"
                               :title="sa.status === 'disabled' ? 'Enable this access key to edit' : 'Edit'">
@@ -240,7 +240,7 @@
                   placeholder="Enter a secret key or generate one" />
 
                 <div class="flex items-center justify-between gap-3">
-                  <button type="button" class="rounded-md border border-default bg-secondary px-2.5 py-1 text-xs"
+                  <button type="button" class="rounded-md btn-secondary px-2.5 py-1 text-xs"
                     @click="localSecret = generateSecret()">
                     Generate key
                   </button>
@@ -261,13 +261,13 @@
         <!-- Footer (sticky) -->
         <div class="sticky bottom-0 z-10 flex justify-end gap-2 border-t border-default bg-accent px-6 py-4">
           <button type="button"
-            class="rounded-md border border-default bg-secondary px-3 py-1.5 text-xs disabled:opacity-60"
+            class="rounded-md btn-secondary px-3 py-1.5 text-xs disabled:opacity-60"
             @click="$emit('update:modelValue', false)" :disabled="loading">
             Cancel
           </button>
 
           <button type="button"
-            class="rounded-md border border-default bg-danger px-3 py-1.5 text-xs text-default disabled:opacity-60"
+            class="rounded-md border text-white border-default bg-danger px-3 py-1.5 text-xs text-default disabled:opacity-60"
             @click="onSubmit" :disabled="loading || !user">
             Save changes
           </button>

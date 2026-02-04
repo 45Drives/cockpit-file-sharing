@@ -27,7 +27,7 @@
 
       <div class="flex items-center justify-end gap-2">
         <button type="button" @click="onCancel"
-          class="rounded-md border border-default bg-secondary px-3 py-1.5 text-xs font-medium text-default hover:bg-slate-800">
+          class="rounded-md btn-secondary px-3 py-1.5 text-xs font-medium text-default hover:bg-slate-800">
           Cancel
         </button>
 

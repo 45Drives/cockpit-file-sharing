@@ -10,7 +10,7 @@
 
       <div class="flex items-center gap-2">
         <button v-if="showBackButton" type="button"
-          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
+          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950"
           @click="$emit('back')">
           Back
         </button>
@@ -19,7 +19,7 @@
 
     <!-- Loading / error -->
     <div v-if="loading"
-      class="mx-4 rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-slate-300">
+      class="mx-4 rounded-lg border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm text-default">
       Loading bucket usage…
     </div>
 

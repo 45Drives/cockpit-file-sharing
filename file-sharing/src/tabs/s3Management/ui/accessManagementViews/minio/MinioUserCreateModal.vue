@@ -53,7 +53,7 @@
               Secret key is required for MinIO user creation.
             </span>
             <button type="button"
-              class="text-xs px-2 py-1 rounded border border-default bg-primary text-white hover:bg-primary disabled:opacity-60"
+              class="text-xs px-2 py-1 rounded btn-primary text-default hover:bg-primary disabled:opacity-60"
               @click="form.secretKey = generateSecret()" :disabled="loading">
               Generate
             </button>
@@ -68,7 +68,7 @@
                 class="w-full border border-default bg-default rounded px-2 py-1 text-xs font-mono"
                 placeholder="required" />
               <button type="button"
-                class="px-2 py-1 text-smrounded border border-default bg-secondary hover:bg-gray-100 whitespace-nowrap"
+                class="px-2 py-1 text-smrounded btn-secondary hover:bg-gray-100 whitespace-nowrap"
                 @click="showSecret = !showSecret">
                 {{ showSecret ? "Hide" : "Show" }}
               </button>
@@ -173,12 +173,12 @@
 
       <!-- Footer -->
       <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-        <button class="px-3 py-1.5 text-xs rounded border border-default bg-secondary hover:bg-gray-100" @click="close"
+        <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100" @click="close"
           :disabled="loading">
           Cancel
         </button>
         <button
-          class="px-3 py-1.5 text-xs rounded border border-green-600 bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
+          class="px-3 py-1.5 text-xs rounded border  border-green-600 bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
           @click="submit" :disabled="loading">
           Create user
         </button>

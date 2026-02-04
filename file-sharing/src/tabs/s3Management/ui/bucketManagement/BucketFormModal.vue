@@ -2,7 +2,7 @@
 <template>
   <div v-if="visible" class="fixed inset-0 z-30 flex items-center justify-center bg-black/60">
     <div class="w-1/2 rounded-lg border border-default bg-well p-4 shadow-xl max-h-[90vh] overflow-y-auto">
-      <h3 class="mb-3 text-base font-semibold text-slate-100">
+      <h3 class="mb-3 text-base font-semibold text-default">
         {{ mode === "create" ? "Create bucket" : "Edit bucket" }}
       </h3>
 
@@ -10,24 +10,24 @@
         class="grid grid-cols-1 gap-3 text-sm md:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)]">
         <!-- Shared (Ceph/MinIO only): name + region + tags -->
         <div v-if="backend !== 'garage'" class="w-full min-w-0">
-          <label class="mb-1 block text-md font-medium text-slate-300">Bucket name</label>
+          <label class="mb-1 block text-md font-medium text-default">Bucket name</label>
           <input v-model="modalForm.name" :disabled="mode === 'edit'" type="text" required
-            class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1 disabled:opacity-60" />
+            class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-default outline-none focus:ring-1 disabled:opacity-60" />
           <p v-if="nameError" class="mt-1 text-sm text-red-400">{{ nameError }}</p>
         </div>
 
         <div v-if="backend !== 'garage'" class="w-full min-w-0">
-          <label class="mb-1 block text-md font-medium text-slate-300">Region</label>
+          <label class="mb-1 block text-md font-medium text-default">Region</label>
           <input v-model="modalForm.region" type="text" placeholder="optional"
-            class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1" />
+            class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-default outline-none focus:ring-1" />
         </div>
 
         <!-- Owner (Ceph only) -->
         <div v-if="backend === 'ceph'" class="md:col-span-2">
-          <label class="mb-1 block text-md font-medium text-slate-300">Owner</label>
+          <label class="mb-1 block text-md font-medium text-default">Owner</label>
 
           <select v-model="modalForm.owner"
-            class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-slate-100 outline-none focus:ring-1">
+            class="w-full rounded-md border border-default bg-default px-3 py-2.5 text-base text-default outline-none focus:ring-1">
             <option value="">-- Select a Ceph user --</option>
             <option v-for="u in (cephDeps?.cephUsers ?? [])" :key="u" :value="u">
               {{ u }}
@@ -46,24 +46,24 @@
           <div class="space-y-2">
             <div v-for="(tag, index) in modalForm.tags" :key="index" class="flex gap-2">
               <input v-model="tag.key" type="text" placeholder="key (e.g. env)"
-                class="flex-1 rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1" />
+                class="flex-1 rounded-md border border-default bg-default px-3 py-2 text-sm text-default outline-none focus:ring-1" />
               <input v-model="tag.value" type="text" placeholder="value (e.g. prod)"
-                class="flex-1 rounded-md border border-default bg-default px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1" />
+                class="flex-1 rounded-md border border-default bg-default px-3 py-2 text-sm text-default outline-none focus:ring-1" />
 
               <button v-if="modalForm.tags.length > 1" type="button" @click="removeTagRow(index)"
-                class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-slate-100 hover:bg-slate-800">
+                class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-default hover:bg-slate-800">
                 Remove
               </button>
 
               <button v-else type="button" @click="clearTagRow(index)"
-                class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-slate-100 hover:bg-slate-800">
+                class="rounded-md border border-default bg-default px-2 py-2 text-md font-medium text-default hover:bg-slate-800">
                 Clear
               </button>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
               <button type="button" @click="addTagRow" :disabled="modalForm.tags.length >= MAX_TAGS"
-                class="rounded-md border border-default bg-secondary px-3 py-2 text-md font-medium text-slate-100 hover:bg-slate-900 disabled:opacity-50">
+                class="rounded-md btn-secondary px-3 py-2 text-md font-medium text-default hover:bg-slate-900 disabled:opacity-50">
                 Add tag
               </button>
 
