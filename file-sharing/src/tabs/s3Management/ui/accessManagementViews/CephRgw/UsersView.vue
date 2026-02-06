@@ -34,7 +34,7 @@
           <div></div>
           <div class="justify-self-end flex items-center gap-2">
             <button
-              class="inline-flex items-center border bg-primary  text-default text-xs font-medium rounded px-3 py-1.5 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-default"
+              class="inline-flex items-center border bg-primary  text-white text-xs font-medium rounded px-3 py-1.5 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-default"
               @click="refresh" :disabled="loading" aria-label="Refresh" title="Refresh">
               <ArrowPathIcon class="h-4 w-4" />
             </button>
@@ -93,7 +93,7 @@
                 </td>
                 <td class="px-3 py-2 border-b border-default whitespace-nowrap">
                   <button
-                    class="inline-flex items-center border border-default text-xs bg-primary font-medium rounded px-2 py-1 mr-1"
+                    class="inline-flex items-center  text-xs btn-primary font-medium rounded px-2 py-1 mr-1"
                     @click="openDetails(user)">
                     Details
                   </button>
@@ -106,7 +106,7 @@
                     </button>
 
                     <button
-                      class="inline-flex items-center border border-red-600 bg-red-500 text-default text-xs font-medium rounded px-2 py-1 hover:bg-red-600"
+                      class="inline-flex items-center border border-red-600 bg-red-500 text-white text-xs font-medium rounded px-2 py-1 hover:bg-red-600"
                       @click="openDeleteDialog(user)">
                       Delete
                     </button>
@@ -158,12 +158,12 @@
           </div>
 
           <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-            <button class="px-3 py-1.5 text-xs rounded border border-default" @click="closeDeleteDialog"
+            <button class="px-3 py-1.5 text-xs rounded btn-secondary " @click="closeDeleteDialog"
               :disabled="loading">
               Cancel
             </button>
             <button
-              class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60"
+              class="px-3 py-1.5 text-xs rounded border text-white border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60"
               @click="confirmDelete" :disabled="loading">
               Delete
             </button>

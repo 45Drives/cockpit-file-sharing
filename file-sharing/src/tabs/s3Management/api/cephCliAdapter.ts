@@ -334,8 +334,7 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
 
       try {
         // 1) user info
-        const infoArgs = ["user", "info", "--uid", uid];
-        if (tenant) infoArgs.push("--tenant", tenant);
+        const infoArgs = ["user", "info", `--uid=${fullUid}`];
         const info = await rgwJson(infoArgs);
 
         const userQuota = info.user_quota || {};
@@ -345,8 +344,7 @@ export async function listRgwUsers(): Promise<RgwUser[]> {
           typeof userQuota.max_objects === "number" ? userQuota.max_objects : null;
 
         // 2) user stats 
-        const statsArgs = ["user", "stats", "--uid", uid];
-        if (tenant) statsArgs.push("--tenant", tenant);
+        const statsArgs = ["user", "stats", `--uid=${fullUid}`];
         const stats = await rgwJson(statsArgs);
 
         const { usedSizeKb, usedObjects } = extractUsageFromUserStats(stats);
@@ -818,7 +816,7 @@ export async function updateRgwUser(opts: CreateRgwUserOptions): Promise<void> {
 export async function getRgwUserInfo(uid: string, tenant?: string): Promise<RgwUserDetails> {
   if (!uid) throw new Error("getRgwUserInfo: uid is required");
 
-  const fullUid = tenant ? `${tenant}$${uid}` : uid;
+  const fullUid = uid;
 
   // Fetch only what the table doesn't already have (keys/caps + bucket quota).
   // Do NOT call "user stats" or recompute usage/percent here, because listRgwUsers
@@ -888,7 +886,6 @@ function splitTenantFromUid(fullUid: string): { tenant?: string; uid: string } {
     uid: fullUid,
   };
 }
-
 
 export async function getCephS3Connection(): Promise<CephS3Connection> {
   if (cachedCephS3Conn) return cachedCephS3Conn;
@@ -1242,8 +1239,8 @@ export async function isRgwUsageLogEnabled(): Promise<boolean | null> {
 }
 
 async function rgwUserExists(uid: string, tenant?: string): Promise<boolean> {
-  const args = ["user", "info", "--uid", uid];
-  if (tenant) args.push("--tenant", tenant);
+  const fullUid = uid;
+  const args = ["user", "info", `--uid=${fullUid}`];
 
   try {
     await rgwJson(args);

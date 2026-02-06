@@ -1,6 +1,6 @@
 <template>
   <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-    <div class="bg-default rounded-lg shadow-lg max-w-md w-full mx-4">
+    <div class="bg-default rounded-lg shadow-lg max-w-md w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col">
       <div class="px-5 py-4 border-b border-default">
         <h3 class="text-base font-semibold">
           {{ isEdit ? "Edit RGW user" : "Create RGW user" }}
@@ -8,7 +8,7 @@
 
       </div>
 
-      <div class="px-5 py-4 space-y-3 text-sm">
+      <div class="px-5 py-4 space-y-3 text-sm overflow-y-auto">
         <!-- Basic identity -->
         <div>
           <label class="block text-sm font-medium mb-1">

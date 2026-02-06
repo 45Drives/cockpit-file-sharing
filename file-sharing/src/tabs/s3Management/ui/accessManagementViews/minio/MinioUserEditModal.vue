@@ -220,9 +220,9 @@
             <section class="rounded-lg border border-default bg-default px-4 py-4 space-y-3">
               <div class="flex items-center justify-between">
                 <div>
-                  <div class="text-sm font-medium text-default">Reset user secret key</div>
+                  <div class="text-sm font-medium text-default">Reset user Password</div>
                   <div class="text-xs text-muted">
-                    If enabled, the user must use the new secret key for MinIO access.
+                    If enabled, the user must use the new password key for MinIO access.
                   </div>
                 </div>
 
@@ -233,7 +233,7 @@
               </div>
 
               <div v-if="resetSecret" class="rounded-md border border-default bg-accent p-3 space-y-2">
-                <label class="block text-xs font-semibold text-default">New secret key</label>
+                <label class="block text-xs font-semibold text-default">New Password</label>
 
                 <input type="text" v-model="localSecret"
                   class="w-full rounded-md border border-default bg-default px-2 py-1 text-xs"
@@ -242,10 +242,10 @@
                 <div class="flex items-center justify-between gap-3">
                   <button type="button" class="rounded-md btn-secondary px-2.5 py-1 text-xs"
                     @click="localSecret = generateSecret()">
-                    Generate key
+                    Generate Password
                   </button>
                   <div class="text-xs text-muted">
-                    Leave empty to let the backend generate a random secret. If you provide a value, that exact secret
+                    Leave empty to let the backend generate a random password. If you provide a value, that exact password
                     will be set.
                   </div>
                 </div>

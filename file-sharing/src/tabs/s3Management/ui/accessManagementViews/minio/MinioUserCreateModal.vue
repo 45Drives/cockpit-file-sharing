@@ -50,7 +50,7 @@
 
           <div class="flex items-center justify-between">
             <span class="text-xs text-gray-600">
-              Secret key is required for MinIO user creation.
+              Password is required for MinIO user creation.
             </span>
             <button type="button"
               class="text-xs px-2 py-1 rounded btn-primary text-default hover:bg-primary disabled:opacity-60"
@@ -61,7 +61,7 @@
 
           <div>
             <label class="block text-xs font-medium mb-1">
-              Secret key
+              Password
             </label>
             <div class="flex items-center space-x-2">
               <input :type="showSecret ? 'text' : 'password'" v-model="form.secretKey" autocomplete="off"
