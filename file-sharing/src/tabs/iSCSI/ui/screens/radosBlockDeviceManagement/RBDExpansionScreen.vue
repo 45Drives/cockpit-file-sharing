@@ -21,7 +21,7 @@
           <button
             class="btn btn-primary"
             @click="actions.resizeDevice"
-            :disabled="!validationScope.isValid() || !modified"
+            :disabled="!validationScope.isValid() || !modified || !canCreate"
           >
             {{ "Create" }}
           </button>
@@ -35,7 +35,7 @@ import { RadosBlockDevice } from "@/tabs/iSCSI/types/cluster/RadosBlockDevice";
 import { LogicalVolume } from "@/tabs/iSCSI/types/cluster/LogicalVolume";
 import { CardContainer, InputLabelWrapper, useTempObjectStaging, validationError, ValidationResultView, ValidationScope, validationSuccess, wrapActions, ByteInput } from "@45drives/houston-common-ui";
 import { ResultAsync, okAsync } from "neverthrow";
-import { inject, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 import type { ProcessError } from "@45drives/houston-common-lib";
 import type { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
@@ -45,8 +45,10 @@ const _cockpit = cockpit;
 const _ = cockpit.gettext;
 
 const driver = inject<ResultAsync<ISCSIDriverClusteredServer, ProcessError>>("iSCSIDriver")!;
-
-const props = defineProps<{
+  const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+  if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+  const canCreate = computed(() => canEditIscsi.value);
+  const props = defineProps<{
   device: RadosBlockDevice | LogicalVolume | VirtualDevice;
 }>();
 

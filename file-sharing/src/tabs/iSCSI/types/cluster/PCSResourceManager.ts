@@ -19,7 +19,7 @@ export class PCSResourceManager {
     createResource(name: string, creationArguments: string, type: PCSResourceType, server: Server) {
         const resourceName = name.replace(':', '_');
         const creationCommand = new BashCommand(`pcs resource create '${resourceName}' ${creationArguments}`);
-        console.log("creation command", creationCommand.toString());
+        // console.log("creation command", creationCommand.toString());
         return server.execute(creationCommand).map(() => {
           const resource = new PCSResource(resourceName, type);
           this.currentResources = [...this.currentResources!, resource];
@@ -28,7 +28,7 @@ export class PCSResourceManager {
       }
 
     deleteResource(resource: Pick<PCSResource, "name">) {
-      console.log(`pcs resource delete '${resource.name}'`);
+      // console.log(`pcs resource delete '${resource.name}'`);
         return this.server.execute(new BashCommand(`pcs resource delete '${resource.name}'`))
         .map(() => {
             this.currentResources = this.currentResources!.filter((existingResource) => existingResource.name !== resource.name);
@@ -222,7 +222,7 @@ export class PCSResourceManager {
             }
 
             resource.resourceGroup = resourceGroup;
-            console.log(`pcs resource group add '${resourceGroup.name}' ${positionArgument.join(" ")} '${resource.name}'`);
+            // console.log(`pcs resource group add '${resourceGroup.name}' ${positionArgument.join(" ")} '${resource.name}'`);
             return self.server.execute(new BashCommand(`pcs resource group add '${resourceGroup.name}' ${positionArgument.join(" ")} '${resource.name}'`)).map(() => undefined);
         }))
     }
@@ -234,7 +234,7 @@ export class PCSResourceManager {
     }
 
     constrainResourceToGroup(resource: PCSResource, resourceGroup: PCSResourceGroup,server: Server) {
-        console.log(`pcs constraint colocation add '${resource.name}' with '${resourceGroup.name}'`);
+        // console.log(`pcs constraint colocation add '${resource.name}' with '${resourceGroup.name}'`);
         return server.execute(new BashCommand(`pcs constraint colocation add '${resource.name}' with '${resourceGroup.name}'`))
         .map(() => undefined)
     }
@@ -244,13 +244,13 @@ export class PCSResourceManager {
     }
 
     enableResources(resourceName:string) {
-        console.log(`pcs resource enable ${resourceName}`);
+        // console.log(`pcs resource enable ${resourceName}`);
         return this.server.execute(new BashCommand(`pcs resource enable ${resourceName} `))
         .map(() => undefined);
     }
 
     orderResourceBeforeGroup(resource: PCSResource, resourceGroup: PCSResourceGroup) {
-        console.log(`pcs constraint order start '${resource.name}' then '${resourceGroup.name}'`);
+        // console.log(`pcs constraint order start '${resource.name}' then '${resourceGroup.name}'`);
         return this.server.execute(new BashCommand(`pcs constraint order start '${resource.name}' then '${resourceGroup.name}'`))
         .map(() => undefined);
     }
@@ -260,7 +260,7 @@ export class PCSResourceManager {
     }
 
     fetchResourceConfig(resource: Pick<PCSResource, "name">) {
-        console.log(`pcs resource config --output-format json '${resource.name}'`);
+        // console.log(`pcs resource config --output-format json '${resource.name}'`);
         return this.server.execute(new BashCommand(`pcs resource config --output-format json '${resource.name}'`))
         .map((process) => process.getStdout())
         .andThen(safeJsonParse<PCSConfigJson>);
@@ -286,10 +286,6 @@ export class PCSResourceManager {
 
     fetchResourceByName(resourceName: string) {
         return this.fetchResources().map((resources) => resources.find((resource) => resource.name === resourceName));
-    }
-
-    getTargetGroups(){
-    
     }
 
     fetchResources(): ResultAsync<PCSResource[], ProcessError> {
@@ -348,12 +344,6 @@ export class PCSResourceManager {
         }
 
         return undefined;
-    }
-
-    getGenerationCommandForPCSResource(resource: PCSResourceConfigJson) {
-        return okAsync(undefined);
-        // return this.server.execute(new BashCommand(`pcs resource config '${resource.id}' --output-format cmd`))
-        // .map((proc) => new BashCommand(proc.getStdout().replace(/\\\n/g, "").replace(/\n/g, "")));
     }
 }
  type PCSResourceConfigJson = {

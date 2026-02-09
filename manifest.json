@@ -13,6 +13,8 @@
         "ubuntu": "all",
         "rocky": "noarch",
         "debian": "all"
+        "rocky": "noarch",
+        "debian": "all"
     },
     "defaults": {
         "change_urgency": "medium"

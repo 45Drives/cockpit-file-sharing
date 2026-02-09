@@ -110,7 +110,7 @@ onMounted(async () => {
 const windowsACLsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
   include: {
     "map acl inherit": "yes",
-    "vfs objects": "acl_xattr",
+    "vfs objects": ["acl_xattr"],
   },
   exclude: {},
 });

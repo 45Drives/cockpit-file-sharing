@@ -6,11 +6,7 @@
         <span class="sr-only">Edit</span>
         <WrenchIcon class="size-icon icon-default" />
       </button>
-      <button v-if="!useUserSettings().value.iscsi.clusteredServer" @click="promptDeletion">
-        <span class="sr-only">Delete</span>
-        <TrashIcon class="size-icon icon-danger" />
-      </button>
-      <button @click="promptDeletion">
+      <button @click="promptDeletion" :disabled="!canCreate">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
@@ -31,7 +27,7 @@
 <script setup lang="ts">
 import { TrashIcon, WrenchIcon } from "@heroicons/vue/20/solid";
 import { wrapActions, confirmBeforeAction } from "@45drives/houston-common-ui";
-import { inject, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import { Disclosure } from "@45drives/houston-common-ui";
 import { ResultAsync } from "neverthrow";
 import { ProcessError } from "@45drives/houston-common-lib";
@@ -43,12 +39,14 @@ import type { Target } from "@/tabs/iSCSI/types/Target";
 import { useUserSettings } from "@/common/user-settings";
 
 const props = defineProps<{ target: Target; initiatorGroup: InitiatorGroup }>();
-
 // NOTE: add 'groupWillDelete' to your emits
 const emit = defineEmits(["deleteEntry", "groupWillDelete"]);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 const showEditor = ref(false);
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+const canCreate = computed(() => canEditIscsi.value);
 
 const deleteEntry = () => {
   return driver
@@ -77,8 +75,23 @@ const deleteEntry = () => {
 
 const actions = wrapActions({ deleteEntry });
 
+const deletionBody = computed(() => {
+  const base = `Delete initiator group "${props.initiatorGroup.name}"?`;
+
+  const clusteredWarning = `Deleting this initiator group may restart related resources and impact active sessions. Recommended to perform during a maintenance window.`;
+
+  const isClustered = useUserSettings().value.iscsi.clusteredServer === true;
+
+  return isClustered ? `${base}\n${clusteredWarning.trim()}` : base;
+});
+
 const promptDeletion = confirmBeforeAction(
-  { header: "Confirm", body: `Delete Initiator Group ${props.initiatorGroup.name}?` },
+  {
+    header: "Confirm Deletion",
+    body: deletionBody.value,
+    dangerous: true
+  },
   actions.deleteEntry
 );
+
 </script>

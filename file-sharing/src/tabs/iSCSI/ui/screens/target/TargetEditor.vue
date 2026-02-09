@@ -31,7 +31,7 @@
         <button
           class="btn btn-primary"
           @click="actions.createTarget"
-          :disabled="!validationScope.isValid()"
+          :disabled="!validationScope.isValid() || !canCreate"
         >
           {{ "Create" }}
         </button>
@@ -53,7 +53,7 @@ import {
   ValidationScope,
 } from "@45drives/houston-common-ui";
 import { ResultAsync } from "neverthrow";
-import { inject, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import { BashCommand, getServerCluster, ProcessError } from "@45drives/houston-common-lib";
 import { Target } from "@/tabs/iSCSI/types/Target";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
@@ -77,8 +77,10 @@ const { tempObject: tempPortal, modified: portalModified, resetChanges: resetCha
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 let usedAddresses: string[] = [];
-
-getServerCluster("pcs").andThen((servers) => 
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+  if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+  const canCreate = computed(() => canEditIscsi.value);
+  getServerCluster("pcs").andThen((servers) => 
   ResultAsync.combine(servers.map((server) => server.execute(new BashCommand("hostname -I"))))
   .map((procs) => procs.map((proc) => proc.getStdout().trim().split(" ")))).map((ips) => usedAddresses = ips.flat())
 

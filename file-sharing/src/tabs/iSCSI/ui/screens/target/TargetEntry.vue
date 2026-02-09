@@ -6,7 +6,7 @@
         <span class="sr-only">Edit</span>
         <WrenchIcon class="size-icon icon-default" />
       </button>
-      <button @click="promptDeletion">
+      <button @click="promptDeletion" :disabled="!canCreate">
         <span class="sr-only">Delete</span>
         <TrashIcon class="size-icon icon-danger" />
       </button>
@@ -33,7 +33,7 @@ import { TrashIcon, WrenchIcon } from "@heroicons/vue/20/solid";
 import { wrapActions, confirmBeforeAction } from "@45drives/houston-common-ui";
 import { ProcessError } from "@45drives/houston-common-lib";
 import type { ResultAsync } from "neverthrow";
-import { inject, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import { Disclosure } from "@45drives/houston-common-ui";
 import PortalTable from "../portal/PortalTable.vue";
@@ -48,6 +48,9 @@ const emit = defineEmits(["deleteTarget"]);
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;
 
 const showEditor = ref(false);
+const canEditIscsi = inject<Ref<boolean>>("canEditIscsi");
+if (!canEditIscsi) throw new Error("canEditIscsi not provided");
+const canCreate = computed(() => canEditIscsi.value);
 
 const deleteTarget = () => {
   return driver
@@ -61,7 +64,7 @@ const deleteTarget = () => {
 const actions = wrapActions({ deleteTarget: deleteTarget });
 
 const promptDeletion = confirmBeforeAction(
-  { header: "Confirm", body: `Delete target ${props.target.name}?` },
+  { header: "Confirm", body: `Delete target ${props.target.name}?`, dangerous: true },
   actions.deleteTarget
 );
 </script>

@@ -25,27 +25,7 @@ export class RBDManager {
               return new ProcessError("Failed to fetch online cluster nodes");
           });
   }
-    // createRadosBlockDevice(name: string, size: number, parentPool: Pool, dataPool?: Pool) {
-    //     const dataPoolArgument =  dataPool === undefined ? "" :  `--data-pool ${dataPool.name}`
-
-    //     return this.server.execute(new BashCommand(`rbd create ${parentPool.name}/${name} --size ${size}B ${dataPoolArgument}`))
-    //     .andThen(() => 
-    //         this.server.execute(new BashCommand(`rbd map ${parentPool.name}/${name}`))
-    //         .andThen((mapProc) => this.server.execute(new BashCommand(`blockdev --getbsz ${mapProc.getStdout()}`))
-    //             .andThen((blockSizeProc) => {
-    //                 const blockSize = StringToIntCaster()(blockSizeProc.getStdout())
-
-    //                 if (!blockSize.isNone())
-    //                     return okAsync(new RadosBlockDevice(name, mapProc.getStdout().trim(), blockSize.some(), size, parentPool, dataPool));
-    //                 if (this.cachedRBDs === null) {
-    //                     this.cachedRBDs = [];
-    //                 }
-    //                 this.cachedRBDs.push(new RadosBlockDevice(name, mapProc.getStdout().trim(), blockSize.some(), size, parentPool, dataPool));
-    //                 return errAsync(new ProcessError("Unable to determine block size of RBD"));
-    //             })
-    //         )
-    //     )
-    // }
+ 
     createRadosBlockDevice(name: string, size: number, parentPool: Pool, dataPool?: Pool) {
         const dataPoolArgument =  dataPool === undefined ? "" :  `--data-pool ${dataPool.name}`
 
@@ -77,14 +57,13 @@ export class RBDManager {
   
               const nodeElements = Array.from(doc.getElementsByTagName("node"));
               const servers = nodeElements
-                  .filter(el => el.getAttribute("online") === "true" && el.getAttribute("standby")==="false")
+                  .filter(el => el.getAttribute("online") === "true")
                   .map(el => el.getAttribute("name"))
                   .filter((name): name is string => !!name)
                   .map(name => new Server(name));
               if (servers.length === 0) {
                   return errAsync(new ProcessError("No online cluster nodes found."));
               }
-  
               return okAsync(servers);
           });
   }
@@ -93,7 +72,6 @@ export class RBDManager {
     return this.allServers[0]
   }
 
-    
 
     createLogicalVolumeFromRadosBlockDevices(logicalVolumeName: string, volumeGroupName: string, rbds: RadosBlockDevice[]) {
         const rbdPaths = rbds.map((rbd) => rbd.filePath).join(' ');
@@ -165,60 +143,7 @@ export class RBDManager {
             ))
             .map((results) => results.filter((result): result is Pool => result !== undefined));
     }
-    // fetchAvaliableRadosBlockDevices() {
-    //     const self = this;
-    //     return ResultAsync.combine([
-    //       this.server.execute(new BashCommand(`rbd showmapped --format json`))
-    //         .map((proc) => proc.getStdout())
-    //         .andThen(safeJsonParse<MappedRBDJson>)
-    //         .mapErr((err) => new ProcessError(`Unable to get current mapped Rados Block Devices: ${err}`)),
-      
-    //       this.server.execute(new BashCommand(`pvs --reportformat json -o pv_name,vg_name`))
-    //         .map((proc) => proc.getStdout())
-    //         .andThen(safeJsonParse<PVToVGJson>)
-    //         .map((parsed) => {
-    //           const map = new Map<string, string>();
-    //           parsed.report.forEach(report => {
-    //             report.pv.forEach(entry => {
-    //               if (entry.vg_name) {
-    //                 map.set(entry.pv_name, entry.vg_name);
-    //               }
-    //             });
-    //           });
-    //           return map;
-    //         })
-    //     ])
-    //     .andThen(([rbdEntries, pvToVGMap]) => {
-    //       return ResultAsync.combine(
-    //         rbdEntries.filter(Boolean).map((entry) => {
-    //           return new ResultAsync(safeTry(async function* () {
-    //             const devicePath = entry.device;
-    //             const vgName = pvToVGMap.get(devicePath); // ✅ Map device to VG (if exists)
-      
-    //             const blockSize = yield* self.getBlockSizeFromDevicePath(devicePath).safeUnwrap();
-    //             const maximumSize = yield* self.getMaximumSizeFromRBDName(entry.name).safeUnwrap();
-      
-    //             const parentPool = yield* self.fetchAvaliablePools()
-    //               .map(pools => pools.find(pool => pool.name === entry.pool))
-    //               .safeUnwrap();
-      
-    //             if (parentPool) {
-    //               if (parentPool.poolType === PoolType.Replication) {
-    //                 return ok(new RadosBlockDevice(entry.name, devicePath, blockSize, maximumSize, parentPool, undefined, vgName));
-    //               } else if (parentPool.poolType === PoolType.ErasureCoded) {
-    //                 const dataPool = yield* self.getDataPoolForRBDName(entry.name, parentPool).safeUnwrap();
-    //                 if (dataPool) {
-    //                   return ok(new RadosBlockDevice(entry.name, devicePath, blockSize, maximumSize, parentPool, dataPool, vgName));
-    //                 }
-    //               }
-    //             }
-      
-    //             return err(new ProcessError("Unable to get Block Device information."));
-    //           }));
-    //         })
-    //       );
-    //     });
-    //   }
+
 
     private cachedRBDs: RadosBlockDevice[] | null = null;
 
@@ -233,7 +158,7 @@ export class RBDManager {
               .map((proc) => proc.getStdout())
               .andThen(safeJsonParse<MappedRBDJson>)
               .mapErr((err) => new ProcessError(`Unable to get mapped RBDs from ${server}: ${err}`)),
-    
+              
             server.execute(new BashCommand(`pvs --reportformat json -o pv_name,vg_name`))
               .map((proc) => proc.getStdout())
               .andThen(safeJsonParse<PVToVGJson>)
@@ -285,7 +210,7 @@ export class RBDManager {
 
      fetchAvaliableLogicalVolumes(): ResultAsync<LogicalVolume[], ProcessError> {
       const self = this;
-    
+    // console.log("this.allservers ", this.allServers)
       return ResultAsync.combine(
         this.allServers.map((server) =>
           // 1) get all LVs for this server
@@ -294,16 +219,28 @@ export class RBDManager {
              -o lv_name,vg_name,lv_size,lv_path,lv_attr \
              -S 'vg_name!="rl" && lv_name!~"^(root|home|swap)$"'`
           ))
-            .map(p => p.getStdout())
+            .map(p => {
+              const out = p.getStdout()
+              // console.log("LVS raw stdout: ", out);
+              // console.log("server ", server)
+              return out;
+            })
             .andThen(safeJsonParse<LogicalVolumeInfoJson>)
-            .map(info => info?.report?.flatMap(r => r.lv) ?? [])
-            // 2) get PV->VG data ONCE (not per-LV)
+            .map(info => {
+              // console.log("LVS PARSED JSON:", info);
+              return info?.report?.flatMap(r => r.lv) ?? [];
+            })            // 2) get PV->VG data ONCE (not per-LV)
             .andThen(lvList =>
               ResultAsync.combine([
                 okAsync(lvList),
                 server.execute(new BashCommand(`pvs --reportformat json --units B -o pv_name,vg_name`))
-                  .map(p => p.getStdout())
+                  .map(p => {
+                    const out = p.getStdout()
+                    // console.log("pvs raw stdout: ", out);
+                    return out;
+                  })
                   .andThen(safeJsonParse<PVToVGJson>)
+                
               ])
             )
             // 3) get ALL mapped RBDs ONCE (not per-LV), for ALL servers, and reuse
@@ -321,9 +258,11 @@ export class RBDManager {
                 arr.push(rbd);
                 rbdByServer.set(rbd.server, arr);
               }
+              // console.log("rbdByserver ", rbdByServer)
               const rbdHere = rbdByServer.get(server) ?? [];
     
               // Build PV objects by matching to RBDs on THIS server
+              // console.log("pvList ", pvList)
               const pvsForServer = pvList
                 .map(pv => rbdHere.find(r => r.filePath === pv.pv_name))
                 .filter((x): x is RadosBlockDevice => !!x)
@@ -336,6 +275,7 @@ export class RBDManager {
                 if (hit) return hit;
                 const vg = new VolumeGroup(vgName, pvsForServer, server);
                 vgCache.set(vgName, vg);
+                // console.log("vgName ", vg)
                 return vg;
               }
     
@@ -348,7 +288,7 @@ export class RBDManager {
                   server
                 )
               );
-    
+              console.log("lvs  ", lvs)
               return okAsync(lvs);
             })
         )
