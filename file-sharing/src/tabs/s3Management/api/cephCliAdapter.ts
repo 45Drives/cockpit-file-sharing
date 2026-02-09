@@ -450,7 +450,7 @@ function isRgwUserNotFoundError(err: unknown): boolean {
   );
 }
 
-// Backwards-compatible wrappers (optional, keep call sites unchanged if you want)
+// Backwards-compatible wrappers 
 async function getDashboardS3Creds(): Promise<RgwS3Creds> {
   return getFirstExistingRgwUserS3Creds(["ceph-dashboard", "dashboard"]);
 }
@@ -931,7 +931,7 @@ export async function getCephBucketFromStats(adminRefOrName: string): Promise<Ce
   const rgwBucket = String(adminRefOrName ?? "").trim();
   if (!rgwBucket) throw new Error("getCephBucketFromStats: bucket name is required");
 
-  // rgw-admin expects tenant:bucket (not tenant/bucket). Your hydrate uses replace("/",":") too.
+  // rgw-admin expects tenant:bucket (not tenant/bucket)
 
   const stats: any = await rgwJson(["bucket", "stats", "--bucket", rgwBucket]);
   return buildS3BucketFromRgwStats(stats);
