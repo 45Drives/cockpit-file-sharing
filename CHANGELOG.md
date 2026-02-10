@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.3-2
+## Cockpit File Sharing 4.5.3-3
 
-* fixed light mode view + added view mode for minio service accounts  + building test package
+* building package with s3 management tab
