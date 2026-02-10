@@ -1,9 +1,28 @@
+cockpit-file-sharing (4.5.3-2jammy) jammy; urgency=medium
+
+  * fixed light mode view + added view mode for minio service accounts + building
+    test package
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 04 Feb 2026 08:14:59 -0400
+
+cockpit-file-sharing (4.5.3-1jammy) jammy; urgency=medium
+
+  * added service account creation for minio users + building test pacakge
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 03 Feb 2026 05:55:38 -0400
+
 cockpit-file-sharing (4.5.2-1jammy) jammy; urgency=medium
 
   * Fix Windows ACLs toggle switch in Samba share editor - now stays on when extra
     vfs objects are added
 
  -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 21 Jan 2026 07:18:09 -0400
+
+cockpit-file-sharing (4.5.2-1jammy) jammy; urgency=medium
+
+  * building test package for s3 management
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 12 Jan 2026 09:10:33 -0400
 
 cockpit-file-sharing (4.5.1-4jammy) jammy; urgency=medium
 
@@ -17,11 +36,23 @@ cockpit-file-sharing (4.5.1-1jammy) jammy; urgency=medium
 
  -- Rachit Hans <rhans@45drives.com>  Tue, 06 Jan 2026 07:59:44 -0400
 
+cockpit-file-sharing (4.5.1-2jammy) jammy; urgency=medium
+
+  * building pacakge for s3 testing
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 30 Dec 2025 11:28:26 -0400
+
 cockpit-file-sharing (4.4.1-10jammy) jammy; urgency=medium
 
   * building package internal for repo
 
  -- Rachit Hans <rhans@45drives.com>  Wed, 24 Dec 2025 05:28:08 -0400
+
+cockpit-file-sharing (4.5.1-1jammy) jammy; urgency=medium
+
+  * added S3 management
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 24 Dec 2025 05:06:06 -0400
 
 cockpit-file-sharing (4.4.0-1jammy) jammy; urgency=medium
 

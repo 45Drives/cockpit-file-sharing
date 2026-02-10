@@ -28,13 +28,24 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el9 install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Feb 04 2026 Rachit Hans <rhans@45drives.com> 4.5.3-2
+- fixed light mode view + added view mode for minio service accounts + building
+  test package
+* Tue Feb 03 2026 Rachit Hans <rhans@45drives.com> 4.5.3-1
+- added service account creation for minio users + building test pacakge
 * Wed Jan 21 2026 Joshua Boudreau <jboudreau@45drives.com> 4.5.2-1
 - Fix Windows ACLs toggle switch in Samba share editor - now stays on when extra
   vfs objects are added
+* Mon Jan 12 2026 Rachit Hans <rhans@45drives.com> 4.5.2-1
+- building test package for s3 management
 * Tue Jan 06 2026 Rachit Hans <rhans@45drives.com> 4.5.1-4
 - build package
 * Tue Jan 06 2026 Rachit Hans <rhans@45drives.com> 4.5.1-1
 - building pacakge with iscsi cluster changes and single server UI changes
+* Tue Dec 30 2025 Rachit Hans <rhans@45drives.com> 4.5.1-2
+- building pacakge for s3 testing
+* Wed Dec 24 2025 Rachit Hans <rhans@45drives.com> 4.5.1-1
+- added S3 management
 * Wed Dec 24 2025 Rachit Hans <rhans@45drives.com> 4.4.1-10
 - building package internal for repo
 * Fri Dec 12 2025 Joshua Boudreau <jboudreau@45drives.com> 4.4.0-1

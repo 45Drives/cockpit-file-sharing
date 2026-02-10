@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.2-1
+## Cockpit File Sharing 4.5.3-2
 
-* Fix Windows ACLs toggle switch in Samba share editor - now stays on when extra vfs objects are added
+* fixed light mode view + added view mode for minio service accounts  + building test package

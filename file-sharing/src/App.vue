@@ -19,6 +19,7 @@ import { Cog8ToothIcon } from "@heroicons/vue/20/solid";
 import { useUserSettings } from "@/common/user-settings";
 import { type ResultAsync, ok } from "neverthrow";
 import { BashCommand, Directory, getServer } from "@45drives/houston-common-lib";
+import S3ManagementMain from "./tabs/s3Management/ui/S3ManagementMain.vue";
 
 const _ = cockpit.gettext;
 
@@ -29,7 +30,7 @@ const showUserSettings = ref(false);
 const showSambaTab = ref(true);
 const showNfsTab = ref(true);
 const showIscsiTab = ref(true);
-
+const showS3Tab = ref(true);
 const sambaConfigured = (): ResultAsync<boolean, never> => {
   return getServer()
     .andThen((server) => server.execute(new BashCommand("command -v net")))
@@ -143,6 +144,21 @@ globalProcessingWrapPromise(useUserSettings(true)).then((userSettings) => {
           );
           break;
       }
+      switch (userSettings.s3.tabVisibility) {
+        case "always":
+          showIscsiTab.value = true;
+          break;
+        case "never":
+          showIscsiTab.value = false;
+          break;
+        case "auto":
+          globalProcessingWrapPromise(
+            iscsiConfigured()
+              .map((value) => (showIscsiTab.value = value))
+              .unwrapOr(null)
+          );
+          break;
+      }
     },
     { immediate: true }
   );
@@ -175,6 +191,14 @@ const visibleTabs = computed<HoustonAppTabEntry[]>(() => [
         },
       ]
     : []),
+    ...(showS3Tab.value
+    ? [
+        {
+          label: "S3",
+          component: S3ManagementMain,
+        },
+      ]
+    : [])
 ]);
 </script>
 
