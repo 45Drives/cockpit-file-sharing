@@ -30,23 +30,17 @@ cockpit-file-sharing (4.5.1-4bookworm) bookworm; urgency=medium
 
  -- Rachit Hans <rhans@45drives.com>  Tue, 06 Jan 2026 13:52:06 -0400
 
-cockpit-file-sharing (4.5.1-2bookworm) bookworm; urgency=medium
-
-  * building pacakge for s3 testing
-
- -- Rachit Hans <rhans@45drives.com>  Tue, 30 Dec 2025 11:28:26 -0400
-
 cockpit-file-sharing (4.5.1-1bookworm) bookworm; urgency=medium
 
   * building pacakge with iscsi cluster changes and single server UI changes
 
  -- Rachit Hans <rhans@45drives.com>  Tue, 06 Jan 2026 07:59:44 -0400
 
-cockpit-file-sharing (4.5.1-1bookworm) bookworm; urgency=medium
+cockpit-file-sharing (4.5.1-2bookworm) bookworm; urgency=medium
 
-  * added S3 management
+  * building pacakge for s3 testing
 
- -- Rachit Hans <rhans@45drives.com>  Wed, 24 Dec 2025 05:06:06 -0400
+ -- Rachit Hans <rhans@45drives.com>  Tue, 30 Dec 2025 11:28:26 -0400
 
 cockpit-file-sharing (4.4.1-10bookworm) bookworm; urgency=medium
 
@@ -54,17 +48,23 @@ cockpit-file-sharing (4.4.1-10bookworm) bookworm; urgency=medium
 
  -- Rachit Hans <rhans@45drives.com>  Wed, 24 Dec 2025 05:28:08 -0400
 
-cockpit-file-sharing (4.4.1-9bookworm) bookworm; urgency=medium
+cockpit-file-sharing (4.5.1-1bookworm) bookworm; urgency=medium
 
-  * fixed table long name bug + hiding unwanted vgs + changed ocf directory name
+  * added S3 management
 
- -- Rachit Hans <rhans@45drives.com>  Tue, 02 Dec 2025 08:09:33 -0400
+ -- Rachit Hans <rhans@45drives.com>  Wed, 24 Dec 2025 05:06:06 -0400
 
 cockpit-file-sharing (4.4.0-1bookworm) bookworm; urgency=medium
 
   * Added smbpasswd management
 
  -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 12 Dec 2025 13:21:36 -0400
+
+cockpit-file-sharing (4.4.1-9bookworm) bookworm; urgency=medium
+
+  * fixed table long name bug + hiding unwanted vgs + changed ocf directory name
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 02 Dec 2025 08:09:33 -0400
 
 cockpit-file-sharing (4.4.1-8bookworm) bookworm; urgency=medium
 
