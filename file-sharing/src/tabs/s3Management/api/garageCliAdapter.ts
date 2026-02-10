@@ -449,7 +449,6 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
     };
   }
       
-  // CREATE: just pass the pieces you actually need
   const creatingKeys = new Set<string>();
 
   export async function createGarageKey(
@@ -614,7 +613,6 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
 
     }
     
-// Shared unit multipliers + helper (drop in near top of file, above functions)
 const GARAGE_UNIT_MULTIPLIERS: Record<string, number> = {
   B: 1,
   KIB: 1024,

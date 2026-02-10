@@ -67,7 +67,6 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 
-// Your existing users page/table:
 import MinioUsersTable from "./MinioUsersTable.vue";
 import MinioPoliciesView from "./MinioPoliciesView.vue";
 import MinioGroupsView from "./MinioGroupsView.vue";

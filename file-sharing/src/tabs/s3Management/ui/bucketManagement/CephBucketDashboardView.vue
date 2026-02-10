@@ -95,7 +95,6 @@
     </div>
 
     <!-- Content -->
-    <!-- Content -->
     <div v-if="usageWarning"
       class="mx-4 rounded-lg border border-yellow-700/60 bg-yellow-950/40 px-4 py-3 text-sm text-yellow-200">
       {{ usageWarning }}
@@ -204,34 +203,6 @@
               {{ bucket.zonegroup || "Unknown" }}
             </span>
           </div>
-          <!-- <p class="text-xs">
-        Placement rule:
-        <span class="font-semibold">
-          {{ bucket.placementRule || "default-placement" }}
-        </span>
-      </p> -->
-          <!-- <p v-if="bucket.bucketQuota" class="text-xs mt-1">
-        Bucket quota:
-        <span class="font-semibold">
-          <span v-if="stats.bucketQuota.maxSizeKb && stats.bucketQuota.maxSizeKb > 0">
-            {{ formatBytes(stats.bucketQuota.maxSizeKb * 1024) }}
-          </span>
-          <span v-else>
-            Unlimited size
-          </span>
-          <span class="ml-1">
-            /
-            {{
-              stats.bucketQuota.maxObjects && stats.bucketQuota.maxObjects > 0
-                ? stats.bucketQuota.maxObjects.toLocaleString() + " objects"
-                : "unlimited objects"
-            }}
-          </span>
-        </span>
-      </p>
-      <p v-else class="text-xs mt-1 text-default">
-        No bucket quota configured.
-      </p> -->
         </div>
       </div>
 
