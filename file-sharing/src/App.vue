@@ -17,9 +17,12 @@ import UserSettingsView from "@/common/ui/UserSettingsView.vue";
 import { ref, computed, watchEffect, type WatchStopHandle, onUnmounted, watch } from "vue";
 import { Cog8ToothIcon } from "@heroicons/vue/20/solid";
 import { useUserSettings } from "@/common/user-settings";
-import { type ResultAsync, ok } from "neverthrow";
+import { ResultAsync, ok } from "neverthrow";
 import { BashCommand, Directory, getServer } from "@45drives/houston-common-lib";
 import S3ManagementMain from "./tabs/s3Management/ui/S3ManagementMain.vue";
+import { isMinioAvailable } from "@/tabs/s3Management/api/minioCliAdapter";
+import { isGarageHealthy } from "@/tabs/s3Management/api/garageCliAdapter";
+import { isCephRgwHealthy } from "@/tabs/s3Management/api/cephCliAdapter";
 
 const _ = cockpit.gettext;
 
@@ -49,6 +52,15 @@ const iscsiConfigured = (): ResultAsync<boolean, never> => {
   return getServer()
     .andThen((server) => new Directory(server, "/sys/kernel/scst_tgt").exists())
     .orElse((_) => ok(false));
+};
+
+const s3Configured = (): ResultAsync<boolean, never> => {
+  return ResultAsync.fromPromise(
+    Promise.allSettled([isMinioAvailable(), isGarageHealthy(), isCephRgwHealthy()]).then(
+      (results) => results.some((r) => r.status === "fulfilled" && r.value === true)
+    ),
+    () => null
+  ).orElse((_) => ok(false));
 };
 
 let watchStopHandle: WatchStopHandle;
@@ -146,15 +158,15 @@ globalProcessingWrapPromise(useUserSettings(true)).then((userSettings) => {
       }
       switch (userSettings.s3.tabVisibility) {
         case "always":
-          showIscsiTab.value = true;
+          showS3Tab.value = true;
           break;
         case "never":
-          showIscsiTab.value = false;
+          showS3Tab.value = false;
           break;
         case "auto":
           globalProcessingWrapPromise(
-            iscsiConfigured()
-              .map((value) => (showIscsiTab.value = value))
+            s3Configured()
+              .map((value) => (showS3Tab.value = value))
               .unwrapOr(null)
           );
           break;

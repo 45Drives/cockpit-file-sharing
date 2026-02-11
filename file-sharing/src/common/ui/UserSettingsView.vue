@@ -10,7 +10,7 @@ import {
   type SelectMenuOption,
 } from "@45drives/houston-common-ui";
 import { StringToIntCaster } from "@45drives/houston-common-lib";
-import { computed, defineEmits } from "vue";
+import { computed } from "vue";
 
 const _ = cockpit.gettext;
 
@@ -134,6 +134,16 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
         </template>
         <SelectMenu
           v-model="tempUserSettings.iscsi.tabVisibility"
+          :options="tabVisibilityOptions"
+        />
+      </InputLabelWrapper>
+       <div class="text-header">S3</div>
+             <InputLabelWrapper>
+        <template #label>
+          {{ _("S3 Management Tab Visibility") }}
+        </template>
+        <SelectMenu
+          v-model="tempUserSettings.s3.tabVisibility"
           :options="tabVisibilityOptions"
         />
       </InputLabelWrapper>
