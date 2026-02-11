@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.5.3-4jammy) jammy; urgency=medium
+
+  * fixed tab visibilty logic for s3 management + building package
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 11 Feb 2026 08:44:39 -0400
+
 cockpit-file-sharing (4.5.3-3jammy) jammy; urgency=medium
 
   * building package with s3 management tab
