@@ -11,6 +11,8 @@ export interface S3BucketBase {
   quotaBytes?: number;
 
   objectLockEnabled?: boolean;
+  objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
+  objectLockRetentionDays?: number;
   versioning?: BucketVersioningStatus;
   versionCount?: number;
 
@@ -243,7 +245,9 @@ export interface MinioBucketUpdateOptions {
     versioning?: boolean;
     quotaSize?: string | null;
     tags?: Record<string, string> | null;
-    objectLock?: boolean
+    objectLock?: boolean;
+    objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
+    objectLockRetentionDays?: number;
   }
 
   export interface RustfsBucketUpdateOptions extends MinioBucketUpdateOptions {}

@@ -559,7 +559,8 @@ async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any })
 
     closeModal();
   } catch (e: any) {
-    pushNotification(new Notification(`Failed to save bucket "${bucketToDelete.value?.name}"`, e?.message, "error"));
+    const targetName = payload.form?.name ?? editingBucket.value?.name ?? "";
+    pushNotification(new Notification(`Failed to save bucket "${targetName}"`, e?.message, "error"));
   }
   finally {
     submittingBucket.value = false;

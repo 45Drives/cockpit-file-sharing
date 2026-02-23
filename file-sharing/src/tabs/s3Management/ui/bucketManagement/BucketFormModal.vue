@@ -267,12 +267,12 @@ function submit() {
     return;
   }
 
-  if (props.backend === "minio" || props.backend === "rustfs") {
-    const api = minioRef.value;
-    if (!api) return;
-    if (!api.validate()) return;
+    if (props.backend === "minio" || props.backend === "rustfs") {
+      const api = minioRef.value;
+      if (!api) return;
+      if (!api.validate()) return;
 
-    const built = api.build();
+      const built = api.build();
 
     const tagsMap = modalForm.tags
       .filter((t) => t.key.trim() && t.value.trim())
@@ -280,20 +280,21 @@ function submit() {
         acc[t.key.trim()] = t.value.trim();
         return acc;
       }, {});
-    const hasTags = Object.keys(tagsMap).length > 0;
+      const hasTags = Object.keys(tagsMap).length > 0;
+      const supportsBucketTags = props.backend === "minio" || props.backend === "rustfs";
 
-    emit("submit", {
-      mode: props.mode,
-      form: {
-        ...built,
-        name: modalForm.name,
-        backend: props.backend,
-        [props.backend]: {
-          ...(built as any)[props.backend],
-          tags: hasTags ? tagsMap : null,
-        } as MinioBucketUpdateOptions,
-      },
-    });
+      emit("submit", {
+        mode: props.mode,
+        form: {
+          ...built,
+          name: modalForm.name,
+          backend: props.backend,
+          [props.backend]: {
+            ...(built as any)[props.backend],
+            tags: supportsBucketTags && hasTags ? tagsMap : null,
+          } as MinioBucketUpdateOptions,
+        },
+      });
     return;
   }
 
