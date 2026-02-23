@@ -106,6 +106,8 @@
 
         <MinioBucketDashboardView v-else-if="backend === 'minio'" :bucket-name="usageBucketName"
           :bucket="minioUsageBucket!" :show-back-button="true" @back="closeUsageDashboard" />
+        <RustfsBucketDashboardView v-else-if="backend === 'rustfs'" :bucket-name="usageBucketName"
+          :bucket="rustfsUsageBucket!" :show-back-button="true" @back="closeUsageDashboard" />
         <GarageBucketDashboardView v-else-if="backend === 'garage'"
           :bucket-name="garageUsageBucket?.garageId || usageBucketName" :bucket="garageUsageBucket!"
           :show-back-button="true" @back="closeUsageDashboard" />
@@ -252,7 +254,7 @@
                 <span v-else>Edit</span>
               </button>
 
-              <button v-if="backend === 'ceph' || backend === 'minio' || backend === 'garage'" type="button"
+              <button v-if="backend === 'ceph' || backend === 'minio' || backend === 'rustfs' || backend === 'garage'" type="button"
                 class="rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800"
                 @click="openUsageDashboard(bucket)">
                 Usage
@@ -303,6 +305,7 @@ import CephBucketDashboardView from "./CephBucketDashboardView.vue";
 import { useBucketBackend } from "../../composables/useBucketBackend";
 import MinioBucketDashboardView from "./MinioBucketDashboard.vue";
 import GarageBucketDashboardView from "./GarageBucketDashboard.vue";
+import RustfsBucketDashboardView from "./RustfsBucketDashboard.vue";
 import type { BackendContext } from "../../bucketBackends/bucketBackend";
 import { LoadingSpinner } from "@45drives/houston-common-ui";
 import type { ModalDeps } from "../../types/types";
@@ -509,6 +512,11 @@ const cephUsageBucket = computed<CephBucket | null>(() => {
 const minioUsageBucket = computed<MinioBucket | null>(() => {
   const b = usageBucket.value;
   return b && b.backendKind === "minio" ? (b as MinioBucket) : null;
+});
+
+const rustfsUsageBucket = computed<RustfsBucket | null>(() => {
+  const b = usageBucket.value;
+  return b && b.backendKind === "rustfs" ? (b as RustfsBucket) : null;
 });
 
 const garageUsageBucket = computed<GarageBucket | null>(() => {

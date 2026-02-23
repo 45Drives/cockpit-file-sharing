@@ -386,6 +386,21 @@ export type GarageBucketDashboardStats = {
   raw: string;
 };
 
+export type RustfsBucketDashboardStats = {
+  bucket: string;
+  totalSizeBytes: number;
+  objectCount: number;
+  versionCount?: number;
+  deleteMarkersCount?: number;
+  quotaBytes?: number;
+  versioningStatus?: BucketVersioningStatus;
+  objectLockEnabled?: boolean;
+  objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
+  objectLockRetentionDays?: number;
+  lastUpdate?: string;
+  raw: any;
+};
+
 
 
 export type CephDeps = {

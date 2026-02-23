@@ -1,4 +1,4 @@
-import type { BucketVersioningStatus, McAliasCandidate, RustfsBucket } from "../types/types";
+import type { BucketVersioningStatus, McAliasCandidate, RustfsBucket, RustfsBucketDashboardStats } from "../types/types";
 import pLimit from "p-limit";
 import { server, Command, unwrap } from "@45drives/houston-common-lib";
 
@@ -673,6 +673,41 @@ async function runRustfsQuotaApiRequest(
   return JSON.parse(trimmed);
 }
 
+async function runRustfsAdminApiGet(path: string): Promise<any> {
+  const { apiBase, region, accessKey, secretKey } = await resolveRustfsAdminApiConfig();
+  const url = `${apiBase}/${String(path).replace(/^\/+/, "")}`;
+
+  const cmdParts = [
+    `AWS_ACCESS_KEY_ID=${shellQuote(accessKey)}`,
+    `AWS_SECRET_ACCESS_KEY=${shellQuote(secretKey)}`,
+    "python3 -m awscurl --service s3",
+    `--region ${shellQuote(region)}`,
+    "-X 'GET'",
+    shellQuote(url),
+  ];
+
+  const commandString = cmdParts.join(" ");
+  const redacted = commandString.replace(
+    /AWS_SECRET_ACCESS_KEY='[^']*'/,
+    "AWS_SECRET_ACCESS_KEY='***'"
+  );
+  console.log(`[rustfs admin:get] ${redacted}`);
+
+  const cmd = new Command(["bash", "-lc", commandString], { superuser: "require" });
+  const proc = await unwrap(server.execute(cmd, false));
+  const stdout = proc.getStdout();
+  const stderr = proc.getStderr();
+  const exitStatus = proc.exitStatus;
+  if (exitStatus !== 0) {
+    const msg = stderr.trim() || stdout.trim() || `awscurl exited with status ${exitStatus}`;
+    throw new Error(msg);
+  }
+
+  const trimmed = stdout.trim();
+  if (!trimmed) return {};
+  return JSON.parse(trimmed);
+}
+
 function parseJsonLines(text: string): any[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
@@ -904,6 +939,59 @@ export async function getRustfsBucketTags(
   bucketName: string
 ): Promise<Record<string, string> | undefined> {
   return getRustfsBucketTaggingViaApi(bucketName);
+}
+
+export async function getRustfsBucketDashboardStats(
+  bucketName: string
+): Promise<RustfsBucketDashboardStats> {
+  if (!bucketName) {
+    throw new Error("getRustfsBucketDashboardStats: bucketName is required");
+  }
+
+  const dataUsage = await runRustfsAdminApiGet("datausageinfo");
+  const bucketUsage = (dataUsage?.buckets_usage && dataUsage.buckets_usage[bucketName]) || {};
+
+  const totalSizeBytes = Number(bucketUsage?.size ?? 0) || 0;
+  const objectCount = Number(bucketUsage?.objects_count ?? 0) || 0;
+  const versionCountRaw = Number(bucketUsage?.versions_count ?? NaN);
+  const deleteMarkersRaw = Number(bucketUsage?.delete_markers_count ?? NaN);
+
+  const [quotaBytes, versioningStatus, lockCfg] = await Promise.all([
+    getRustfsBucketQuotaBytes(bucketName).catch(() => undefined),
+    getRustfsBucketVersioningStatus(bucketName).catch(() => undefined),
+    getRustfsBucketObjectLockConfiguration(bucketName).catch(() => ({})),
+  ]);
+
+  const lastUpdateSecs = Number(dataUsage?.last_update?.secs_since_epoch ?? NaN);
+  const lastUpdate =
+    Number.isFinite(lastUpdateSecs) && lastUpdateSecs > 0
+      ? new Date(lastUpdateSecs * 1000).toISOString()
+      : undefined;
+
+  return {
+    bucket: bucketName,
+    totalSizeBytes,
+    objectCount,
+    versionCount: Number.isFinite(versionCountRaw) ? versionCountRaw : undefined,
+    deleteMarkersCount: Number.isFinite(deleteMarkersRaw) ? deleteMarkersRaw : undefined,
+    quotaBytes,
+    versioningStatus,
+    objectLockEnabled: lockCfg.objectLockEnabled,
+    objectLockMode: lockCfg.objectLockMode,
+    objectLockRetentionDays: lockCfg.objectLockRetentionDays,
+    lastUpdate,
+    raw: {
+      bucket: bucketName,
+      total_capacity: dataUsage?.total_capacity,
+      total_used_capacity: dataUsage?.total_used_capacity,
+      total_free_capacity: dataUsage?.total_free_capacity,
+      objects_total_count: dataUsage?.objects_total_count,
+      versions_total_count: dataUsage?.versions_total_count,
+      delete_markers_total_count: dataUsage?.delete_markers_total_count,
+      last_update: dataUsage?.last_update,
+      bucketUsage,
+    },
+  };
 }
 
 export async function listBucketsFromRustfs(): Promise<RustfsBucket[]> {
