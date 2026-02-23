@@ -19,7 +19,7 @@ export interface S3BucketBase {
   policy?: string;
   tags?: S3BucketTagMap;
 }
-export type BackendKind = "minio" | "ceph" | "garage"; 
+export type BackendKind = "minio" | "rustfs" | "ceph" | "garage"; 
 
 
 export interface CephBucket extends S3BucketBase {
@@ -46,7 +46,11 @@ export interface MinioBucket extends S3BucketBase {
   backendKind: "minio";
 }
 
-export type S3Bucket = CephBucket | GarageBucket | MinioBucket;
+export interface RustfsBucket extends S3BucketBase {
+  backendKind: "rustfs";
+}
+
+export type S3Bucket = CephBucket | GarageBucket | MinioBucket | RustfsBucket;
 
 export type BucketByKind<K extends BackendKind> = Extract<S3Bucket, { backendKind: K }>;
 
@@ -235,12 +239,14 @@ export type RgwDashboardS3Creds = {
   }
   
 
-  export interface MinioBucketUpdateOptions {
+export interface MinioBucketUpdateOptions {
     versioning?: boolean;
     quotaSize?: string | null;
     tags?: Record<string, string> | null;
     objectLock?: boolean
   }
+
+  export interface RustfsBucketUpdateOptions extends MinioBucketUpdateOptions {}
   
   export interface CephBucketUpdatePayload {
     cephAclRules: CephAclRule[] | undefined;
@@ -399,7 +405,11 @@ export type MinioDeps = {
   backend: "minio";
 };
 
-export type ModalDeps = CephDeps | GarageDeps | MinioDeps;
+export type RustfsDeps = {
+  backend: "rustfs";
+};
+
+export type ModalDeps = CephDeps | GarageDeps | MinioDeps | RustfsDeps;
 
 export type GarageBucketAliasPatch = {
   aliasesAdd?: string[];

@@ -61,14 +61,15 @@
   
   <script setup lang="ts">
   import { reactive, ref, watch } from "vue";
-  import type { MinioBucket } from "../../../types/types";
+  import type { MinioBucket, RustfsBucket } from "../../../types/types";
   import type { BucketFormData } from "../../../bucketBackends/bucketBackend";
   import type { MinioBucketUpdateOptions } from "../../../types/types";
   import { splitBytesBinary } from "../../../bucketBackends/bucketUtils";
   
   const props = defineProps<{
     mode: "create" | "edit";
-    bucket: MinioBucket | null;
+    backend?: "minio" | "rustfs";
+    bucket: MinioBucket | RustfsBucket | null;
   }>();
   
   const error = ref<string | null>(null);
@@ -130,9 +131,9 @@
     };
   
     return {
-      backend: "minio",
+      backend: props.backend ?? "minio",
       name: props.bucket?.name ?? "",
-      minio,
+      [props.backend ?? "minio"]: minio,
     };
   }
   

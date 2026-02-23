@@ -280,6 +280,9 @@
     <BucketFormModal  :submitting="submittingBucket" v-else-if="backend === 'minio'" :visible="showModal" :mode="modalMode" backend="minio"
       :bucketToEdit="minioEditingBucket" :deps="minioModalDeps" @close="closeModal" @submit="handleFormSubmit" />
 
+    <BucketFormModal  :submitting="submittingBucket" v-else-if="backend === 'rustfs'" :visible="showModal" :mode="modalMode" backend="rustfs" :bucketToEdit="rustfsEditingBucket"
+      :deps="rustfsModalDeps" @close="closeModal" @submit="handleFormSubmit" />
+
     <BucketFormModal  :submitting="submittingBucket" v-else :visible="showModal" :mode="modalMode" backend="garage" :bucketToEdit="garageEditingBucket"
       :deps="garageModalDeps" @close="closeModal" @submit="handleFormSubmit" />
 
@@ -292,7 +295,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
-import type { RgwGateway, CephBucket, MinioBucket, GarageBucket, CephDeps, MinioDeps, GarageDeps, BackendKind } from "../../types/types";
+import type { RgwGateway, CephBucket, MinioBucket, RustfsBucket, GarageBucket, CephDeps, MinioDeps, RustfsDeps, GarageDeps, BackendKind } from "../../types/types";
 import { ArchiveBoxIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 import BucketFormModal from "./BucketFormModal.vue";
 import BucketDeleteModal from "./BucketDeleteModal.vue";
@@ -307,7 +310,7 @@ import { pushNotification, Notification } from "@45drives/houston-common-ui";
 import { formatBytes } from "../../bucketBackends/bucketUtils";
 
 const props = defineProps<{
-  backend: "minio" | "ceph" | "garage";
+  backend: "minio" | "rustfs" | "ceph" | "garage";
   cephGateway?: RgwGateway | null;
   showBackButton?: boolean;
   minioAlias?: string | null;
@@ -346,6 +349,10 @@ const garageEditingBucket = computed<GarageBucket | null>(() => {
   const b = editingBucket.value;
   return b && b.backendKind === "garage" ? (b as GarageBucket) : null;
 });
+const rustfsEditingBucket = computed<RustfsBucket | null>(() => {
+  const b = editingBucket.value;
+  return b && b.backendKind === "rustfs" ? (b as RustfsBucket) : null;
+});
 
 const cephModalDeps = computed<CephDeps | null>(() => {
   if (props.backend !== "ceph") return null;
@@ -354,6 +361,10 @@ const cephModalDeps = computed<CephDeps | null>(() => {
 const minioModalDeps = computed<MinioDeps | null>(() => {
   if (props.backend !== "minio") return null;
   return (modalDeps.value as MinioDeps | null) ?? null;
+});
+const rustfsModalDeps = computed<RustfsDeps | null>(() => {
+  if (props.backend !== "rustfs") return null;
+  return (modalDeps.value as RustfsDeps | null) ?? null;
 });
 const garageModalDeps = computed<GarageDeps | null>(() => {
   if (props.backend !== "garage") return null;
@@ -381,6 +392,7 @@ const bucketToDelete = ref<BucketType | null>(null);
 
 const backendLabel = computed(() => {
   if (props.backend === "minio") return "MinIO";
+  if (props.backend === "rustfs") return "RustFS";
   if (props.backend === "ceph") return "Ceph RGW";
   return "Garage";
 });
@@ -652,8 +664,8 @@ function tagsTextToObject(tagsText?: string | null): Record<string, string> | un
 }
 
 function formTagsToObject(form: any): Record<string, string> | undefined {
-  if (props.backend === "minio") {
-    const t = form?.minio?.tags;
+  if (props.backend === "minio" || props.backend === "rustfs") {
+    const t = form?.[props.backend]?.tags;
     return t && typeof t === "object" ? t : undefined;
   }
 

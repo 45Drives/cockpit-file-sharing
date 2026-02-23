@@ -7,7 +7,7 @@
 
     <div v-else-if="availableBackends.length === 0">
       <p class="error">
-        No storage backend is available. MinIO, Ceph RGW, and Garage appear to be
+        No storage backend is available. MinIO, RustFS, Ceph RGW, and Garage appear to be
         misconfigured or unreachable.
       </p>
     </div>
@@ -76,6 +76,42 @@
           </div>
         </div>
 
+        <div v-if="selectedBackend === 'rustfs'" class="mb-6 w-9/12 mx-auto">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xl font-semibold">RustFS alias</h3>
+
+            <button type="button" class="btn btn-secondary" @click="loadRustfsAliasesIfNeeded"
+              :disabled="loadingRustfsAliases">
+              Refresh
+            </button>
+          </div>
+
+          <div v-if="loadingRustfsAliases" class="opacity-80">
+            Loading aliases…
+          </div>
+
+          <div v-else-if="rustfsAliasError" class="text-red-600">
+            {{ rustfsAliasError }}
+          </div>
+
+          <div v-else-if="rustfsAliases.length === 0" class="opacity-80">
+            No usable RustFS aliases found.
+          </div>
+
+          <div v-else>
+            <select v-model="selectedRustfsAlias" class="w-full rounded-lg border border-default bg-accent px-4 py-3">
+              <option disabled value="">Select an alias…</option>
+              <option v-for="a in rustfsAliases" :key="a.alias" :value="a.alias">
+                {{ a.alias }}
+              </option>
+            </select>
+
+            <div class="mt-2 text-sm opacity-70">
+              Select the rc alias that points to the RustFS instance you want to manage.
+            </div>
+          </div>
+        </div>
+
         <!-- Ceph gateway errors / loading -->
         <div v-if="selectedBackend === 'ceph'" class="w-9/12 mx-auto mb-6">
           <div v-if="loadingGateways" class="opacity-80">Loading Ceph gateways…</div>
@@ -91,7 +127,7 @@
 
             <template #footer>
               <button type="button" class="btn btn-secondary w-full text-6xl" @click="chooseView('buckets')"
-                :disabled="selectedBackend === 'minio' && !selectedMinioAlias">
+                :disabled="(selectedBackend === 'minio' && !selectedMinioAlias) || (selectedBackend === 'rustfs' && !selectedRustfsAlias)">
                 Bucket Management
               </button>
             </template>
@@ -104,7 +140,7 @@
 
             <template #footer>
               <button type="button" class="btn btn-secondary w-full text-6xl" @click="chooseView('users')"
-                :disabled="selectedBackend === 'minio' && !selectedMinioAlias">
+                :disabled="selectedBackend === 'rustfs' || (selectedBackend === 'minio' && !selectedMinioAlias)">
                 Access Management
               </button>
             </template>
@@ -144,6 +180,11 @@ import {
   listMinioAliasCandidates,
   setMinioAlias,
 } from "../api/minioCliAdapter";
+import {
+  isRustfsAvailable,
+  listRustfsAliasCandidates,
+  setRustfsAlias,
+} from "../api/rustfsCliAdapter";
 import { isGarageHealthy } from "../api/garageCliAdapter";
 import UsersView from "./accessManagementViews/CephRgw/UsersView.vue";
 import MinioAccessManagement from "./accessManagementViews/minio/MinioAccessManagement.vue";
@@ -154,7 +195,7 @@ import AccIcon from "../images/AccIcon.vue";
 import type { RgwGateway } from "../types/types";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
 
-type Backend = "minio" | "ceph" | "garage";
+type Backend = "minio" | "rustfs" | "ceph" | "garage";
 type View = "buckets" | "users";
 
 type MinioAliasOption = {
@@ -165,6 +206,7 @@ type MinioAliasOption = {
 const loadingConfig = ref(false);
 
 const isMinioAvailableFlag = ref(false);
+const isRustfsAvailableFlag = ref(false);
 const isCephAvailable = ref(false);
 const isGarageAvailable = ref(false);
 
@@ -189,12 +231,19 @@ const loadingMinioAliases = ref(false);
 const minioAliases = ref<MinioAliasOption[]>([]);
 const selectedMinioAlias = ref<string>("");
 const minioAliasError = ref<string | null>(null);
+const loadingRustfsAliases = ref(false);
+const rustfsAliases = ref<MinioAliasOption[]>([]);
+const selectedRustfsAlias = ref<string>("");
+const rustfsAliasError = ref<string | null>(null);
 
 const availableBackends = computed(() => {
   const list: { value: Backend; label: string }[] = [];
   if (isMinioAvailableFlag.value) list.push({ value: "minio", label: "MinIO" });
+  if (isRustfsAvailableFlag.value) list.push({ value: "rustfs", label: "RustFS" });
   if (isCephAvailable.value) list.push({ value: "ceph", label: "Ceph RGW" });
   if (isGarageAvailable.value) list.push({ value: "garage", label: "Garage" });
+
+  console.log("list ",list)
   return list;
 });
 
@@ -204,14 +253,36 @@ async function detectBackends() {
   try {
     const results = await Promise.allSettled([
       isMinioAvailable(),
+      isRustfsAvailable(),
       isGarageHealthy(),
       isCephRgwHealthy(),
     ]);
 
-    const [minioRes, garageRes, cephRes] = results;
+    const [minioRes, rustfsRes, garageRes, cephRes] = results;
 
     isMinioAvailableFlag.value =
       minioRes.status === "fulfilled" ? !!minioRes.value : false;
+
+    isRustfsAvailableFlag.value =
+      rustfsRes.status === "fulfilled" ? !!rustfsRes.value : false;
+    if (rustfsRes.status === "rejected") {
+    } else {
+      if (!rustfsRes.value) {
+        try {
+          // Debug probe to surface concrete command failure details in UI console.
+          await listRustfsAliasCandidates();
+          console.warn("RustFS debug probe returned no aliases.");
+        } catch (e: any) {
+          console.error("RustFS debug probe failed:", {
+            message: e?.message,
+            stderr: e?.stderr,
+            stdout: e?.stdout,
+            exitStatus: e?.exitStatus,
+            raw: e,
+          });
+        }
+      }
+    }
 
     isGarageAvailable.value =
       garageRes.status === "fulfilled" ? !!garageRes.value : false;
@@ -296,6 +367,43 @@ async function loadMinioAliasesIfNeeded() {
   }
 }
 
+async function loadRustfsAliasesIfNeeded() {
+  if (selectedBackend.value !== "rustfs") return;
+
+  loadingRustfsAliases.value = true;
+  rustfsAliasError.value = null;
+  rustfsAliases.value = [];
+  selectedRustfsAlias.value = "";
+
+  try {
+    const list = await listRustfsAliasCandidates();
+
+    const normalized: MinioAliasOption[] = (list as any[])
+      .map((x) => {
+        if (typeof x === "string") return { alias: x };
+        return {
+          alias: String(x.alias ?? "").trim(),
+        };
+      })
+      .filter((x) => x.alias);
+
+    rustfsAliases.value = normalized;
+
+    if (rustfsAliases.value.length === 1) {
+      selectedRustfsAlias.value = rustfsAliases.value[0]!.alias;
+    } else if (rustfsAliases.value.length === 0) {
+      // Non-blocking fallback; RustFS may still be reachable via default alias.
+      selectedRustfsAlias.value = "local";
+    }
+  } catch (e: any) {
+    rustfsAliases.value = [];
+    selectedRustfsAlias.value = "local";
+    console.warn("RustFS alias listing failed; falling back to alias 'local':", e);
+  } finally {
+    loadingRustfsAliases.value = false;
+  }
+}
+
 async function chooseBackend(backend: Backend) {
   selectedBackend.value = backend;
   selectedView.value = null;
@@ -311,6 +419,11 @@ async function chooseBackend(backend: Backend) {
     selectedMinioAlias.value = "";
     minioAliasError.value = null;
   }
+  if (backend !== "rustfs") {
+    rustfsAliases.value = [];
+    selectedRustfsAlias.value = "";
+    rustfsAliasError.value = null;
+  }
 
   if (backend === "ceph") {
     await loadGatewaysIfNeeded();
@@ -319,11 +432,15 @@ async function chooseBackend(backend: Backend) {
   if (backend === "minio") {
     await loadMinioAliasesIfNeeded();
   }
+  if (backend === "rustfs") {
+    await loadRustfsAliasesIfNeeded();
+  }
 
   step.value = 2;
 }
 
 function chooseView(view: View) {
+  if (selectedBackend.value === "rustfs" && view === "users") return;
   selectedView.value = view;
   step.value = 3;
 }
@@ -340,6 +457,9 @@ function goBackToBackendSelection() {
   minioAliases.value = [];
   selectedMinioAlias.value = "";
   minioAliasError.value = null;
+  rustfsAliases.value = [];
+  selectedRustfsAlias.value = "";
+  rustfsAliasError.value = null;
 }
 async function autoSelectSingleBackendIfAny() {
   const list = availableBackends.value;
@@ -353,6 +473,14 @@ watch(
   (alias) => {
     if (alias && alias.trim()) {
       setMinioAlias(alias.trim());
+    }
+  }
+);
+watch(
+  () => selectedRustfsAlias.value,
+  (alias) => {
+    if (alias && alias.trim()) {
+      setRustfsAlias(alias.trim());
     }
   }
 );
