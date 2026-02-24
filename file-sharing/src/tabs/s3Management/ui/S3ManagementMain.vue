@@ -140,7 +140,7 @@
 
             <template #footer>
               <button type="button" class="btn btn-secondary w-full text-6xl" @click="chooseView('users')"
-                :disabled="selectedBackend === 'rustfs' || (selectedBackend === 'minio' && !selectedMinioAlias)">
+                :disabled="(selectedBackend === 'minio' && !selectedMinioAlias) || (selectedBackend === 'rustfs' && !selectedRustfsAlias)">
                 Access Management
               </button>
             </template>
@@ -163,6 +163,11 @@
               @backToViewSelection="() => { step = 2; selectedView = null; }" />
           </div>
 
+          <div v-else-if="selectedBackend === 'rustfs'">
+            <MinioAccessManagement :minioAlias="selectedRustfsAlias" backendLabel="RustFS"
+              @backToViewSelection="() => { step = 2; selectedView = null; }" />
+          </div>
+
           <GarageKeysPage v-else-if="selectedBackend === 'garage'"
             @backToViewSelection="() => { step = 2; selectedView = null; }" />
         </template>
@@ -178,6 +183,7 @@ import { isCephRgwHealthy, listRgwGateways } from "../api/cephCliAdapter";
 import {
   isMinioAvailable,
   listMinioAliasCandidates,
+  setAccessAdminCli,
   setMinioAlias,
 } from "../api/minioCliAdapter";
 import {
@@ -408,6 +414,12 @@ async function chooseBackend(backend: Backend) {
   selectedBackend.value = backend;
   selectedView.value = null;
 
+  if (backend === "rustfs") {
+    setAccessAdminCli("rc");
+  } else if (backend === "minio") {
+    setAccessAdminCli("mc");
+  }
+
   if (backend !== "ceph") {
     gateways.value = [];
     selectedGatewayId.value = null;
@@ -440,7 +452,12 @@ async function chooseBackend(backend: Backend) {
 }
 
 function chooseView(view: View) {
-  if (selectedBackend.value === "rustfs" && view === "users") return;
+  if (selectedBackend.value === "rustfs" && view === "users") {
+    const alias = selectedRustfsAlias.value.trim();
+    if (!alias) return;
+    // Reuse MinIO access-management command layer against selected RustFS alias.
+    setMinioAlias(alias);
+  }
   selectedView.value = view;
   step.value = 3;
 }
@@ -480,12 +497,17 @@ watch(
   () => selectedRustfsAlias.value,
   (alias) => {
     if (alias && alias.trim()) {
-      setRustfsAlias(alias.trim());
+      const selected = alias.trim();
+      setRustfsAlias(selected);
+      if (selectedBackend.value === "rustfs") {
+        setMinioAlias(selected);
+      }
     }
   }
 );
 
 onMounted(() => {
+  setAccessAdminCli("mc");
   detectBackends();
 });
 </script>

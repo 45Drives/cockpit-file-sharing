@@ -16,9 +16,9 @@
       <!-- Center: title -->
       <div class="flex items-baseline justify-center gap-2">
         <div>
-          <h1 class="text-2xl font-semibold text-default">MinIO Access Management</h1>
+          <h1 class="text-2xl font-semibold text-default">{{ backendLabel }} Access Management</h1>
           <p class="text-xs text-default mt-1">
-            Manage users, policies, and groups for this MinIO deployment.
+            Manage users, policies, and groups for this {{ backendLabel }} deployment.
           </p>
         </div>
       </div>
@@ -54,7 +54,7 @@
 
       <!-- Tab content -->
       <div>
-        <MinioUsersTable v-if="activeTab === 'users'" />
+        <MinioUsersTable v-if="activeTab === 'users'" :backendLabel="backendLabel" />
 
         <MinioPoliciesView v-else-if="activeTab === 'policies'" />
 
@@ -76,5 +76,7 @@ const activeTab = ref<"users" | "policies" | "groups">("users");
 const emit = defineEmits<{ (e: "backToViewSelection"): void }>();
 const props = defineProps<{
   minioAlias?: string | null;
+  backendLabel?: string;
 }>();
+const backendLabel = props.backendLabel?.trim() || "MinIO";
 </script>

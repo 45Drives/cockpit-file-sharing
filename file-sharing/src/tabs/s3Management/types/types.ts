@@ -194,6 +194,7 @@ export type RgwDashboardS3Creds = {
     secretKey: string;
     status: "enabled" | "disabled";
     policies: string[];
+    groups?: string[];
   }
   
   export interface MinioUserGroupMembership {

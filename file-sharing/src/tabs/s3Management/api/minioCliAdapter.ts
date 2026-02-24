@@ -26,6 +26,12 @@ export function getMinioAlias(): string {
   return MINIO_ALIAS;
 }
 
+// Backward-compatible API used by S3ManagementMain.
+// Current MinIO adapter operations are implemented via `mc`.
+export function setAccessAdminCli(_cli: "mc" | "rc"): void {
+  // no-op
+}
+
 export async function listMinioAliasCandidates(): Promise<McAliasCandidate[]> {
   const rows = await mcJsonLines(["alias", "list"]);
 

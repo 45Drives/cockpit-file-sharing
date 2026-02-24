@@ -1,4 +1,4 @@
-import type { BucketVersioningStatus, McAliasCandidate, RustfsBucket, RustfsBucketDashboardStats } from "../types/types";
+import type { BucketVersioningStatus, McAliasCandidate, MinioUser, MinioUserCreatePayload, RustfsBucket, RustfsBucketDashboardStats } from "../types/types";
 import pLimit from "p-limit";
 import { server, Command, unwrap } from "@45drives/houston-common-lib";
 
@@ -102,9 +102,9 @@ function deriveRustfsAdminApiBaseFromAliasUrl(aliasUrl: string): string | undefi
 
   try {
     const u = new URL(raw);
-    const host = u.hostname;
-    if (!host) return undefined;
-    return normalizeApiBase(`${u.protocol}//${host}:9201/rustfs/admin/v3`);
+    const authority = u.host;
+    if (!authority) return undefined;
+    return normalizeApiBase(`${u.protocol}//${authority}/rustfs/admin/v3`);
   } catch {
     return undefined;
   }
@@ -115,9 +115,9 @@ function deriveRustfsS3EndpointFromAdminApiBase(adminApiBase: string): string | 
   if (!raw) return undefined;
   try {
     const u = new URL(raw);
-    const host = u.hostname;
-    if (!host) return undefined;
-    return normalizeApiBase(`${u.protocol}//${host}:9200`);
+    const authority = u.host;
+    if (!authority) return undefined;
+    return normalizeApiBase(`${u.protocol}//${authority}`);
   } catch {
     return undefined;
   }
@@ -125,6 +125,17 @@ function deriveRustfsS3EndpointFromAdminApiBase(adminApiBase: string): string | 
 
 async function getRustfsAliasConfig(alias: string): Promise<RustfsAliasConfig> {
   let firstAliasFromRc: RustfsAliasConfig | undefined;
+  const normalizeUrl = (value: unknown): string | undefined => {
+    const raw = String(value ?? "").trim();
+    if (!raw) return undefined;
+    try {
+      const u = new URL(raw);
+      return normalizeApiBase(u.toString());
+    } catch {
+      return undefined;
+    }
+  };
+
   try {
     const { stdout } = await runRc(["--json", "alias", "list"]);
     const rows = parseJsonLines(stdout);
@@ -134,11 +145,28 @@ async function getRustfsAliasConfig(alias: string): Promise<RustfsAliasConfig> {
       if (!a) return undefined;
 
       const cfg: RustfsAliasConfig = {
-        url: String(entry?.URL ?? entry?.url ?? "").trim() || undefined,
-        accessKey: String(entry?.AccessKey ?? entry?.accessKey ?? "").trim() || undefined,
-        secretKey: String(entry?.SecretKey ?? entry?.secretKey ?? "").trim() || undefined,
+        url: normalizeUrl(
+          entry?.endpoint ??
+          entry?.Endpoint ??
+          entry?.url ??
+          entry?.URL
+        ),
+        accessKey: String(
+          entry?.AccessKey ??
+          entry?.accessKey ??
+          entry?.access_key ??
+          ""
+        ).trim() || undefined,
+        secretKey: String(
+          entry?.SecretKey ??
+          entry?.secretKey ??
+          entry?.secret_key ??
+          ""
+        ).trim() || undefined,
       };
-      if (!firstAliasFromRc) firstAliasFromRc = cfg;
+      if (!firstAliasFromRc || (!firstAliasFromRc.url && cfg.url)) {
+        firstAliasFromRc = cfg;
+      }
       if (a !== alias) return undefined;
       return cfg;
     };
@@ -158,7 +186,34 @@ async function getRustfsAliasConfig(alias: string): Promise<RustfsAliasConfig> {
     // no-op: we have defaults/env fallback below
   }
 
-  if (firstAliasFromRc) return firstAliasFromRc;
+  // Fallback: parse plain `rc alias list` output:
+  // rustfs   http://localhost:9200
+  try {
+    const { stdout } = await runRc(["alias", "list"], true);
+    const lines = String(stdout ?? "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const parsed: RustfsAliasConfig[] = [];
+    for (const line of lines) {
+      const m = line.match(/^([^\s]+)\s+(\S+)$/);
+      if (!m) continue;
+      const name = m[1]!;
+      const url = normalizeUrl(m[2]);
+      if (!url) continue;
+      const cfg: RustfsAliasConfig = { url };
+      if (!firstAliasFromRc || (!firstAliasFromRc.url && cfg.url)) {
+        firstAliasFromRc = cfg;
+      }
+      if (name === alias) return cfg;
+      parsed.push(cfg);
+    }
+    if (parsed.length > 0 && firstAliasFromRc?.url) return firstAliasFromRc;
+  } catch {
+    // no-op: continue with rc config fallback
+  }
+
+  if (firstAliasFromRc?.url) return firstAliasFromRc;
 
   // Fallback: parse rc config file directly (e.g. ~/.config/rc/config.toml)
   // Sample:
@@ -219,9 +274,11 @@ async function getRustfsAliasConfig(alias: string): Promise<RustfsAliasConfig> {
     const exact = parsedAliases.find((a) => String(a.name ?? "").trim() === alias);
     const chosen = exact ?? parsedAliases[0];
     if (!chosen) return {};
+    const url = normalizeUrl(chosen.url);
+    if (!url) return {};
 
     return {
-      url: chosen.url || undefined,
+      url,
       accessKey: chosen.access_key || undefined,
       secretKey: chosen.secret_key || undefined,
     };
@@ -242,9 +299,13 @@ async function resolveRustfsAdminApiConfig(): Promise<{
     normalizeApiBase(
       process.env.RUSTFS_ADMIN_API_BASE ||
       process.env.RUSTFS_API_BASE ||
-      deriveRustfsAdminApiBaseFromAliasUrl(aliasCfg.url ?? "") ||
-      "http://127.0.0.1:9201/rustfs/admin/v3"
+      deriveRustfsAdminApiBaseFromAliasUrl(aliasCfg.url ?? "")
     );
+  if (!apiBase) {
+    throw new Error(
+      `Unable to resolve RustFS admin API base from rc alias "${RUSTFS_ALIAS}".`
+    );
+  }
 
   const region = String(process.env.RUSTFS_ADMIN_REGION || process.env.AWS_REGION || "us-east-1");
   const accessKey = String(process.env.RUSTFS_ADMIN_ACCESS_KEY || aliasCfg.accessKey || "rustfsadmin");
@@ -267,9 +328,13 @@ async function resolveRustfsS3ApiConfig(): Promise<{
     normalizeApiBase(
       process.env.RUSTFS_S3_ENDPOINT ||
       aliasCfg.url ||
-      deriveRustfsS3EndpointFromAdminApiBase(adminApiBase ?? "") ||
-      "http://127.0.0.1:9200"
+      deriveRustfsS3EndpointFromAdminApiBase(adminApiBase ?? "")
     );
+  if (!endpointUrl) {
+    throw new Error(
+      `Unable to resolve RustFS S3 endpoint from rc alias "${RUSTFS_ALIAS}".`
+    );
+  }
 
   const accessKeyId = String(
     process.env.RUSTFS_ACCESS_KEY_ID ||
@@ -708,6 +773,56 @@ async function runRustfsAdminApiGet(path: string): Promise<any> {
   return JSON.parse(trimmed);
 }
 
+async function runRustfsAdminApiRequest(
+  kind: string,
+  method: "GET" | "PUT" | "POST" | "DELETE",
+  path: string,
+  body?: unknown,
+): Promise<any> {
+  const { apiBase, region, accessKey, secretKey } = await resolveRustfsAdminApiConfig();
+  const url = `${apiBase}/${String(path).replace(/^\/+/, "")}`;
+  const bodyJson = body === undefined ? "" : JSON.stringify(body);
+
+  const cmdParts = [
+    `AWS_ACCESS_KEY_ID=${shellQuote(accessKey)}`,
+    `AWS_SECRET_ACCESS_KEY=${shellQuote(secretKey)}`,
+    "python3 -m awscurl --service s3",
+    `--region ${shellQuote(region)}`,
+    `-X ${shellQuote(method)}`,
+  ];
+
+  if (body !== undefined) {
+    cmdParts.push(`-H ${shellQuote("Content-Type: application/json")}`);
+    cmdParts.push(`-d ${shellQuote(bodyJson)}`);
+  }
+  cmdParts.push(shellQuote(url));
+
+  const commandString = cmdParts.join(" ");
+  const redacted = commandString.replace(
+    /AWS_SECRET_ACCESS_KEY='[^']*'/,
+    "AWS_SECRET_ACCESS_KEY='***'"
+  );
+  console.log(`[rustfs admin:${kind}] ${redacted}`);
+
+  const cmd = new Command(["bash", "-lc", commandString], { superuser: "require" });
+  const proc = await unwrap(server.execute(cmd, false));
+  const stdout = proc.getStdout();
+  const stderr = proc.getStderr();
+  const exitStatus = proc.exitStatus;
+  if (exitStatus !== 0) {
+    const msg = stderr.trim() || stdout.trim() || `awscurl exited with status ${exitStatus}`;
+    throw new Error(msg);
+  }
+
+  const trimmed = stdout.trim();
+  if (!trimmed) return {};
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return { raw: trimmed };
+  }
+}
+
 function parseJsonLines(text: string): any[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
@@ -857,6 +972,243 @@ export async function isRustfsAvailable(): Promise<boolean> {
       exitStatus: e?.exitStatus,
     });
     return false;
+  }
+}
+
+export async function listRustfsUsers(): Promise<MinioUser[]> {
+  const { stdout } = await runRc(["--json", "admin", "user", "list", RUSTFS_ALIAS]);
+  const rows = parseJsonLines(stdout);
+  const objs: any[] = [];
+  for (const row of rows) {
+    const nestedUsers = (row as any)?.users;
+    if (Array.isArray(nestedUsers)) {
+      objs.push(...nestedUsers);
+      continue;
+    }
+    objs.push(row);
+  }
+  const users: MinioUser[] = [];
+
+  for (const obj of objs) {
+    const username: string =
+      obj.accessKey || obj.user || obj.userName || obj.username;
+    if (!username) continue;
+    const rawStatus: string =
+      obj.userStatus || obj.status || obj.statusValue || "enabled";
+
+    const status: "enabled" | "disabled" =
+      String(rawStatus).toLowerCase() === "disabled" ? "disabled" : "enabled";
+
+    let policies: string[] | undefined;
+    if (Array.isArray(obj.policy)) {
+      policies = obj.policy;
+    } else if (Array.isArray(obj.policies)) {
+      policies = obj.policies;
+    } else if (typeof obj.policy === "string") {
+      policies = [obj.policy];
+    }
+
+    if (!policies && typeof obj.policyName === "string") {
+      policies = obj.policyName
+        .split(",")
+        .map((p: string) => p.trim())
+        .filter(Boolean);
+    }
+
+    const policyCount = policies?.length ?? 0;
+    users.push({ username, status, policies, policyCount });
+  }
+
+  return users;
+}
+
+function parseNameListFromOutput(
+  stdout: string,
+  expectedTopLevelKey: string,
+  candidateKeys: string[]
+): string[] {
+  const rows = parseJsonLines(stdout);
+  const names = new Set<string>();
+
+  const collectString = (value: unknown) => {
+    const text = String(value ?? "").trim();
+    if (!text) return;
+    names.add(text);
+  };
+
+  for (const row of rows) {
+    const nested = (row as any)?.[expectedTopLevelKey];
+    if (Array.isArray(nested)) {
+      for (const entry of nested) {
+        if (typeof entry === "string") {
+          collectString(entry);
+          continue;
+        }
+        for (const key of candidateKeys) {
+          collectString((entry as any)?.[key]);
+        }
+      }
+      continue;
+    }
+
+    if (typeof row === "string") {
+      collectString(row);
+      continue;
+    }
+
+    for (const key of candidateKeys) {
+      const value = (row as any)?.[key];
+      if (Array.isArray(value)) {
+        for (const v of value) collectString(v);
+      } else {
+        collectString(value);
+      }
+    }
+  }
+
+  if (names.size > 0) {
+    return Array.from(names).sort();
+  }
+
+  return stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/^[-*]\s*/, "").trim())
+    .filter(Boolean);
+}
+
+export async function listRustfsPolicies(): Promise<string[]> {
+  const variants = [
+    ["--json", "admin", "policy", "list", RUSTFS_ALIAS],
+    ["--json", "admin", "policy", "ls", RUSTFS_ALIAS],
+    ["admin", "policy", "list", RUSTFS_ALIAS],
+    ["admin", "policy", "ls", RUSTFS_ALIAS],
+  ];
+
+  let lastErr: unknown;
+  for (const args of variants) {
+    try {
+      const { stdout } = await runRc(args);
+      return parseNameListFromOutput(stdout, "policies", [
+        "policy",
+        "policyName",
+        "name",
+      ]);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  throw lastErr instanceof Error ? lastErr : new Error("Failed to list RustFS policies");
+}
+
+export async function listRustfsGroups(): Promise<string[]> {
+  const variants = [
+    ["--json", "admin", "group", "list", RUSTFS_ALIAS],
+    ["--json", "admin", "group", "ls", RUSTFS_ALIAS],
+    ["admin", "group", "list", RUSTFS_ALIAS],
+    ["admin", "group", "ls", RUSTFS_ALIAS],
+  ];
+
+  let lastErr: unknown;
+  for (const args of variants) {
+    try {
+      const { stdout } = await runRc(args);
+      return parseNameListFromOutput(stdout, "groups", ["group", "name"]);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  throw lastErr instanceof Error ? lastErr : new Error("Failed to list RustFS groups");
+}
+
+export async function createRustfsUser(
+  payload: MinioUserCreatePayload
+): Promise<void> {
+  const username = String(payload?.username ?? "").trim();
+  const secretKey = String(payload?.secretKey ?? "").trim();
+  const status = payload?.status ?? "enabled";
+  const policies = Array.isArray(payload?.policies) ? payload.policies : [];
+  const groups = Array.isArray(payload?.groups) ? payload.groups : [];
+
+  if (!username) {
+    throw new Error("createRustfsUser: username is required");
+  }
+  if (!secretKey) {
+    throw new Error("createRustfsUser: secretKey is required");
+  }
+
+  await runRc(["admin", "user", "add", RUSTFS_ALIAS, username, secretKey]);
+
+  if (status === "disabled") {
+    await runRc(["admin", "user", "disable", RUSTFS_ALIAS, username]);
+  } else {
+    await runRc(["admin", "user", "enable", RUSTFS_ALIAS, username]);
+  }
+
+  const selectedPolicies = policies
+    .map((p) => String(p ?? "").trim())
+    .filter(Boolean);
+  if (selectedPolicies.length > 0) {
+    const policyName = selectedPolicies.join(",");
+    const userOrGroup = encodeURIComponent(username);
+    await runRustfsAdminApiRequest(
+      "set-user-or-group-policy",
+      "PUT",
+      `set-user-or-group-policy?policyName=${policyName}&userOrGroup=${userOrGroup}&isGroup=false`,
+      {}
+    );
+
+    // Some RustFS builds return success but do not persist user policies.
+    // Verify via RustFS admin API (avoid rc dependency for user info readback).
+    const info = await runRustfsAdminApiGet(
+      `user-info?accessKey=${encodeURIComponent(username)}`
+    );
+    const attachedFromList = Array.isArray((info as any)?.policies)
+      ? ((info as any).policies as unknown[])
+      : [];
+    const attachedFromName = String((info as any)?.policyName ?? "")
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const attached = new Set<string>(
+      attachedFromList
+        .map((p) => String(p ?? "").trim())
+        .concat(attachedFromName)
+        .filter(Boolean)
+    );
+    const missingPolicies = selectedPolicies.filter((p) => !attached.has(p));
+    if (missingPolicies.length > 0) {
+      throw new Error(
+        `RustFS did not persist requested policies for user "${username}": ${missingPolicies.join(", ")}`
+      );
+    }
+  }
+
+  for (const group of groups) {
+    const g = String(group ?? "").trim();
+    if (!g) continue;
+    try {
+      await runRustfsAdminApiRequest(
+        "update-group-members",
+        "PUT",
+        "update-group-members",
+        {
+          group: g,
+          groupStatus: "enabled",
+          isRemove: false,
+          members: [username],
+        }
+      );
+    } catch {
+      try {
+        await runRc(["admin", "group", "add-members", RUSTFS_ALIAS, g, username]);
+      } catch {
+        await runRc(["admin", "group", "add", RUSTFS_ALIAS, g, username]);
+      }
+    }
   }
 }
 

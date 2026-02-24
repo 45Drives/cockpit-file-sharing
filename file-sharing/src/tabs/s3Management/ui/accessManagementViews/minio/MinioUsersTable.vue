@@ -141,9 +141,19 @@ import MinioUserEditModal from "./MinioUserEditModal.vue";
 
 import {listMinioUsers,deleteMinioUser,createMinioUser,listMinioPolicies,getMinioUserInfo,updateMinioUser,listMinioGroups,
 } from "../../../api/minioCliAdapter";
+import {
+  createRustfsUser,
+  listRustfsGroups,
+  listRustfsPolicies,
+  listRustfsUsers,
+} from "../../../api/rustfsCliAdapter";
 import type { MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserUpdatePayload, } from "@/tabs/s3Management/types/types";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
 
+const props = defineProps<{
+  backendLabel?: string;
+}>();
+const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
 
 const users = ref<MinioUser[]>([]);
 const loading = ref(false);
@@ -173,7 +183,7 @@ async function loadUsers() {
   loading.value = true;
   error.value = null;
   try {
-    users.value = await listMinioUsers();
+    users.value = isRustfsBackend ? await listRustfsUsers() : await listMinioUsers();
   } catch (e: any) {
     error.value = e?.message || "Failed to load MinIO users.";
   } finally {
@@ -183,10 +193,12 @@ async function loadUsers() {
 
 async function loadPolicies() {
   try {
-    availablePolicies.value = await listMinioPolicies();
+    availablePolicies.value = isRustfsBackend
+      ? await listRustfsPolicies()
+      : await listMinioPolicies();
   } catch (e) {
     // Non-fatal; just log or ignore
-    console.warn("Failed to load MinIO policies", e);
+    console.warn("Failed to load policies", e);
   }
 }
 
@@ -240,13 +252,17 @@ async function handleUserSubmit(payload: MinioUserCreatePayload) {
   userDialogError.value = null;
   try {
     loading.value = true;
-    await createMinioUser(payload);
+    if (isRustfsBackend) {
+      await createRustfsUser(payload);
+    } else {
+      await createMinioUser(payload);
+    }
     await loadUsers();
     showUserDialog.value = false;
-    pushNotification(new Notification(`Minio user created succesfully."`, "success"));
+    pushNotification(new Notification(`User created succesfully."`, "success"));
 
   } catch (e: any) {
-    pushNotification(new Notification(`Failed to create MinIO user."`, e?.message, "error"));
+    pushNotification(new Notification(`Failed to create user."`, e?.message, "error"));
 
     // userDialogError.value = e?.message || "Failed to create MinIO user.";
   } finally {
@@ -310,9 +326,11 @@ async function handleUserUpdate(payload: MinioUserUpdatePayload) {
 }
 async function loadGroups() {
   try {
-    availableGroups.value = await listMinioGroups();
+    availableGroups.value = isRustfsBackend
+      ? await listRustfsGroups()
+      : await listMinioGroups();
   } catch (e) {
-    console.warn("Failed to load MinIO groups", e);
+    console.warn("Failed to load groups", e);
   }
 }
 
