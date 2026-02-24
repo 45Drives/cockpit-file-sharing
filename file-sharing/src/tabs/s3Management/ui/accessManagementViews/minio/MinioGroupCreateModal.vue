@@ -4,7 +4,7 @@
     <div class="bg-accent rounded-lg shadow-lg max-w-sm w-full mx-4">
       <div class="px-5 py-4 border-b border-default flex items-center justify-between">
         <h3 class="text-base font-semibold">
-          Create MinIO group
+          Create {{ backendLabel }} group
         </h3>
       </div>
 
@@ -49,13 +49,15 @@
           </div>
 
           <p v-else class="text-sm text-muted italic mt-1">
-            No users available. At least one user is required to create a group.
+            <span v-if="requireMember">No users available. At least one user is required to create a group.</span>
+            <span v-else>No users available. You can still create the group without members.</span>
           </p>
         </div>
 
         <p class="text-sm text-muted">
-          Groups are used to attach shared policies to multiple users. MinIO requires
-          at least one member when creating a group.
+          Groups are used to attach shared policies to multiple users.
+          <span v-if="requireMember">{{ backendLabel }} requires at least one member when creating a group.</span>
+          <span v-else>{{ backendLabel }} supports creating a group without members.</span>
         </p>
       </div>
 
@@ -66,7 +68,7 @@
         </button>
         <button
           class="px-3 py-1.5 text-xs rounded border text-white border-green-600 bg-green-600 text-default hover:bg-green-700 disabled:opacity-60"
-          @click="submit" :disabled="loading || !availableUsers.length">
+          @click="submit" :disabled="loading || (requireMember && !availableUsers.length)">
           Create group
         </button>
       </div>
@@ -82,6 +84,8 @@ const props = defineProps<{
   loading?: boolean;
   errorMessage?: string | null;
   availableUsers: string[];
+  requireMember?: boolean;
+  backendLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -92,6 +96,8 @@ const emit = defineEmits<{
 const name = ref("");
 const selectedUsers = ref<string[]>([]);
 const localError = ref<string | null>(null);
+const requireMember = props.requireMember !== false;
+const backendLabel = props.backendLabel?.trim() || "MinIO";
 
 watch(
   () => props.modelValue,
@@ -116,7 +122,7 @@ function submit() {
     return;
   }
 
-  if (!selectedUsers.value.length) {
+  if (requireMember && !selectedUsers.value.length) {
     localError.value = "At least one user is required to create a group.";
     return;
   }

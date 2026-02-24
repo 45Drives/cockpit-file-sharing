@@ -5,13 +5,13 @@
       <div>
         <h2 class="text-lg font-semibold">Groups</h2>
         <p class="text-xs text-muted">
-          Manage MinIO groups that can hold multiple users and shared policies.
+          Manage {{ isRustfsBackend ? "RustFS" : "MinIO" }} groups that can hold multiple users and shared policies.
         </p>
       </div>
 
       <button
         class="inline-flex items-center btn-primary text-default text-xs font-medium rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
-        @click="openCreateDialog" :disabled="loading || !usernames.length">
+        @click="openCreateDialog" :disabled="loading || (!isRustfsBackend && !usernames.length)">
         Create group
       </button>
     </div>
@@ -68,7 +68,8 @@
 
     <!-- Create group modal -->
     <MinioGroupCreateModal v-model="showCreateDialog" :loading="loading" :error-message="createDialogError"
-      :available-users="usernames" @submit="handleGroupCreate" />
+      :available-users="usernames" :require-member="!isRustfsBackend" :backend-label="isRustfsBackend ? 'RustFS' : 'MinIO'"
+      @submit="handleGroupCreate" />
     <MinioGroupModal v-model="showGroupDialog" :group="selectedGroup" :loading="groupDialogLoading"
       :error-message="groupDialogError" :available-users="usernames" :available-policies="availablePolicies"
       :mode="groupDialogMode" @submit="handleGroupUpdate" @switch-mode="groupDialogMode = $event" />
@@ -84,7 +85,7 @@
 
         <div class="px-5 py-4 space-y-3 text-sm">
           <p>
-            Are you sure you want to delete this MinIO group?
+            Are you sure you want to delete this {{ isRustfsBackend ? "RustFS" : "MinIO" }} group?
           </p>
           <p v-if="!isRustfsBackend" class="text-xs text-red-600">
             All users will be removed from this group. This action cannot be undone.

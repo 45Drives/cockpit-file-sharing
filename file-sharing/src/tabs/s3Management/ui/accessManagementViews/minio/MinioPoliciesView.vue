@@ -5,7 +5,7 @@
       <div>
         <h2 class="text-lg font-semibold">Policies</h2>
         <p class="text-xs text-muted">
-          Manage MinIO policies that can be attached to users and groups.
+          Manage {{ isRustfsBackend ? "RustFS" : "MinIO" }} policies that can be attached to users and groups.
         </p>
       </div>
 
@@ -63,6 +63,7 @@
     </div>
 
     <MinioPolicyCreateModal v-model="showCreateDialog" :loading="loading" :error-message="createDialogError"
+      :backend-label="isRustfsBackend ? 'RustFS' : 'MinIO'"
       @submit="handlePolicyCreate" />
 
     <MinioPolicyViewEditModal v-model="showViewEditDialog" :policy-name="selectedPolicyName"
@@ -80,7 +81,7 @@
 
         <div class="px-5 py-4 space-y-3 text-sm">
           <p>
-            Are you sure you want to delete this MinIO policy?
+            Are you sure you want to delete this {{ isRustfsBackend ? "RustFS" : "MinIO" }} policy?
           </p>
           <p v-if="!isRustfsBackend" class="text-xs text-red-600">
             Any users or groups attached to this policy will lose its permissions.

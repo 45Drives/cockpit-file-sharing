@@ -5,7 +5,7 @@
       <!-- Header -->
       <div class="px-5 py-4 border-b border-default flex items-center justify-between">
         <h3 class="text-base font-semibold">
-          Create MinIO policy
+          Create {{ backendLabel }} policy
         </h3>
         <button class="px-2 py-1 text-xs rounded btn-secondary hover:bg-gray-100" @click="close"
           :disabled="loading">
@@ -32,7 +32,7 @@
             class="w-full border border-default bg-default rounded px-2 py-1 text-sm"
             placeholder="e.g. backups-readwrite" />
           <p class="text-xs text-muted mt-1">
-            This is the name MinIO will use for the policy (e.g. in
+            This is the name {{ backendLabel }} will use for the policy (e.g. in
             <span class="font-mono">mc admin policy attach</span>.
           </p>
         </div>
@@ -100,6 +100,7 @@ const props = defineProps<{
   modelValue: boolean;
   loading?: boolean;
   errorMessage?: string | null;
+  backendLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -110,6 +111,7 @@ const emit = defineEmits<{
 const name = ref("");
 const json = ref("");
 const localError = ref<string | null>(null);
+const backendLabel = props.backendLabel?.trim() || "MinIO";
 
 watch(
   () => props.modelValue,
