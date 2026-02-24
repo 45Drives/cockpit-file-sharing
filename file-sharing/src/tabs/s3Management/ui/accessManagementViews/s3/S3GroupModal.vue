@@ -101,13 +101,13 @@
 
 <script lang="ts" setup>
 import { ref, watch, computed } from "vue";
-import type { MinioGroupInfo } from "../../../types/types";
+import type { S3AccessGroupInfo } from "../../../types/types";
 
 const props = defineProps<{
   modelValue: boolean;
   loading: boolean;
   errorMessage: string | null;
-  group: MinioGroupInfo | null;
+  group: S3AccessGroupInfo | null;
   availableUsers: string[];
   availablePolicies: string[];
   mode: "view" | "edit";

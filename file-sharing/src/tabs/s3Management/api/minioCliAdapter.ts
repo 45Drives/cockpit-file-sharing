@@ -1,6 +1,6 @@
 
-import type {MinioBucket,BucketVersioningStatus,MinioUser,MinioUserCreatePayload,MinioUserDetails,MinioUserGroupMembership,MinioUserUpdatePayload,
-  MinioBucketDashboardStats,MinioReplicationUsage,MinioGroupInfo,McAliasCandidate,
+import type {MinioBucket,BucketVersioningStatus,S3AccessUser,S3AccessUserCreatePayload,S3AccessUserDetails,S3AccessUserGroupMembership,S3AccessUserUpdatePayload,
+  MinioBucketDashboardStats,MinioReplicationUsage,S3AccessGroupInfo,McAliasCandidate,
   MinioServiceAccount,
   MinioServiceAccountCreatePayload,
   MinioServiceAccountUpdatePayload,
@@ -441,9 +441,9 @@ if (hasSizeQuota) {
 }
 
 
-export async function listMinioUsers(): Promise<MinioUser[]> {
+export async function listMinioUsers(): Promise<S3AccessUser[]> {
   const objs = await mcJsonLines(["admin", "user", "list", MINIO_ALIAS]);
-  const users: MinioUser[] = [];
+  const users: S3AccessUser[] = [];
 
   for (const obj of objs) {
     const username: string =
@@ -499,7 +499,7 @@ export async function deleteMinioUser(username: string): Promise<void> {
 }
 
 /**
- * createMinioUser(payload: MinioUserCreatePayload): Promise<void>
+ * createMinioUser(payload: S3AccessUserCreatePayload): Promise<void>
  *
  * Uses:
  *   mc admin user add ALIAS USERNAME PASSWORD
@@ -507,7 +507,7 @@ export async function deleteMinioUser(username: string): Promise<void> {
  *   mc admin policy set ALIAS POLICY user=USERNAME
  */
 export async function createMinioUser(
-  payload: MinioUserCreatePayload
+  payload: S3AccessUserCreatePayload
 ): Promise<void> {
   const { username, secretKey, status, policies } = payload;
 
@@ -571,7 +571,7 @@ export async function listMinioPolicies(): Promise<string[]> {
   return Array.from(names).sort();
 }
 
-export async function getMinioUserInfo(username: string): Promise<MinioUserDetails> {
+export async function getMinioUserInfo(username: string): Promise<S3AccessUserDetails> {
   if (!username) {
     throw new Error("getMinioUserInfo: username is required");
   }
@@ -617,7 +617,7 @@ export async function getMinioUserInfo(username: string): Promise<MinioUserDetai
     info.authentication || info.Authentication;
 
   const memberOfRaw = info.memberOf || info.member_of || [];
-  const memberOf: MinioUserGroupMembership[] = Array.isArray(memberOfRaw)
+  const memberOf: S3AccessUserGroupMembership[] = Array.isArray(memberOfRaw)
     ? memberOfRaw.map((g: any) => ({
         name: g.name || g.group || "",
         policies: Array.isArray(g.policies)
@@ -628,7 +628,7 @@ export async function getMinioUserInfo(username: string): Promise<MinioUserDetai
       }))
     : [];
 
-  const details: MinioUserDetails = {
+  const details: S3AccessUserDetails = {
     username: accessKey || username,status,policies,accessKey,authentication,memberOf,raw: info,
   };
 
@@ -636,7 +636,7 @@ export async function getMinioUserInfo(username: string): Promise<MinioUserDetai
 }
 
 
-export async function updateMinioUser(payload: MinioUserUpdatePayload): Promise<void> {
+export async function updateMinioUser(payload: S3AccessUserUpdatePayload): Promise<void> {
   const {
     username,
     status,
@@ -651,7 +651,7 @@ export async function updateMinioUser(payload: MinioUserUpdatePayload): Promise<
   }
 
   // 1) Fetch current state so can diff policies & groups and get accessKey
-  const current: MinioUserDetails = await getMinioUserInfo(username);
+  const current: S3AccessUserDetails = await getMinioUserInfo(username);
 
   const currentPolicies: string[] = (current.policies ?? []) as string[];
   const currentGroups: string[] = (current.memberOf ?? [])
@@ -703,7 +703,7 @@ export async function updateMinioUser(payload: MinioUserUpdatePayload): Promise<
   if (resetSecret) {
     // If the user provided a specific secret, set that
     if (newSecretKey && newSecretKey.trim().length > 0) {
-      // Prefer explicit accessKey from MinioUserDetails, fallback to username
+      // Prefer explicit accessKey from user details, fallback to username
       const accessKey = current.accessKey || username;
 
       await runMc(["admin", "user", "add", MINIO_ALIAS, username, newSecretKey.trim()]);
@@ -874,7 +874,7 @@ export async function deleteMinioPolicy(name: string): Promise<void> {
 }
 
 
-export async function getMinioGroupInfo(name: string): Promise<MinioGroupInfo> {
+export async function getMinioGroupInfo(name: string): Promise<S3AccessGroupInfo> {
   const info = await mcJsonSingle(["admin", "group", "info", MINIO_ALIAS, name]);
 
   const toStringArray = (v: any): string[] => {

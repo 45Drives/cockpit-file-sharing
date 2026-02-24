@@ -193,7 +193,7 @@ import {
 } from "../api/rustfsCliAdapter";
 import { isGarageHealthy } from "../api/garageCliAdapter";
 import UsersView from "./accessManagementViews/CephRgw/UsersView.vue";
-import MinioAccessManagement from "./accessManagementViews/minio/MinioAccessManagement.vue";
+import MinioAccessManagement from "./accessManagementViews/s3/S3AccessManagement.vue";
 import GarageKeysPage from "./accessManagementViews/GarageHq/GarageKeysPage.vue";
 import { CardContainer } from "@45drives/houston-common-ui";
 import { ArchiveBoxIcon } from "@heroicons/vue/20/solid";

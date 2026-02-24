@@ -182,14 +182,14 @@ export type RgwDashboardS3Creds = {
   }
   
 
-  export interface MinioUser {
+  export interface S3AccessUser {
     username: string;
     status: "enabled" | "disabled";
     policies?: string[];
     policyCount?: number;
   }
   
-  export interface MinioUserCreatePayload {
+  export interface S3AccessUserCreatePayload {
     username: string;
     secretKey: string;
     status: "enabled" | "disabled";
@@ -197,18 +197,18 @@ export type RgwDashboardS3Creds = {
     groups?: string[];
   }
   
-  export interface MinioUserGroupMembership {
+  export interface S3AccessUserGroupMembership {
     name: string;
     policies?: string[];
   }
-  export interface MinioUserDetails extends MinioUser {
+  export interface S3AccessUserDetails extends S3AccessUser {
     accessKey?: string;
     authentication?: string;
-    memberOf?: MinioUserGroupMembership[];
+    memberOf?: S3AccessUserGroupMembership[];
     raw?: any;
   }
 
-  export interface MinioUserUpdatePayload {
+  export interface S3AccessUserUpdatePayload {
     username: string;
     status?: "enabled" | "disabled";
     policies?: string[];
@@ -217,7 +217,7 @@ export type RgwDashboardS3Creds = {
     groups: string[];
   }
   
-  export interface MinioGroupInfo {
+  export interface S3AccessGroupInfo {
     name: string;
     members: string[];
     policies: string[];

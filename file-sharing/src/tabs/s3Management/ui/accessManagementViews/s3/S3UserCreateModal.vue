@@ -190,14 +190,7 @@
 <script lang="ts" setup>
 import { ref, watch } from "vue";
 import { generateSecret } from "@/tabs/s3Management/bucketBackends/bucketUtils";
-
-export interface MinioUserCreatePayload {
-  username: string;
-  secretKey: string;
-  status: "enabled" | "disabled";
-  policies: string[];
-  groups: string[];
-}
+import type { S3AccessUserCreatePayload } from "@/tabs/s3Management/types/types";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -209,7 +202,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: boolean): void;
-  (e: "submit", payload: MinioUserCreatePayload): void;
+  (e: "submit", payload: S3AccessUserCreatePayload): void;
 }>();
 
 const form = ref({
@@ -265,7 +258,7 @@ function submit() {
     return;
   }
 
-  const payload: MinioUserCreatePayload = {
+  const payload: S3AccessUserCreatePayload = {
     username: form.value.username.trim(),
     secretKey: form.value.secretKey,
     status: form.value.status,

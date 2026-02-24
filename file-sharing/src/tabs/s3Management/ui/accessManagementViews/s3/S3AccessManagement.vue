@@ -67,9 +67,9 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 
-import MinioUsersTable from "./MinioUsersTable.vue";
-import MinioPoliciesView from "./MinioPoliciesView.vue";
-import MinioGroupsView from "./MinioGroupsView.vue";
+import MinioUsersTable from "./S3UsersTable.vue";
+import MinioPoliciesView from "./S3PoliciesView.vue";
+import MinioGroupsView from "./S3GroupsView.vue";
 import { ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 
 const activeTab = ref<"users" | "policies" | "groups">("users");

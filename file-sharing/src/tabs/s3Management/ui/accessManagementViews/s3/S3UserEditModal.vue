@@ -285,7 +285,11 @@
 
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
-import type { MinioServiceAccount, MinioUserDetails, MinioUserUpdatePayload } from "@/tabs/s3Management/types/types";
+import type {
+  MinioServiceAccount,
+  S3AccessUserDetails,
+  S3AccessUserUpdatePayload,
+} from "@/tabs/s3Management/types/types";
 import { generateSecret, formatIsoLocal, localTimeZone } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 import {
   listMinioServiceAccounts,
@@ -302,7 +306,7 @@ interface Props {
   errorMessage: string | null;
   availablePolicies: string[];
   availableGroups: string[];
-  user: MinioUserDetails | null;
+  user: S3AccessUserDetails | null;
   showServiceAccounts?: boolean;
 }
 
@@ -310,7 +314,7 @@ const props = defineProps<Props>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: boolean): void;
-  (e: "submit", payload: MinioUserUpdatePayload): void;
+  (e: "submit", payload: S3AccessUserUpdatePayload): void;
 }>();
 
 const user = computed(() => props.user);
@@ -358,7 +362,7 @@ watch(
 function onSubmit() {
   if (!props.user) return;
 
-  const payload: MinioUserUpdatePayload = {
+  const payload: S3AccessUserUpdatePayload = {
     username: props.user.username,
     status: localStatusEnabled.value ? "enabled" : "disabled",
     policies: [...localPolicies.value],

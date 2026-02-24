@@ -121,8 +121,8 @@ import {
   getRustfsPolicy,
   listRustfsPolicies,
 } from "../../../api/rustfsCliAdapter";
-import MinioPolicyCreateModal from "./MinioPolicyCreateModal.vue";
-import MinioPolicyViewEditModal from "./MinioPolicyViewEditModal.vue";
+import MinioPolicyCreateModal from "./S3PolicyCreateModal.vue";
+import MinioPolicyViewEditModal from "./S3PolicyViewEditModal.vue";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
 
 const props = defineProps<{

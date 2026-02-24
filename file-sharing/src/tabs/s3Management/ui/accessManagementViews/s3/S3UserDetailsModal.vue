@@ -160,7 +160,7 @@
 
 <script lang="ts" setup>
 import { ref, watch } from "vue";
-import type { MinioServiceAccount, MinioUserDetails } from "@/tabs/s3Management/types/types";
+import type { MinioServiceAccount, S3AccessUserDetails } from "@/tabs/s3Management/types/types";
 import { listMinioServiceAccounts } from "@/tabs/s3Management/api/minioCliAdapter";
 import { formatIsoLocal } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 
@@ -168,7 +168,7 @@ const props = defineProps<{
   modelValue: boolean;
   loading?: boolean;
   errorMessage?: string | null;
-  user: MinioUserDetails | null;
+  user: S3AccessUserDetails | null;
   showServiceAccounts?: boolean;
 }>();
 

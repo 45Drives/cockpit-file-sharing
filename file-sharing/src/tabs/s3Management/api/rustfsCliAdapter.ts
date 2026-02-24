@@ -1,12 +1,12 @@
 import type {
   BucketVersioningStatus,
   McAliasCandidate,
-  MinioGroupInfo,
-  MinioUser,
-  MinioUserCreatePayload,
-  MinioUserDetails,
-  MinioUserGroupMembership,
-  MinioUserUpdatePayload,
+  S3AccessUserGroupMembership,
+  S3AccessGroupInfo,
+  S3AccessUser,
+  S3AccessUserCreatePayload,
+  S3AccessUserDetails,
+  S3AccessUserUpdatePayload,
   RustfsBucket,
   RustfsBucketDashboardStats,
 } from "../types/types";
@@ -1022,7 +1022,7 @@ export async function isRustfsAvailable(): Promise<boolean> {
   }
 }
 
-export async function listRustfsUsers(): Promise<MinioUser[]> {
+export async function listRustfsUsers(): Promise<S3AccessUser[]> {
   const payload = await runRustfsAdminApiGet("list-users");
   const objs: any[] = [];
 
@@ -1033,7 +1033,7 @@ export async function listRustfsUsers(): Promise<MinioUser[]> {
     }
   }
 
-  const users: MinioUser[] = [];
+  const users: S3AccessUser[] = [];
 
   for (const obj of objs) {
     const username: string =
@@ -1068,7 +1068,7 @@ export async function listRustfsUsers(): Promise<MinioUser[]> {
   return users;
 }
 
-export async function getRustfsUserInfo(username: string): Promise<MinioUserDetails> {
+export async function getRustfsUserInfo(username: string): Promise<S3AccessUserDetails> {
   const target = String(username ?? "").trim();
   if (!target) {
     throw new Error("getRustfsUserInfo: username is required");
@@ -1098,7 +1098,7 @@ export async function getRustfsUserInfo(username: string): Promise<MinioUserDeta
   }
 
   const memberOfRaw = info?.memberOf || info?.member_of || [];
-  const memberOf: MinioUserGroupMembership[] = Array.isArray(memberOfRaw)
+  const memberOf: S3AccessUserGroupMembership[] = Array.isArray(memberOfRaw)
     ? memberOfRaw
       .map((g: unknown) => String(g ?? "").trim())
       .filter(Boolean)
@@ -1348,7 +1348,7 @@ export async function listRustfsGroups(): Promise<string[]> {
   return parseGroupNames(payload);
 }
 
-export async function getRustfsGroupInfo(name: string): Promise<MinioGroupInfo> {
+export async function getRustfsGroupInfo(name: string): Promise<S3AccessGroupInfo> {
   const groupName = String(name ?? "").trim();
   if (!groupName) {
     throw new Error("getRustfsGroupInfo: group name is required");
@@ -1527,7 +1527,7 @@ export async function createRustfsGroup(
 }
 
 export async function createRustfsUser(
-  payload: MinioUserCreatePayload
+  payload: S3AccessUserCreatePayload
 ): Promise<void> {
   const username = String(payload?.username ?? "").trim();
   const secretKey = String(payload?.secretKey ?? "").trim();
@@ -1608,7 +1608,7 @@ export async function createRustfsUser(
   }
 }
 
-export async function updateRustfsUser(payload: MinioUserUpdatePayload): Promise<void> {
+export async function updateRustfsUser(payload: S3AccessUserUpdatePayload): Promise<void> {
   const username = String(payload?.username ?? "").trim();
   if (!username) {
     throw new Error("updateRustfsUser: username is required");

@@ -134,9 +134,9 @@ import {
   deleteRustfsGroup,
   updateRustfsGroup,
 } from "../../../api/rustfsCliAdapter";
-import MinioGroupCreateModal from "./MinioGroupCreateModal.vue";
-import type { MinioUser, MinioGroupInfo } from "@/tabs/s3Management/types/types";
-import MinioGroupModal from "./MinioGroupModal.vue";
+import MinioGroupCreateModal from "./S3GroupCreateModal.vue";
+import type { S3AccessGroupInfo, S3AccessUser } from "@/tabs/s3Management/types/types";
+import MinioGroupModal from "./S3GroupModal.vue";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
 
 const props = defineProps<{
@@ -145,7 +145,7 @@ const props = defineProps<{
 const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
 
 const groups = ref<string[]>([]);
-const users = ref<MinioUser[]>([]);
+const users = ref<S3AccessUser[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
@@ -164,7 +164,7 @@ const usernames = computed(() => users.value.map((u) => u.username));
 const showGroupDialog = ref(false);
 const groupDialogLoading = ref(false);
 const groupDialogError = ref<string | null>(null);
-const selectedGroup = ref<MinioGroupInfo | null>(null);
+const selectedGroup = ref<S3AccessGroupInfo | null>(null);
 const groupDialogMode = ref<"view" | "edit">("view");
 
 // Policies for group edit

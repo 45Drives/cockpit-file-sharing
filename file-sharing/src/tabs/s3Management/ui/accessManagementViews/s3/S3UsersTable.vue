@@ -136,9 +136,9 @@
 
 <script lang="ts" setup>
 import { ref, onMounted } from "vue";
-import MinioUserCreateModal from "./MinioUserCreateModal.vue";
-import MinioUserDetailsModal from "./MinioUserDetailsModal.vue";
-import MinioUserEditModal from "./MinioUserEditModal.vue";
+import MinioUserCreateModal from "./S3UserCreateModal.vue";
+import MinioUserDetailsModal from "./S3UserDetailsModal.vue";
+import MinioUserEditModal from "./S3UserEditModal.vue";
 
 import {listMinioUsers,deleteMinioUser,createMinioUser,listMinioPolicies,getMinioUserInfo,updateMinioUser,listMinioGroups,
 } from "../../../api/minioCliAdapter";
@@ -151,7 +151,12 @@ import {
   listRustfsUsers,
   updateRustfsUser,
 } from "../../../api/rustfsCliAdapter";
-import type { MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserUpdatePayload, } from "@/tabs/s3Management/types/types";
+import type {
+  S3AccessUser,
+  S3AccessUserCreatePayload,
+  S3AccessUserDetails,
+  S3AccessUserUpdatePayload,
+} from "@/tabs/s3Management/types/types";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
 
 const props = defineProps<{
@@ -159,13 +164,13 @@ const props = defineProps<{
 }>();
 const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
 
-const users = ref<MinioUser[]>([]);
+const users = ref<S3AccessUser[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
 // Delete dialog state
 const showDeleteDialog = ref(false);
-const deleteTarget = ref<MinioUser | null>(null);
+const deleteTarget = ref<S3AccessUser | null>(null);
 
 // Create dialog state
 const showUserDialog = ref(false);
@@ -177,10 +182,10 @@ const availableGroups = ref<string[]>([]);
 const showUserDetailsDialog = ref(false);
 const userDetailsLoading = ref(false);
 const userDetailsError = ref<string | null>(null);
-const selectedUserDetails = ref<MinioUserDetails | null>(null);
+const selectedUserDetails = ref<S3AccessUserDetails | null>(null);
 // Edit dialog state
 const showEditDialog = ref(false);
-const editTarget = ref<MinioUserDetails | null>(null);
+const editTarget = ref<S3AccessUserDetails | null>(null);
 const editDialogError = ref<string | null>(null);
 
 async function loadUsers() {
@@ -211,7 +216,7 @@ function openCreateDialog() {
   showUserDialog.value = true;
 }
 
-function openDeleteDialog(user: MinioUser) {
+function openDeleteDialog(user: S3AccessUser) {
   deleteTarget.value = user;
   showDeleteDialog.value = true;
 }
@@ -260,7 +265,7 @@ async function confirmDelete() {
   closeDeleteDialog();
 }
 
-async function handleUserSubmit(payload: MinioUserCreatePayload) {
+async function handleUserSubmit(payload: S3AccessUserCreatePayload) {
   userDialogError.value = null;
   try {
     loading.value = true;
@@ -282,7 +287,7 @@ async function handleUserSubmit(payload: MinioUserCreatePayload) {
   }
 }
 
-async function onViewUser(user: MinioUser) {
+async function onViewUser(user: S3AccessUser) {
   userDetailsError.value = null;
   selectedUserDetails.value = null;
   showUserDetailsDialog.value = true;
@@ -301,7 +306,7 @@ async function onViewUser(user: MinioUser) {
   }
 }
 
-function openEditDialog(user: MinioUser) {
+function openEditDialog(user: S3AccessUser) {
   editDialogError.value = null;
   editTarget.value = null;
   showEditDialog.value = true;
@@ -324,7 +329,7 @@ function openEditDialog(user: MinioUser) {
     });
 }
 
-async function handleUserUpdate(payload: MinioUserUpdatePayload) {
+async function handleUserUpdate(payload: S3AccessUserUpdatePayload) {
   editDialogError.value = null;
   try {
     loading.value = true;
