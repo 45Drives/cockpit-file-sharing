@@ -1,4 +1,14 @@
-import type { BucketVersioningStatus, McAliasCandidate, MinioUser, MinioUserCreatePayload, RustfsBucket, RustfsBucketDashboardStats } from "../types/types";
+import type {
+  BucketVersioningStatus,
+  McAliasCandidate,
+  MinioUser,
+  MinioUserCreatePayload,
+  MinioUserDetails,
+  MinioUserGroupMembership,
+  MinioUserUpdatePayload,
+  RustfsBucket,
+  RustfsBucketDashboardStats,
+} from "../types/types";
 import pLimit from "p-limit";
 import { server, Command, unwrap } from "@45drives/houston-common-lib";
 
@@ -1022,6 +1032,81 @@ export async function listRustfsUsers(): Promise<MinioUser[]> {
   return users;
 }
 
+export async function getRustfsUserInfo(username: string): Promise<MinioUserDetails> {
+  const target = String(username ?? "").trim();
+  if (!target) {
+    throw new Error("getRustfsUserInfo: username is required");
+  }
+
+  const info = await runRustfsAdminApiGet(
+    `user-info?accessKey=${encodeURIComponent(target)}`
+  );
+
+  const rawStatus: string =
+    info?.userStatus || info?.status || info?.statusValue || "enabled";
+  const status: "enabled" | "disabled" =
+    String(rawStatus).toLowerCase() === "disabled" ? "disabled" : "enabled";
+
+  let policies: string[] | undefined;
+  if (Array.isArray(info?.policies)) {
+    policies = (info.policies as unknown[])
+      .map((p) => String(p ?? "").trim())
+      .filter(Boolean);
+  } else if (typeof info?.policyName === "string") {
+    policies = info.policyName
+      .split(",")
+      .map((p: string) => p.trim())
+      .filter(Boolean);
+  } else if (typeof info?.policy === "string") {
+    policies = [String(info.policy).trim()].filter(Boolean);
+  }
+
+  const memberOfRaw = info?.memberOf || info?.member_of || [];
+  const memberOf: MinioUserGroupMembership[] = Array.isArray(memberOfRaw)
+    ? memberOfRaw
+      .map((g: unknown) => String(g ?? "").trim())
+      .filter(Boolean)
+      .map((name) => ({ name }))
+    : [];
+
+  return {
+    username: target,
+    accessKey: target,
+    status,
+    policies,
+    policyCount: policies?.length ?? 0,
+    memberOf,
+    raw: info,
+  };
+}
+
+export async function deleteRustfsUser(username: string): Promise<void> {
+  const target = String(username ?? "").trim();
+  if (!target) {
+    throw new Error("deleteRustfsUser: username is required");
+  }
+
+  const q = `remove-user?accessKey=${encodeURIComponent(target)}`;
+  const variants: Array<() => Promise<any>> = [
+    () => runRustfsAdminApiRequest("remove-user", "DELETE", q),
+    () => runRustfsAdminApiRequest("remove-user", "PUT", q, {}),
+    () => runRustfsAdminApiRequest("remove-user", "POST", q, {}),
+    () => runRc(["admin", "user", "remove", RUSTFS_ALIAS, target]),
+  ];
+
+  let lastErr: unknown;
+  for (const attempt of variants) {
+    try {
+      await attempt();
+      return;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  throw lastErr instanceof Error ? lastErr : new Error("Failed to delete RustFS user");
+}
+
 function parseNameListFromOutput(
   stdout: string,
   expectedTopLevelKey: string,
@@ -1209,6 +1294,84 @@ export async function createRustfsUser(
         await runRc(["admin", "group", "add", RUSTFS_ALIAS, g, username]);
       }
     }
+  }
+}
+
+export async function updateRustfsUser(payload: MinioUserUpdatePayload): Promise<void> {
+  const username = String(payload?.username ?? "").trim();
+  if (!username) {
+    throw new Error("updateRustfsUser: username is required");
+  }
+
+  const current = await getRustfsUserInfo(username);
+  const currentPolicies = Array.from(
+    new Set((current.policies ?? []).map((p) => String(p ?? "").trim()).filter(Boolean))
+  ).sort();
+  const currentGroups = Array.from(
+    new Set((current.memberOf ?? []).map((g) => String(g?.name ?? "").trim()).filter(Boolean))
+  ).sort();
+
+  const desiredPolicies = Array.from(
+    new Set((payload.policies ?? []).map((p) => String(p ?? "").trim()).filter(Boolean))
+  ).sort();
+  const desiredGroups = Array.from(
+    new Set((payload.groups ?? []).map((g) => String(g ?? "").trim()).filter(Boolean))
+  ).sort();
+
+  if (payload.status === "enabled") {
+    await runRc(["admin", "user", "enable", RUSTFS_ALIAS, username]);
+  } else if (payload.status === "disabled") {
+    await runRc(["admin", "user", "disable", RUSTFS_ALIAS, username]);
+  }
+
+  if (desiredPolicies.join(",") !== currentPolicies.join(",")) {
+    const policyName = desiredPolicies.join(",");
+    const userOrGroup = encodeURIComponent(username);
+    await runRustfsAdminApiRequest(
+      "set-user-or-group-policy",
+      "PUT",
+      `set-user-or-group-policy?policyName=${policyName}&userOrGroup=${userOrGroup}&isGroup=false`,
+      {}
+    );
+  }
+
+  const groupsToAdd = desiredGroups.filter((g) => !currentGroups.includes(g));
+  const groupsToRemove = currentGroups.filter((g) => !desiredGroups.includes(g));
+
+  for (const g of groupsToAdd) {
+    await runRustfsAdminApiRequest(
+      "update-group-members",
+      "PUT",
+      "update-group-members",
+      {
+        group: g,
+        groupStatus: "enabled",
+        isRemove: false,
+        members: [username],
+      }
+    );
+  }
+
+  for (const g of groupsToRemove) {
+    await runRustfsAdminApiRequest(
+      "update-group-members",
+      "PUT",
+      "update-group-members",
+      {
+        group: g,
+        groupStatus: "enabled",
+        isRemove: true,
+        members: [username],
+      }
+    );
+  }
+
+  if (payload.resetSecret) {
+    const newSecret = String(payload.newSecretKey ?? "").trim();
+    if (!newSecret) {
+      throw new Error("updateRustfsUser: explicit secret is required when resetSecret is enabled");
+    }
+    await runRc(["admin", "user", "add", RUSTFS_ALIAS, username, newSecret]);
   }
 }
 

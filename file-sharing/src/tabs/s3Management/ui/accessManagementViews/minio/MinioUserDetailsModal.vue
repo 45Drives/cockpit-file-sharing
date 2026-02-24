@@ -100,7 +100,7 @@
           </section>
 
           <!-- Service accounts -->
-          <section class="space-y-1 mt-4">
+          <section v-if="showServiceAccounts" class="space-y-1 mt-4">
             <h4 class="text-xs font-semibold uppercase text-default mb-2">
               Service accounts
             </h4>
@@ -169,6 +169,7 @@ const props = defineProps<{
   loading?: boolean;
   errorMessage?: string | null;
   user: MinioUserDetails | null;
+  showServiceAccounts?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -178,8 +179,10 @@ const emit = defineEmits<{
 const serviceAccounts = ref<MinioServiceAccount[]>([]);
 const saLoading = ref(false);
 const saError = ref<string | null>(null);
+const showServiceAccounts = props.showServiceAccounts !== false;
 
 async function loadServiceAccounts() {
+  if (!showServiceAccounts) return;
   if (!props.user?.username) return;
   saLoading.value = true;
   saError.value = null;

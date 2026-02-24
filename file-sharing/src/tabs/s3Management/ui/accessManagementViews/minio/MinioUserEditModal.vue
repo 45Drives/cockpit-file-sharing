@@ -13,7 +13,7 @@
               Edit user "{{ user?.username }}"
             </h3>
             <p class="mt-0.5 text-xs text-muted">
-              Manage status, access policies/groups, service accounts, and credentials.
+              Manage status, access policies/groups, and credentials.
             </p>
           </div>
 
@@ -59,7 +59,7 @@
                 <div>
                   <div class="text-xs font-semibold uppercase tracking-wide text-default">Access</div>
                   <div class="mt-0.5 text-xs text-muted">
-                    Configure policies, groups, and service accounts for this user.
+                    Configure policies and groups for this user.
                   </div>
                 </div>
               </div>
@@ -79,15 +79,15 @@
                     Groups
                   </button>
 
-                  <button type="button" class="rounded-md px-3 py-1.5" :class="activeAccessTab === 'serviceAccounts'
-                    ? 'bg-default text-default font-medium'
-                    : 'text-muted hover:text-default'"
-                    @click="activeAccessTab = 'serviceAccounts'; loadServiceAccounts()">
+                  <button v-if="showServiceAccounts" type="button" class="rounded-md px-3 py-1.5"
+                    :class="activeAccessTab === 'serviceAccounts'
+                      ? 'bg-default text-default font-medium'
+                      : 'text-muted hover:text-default'" @click="activeAccessTab = 'serviceAccounts'; loadServiceAccounts()">
                     Service accounts
                   </button>
                 </div>
 
-                <button v-if="activeAccessTab === 'serviceAccounts'" type="button"
+                <button v-if="showServiceAccounts && activeAccessTab === 'serviceAccounts'" type="button"
                   class="inline-flex items-center justify-center rounded-md btn-primary px-3 py-1.5 text-xs text-default disabled:opacity-60"
                   @click="openCreateServiceAccountModal()" :disabled="loading || !user">
                   New access key
@@ -146,7 +146,7 @@
               </div>
 
               <!-- Service accounts -->
-              <div v-else class="px-4 py-4 space-y-4">
+              <div v-else-if="showServiceAccounts && activeAccessTab === 'serviceAccounts'" class="px-4 py-4 space-y-4">
                 <div v-if="saLoading" class="text-xs text-muted">Loading...</div>
 
                 <div v-else class="rounded-md border border-default overflow-hidden">
@@ -277,7 +277,7 @@
   </div>
 
   <!-- Single source of truth: modal for create/edit service accounts -->
-  <MinioServiceAccountModal v-if="saModalOpen" :modelValue="saModalOpen" :username="user?.username ?? ''"
+  <MinioServiceAccountModal v-if="showServiceAccounts && saModalOpen" :modelValue="saModalOpen" :username="user?.username ?? ''"
     :serviceAccount="saModalServiceAccount"
     @update:modelValue="(v: boolean) => { saModalOpen = v; if (!v) closeServiceAccountModal(); }"
     @created="async () => { await loadServiceAccounts(); }" @updated="async () => { await loadServiceAccounts(); }" />
@@ -303,6 +303,7 @@ interface Props {
   availablePolicies: string[];
   availableGroups: string[];
   user: MinioUserDetails | null;
+  showServiceAccounts?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -318,6 +319,7 @@ const loading = computed(() => props.loading);
 
 const availablePolicies = computed(() => props.availablePolicies ?? []);
 const availableGroups = computed(() => props.availableGroups ?? []);
+const showServiceAccounts = computed(() => props.showServiceAccounts !== false);
 
 const localPolicies = ref<string[]>([]);
 const localGroups = ref<string[]>([]);
@@ -369,6 +371,7 @@ function onSubmit() {
 }
 
 async function loadServiceAccounts() {
+  if (!showServiceAccounts.value) return;
   if (!props.user) return;
   saLoading.value = true;
 

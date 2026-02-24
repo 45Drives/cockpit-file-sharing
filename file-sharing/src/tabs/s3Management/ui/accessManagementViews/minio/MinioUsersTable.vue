@@ -127,9 +127,10 @@
     <MinioUserCreateModal v-model="showUserDialog" :loading="loading" :error-message="userDialogError"
       :available-policies="availablePolicies" :available-groups="availableGroups" @submit="handleUserSubmit" />
     <MinioUserDetailsModal v-model="showUserDetailsDialog" :user="selectedUserDetails" :loading="userDetailsLoading"
-      :error-message="userDetailsError" />
+      :error-message="userDetailsError" :show-service-accounts="!isRustfsBackend" />
     <MinioUserEditModal v-model="showEditDialog" :user="editTarget" :loading="loading" :error-message="editDialogError"
-      :available-policies="availablePolicies" :available-groups="availableGroups" @submit="handleUserUpdate" />
+      :available-policies="availablePolicies" :available-groups="availableGroups"
+      :show-service-accounts="!isRustfsBackend" @submit="handleUserUpdate" />
   </div>
 </template>
 
@@ -143,9 +144,12 @@ import {listMinioUsers,deleteMinioUser,createMinioUser,listMinioPolicies,getMini
 } from "../../../api/minioCliAdapter";
 import {
   createRustfsUser,
+  deleteRustfsUser,
+  getRustfsUserInfo,
   listRustfsGroups,
   listRustfsPolicies,
   listRustfsUsers,
+  updateRustfsUser,
 } from "../../../api/rustfsCliAdapter";
 import type { MinioUser, MinioUserCreatePayload, MinioUserDetails, MinioUserUpdatePayload, } from "@/tabs/s3Management/types/types";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
@@ -226,15 +230,23 @@ async function confirmDelete() {
     loading.value = true;
     error.value = null;
 
-    await deleteMinioUser(username);
+    if (isRustfsBackend) {
+      await deleteRustfsUser(username);
+    } else {
+      await deleteMinioUser(username);
+    }
     pushNotification(new Notification(`User "${username} deleted succesfully`, "success"));
 
   } catch (e: any) {
     const msg = (e?.message || "").toLowerCase();
 
     // If MinIO says the user doesn't exist, treat it as already deleted.
-    if (!msg.includes("the specified user does not exist")) {
-      pushNotification(new Notification(`Failed to delete MinIO user."`, e?.message, "success"));
+    const notFound =
+      msg.includes("the specified user does not exist") ||
+      msg.includes("nosuchuser") ||
+      msg.includes("not found");
+    if (!notFound) {
+      pushNotification(new Notification(`Failed to delete user."`, e?.message, "error"));
 
       // error.value = e?.message || "Failed to delete MinIO user.";
       return;
@@ -277,7 +289,9 @@ async function onViewUser(user: MinioUser) {
   userDetailsLoading.value = true;
 
   try {
-    selectedUserDetails.value = await getMinioUserInfo(user.username);
+    selectedUserDetails.value = isRustfsBackend
+      ? await getRustfsUserInfo(user.username)
+      : await getMinioUserInfo(user.username);
   } catch (e: any) {
     pushNotification(new Notification(`Failed to load user details"`, e?.message, "error"));
 
@@ -293,7 +307,10 @@ function openEditDialog(user: MinioUser) {
   showEditDialog.value = true;
   userDetailsLoading.value = true;
 
-  getMinioUserInfo(user.username)
+  const loadDetails = isRustfsBackend
+    ? getRustfsUserInfo(user.username)
+    : getMinioUserInfo(user.username);
+  loadDetails
     .then((details) => {
       editTarget.value = details;
     })
@@ -311,7 +328,11 @@ async function handleUserUpdate(payload: MinioUserUpdatePayload) {
   editDialogError.value = null;
   try {
     loading.value = true;
-    await updateMinioUser(payload);
+    if (isRustfsBackend) {
+      await updateRustfsUser(payload);
+    } else {
+      await updateMinioUser(payload);
+    }
     await loadUsers();
     showEditDialog.value = false;
     pushNotification(new Notification("Success", `User updated succesfully"`, "success", 2000));
