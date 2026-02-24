@@ -56,7 +56,7 @@
       <div>
         <MinioUsersTable v-if="activeTab === 'users'" :backendLabel="backendLabel" />
 
-        <MinioPoliciesView v-else-if="activeTab === 'policies'" />
+        <MinioPoliciesView v-else-if="activeTab === 'policies'" :backendLabel="backendLabel" />
 
         <MinioGroupsView v-else />
       </div>

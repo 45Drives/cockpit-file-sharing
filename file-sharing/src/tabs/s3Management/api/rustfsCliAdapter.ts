@@ -744,6 +744,10 @@ async function runRustfsQuotaApiRequest(
   }
 
   const trimmed = stdout.trim();
+  const apiError = extractRustfsApiErrorMessage(trimmed);
+  if (apiError) {
+    throw new Error(apiError);
+  }
   if (!trimmed) return {};
   return JSON.parse(trimmed);
 }
@@ -779,6 +783,10 @@ async function runRustfsAdminApiGet(path: string): Promise<any> {
   }
 
   const trimmed = stdout.trim();
+  const apiError = extractRustfsApiErrorMessage(trimmed);
+  if (apiError) {
+    throw new Error(apiError);
+  }
   if (!trimmed) return {};
   return JSON.parse(trimmed);
 }
@@ -825,6 +833,10 @@ async function runRustfsAdminApiRequest(
   }
 
   const trimmed = stdout.trim();
+  const apiError = extractRustfsApiErrorMessage(trimmed);
+  if (apiError) {
+    throw new Error(apiError);
+  }
   if (!trimmed) return {};
   try {
     return JSON.parse(trimmed);
@@ -850,6 +862,30 @@ function parseJsonLines(text: string): any[] {
     .map((l) => l.trim())
     .filter(Boolean)
     .map((line) => JSON.parse(line));
+}
+
+function extractRustfsApiErrorMessage(body: string): string | undefined {
+  const trimmed = String(body ?? "").trim();
+  if (!trimmed) return undefined;
+
+  const code = trimmed.match(/<Code>([^<]+)<\/Code>/i)?.[1]?.trim();
+  const message = trimmed.match(/<Message>([^<]+)<\/Message>/i)?.[1]?.trim();
+  if (code || message) {
+    return message ? `${code ?? "Error"}: ${message}` : code;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as any;
+    const jsonCode = parsed?.error?.Code ?? parsed?.error?.code ?? parsed?.Code ?? parsed?.code;
+    const jsonMessage = parsed?.error?.Message ?? parsed?.error?.message ?? parsed?.Message ?? parsed?.message;
+    if (jsonCode || jsonMessage) {
+      return jsonMessage ? `${jsonCode ?? "Error"}: ${jsonMessage}` : String(jsonCode);
+    }
+  } catch {
+    // no-op
+  }
+
+  return undefined;
 }
 
 function parseQuotaToBytes(raw: unknown): number | undefined {
@@ -986,17 +1022,16 @@ export async function isRustfsAvailable(): Promise<boolean> {
 }
 
 export async function listRustfsUsers(): Promise<MinioUser[]> {
-  const { stdout } = await runRc(["--json", "admin", "user", "list", RUSTFS_ALIAS]);
-  const rows = parseJsonLines(stdout);
+  const payload = await runRustfsAdminApiGet("list-users");
   const objs: any[] = [];
-  for (const row of rows) {
-    const nestedUsers = (row as any)?.users;
-    if (Array.isArray(nestedUsers)) {
-      objs.push(...nestedUsers);
-      continue;
+
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    for (const [username, details] of Object.entries(payload as Record<string, unknown>)) {
+      if (!details || typeof details !== "object" || Array.isArray(details)) continue;
+      objs.push({ username, ...(details as Record<string, unknown>) });
     }
-    objs.push(row);
   }
+
   const users: MinioUser[] = [];
 
   for (const obj of objs) {
@@ -1164,28 +1199,112 @@ function parseNameListFromOutput(
 }
 
 export async function listRustfsPolicies(): Promise<string[]> {
-  const variants = [
-    ["--json", "admin", "policy", "list", RUSTFS_ALIAS],
-    ["--json", "admin", "policy", "ls", RUSTFS_ALIAS],
-    ["admin", "policy", "list", RUSTFS_ALIAS],
-    ["admin", "policy", "ls", RUSTFS_ALIAS],
-  ];
+  const payload = await runRustfsAdminApiGet("list-canned-policies");
 
-  let lastErr: unknown;
-  for (const args of variants) {
-    try {
-      const { stdout } = await runRc(args);
-      return parseNameListFromOutput(stdout, "policies", [
-        "policy",
-        "policyName",
-        "name",
-      ]);
-    } catch (e) {
-      lastErr = e;
-    }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return [];
+
+  const isPolicyDoc = (value: unknown): boolean => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const doc = value as Record<string, unknown>;
+    // RustFS canned policy docs are expected to include Statement (array),
+    // and often Version/ID fields.
+    return Array.isArray(doc.Statement);
+  };
+
+  const names: string[] = [];
+  for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
+    const name = String(key ?? "").trim();
+    if (!name) continue;
+    if (!/^[A-Za-z0-9._-]+$/.test(name)) continue;
+    if (!isPolicyDoc(value)) continue;
+    names.push(name);
   }
 
-  throw lastErr instanceof Error ? lastErr : new Error("Failed to list RustFS policies");
+  return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
+}
+
+export async function getRustfsPolicy(name: string): Promise<string> {
+  const policyName = String(name ?? "").trim();
+  if (!policyName) {
+    throw new Error("getRustfsPolicy: policy name is required");
+  }
+
+  // Fast path: fetch only the requested policy.
+  try {
+    const single = await runRustfsAdminApiGet(
+      `info-canned-policy?name=${encodeURIComponent(policyName)}`
+    );
+    const policyRaw = (single as any)?.policy;
+    if (typeof policyRaw === "string" && policyRaw.trim()) {
+      try {
+        return `${JSON.stringify(JSON.parse(policyRaw), null, 2)}\n`;
+      } catch {
+        return `${policyRaw.trim()}\n`;
+      }
+    }
+    if (policyRaw && typeof policyRaw === "object" && !Array.isArray(policyRaw)) {
+      return `${JSON.stringify(policyRaw, null, 2)}\n`;
+    }
+  } catch {
+    // Fallback below
+  }
+
+  // Fallback: list all and select one by key.
+  const payload = await runRustfsAdminApiGet("list-canned-policies");
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("getRustfsPolicy: invalid RustFS policy response");
+  }
+
+  const doc = (payload as Record<string, unknown>)[policyName];
+  if (!doc || typeof doc !== "object" || Array.isArray(doc)) {
+    throw new Error(`Policy "${policyName}" not found`);
+  }
+  return `${JSON.stringify(doc, null, 2)}\n`;
+}
+
+export async function createOrUpdateRustfsPolicy(
+  name: string,
+  json: string
+): Promise<void> {
+  const policyName = String(name ?? "").trim();
+  if (!policyName) {
+    throw new Error("createOrUpdateRustfsPolicy: policy name is required");
+  }
+
+  const raw = String(json ?? "").trim();
+  if (!raw) {
+    throw new Error("createOrUpdateRustfsPolicy: policy json is required");
+  }
+
+  let doc: unknown;
+  try {
+    doc = JSON.parse(raw);
+  } catch {
+    throw new Error("createOrUpdateRustfsPolicy: invalid JSON");
+  }
+  if (!doc || typeof doc !== "object" || Array.isArray(doc)) {
+    throw new Error("createOrUpdateRustfsPolicy: policy must be a JSON object");
+  }
+
+  await runRustfsAdminApiRequest(
+    "add-canned-policy",
+    "PUT",
+    `add-canned-policy?name=${encodeURIComponent(policyName)}`,
+    doc
+  );
+}
+
+export async function deleteRustfsPolicy(name: string): Promise<void> {
+  const policyName = String(name ?? "").trim();
+  if (!policyName) {
+    throw new Error("deleteRustfsPolicy: policy name is required");
+  }
+
+  await runRustfsAdminApiRequest(
+    "remove-canned-policy",
+    "DELETE",
+    `remove-canned-policy?name=${encodeURIComponent(policyName)}`
+  );
 }
 
 export async function listRustfsGroups(): Promise<string[]> {
@@ -1225,13 +1344,15 @@ export async function createRustfsUser(
     throw new Error("createRustfsUser: secretKey is required");
   }
 
-  await runRc(["admin", "user", "add", RUSTFS_ALIAS, username, secretKey]);
-
-  if (status === "disabled") {
-    await runRc(["admin", "user", "disable", RUSTFS_ALIAS, username]);
-  } else {
-    await runRc(["admin", "user", "enable", RUSTFS_ALIAS, username]);
-  }
+  await runRustfsAdminApiRequest(
+    "add-user",
+    "PUT",
+    `add-user?accessKey=${encodeURIComponent(username)}`,
+    {
+      secretKey,
+      status,
+    }
+  );
 
   const selectedPolicies = policies
     .map((p) => String(p ?? "").trim())
@@ -1275,25 +1396,17 @@ export async function createRustfsUser(
   for (const group of groups) {
     const g = String(group ?? "").trim();
     if (!g) continue;
-    try {
-      await runRustfsAdminApiRequest(
-        "update-group-members",
-        "PUT",
-        "update-group-members",
-        {
-          group: g,
-          groupStatus: "enabled",
-          isRemove: false,
-          members: [username],
-        }
-      );
-    } catch {
-      try {
-        await runRc(["admin", "group", "add-members", RUSTFS_ALIAS, g, username]);
-      } catch {
-        await runRc(["admin", "group", "add", RUSTFS_ALIAS, g, username]);
+    await runRustfsAdminApiRequest(
+      "update-group-members",
+      "PUT",
+      "update-group-members",
+      {
+        group: g,
+        groupStatus: "enabled",
+        isRemove: false,
+        members: [username],
       }
-    }
+    );
   }
 }
 

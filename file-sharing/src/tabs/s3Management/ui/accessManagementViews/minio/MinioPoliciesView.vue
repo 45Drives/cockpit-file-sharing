@@ -82,8 +82,11 @@
           <p>
             Are you sure you want to delete this MinIO policy?
           </p>
-          <p class="text-xs text-red-600">
+          <p v-if="!isRustfsBackend" class="text-xs text-red-600">
             Any users or groups attached to this policy will lose its permissions.
+          </p>
+          <p v-else class="text-xs text-red-600">
+            RustFS may reject deletion if this policy is still in use.
           </p>
         </div>
 
@@ -111,10 +114,20 @@ import {
   createOrUpdateMinioPolicy,
   deleteMinioPolicy,
 } from "../../../api/minioCliAdapter";
+import {
+  createOrUpdateRustfsPolicy,
+  deleteRustfsPolicy,
+  getRustfsPolicy,
+  listRustfsPolicies,
+} from "../../../api/rustfsCliAdapter";
 import MinioPolicyCreateModal from "./MinioPolicyCreateModal.vue";
 import MinioPolicyViewEditModal from "./MinioPolicyViewEditModal.vue";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
 
+const props = defineProps<{
+  backendLabel?: string;
+}>();
+const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
 
 const policies = ref<string[]>([]);
 const loading = ref(false);
@@ -139,7 +152,9 @@ async function loadPolicies() {
   loading.value = true;
   error.value = null;
   try {
-    policies.value = await listMinioPolicies();
+    policies.value = isRustfsBackend
+      ? await listRustfsPolicies()
+      : await listMinioPolicies();
   } catch (e: any) {
     error.value = e?.message || "Failed to load MinIO policies.";
   } finally {
@@ -156,7 +171,11 @@ async function handlePolicyCreate(payload: { name: string; json: string }) {
   createDialogError.value = null;
   try {
     loading.value = true;
-    await createOrUpdateMinioPolicy(payload.name, payload.json);
+    if (isRustfsBackend) {
+      await createOrUpdateRustfsPolicy(payload.name, payload.json);
+    } else {
+      await createOrUpdateMinioPolicy(payload.name, payload.json);
+    }
     await loadPolicies();
     showCreateDialog.value = false;
     pushNotification(new Notification(`Pollicy "${payload.name} created successfully"`, "success"));
@@ -178,7 +197,9 @@ async function onViewEditPolicy(name: string) {
   viewEditLoading.value = true;
 
   try {
-    selectedPolicyJson.value = await getMinioPolicy(name);
+    selectedPolicyJson.value = isRustfsBackend
+      ? await getRustfsPolicy(name)
+      : await getMinioPolicy(name);
   } catch (e: any) {
     pushNotification(new Notification(`Failed to load policy "${name}"`, e?.message, "error"));
 
@@ -192,7 +213,11 @@ async function handlePolicySave(payload: { name: string; json: string }) {
   viewEditError.value = null;
   try {
     viewEditLoading.value = true;
-    await createOrUpdateMinioPolicy(payload.name, payload.json); // or updateMinioPolicy
+    if (isRustfsBackend) {
+      await createOrUpdateRustfsPolicy(payload.name, payload.json);
+    } else {
+      await createOrUpdateMinioPolicy(payload.name, payload.json); // or updateMinioPolicy
+    }
     await loadPolicies();
     showViewEditDialog.value = false;
 
@@ -224,7 +249,11 @@ async function confirmDeletePolicy() {
   try {
     loading.value = true;
     error.value = null;
-    await deleteMinioPolicy(name);
+    if (isRustfsBackend) {
+      await deleteRustfsPolicy(name);
+    } else {
+      await deleteMinioPolicy(name);
+    }
     await loadPolicies();
     closeDeleteDialog();
     pushNotification(new Notification("Success", `Policy  "${name}". deleted succesfully`, "success", 2000));
