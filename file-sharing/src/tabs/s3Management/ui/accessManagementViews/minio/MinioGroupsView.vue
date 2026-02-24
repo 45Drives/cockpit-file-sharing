@@ -86,8 +86,14 @@
           <p>
             Are you sure you want to delete this MinIO group?
           </p>
-          <p class="text-xs text-red-600">
+          <p v-if="!isRustfsBackend" class="text-xs text-red-600">
             All users will be removed from this group. This action cannot be undone.
+          </p>
+          <p v-else-if="deleteTargetMemberCount > 0" class="text-xs text-red-600">
+            This group has {{ deleteTargetMemberCount }} member(s). Continue to remove all members and delete the group?
+          </p>
+          <p v-else class="text-xs text-red-600">
+            This action cannot be undone.
           </p>
         </div>
 
@@ -118,10 +124,24 @@ import {
   updateMinioGroup,
   listMinioPolicies,
 } from "../../../api/minioCliAdapter";
+import {
+  createRustfsGroup,
+  listRustfsGroups,
+  getRustfsGroupInfo,
+  listRustfsPolicies,
+  listRustfsUsers,
+  deleteRustfsGroup,
+  updateRustfsGroup,
+} from "../../../api/rustfsCliAdapter";
 import MinioGroupCreateModal from "./MinioGroupCreateModal.vue";
 import type { MinioUser, MinioGroupInfo } from "@/tabs/s3Management/types/types";
 import MinioGroupModal from "./MinioGroupModal.vue";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
+
+const props = defineProps<{
+  backendLabel?: string;
+}>();
+const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
 
 const groups = ref<string[]>([]);
 const users = ref<MinioUser[]>([]);
@@ -135,6 +155,7 @@ const createDialogError = ref<string | null>(null);
 // Delete dialog state
 const showDeleteDialog = ref(false);
 const deleteTarget = ref<string | null>(null);
+const deleteTargetMemberCount = ref<number>(0);
 
 const usernames = computed(() => users.value.map((u) => u.username));
 
@@ -153,9 +174,15 @@ async function loadGroups() {
   loading.value = true;
   error.value = null;
   try {
-    groups.value = await listMinioGroups();
+    groups.value = isRustfsBackend
+      ? await listRustfsGroups()
+      : await listMinioGroups();
   } catch (e: any) {
-    pushNotification(new Notification(`Failed to load MinIO groups`, e?.message, "error"));
+    pushNotification(new Notification(
+      isRustfsBackend ? `Failed to load RustFS groups` : `Failed to load MinIO groups`,
+      e?.message,
+      "error"
+    ));
 
     // error.value = e?.message || "Failed to load MinIO groups.";
   } finally {
@@ -165,7 +192,9 @@ async function loadGroups() {
 
 async function loadUsers() {
   try {
-    users.value = await listMinioUsers();
+    users.value = isRustfsBackend
+      ? await listRustfsUsers()
+      : await listMinioUsers();
   } catch (e) {
     pushNotification(new Notification(`Failed to load MinIO users for group creation`, e as any, "error"));
   }
@@ -180,13 +209,30 @@ async function handleGroupCreate(payload: { name: string; members: string[] }) {
   createDialogError.value = null;
   try {
     loading.value = true;
-    await createMinioGroup(payload.name, payload.members);
-    await loadGroups();
+    if (isRustfsBackend) {
+      await createRustfsGroup(payload.name, payload.members);
+    } else {
+      await createMinioGroup(payload.name, payload.members);
+    }
     showCreateDialog.value = false;
-    pushNotification(new Notification("Success", `MinIO group "${payload.name} created"`, "success", 2000));
+    try {
+      await loadGroups();
+    } catch {
+      // Keep dialog closed when create succeeded; reload failure is non-fatal here.
+    }
+    pushNotification(new Notification(
+      "Success",
+      `${isRustfsBackend ? "RustFS" : "MinIO"} group "${payload.name}" created`,
+      "success",
+      2000
+    ));
 
   } catch (e: any) {
-    pushNotification(new Notification(`Failed to create MinIO group`, e?.message, "error"));
+    pushNotification(new Notification(
+      `Failed to create ${isRustfsBackend ? "RustFS" : "MinIO"} group`,
+      e?.message,
+      "error"
+    ));
 
     // createDialogError.value = e?.message || "Failed to create MinIO group.";
   } finally {
@@ -197,9 +243,18 @@ async function handleGroupUpdate(payload: { name: string; members: string[]; pol
   groupDialogError.value = null;
   try {
     groupDialogLoading.value = true;
-    await updateMinioGroup(payload.name, payload.members, payload.policies);
-    await loadGroups();
+    if (isRustfsBackend) {
+      await updateRustfsGroup(payload.name, payload.members, payload.policies);
+    } else {
+      await updateMinioGroup(payload.name, payload.members, payload.policies);
+    }
     showGroupDialog.value = false;
+    selectedGroup.value = null;
+    try {
+      await loadGroups();
+    } catch {
+      // Keep dialog closed when update succeeded; reload failure is non-fatal here.
+    }
   } catch (e: any) {
     pushNotification(new Notification(`Failed to update MinIO group"`, e?.message, "error"));
 
@@ -217,7 +272,9 @@ async function openGroupDialog(name: string, mode: "view" | "edit") {
   groupDialogLoading.value = true;
 
   try {
-    selectedGroup.value = await getMinioGroupInfo(name);
+    selectedGroup.value = isRustfsBackend
+      ? await getRustfsGroupInfo(name)
+      : await getMinioGroupInfo(name);
   } catch (e: any) {
     pushNotification(new Notification(`Failed to load group details"`, e?.message, "error"));
 
@@ -234,14 +291,25 @@ function onViewGroup(name: string) {
 function onEditGroup(name: string) {
   openGroupDialog(name, "edit");
 }
-function onDeleteGroup(name: string) {
+async function onDeleteGroup(name: string) {
   deleteTarget.value = name;
+  if (isRustfsBackend) {
+    try {
+      const info = await getRustfsGroupInfo(name);
+      deleteTargetMemberCount.value = info.members?.length ?? 0;
+    } catch {
+      deleteTargetMemberCount.value = 0;
+    }
+  } else {
+    deleteTargetMemberCount.value = 0;
+  }
   showDeleteDialog.value = true;
 }
 
 function closeDeleteDialog() {
   showDeleteDialog.value = false;
   deleteTarget.value = null;
+  deleteTargetMemberCount.value = 0;
 }
 
 async function confirmDeleteGroup() {
@@ -251,7 +319,11 @@ async function confirmDeleteGroup() {
   try {
     loading.value = true;
     error.value = null;
-    await deleteMinioGroup(name);
+    if (isRustfsBackend) {
+      await deleteRustfsGroup(name, { removeMembersFirst: true });
+    } else {
+      await deleteMinioGroup(name);
+    }
     await loadGroups();
     closeDeleteDialog();
     pushNotification(new Notification("Success", `Deleted MinIo group "${name}"`, "success", 2000));
@@ -266,7 +338,9 @@ async function confirmDeleteGroup() {
 
 async function loadPolicies() {
   try {
-    availablePolicies.value = await listMinioPolicies();
+    availablePolicies.value = isRustfsBackend
+      ? await listRustfsPolicies()
+      : await listMinioPolicies();
   } catch (e: any) {
     pushNotification(new Notification(`Failed to load MinIO policies for groups"`, e?.message, "error"));
 

@@ -58,7 +58,7 @@
 
         <MinioPoliciesView v-else-if="activeTab === 'policies'" :backendLabel="backendLabel" />
 
-        <MinioGroupsView v-else />
+        <MinioGroupsView v-else :backendLabel="backendLabel" />
       </div>
     </div>
   </div>

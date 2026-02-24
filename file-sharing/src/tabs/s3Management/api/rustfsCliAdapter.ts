@@ -1,6 +1,7 @@
 import type {
   BucketVersioningStatus,
   McAliasCandidate,
+  MinioGroupInfo,
   MinioUser,
   MinioUserCreatePayload,
   MinioUserDetails,
@@ -1308,24 +1309,221 @@ export async function deleteRustfsPolicy(name: string): Promise<void> {
 }
 
 export async function listRustfsGroups(): Promise<string[]> {
-  const variants = [
-    ["--json", "admin", "group", "list", RUSTFS_ALIAS],
-    ["--json", "admin", "group", "ls", RUSTFS_ALIAS],
-    ["admin", "group", "list", RUSTFS_ALIAS],
-    ["admin", "group", "ls", RUSTFS_ALIAS],
-  ];
+  const parseGroupNames = (payload: unknown): string[] => {
+    const names = new Set<string>();
+    const pushName = (value: unknown) => {
+      const name = String(value ?? "").trim();
+      if (!name) return;
+      names.add(name);
+    };
 
-  let lastErr: unknown;
-  for (const args of variants) {
+    if (Array.isArray(payload)) {
+      for (const item of payload) {
+        if (typeof item === "string") pushName(item);
+        else pushName((item as any)?.name ?? (item as any)?.group);
+      }
+      return Array.from(names).sort((a, b) => a.localeCompare(b));
+    }
+
+    if (payload && typeof payload === "object") {
+      const obj = payload as Record<string, unknown>;
+      if (Array.isArray((obj as any).groups)) {
+        for (const g of (obj as any).groups) {
+          if (typeof g === "string") pushName(g);
+          else pushName((g as any)?.name ?? (g as any)?.group);
+        }
+      } else {
+        for (const [key, val] of Object.entries(obj)) {
+          if (val && typeof val === "object" && !Array.isArray(val)) pushName(key);
+          else pushName(val);
+        }
+      }
+      return Array.from(names).sort((a, b) => a.localeCompare(b));
+    }
+
+    return [];
+  };
+
+  const payload = await runRustfsAdminApiGet("groups");
+  return parseGroupNames(payload);
+}
+
+export async function getRustfsGroupInfo(name: string): Promise<MinioGroupInfo> {
+  const groupName = String(name ?? "").trim();
+  if (!groupName) {
+    throw new Error("getRustfsGroupInfo: group name is required");
+  }
+
+  const payload = await runRustfsAdminApiGet(`group?group=${encodeURIComponent(groupName)}`);
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error(`getRustfsGroupInfo: invalid response for group "${groupName}"`);
+  }
+
+  const obj = payload as Record<string, unknown>;
+  const apiName = String(obj.name ?? "").trim();
+  const resolvedName = apiName || groupName;
+
+  const members = Array.isArray(obj.members)
+    ? (obj.members as unknown[])
+      .map((m) => String(m ?? "").trim())
+      .filter(Boolean)
+    : [];
+
+  const policy = String(obj.policy ?? "").trim();
+  const policies = policy
+    ? policy.split(",").map((p) => p.trim()).filter(Boolean)
+    : [];
+
+  return {
+    name: resolvedName,
+    members,
+    policies,
+    raw: payload,
+  };
+}
+
+export async function deleteRustfsGroup(
+  name: string,
+  opts?: { removeMembersFirst?: boolean }
+): Promise<void> {
+  const groupName = String(name ?? "").trim();
+  if (!groupName) {
+    throw new Error("deleteRustfsGroup: group name is required");
+  }
+
+  const info = await getRustfsGroupInfo(groupName);
+  const hasMembers = (info.members?.length ?? 0) > 0;
+  const removeMembersFirst = !!opts?.removeMembersFirst;
+
+  if (hasMembers && !removeMembersFirst) {
+    throw new Error(
+      `RustFS group "${groupName}" has ${info.members.length} member(s). Confirmation required to remove members and continue.`
+    );
+  }
+
+  if (hasMembers && removeMembersFirst) {
     try {
-      const { stdout } = await runRc(args);
-      return parseNameListFromOutput(stdout, "groups", ["group", "name"]);
-    } catch (e) {
-      lastErr = e;
+      await runRustfsAdminApiRequest(
+        "update-group-members",
+        "PUT",
+        "update-group-members",
+        {
+          group: groupName,
+          groupStatus: "enabled",
+          isRemove: true,
+          members: info.members,
+        }
+      );
+    } catch {
+      // Compatibility fallback for builds that expect "clear members" payload.
+      await runRustfsAdminApiRequest(
+        "update-group-members",
+        "PUT",
+        "update-group-members",
+        {
+          group: groupName,
+          groupStatus: "enabled",
+          isRemove: false,
+          members: [],
+        }
+      );
     }
   }
 
-  throw lastErr instanceof Error ? lastErr : new Error("Failed to list RustFS groups");
+  await runRustfsAdminApiRequest(
+    "group-delete",
+    "DELETE",
+    `group/${encodeURIComponent(groupName)}`
+  );
+}
+
+export async function updateRustfsGroup(
+  name: string,
+  members: string[],
+  policies: string[]
+): Promise<void> {
+  const groupName = String(name ?? "").trim();
+  if (!groupName) {
+    throw new Error("updateRustfsGroup: group name is required");
+  }
+
+  const current = await getRustfsGroupInfo(groupName);
+  const currentMembers = Array.from(
+    new Set((current.members ?? []).map((m) => String(m ?? "").trim()).filter(Boolean))
+  ).sort();
+  const desiredMembers = Array.from(
+    new Set((members ?? []).map((m) => String(m ?? "").trim()).filter(Boolean))
+  ).sort();
+
+  const toAdd = desiredMembers.filter((m) => !currentMembers.includes(m));
+  const toRemove = currentMembers.filter((m) => !desiredMembers.includes(m));
+
+  if (toAdd.length > 0) {
+    await runRustfsAdminApiRequest(
+      "update-group-members",
+      "PUT",
+      "update-group-members",
+      {
+        group: groupName,
+        groupStatus: "enabled",
+        isRemove: false,
+        members: toAdd,
+      }
+    );
+  }
+
+  if (toRemove.length > 0) {
+    await runRustfsAdminApiRequest(
+      "update-group-members",
+      "PUT",
+      "update-group-members",
+      {
+        group: groupName,
+        groupStatus: "enabled",
+        isRemove: true,
+        members: toRemove,
+      }
+    );
+  }
+
+  const desiredPolicies = Array.from(
+    new Set((policies ?? []).map((p) => String(p ?? "").trim()).filter(Boolean))
+  );
+  if (desiredPolicies.length > 0) {
+    const policyName = desiredPolicies.join(",");
+    await runRustfsAdminApiRequest(
+      "set-user-or-group-policy",
+      "PUT",
+      `set-user-or-group-policy?policyName=${policyName}&userOrGroup=${encodeURIComponent(groupName)}&isGroup=true`,
+      {}
+    );
+  }
+}
+
+export async function createRustfsGroup(
+  name: string,
+  members: string[]
+): Promise<void> {
+  const groupName = String(name ?? "").trim();
+  if (!groupName) {
+    throw new Error("createRustfsGroup: group name is required");
+  }
+
+  const normalizedMembers = Array.from(
+    new Set((members ?? []).map((m) => String(m ?? "").trim()).filter(Boolean))
+  );
+
+  await runRustfsAdminApiRequest(
+    "update-group-members",
+    "PUT",
+    "update-group-members",
+    {
+      group: groupName,
+      groupStatus: "enabled",
+      isRemove: false,
+      members: normalizedMembers,
+    }
+  );
 }
 
 export async function createRustfsUser(
