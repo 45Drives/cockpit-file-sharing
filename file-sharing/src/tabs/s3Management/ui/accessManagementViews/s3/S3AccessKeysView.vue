@@ -19,7 +19,7 @@
           @click="loadAccessKeys"
           :disabled="loading"
         >
-          Refresh
+          <ArrowPathIcon class="size-icon mr-1" />
         </button>
       </div>
     </div>
@@ -202,6 +202,7 @@
 
 <script lang="ts" setup>
 import { onMounted, ref } from "vue";
+import { ArrowPathIcon } from "@heroicons/vue/20/solid";
 import { formatIsoLocal } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 import {
   createRustfsServiceAccount,

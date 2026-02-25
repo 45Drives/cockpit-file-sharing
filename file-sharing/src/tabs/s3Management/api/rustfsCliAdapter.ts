@@ -33,7 +33,7 @@ export function getRustfsAlias(): string {
   return RUSTFS_INSTANCE_SELECTOR || RUSTFS_ALIAS;
 }
 
-export function setRustfsManualConnection(input: RustfsManualConnectionInput): void {
+export async function setRustfsManualConnection(input: RustfsManualConnectionInput): Promise<void> {
   const host = String(input.host ?? "").trim();
   const portRaw = String(input.port ?? "").trim();
   const endpointRaw = String(input.endpointUrl ?? "").trim();
@@ -64,8 +64,18 @@ export function setRustfsManualConnection(input: RustfsManualConnectionInput): v
   }
 
   rustfsManualOverride = { apiBase, endpointUrl, accessKey, secretKey, region };
+  const idx = rustfsManualConnections.findIndex(
+    (c) => String(c.accessKey).trim() === accessKey
+  );
+  if (idx >= 0) {
+    rustfsManualConnections.splice(idx, 1, rustfsManualOverride);
+  } else {
+    rustfsManualConnections.push(rustfsManualOverride);
+  }
   rustfsConnectionCache = undefined;
   rustfsDiscoveryCache = undefined;
+  rustfsManualLoaded = true;
+  await persistRustfsManualConnectionToUserConfig();
 }
 
 type RunRcResult = {
@@ -95,6 +105,15 @@ type RustfsManualConnectionInput = {
   secretKey: string;
   region?: string;
 };
+export type RustfsManualSavedConnection = {
+  accessKey: string;
+  secretKey?: string;
+  endpointUrl: string;
+  apiBase: string;
+  region: string;
+  alias: string;
+  source: "manual";
+};
 
 const BYTE_UNIT_FACTORS: Record<string, number> = {
   B: 1,
@@ -116,7 +135,7 @@ const BYTE_UNIT_FACTORS: Record<string, number> = {
 };
 
 async function runRc(args: string[], allowFailure = false): Promise<RunRcResult> {
-  const cmd = new Command(["rc", ...args], { superuser: "require" });
+  const cmd = new Command(["rc", ...args], {});
   const proc = await unwrap(server.execute(cmd, false));
   const res: RunRcResult = {
     stdout: proc.getStdout(),
@@ -179,12 +198,22 @@ let rustfsConnectionCache:
 let rustfsDiscoveryCache:
   | { values: RustfsResolvedConnection[]; expiresAtMs: number }
   | undefined;
+let rustfsManualConnections: Array<{
+  apiBase: string;
+  endpointUrl: string;
+  accessKey: string;
+  secretKey: string;
+  region: string;
+}> = [];
 let rustfsManualOverride:
   | { apiBase: string; endpointUrl: string; accessKey: string; secretKey: string; region: string }
   | undefined;
+let rustfsSessionUidCache: number | undefined;
+let rustfsManualLoaded = false;
+const RUSTFS_MANUAL_CONFIG_PATH = "~/.config/cockpit-file-sharing/rustfs-manual.json";
 
-async function runRootShell(script: string, allowFailure = false): Promise<string> {
-  const cmd = new Command(["bash", "-lc", script], { superuser: "require" });
+async function runUserShell(script: string, allowFailure = false): Promise<string> {
+  const cmd = new Command(["bash", "-lc", script], {});
   const proc = await unwrap(server.execute(cmd, false));
   const stdout = String(proc.getStdout() ?? "");
   const stderr = String(proc.getStderr() ?? "");
@@ -193,6 +222,112 @@ async function runRootShell(script: string, allowFailure = false): Promise<strin
     throw new Error(stderr.trim() || stdout.trim() || `shell exited with status ${exitStatus}`);
   }
   return stdout;
+}
+
+async function loadRustfsManualConnectionFromUserConfig(): Promise<void> {
+  if (rustfsManualLoaded) return;
+  rustfsManualLoaded = true;
+  try {
+    const text = await runUserShell(`cat ${RUSTFS_MANUAL_CONFIG_PATH} 2>/dev/null || true`, true);
+    const raw = String(text ?? "").trim();
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as
+      | Partial<{
+          apiBase: string;
+          endpointUrl: string;
+          accessKey: string;
+          secretKey: string;
+          region: string;
+        }>
+      | Array<
+          Partial<{
+            apiBase: string;
+            endpointUrl: string;
+            accessKey: string;
+            secretKey: string;
+            region: string;
+          }>
+        >;
+    const rows = Array.isArray(parsed) ? parsed : [parsed];
+    const normalized: Array<{
+      apiBase: string;
+      endpointUrl: string;
+      accessKey: string;
+      secretKey: string;
+      region: string;
+    }> = [];
+    for (const row of rows) {
+      const apiBase = normalizeApiBase(String(row?.apiBase ?? "").trim());
+      const endpointUrl = normalizeApiBase(String(row?.endpointUrl ?? "").trim());
+      const accessKey = String(row?.accessKey ?? "").trim();
+      const secretKey = String(row?.secretKey ?? "").trim();
+      const region = String(row?.region ?? "us-east-1").trim() || "us-east-1";
+      if (!apiBase || !endpointUrl || !accessKey || !secretKey) continue;
+      normalized.push({ apiBase, endpointUrl, accessKey, secretKey, region });
+    }
+    if (!normalized.length) return;
+    rustfsManualConnections = normalized;
+    rustfsManualOverride = normalized[normalized.length - 1];
+    console.log(`[rustfs detect] loaded ${normalized.length} manual user connection(s)`);
+  } catch {
+    // ignore malformed or unavailable config
+  }
+}
+
+async function persistRustfsManualConnectionToUserConfig(): Promise<void> {
+  const payload = JSON.stringify(rustfsManualConnections);
+  await runUserShell(
+    `umask 077; mkdir -p ~/.config/cockpit-file-sharing; printf %s ${shellQuote(payload)} > ${RUSTFS_MANUAL_CONFIG_PATH}`,
+    true
+  );
+}
+
+export async function listRustfsManualConnections(): Promise<RustfsManualSavedConnection[]> {
+  await loadRustfsManualConnectionFromUserConfig();
+  return rustfsManualConnections
+    .map((c) => ({
+      accessKey: c.accessKey,
+      secretKey: c.secretKey,
+      endpointUrl: c.endpointUrl,
+      apiBase: c.apiBase,
+      region: c.region,
+      alias: `${c.accessKey}:${c.endpointUrl}`,
+      source: "manual" as const,
+    }))
+    .sort((a, b) => a.accessKey.localeCompare(b.accessKey) || a.endpointUrl.localeCompare(b.endpointUrl));
+}
+
+export async function deleteRustfsManualConnection(accessKey: string): Promise<void> {
+  await loadRustfsManualConnectionFromUserConfig();
+  const key = String(accessKey ?? "").trim();
+  if (!key) return;
+  const before = rustfsManualConnections.length;
+  rustfsManualConnections = rustfsManualConnections.filter(
+    (c) => String(c.accessKey ?? "").trim() !== key
+  );
+  if (rustfsManualConnections.length === before) return;
+
+  if (rustfsManualOverride && String(rustfsManualOverride.accessKey ?? "").trim() === key) {
+    rustfsManualOverride = rustfsManualConnections[rustfsManualConnections.length - 1];
+  }
+  rustfsConnectionCache = undefined;
+  rustfsDiscoveryCache = undefined;
+  await persistRustfsManualConnectionToUserConfig();
+}
+
+async function isRootSessionUser(): Promise<boolean> {
+  if (typeof rustfsSessionUidCache === "number") {
+    return rustfsSessionUidCache === 0;
+  }
+  try {
+    const cmd = new Command(["bash", "-lc", "id -u"], {});
+    const proc = await unwrap(server.execute(cmd, false));
+    const uid = Number(String(proc.getStdout() ?? "").trim());
+    rustfsSessionUidCache = Number.isInteger(uid) ? uid : 1;
+  } catch {
+    rustfsSessionUidCache = 1;
+  }
+  return rustfsSessionUidCache === 0;
 }
 
 function parsePortFromAddress(value: string | undefined): number | undefined {
@@ -226,6 +361,7 @@ function parseEnvFileContent(text: string): Record<string, string> {
 }
 
 function buildConnectionFromEnv(overrides?: Partial<RustfsResolvedConnection>): RustfsResolvedConnection | undefined {
+  const allowDefaultCreds = overrides?.source === "fallback";
   const apiBaseRaw =
     String(process.env.RUSTFS_ADMIN_API_BASE || process.env.RUSTFS_API_BASE || "").trim();
   const endpointRaw = String(process.env.RUSTFS_S3_ENDPOINT || "").trim();
@@ -240,13 +376,13 @@ function buildConnectionFromEnv(overrides?: Partial<RustfsResolvedConnection>): 
     overrides?.accessKey ||
       process.env.RUSTFS_ADMIN_ACCESS_KEY ||
       process.env.RUSTFS_ACCESS_KEY ||
-      "rustfsadmin"
+      (allowDefaultCreds ? "rustfsadmin" : "")
   );
   const secretKey = String(
     overrides?.secretKey ||
       process.env.RUSTFS_ADMIN_SECRET_KEY ||
       process.env.RUSTFS_SECRET_KEY ||
-      "rustfsadmin"
+      (allowDefaultCreds ? "rustfsadmin" : "")
   );
 
   const resolvedApiBase = apiBase || normalizeApiBase(`${endpointUrl}/rustfs/admin/v3`);
@@ -266,7 +402,7 @@ function buildConnectionFromEnv(overrides?: Partial<RustfsResolvedConnection>): 
 async function detectSystemdRustfsConnection(): Promise<RustfsResolvedConnection | undefined> {
   console.log("[rustfs detect] probing systemd rustfs service...");
   console.log("[rustfs detect cmd] systemctl cat rustfs 2>/dev/null || true");
-  const serviceText = await runRootShell("systemctl cat rustfs 2>/dev/null || true", true);
+  const serviceText = await runUserShell("systemctl cat rustfs 2>/dev/null || true", true);
   if (!serviceText.trim()) {
     console.log("[rustfs detect] systemd: rustfs service not found");
     return undefined;
@@ -285,21 +421,22 @@ async function detectSystemdRustfsConnection(): Promise<RustfsResolvedConnection
   }
 
   console.log(`[rustfs detect cmd] cat ${envFilePath} 2>/dev/null || true`);
-  const envFileText = await runRootShell(`cat ${shellQuote(envFilePath)} 2>/dev/null || true`, true);
+  const envFileText = await runUserShell(`cat ${shellQuote(envFilePath)} 2>/dev/null || true`, true);
   if (!envFileText.trim()) {
     console.log(`[rustfs detect] systemd: env file not readable or empty (${envFilePath})`);
     return undefined;
   }
 
   const env = parseEnvFileContent(envFileText);
+  const canUseDiscoveredCreds = await isRootSessionUser();
   const host = String(process.env.RUSTFS_ADMIN_HOST || process.env.RUSTFS_HOST || "localhost").trim() || "localhost";
   const s3Port = parsePortFromAddress(env.RUSTFS_ADDRESS) ?? 9000;
   const endpointUrl = normalizeApiBase(`http://${host}:${s3Port}`);
 
   const resolved = buildConnectionFromEnv({
     endpointUrl,
-    accessKey: env.RUSTFS_ACCESS_KEY,
-    secretKey: env.RUSTFS_SECRET_KEY,
+    accessKey: canUseDiscoveredCreds ? env.RUSTFS_ACCESS_KEY : undefined,
+    secretKey: canUseDiscoveredCreds ? env.RUSTFS_SECRET_KEY : undefined,
     source: "systemd",
   });
   if (resolved) {
@@ -319,7 +456,7 @@ async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnecti
   const detectRuntime = async (): Promise<"podman" | "docker" | undefined> => {
     for (const runtime of ["podman", "docker"] as const) {
       console.log(`[rustfs detect cmd] command -v ${runtime} >/dev/null 2>&1; echo $?`);
-      const exists = (await runRootShell(`command -v ${runtime} >/dev/null 2>&1; echo $?`, true)).trim();
+      const exists = (await runUserShell(`command -v ${runtime} >/dev/null 2>&1; echo $?`, true)).trim();
       if (exists === "0") return runtime;
     }
     return undefined;
@@ -332,7 +469,7 @@ async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnecti
   }
 
   console.log(`[rustfs detect cmd] ${runtime} ps --format '{{.Names}}\\t{{.Image}}' 2>/dev/null || true`);
-  const ps = await runRootShell(
+  const ps = await runUserShell(
     `${runtime} ps --format '{{.Names}}\\t{{.Image}}' 2>/dev/null || true`,
     true
   );
@@ -351,7 +488,7 @@ async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnecti
   }
 
   console.log(`[rustfs detect cmd] ${runtime} inspect ${containerName} 2>/dev/null || true`);
-  const inspectRaw = await runRootShell(`${runtime} inspect ${shellQuote(containerName)} 2>/dev/null || true`, true);
+  const inspectRaw = await runUserShell(`${runtime} inspect ${shellQuote(containerName)} 2>/dev/null || true`, true);
   if (!inspectRaw.trim()) {
     console.log(`[rustfs detect] container: inspect returned no data for ${containerName}`);
     return undefined;
@@ -381,18 +518,19 @@ async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnecti
     first?.NetworkSettings?.Ports?.["9000/tcp"]?.[0]?.HostPort;
   if (!hostPort) {
     console.log(`[rustfs detect cmd] ${runtime} port ${containerName} 2>/dev/null || true`);
-    const portText = await runRootShell(`${runtime} port ${shellQuote(containerName)} 2>/dev/null || true`, true);
+    const portText = await runUserShell(`${runtime} port ${shellQuote(containerName)} 2>/dev/null || true`, true);
     const pm = portText.match(/9000\/tcp\s*->\s*[^:]+:(\d{2,5})/i);
     if (pm?.[1]) hostPort = pm[1];
   }
+  const canUseDiscoveredCreds = await isRootSessionUser();
   const port = parsePortFromAddress(hostPort) ?? 9000;
   const host = String(process.env.RUSTFS_ADMIN_HOST || process.env.RUSTFS_HOST || "localhost").trim() || "localhost";
   const endpointUrl = normalizeApiBase(`http://${host}:${port}`);
 
   const resolved = buildConnectionFromEnv({
     endpointUrl,
-    accessKey: envMap.RUSTFS_ACCESS_KEY,
-    secretKey: envMap.RUSTFS_SECRET_KEY,
+    accessKey: canUseDiscoveredCreds ? envMap.RUSTFS_ACCESS_KEY : undefined,
+    secretKey: canUseDiscoveredCreds ? envMap.RUSTFS_SECRET_KEY : undefined,
     source: "container",
   });
   if (resolved) {
@@ -408,16 +546,36 @@ async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnecti
 }
 
 async function resolveRustfsConnection(): Promise<RustfsResolvedConnection> {
+  await loadRustfsManualConnectionFromUserConfig();
+  const parseSelector = () => {
+    const selected = String(RUSTFS_INSTANCE_SELECTOR ?? "").trim();
+    const m = selected.match(/^([^:]+):(https?:\/\/.+)$/i);
+    if (!m) return undefined;
+    return {
+      keyPrefix: String(m[1] ?? "").trim(),
+      endpoint: normalizeApiBase(String(m[2] ?? "").trim()),
+    };
+  };
   const selectCandidate = (candidates: RustfsResolvedConnection[]): RustfsResolvedConnection | undefined => {
     const selected = String(RUSTFS_INSTANCE_SELECTOR ?? "").trim();
     if (!selected) return candidates[0];
+    const selectorParts = parseSelector();
 
     const bySelected = candidates.find(
       (c) =>
         c.source === selected ||
         c.endpointUrl === selected ||
-        `${c.source}:${c.endpointUrl}` === selected
+        `${c.source}:${c.endpointUrl}` === selected ||
+        (selectorParts
+          ? c.endpointUrl === selectorParts.endpoint &&
+            String(c.accessKey ?? "").trim() === selectorParts.keyPrefix
+          : false)
     );
+    if (bySelected) return bySelected;
+    if (selectorParts?.keyPrefix) {
+      const byKey = candidates.find((c) => String(c.accessKey ?? "").trim() === selectorParts.keyPrefix);
+      if (byKey) return byKey;
+    }
     return bySelected ?? candidates[0];
   };
 
@@ -430,17 +588,26 @@ async function resolveRustfsConnection(): Promise<RustfsResolvedConnection> {
     const out: RustfsResolvedConnection[] = [];
     const push = (conn: RustfsResolvedConnection | undefined) => {
       if (!conn) return;
-      if (out.some((x) => x.endpointUrl === conn.endpointUrl && x.source === conn.source)) return;
+      if (
+        out.some(
+          (x) =>
+            x.endpointUrl === conn.endpointUrl &&
+            x.source === conn.source &&
+            String(x.accessKey ?? "").trim() === String(conn.accessKey ?? "").trim()
+        )
+      ) {
+        return;
+      }
       out.push(conn);
     };
 
-    if (rustfsManualOverride) {
+    for (const entry of rustfsManualConnections) {
       push(
         buildConnectionFromEnv({
-          apiBase: rustfsManualOverride.apiBase,
-          endpointUrl: rustfsManualOverride.endpointUrl,
-          accessKey: rustfsManualOverride.accessKey,
-          secretKey: rustfsManualOverride.secretKey,
+          apiBase: entry.apiBase,
+          endpointUrl: entry.endpointUrl,
+          accessKey: entry.accessKey,
+          secretKey: entry.secretKey,
           source: "manual",
         })
       );
@@ -471,6 +638,18 @@ async function resolveRustfsConnection(): Promise<RustfsResolvedConnection> {
   };
 
   const now = Date.now();
+  if (rustfsConnectionCache && rustfsConnectionCache.expiresAtMs > now) {
+    const selectorParts = parseSelector();
+    if (
+      selectorParts &&
+      !(
+        normalizeApiBase(rustfsConnectionCache.value.endpointUrl) === selectorParts.endpoint &&
+        String(rustfsConnectionCache.value.accessKey ?? "").trim() === selectorParts.keyPrefix
+      )
+    ) {
+      rustfsConnectionCache = undefined;
+    }
+  }
   if (rustfsConnectionCache && rustfsConnectionCache.expiresAtMs > now) {
     console.log(
       `[rustfs detect] cache hit source=${rustfsConnectionCache.value.source} endpoint=${rustfsConnectionCache.value.endpointUrl}`
@@ -535,7 +714,7 @@ async function execRustfsPython(
     .join("; ");
 
   const cmdLine = `${exports}; python3 - <<'PY'\n${pythonSource}\nPY`;
-  const cmd = new Command(["bash", "-lc", cmdLine], { superuser: "require" });
+  const cmd = new Command(["bash", "-lc", cmdLine], {});
   const proc = await unwrap(server.execute(cmd, false));
   const stdout = proc.getStdout().toString().trim();
   const stderr = proc.getStderr().toString().trim();
@@ -886,7 +1065,7 @@ async function createRustfsBucketViaS3Api(
     `[rustfs bucket:create-s3] ${objectLockEnabled ? "lock=true " : ""}${redacted}`
   );
 
-  const cmd = new Command(["bash", "-lc", commandString], { superuser: "require" });
+  const cmd = new Command(["bash", "-lc", commandString], {});
   const proc = await unwrap(server.execute(cmd, false));
   const stdout = proc.getStdout();
   const stderr = proc.getStderr();
@@ -929,7 +1108,7 @@ async function deleteRustfsBucketViaS3Api(bucketName: string): Promise<void> {
   );
   console.log(`[rustfs bucket:delete-s3] ${redacted}`);
 
-  const cmd = new Command(["bash", "-lc", commandString], { superuser: "require" });
+  const cmd = new Command(["bash", "-lc", commandString], {});
   const proc = await unwrap(server.execute(cmd, false));
   const stdout = proc.getStdout();
   const stderr = proc.getStderr();
@@ -1088,7 +1267,7 @@ async function runRustfsQuotaApiRequest(
   );
   console.log(`[rustfs quota:${kind}] ${redacted}`);
 
-  const cmd = new Command(["bash", "-lc", commandString], { superuser: "require" });
+  const cmd = new Command(["bash", "-lc", commandString], {});
   const proc = await unwrap(server.execute(cmd, false));
   const stdout = proc.getStdout();
   const stderr = proc.getStderr();
@@ -1128,7 +1307,7 @@ async function runRustfsAdminApiGet(path: string): Promise<any> {
   );
   console.log(`[rustfs admin:get] ${redacted}`);
 
-  const cmd = new Command(["bash", "-lc", commandString], { superuser: "require" });
+  const cmd = new Command(["bash", "-lc", commandString], {});
   const proc = await unwrap(server.execute(cmd, false));
   const stdout = proc.getStdout();
   const stderr = proc.getStderr();
@@ -1178,7 +1357,7 @@ async function runRustfsAdminApiRequest(
   );
   console.log(`[rustfs admin:${kind}] ${redacted}`);
 
-  const cmd = new Command(["bash", "-lc", commandString], { superuser: "require" });
+  const cmd = new Command(["bash", "-lc", commandString], {});
   const proc = await unwrap(server.execute(cmd, false));
   const stdout = proc.getStdout();
   const stderr = proc.getStderr();
@@ -1391,13 +1570,14 @@ async function rcJsonSingleWithFallback(subArgsList: string[][]): Promise<any> {
 
 
 export async function listRustfsAliasCandidates(): Promise<McAliasCandidate[]> {
+  await loadRustfsManualConnectionFromUserConfig();
   const candidates: RustfsResolvedConnection[] = [];
-  if (rustfsManualOverride) {
+  for (const entry of rustfsManualConnections) {
     const manual = buildConnectionFromEnv({
-      apiBase: rustfsManualOverride.apiBase,
-      endpointUrl: rustfsManualOverride.endpointUrl,
-      accessKey: rustfsManualOverride.accessKey,
-      secretKey: rustfsManualOverride.secretKey,
+      apiBase: entry.apiBase,
+      endpointUrl: entry.endpointUrl,
+      accessKey: entry.accessKey,
+      secretKey: entry.secretKey,
       source: "manual",
     });
     if (manual) candidates.push(manual);
@@ -1423,10 +1603,16 @@ export async function listRustfsAliasCandidates(): Promise<McAliasCandidate[]> {
     if (fallback) candidates.push(fallback);
   }
 
-  return candidates.map((c) => ({
-    alias: `${c.source}:${c.endpointUrl}`,
-    url: c.endpointUrl,
-  }));
+  return candidates.map((c) => {
+    const keyPrefix = String(c.accessKey ?? "").trim() || c.source;
+    return {
+      alias: `${keyPrefix}:${c.endpointUrl}`,
+      url: c.endpointUrl,
+      source: c.source,
+      manual: c.source === "manual",
+      accessKey: String(c.accessKey ?? "").trim() || undefined,
+    };
+  });
 }
 
 export async function isRustfsAvailable(): Promise<boolean> {
@@ -1434,12 +1620,27 @@ export async function isRustfsAvailable(): Promise<boolean> {
     await runRustfsAdminApiGet("list-users");
     return true;
   } catch (e: any) {
-    console.warn("RustFS availability check failed (admin API probe):", {
+    console.warn("RustFS availability check failed (admin API probe); checking install/runtime presence:", {
       message: e?.message,
       stderr: e?.stderr,
       stdout: e?.stdout,
       exitStatus: e?.exitStatus,
     });
+    try {
+      const unit = await runUserShell("systemctl cat rustfs 2>/dev/null || true", true);
+      if (unit.trim()) return true;
+    } catch {
+      // ignore
+    }
+    try {
+      const runtime = await runUserShell(
+        "(podman ps --format '{{.Image}}' 2>/dev/null || docker ps --format '{{.Image}}' 2>/dev/null || true)",
+        true
+      );
+      if (runtime.split("\n").some((line) => /rustfs/i.test(line))) return true;
+    } catch {
+      // ignore
+    }
     return false;
   }
 }

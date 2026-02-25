@@ -86,7 +86,7 @@
       </div>
 
       <div v-else class="py-3 text-sm text-muted">
-        No MinIO users found.
+        No {{ backendDisplay }} users found.
       </div>
     </section>
 
@@ -102,10 +102,10 @@
 
         <div class="px-5 py-4 space-y-3 text-sm">
           <p>
-            Are you sure you want to delete this MinIO user?
+            Are you sure you want to delete this {{ backendDisplay }} user?
           </p>
           <p class="text-xs text-red-600">
-            This will revoke their access to MinIO. This action cannot be undone.
+            This will revoke their access to {{ backendDisplay }}. This action cannot be undone.
           </p>
         </div>
 
@@ -163,6 +163,7 @@ const props = defineProps<{
   backendLabel?: string;
 }>();
 const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
+const backendDisplay = props.backendLabel?.trim() || "MinIO";
 
 const users = ref<S3AccessUser[]>([]);
 const loading = ref(false);
@@ -194,7 +195,7 @@ async function loadUsers() {
   try {
     users.value = isRustfsBackend ? await listRustfsUsers() : await listMinioUsers();
   } catch (e: any) {
-    error.value = e?.message || "Failed to load MinIO users.";
+    error.value = e?.message || `Failed to load ${backendDisplay} users.`;
   } finally {
     loading.value = false;
   }

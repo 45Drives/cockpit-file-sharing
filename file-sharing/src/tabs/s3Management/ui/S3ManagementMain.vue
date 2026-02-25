@@ -46,6 +46,7 @@
 
             <button type="button" class="btn btn-secondary" @click="loadMinioAliasesIfNeeded"
               :disabled="loadingMinioAliases">
+              <ArrowPathIcon class="size-icon mr-1" />
               Refresh
             </button>
           </div>
@@ -76,83 +77,36 @@
           </div>
         </div>
 
-        <div v-if="selectedBackend === 'rustfs'" class="mb-6 w-9/12 mx-auto">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-xl font-semibold">RustFS instance</h3>
-
-            <div class="flex items-center gap-2">
-              <button type="button" class="btn btn-secondary" @click="showRustfsManualForm = !showRustfsManualForm">
-                {{ showRustfsManualForm ? "Hide Manual Setup" : "Manual Setup" }}
-              </button>
-              <button type="button" class="btn btn-secondary" @click="loadRustfsAliasesIfNeeded"
-                :disabled="loadingRustfsAliases">
-                Refresh
-              </button>
-            </div>
-          </div>
-
-          <div v-if="loadingRustfsAliases" class="opacity-80">
-            Detecting instances…
-          </div>
-
-          <div v-else-if="rustfsAliasError" class="text-red-600">
-            {{ rustfsAliasError }}
-          </div>
-
-          <div v-else-if="rustfsAliases.length === 0" class="opacity-80">
-            No RustFS instance detected.
-          </div>
-
-          <div v-else>
-            <select v-model="selectedRustfsAlias" class="w-full rounded-lg border border-default bg-accent px-4 py-3">
-              <option disabled value="">Select an instance…</option>
-              <option v-for="a in rustfsAliases" :key="a.alias" :value="a.alias">
-                {{ a.alias }}{{ a.url ? ` (${a.url})` : "" }}
-              </option>
-            </select>
-
-            <div class="mt-2 text-sm opacity-70">
-              Select the RustFS instance you want to manage.
-            </div>
-          </div>
-
-          <div v-if="showRustfsManualForm || rustfsNeedsManualCreds" class="mt-4 rounded-lg border border-default p-4">
-            <div class="text-sm font-semibold mb-2">Manual RustFS credentials</div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label class="flex flex-col gap-1">
-                <span class="text-xs font-semibold">Host</span>
-                <input v-model="rustfsManualHost" type="text" placeholder="e.g. localhost"
-                  class="rounded-lg border border-default bg-accent px-3 py-2" />
-              </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-xs font-semibold">Port</span>
-                <input v-model="rustfsManualPort" type="text" placeholder="e.g. 9200"
-                  class="rounded-lg border border-default bg-accent px-3 py-2" />
-              </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-xs font-semibold">Access Key</span>
-                <input v-model="rustfsManualAccessKey" type="text" placeholder="Access key"
-                  class="rounded-lg border border-default bg-accent px-3 py-2" />
-              </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-xs font-semibold">Secret Key</span>
-                <input v-model="rustfsManualSecretKey" type="password" placeholder="Secret key"
-                  class="rounded-lg border border-default bg-accent px-3 py-2" />
-              </label>
-              <label class="flex flex-col gap-1 md:col-span-2">
-                <span class="text-xs font-semibold">Region</span>
-                <input v-model="rustfsManualRegion" type="text" placeholder="default: us-east-1"
-                  class="rounded-lg border border-default bg-accent px-3 py-2" />
-              </label>
-            </div>
-            <div class="mt-3 flex justify-end">
-              <button type="button" class="btn btn-secondary" :disabled="applyingRustfsManual"
-                @click="applyRustfsManualConnection">
-                {{ applyingRustfsManual ? "Testing..." : "Use Manual Connection" }}
-              </button>
-            </div>
-          </div>
-        </div>
+        <RustfsInstanceSelector
+          v-if="selectedBackend === 'rustfs'"
+          :loading="loadingRustfsAliases"
+          :alias-error="rustfsAliasError"
+          :aliases="rustfsAliases"
+          :selected-alias="selectedRustfsAlias"
+          :show-manual-form="showRustfsManualForm"
+          :needs-manual-creds="rustfsNeedsManualCreds"
+          :manual-host="rustfsManualHost"
+          :manual-port="rustfsManualPort"
+          :manual-access-key="rustfsManualAccessKey"
+          :manual-secret-key="rustfsManualSecretKey"
+          :manual-region="rustfsManualRegion"
+          :applying-manual="applyingRustfsManual"
+          :manual-saved="rustfsManualSaved"
+          :deleting-manual="deletingRustfsManual"
+          :selected-is-manual="selectedRustfsIsManual"
+          :selected-manual-access-key="selectedRustfsManualAccessKey"
+          @update:selected-alias="selectedRustfsAlias = $event"
+          @update:show-manual-form="showRustfsManualForm = $event"
+          @update:manual-host="rustfsManualHost = $event"
+          @update:manual-port="rustfsManualPort = $event"
+          @update:manual-access-key="rustfsManualAccessKey = $event"
+          @update:manual-secret-key="rustfsManualSecretKey = $event"
+          @update:manual-region="rustfsManualRegion = $event"
+          @refresh="loadRustfsAliasesIfNeeded"
+          @open-manual-editor="openRustfsManualEditor"
+          @apply-manual-connection="applyRustfsManualConnection"
+          @remove-manual-connection="removeRustfsManualConnection"
+        />
 
         <!-- Ceph gateway errors / loading -->
         <div v-if="selectedBackend === 'ceph'" class="w-9/12 mx-auto mb-6">
@@ -221,6 +175,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import S3BucketsView from "./bucketManagement/S3BucketsView.vue";
+import RustfsInstanceSelector from "./RustfsInstanceSelector.vue";
 import { isCephRgwHealthy, listRgwGateways } from "../api/cephCliAdapter";
 import {
   isMinioAvailable,
@@ -229,17 +184,20 @@ import {
   setMinioAlias,
 } from "../api/minioCliAdapter";
 import {
+  deleteRustfsManualConnection,
   isRustfsAvailable,
+  listRustfsManualConnections,
   listRustfsAliasCandidates,
   setRustfsAlias,
   setRustfsManualConnection,
+  type RustfsManualSavedConnection,
 } from "../api/rustfsCliAdapter";
 import { isGarageHealthy } from "../api/garageCliAdapter";
 import UsersView from "./accessManagementViews/CephRgw/UsersView.vue";
 import MinioAccessManagement from "./accessManagementViews/s3/S3AccessManagement.vue";
 import GarageKeysPage from "./accessManagementViews/GarageHq/GarageKeysPage.vue";
 import { CardContainer } from "@45drives/houston-common-ui";
-import { ArchiveBoxIcon } from "@heroicons/vue/20/solid";
+import { ArchiveBoxIcon, ArrowPathIcon } from "@heroicons/vue/20/solid";
 import AccIcon from "../images/AccIcon.vue";
 import type { RgwGateway } from "../types/types";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
@@ -250,6 +208,9 @@ type View = "buckets" | "users";
 type MinioAliasOption = {
   alias: string;
   url?: string;
+  source?: string;
+  manual?: boolean;
+  accessKey?: string;
 };
 
 const loadingConfig = ref(false);
@@ -291,6 +252,8 @@ const rustfsManualSecretKey = ref("");
 const rustfsManualRegion = ref("us-east-1");
 const applyingRustfsManual = ref(false);
 const showRustfsManualForm = ref(false);
+const deletingRustfsManual = ref<string | null>(null);
+const rustfsManualSaved = ref<RustfsManualSavedConnection[]>([]);
 const rustfsNeedsManualCreds = computed(() => {
   const msg = String(rustfsAliasError.value ?? "").toLowerCase();
   return (
@@ -299,6 +262,18 @@ const rustfsNeedsManualCreds = computed(() => {
     msg.includes("signaturedoesnotmatch") ||
     msg.includes("auth")
   );
+});
+const selectedRustfsCandidate = computed(() =>
+  rustfsAliases.value.find((a) => a.alias === selectedRustfsAlias.value)
+);
+const selectedRustfsManualSaved = computed(() =>
+  rustfsManualSaved.value.find((a) => a.alias === selectedRustfsAlias.value)
+);
+const selectedRustfsIsManual = computed(() => Boolean(selectedRustfsCandidate.value?.manual));
+const selectedRustfsManualAccessKey = computed(() => {
+  const selected = selectedRustfsCandidate.value;
+  if (!selected?.manual) return "";
+  return String(selected.accessKey ?? "").trim() || String(selected.alias).split(":", 1)[0] || "";
 });
 
 const availableBackends = computed(() => {
@@ -434,6 +409,7 @@ async function loadRustfsAliasesIfNeeded() {
 
   try {
     const list = await listRustfsAliasCandidates();
+    rustfsManualSaved.value = await listRustfsManualConnections();
 
     const normalized: MinioAliasOption[] = (list as any[])
       .map((x) => {
@@ -441,18 +417,30 @@ async function loadRustfsAliasesIfNeeded() {
         return {
           alias: String(x.alias ?? "").trim(),
           url: typeof x.url === "string" ? x.url : undefined,
+          source: typeof x.source === "string" ? x.source : undefined,
+          manual: Boolean(x.manual),
+          accessKey: typeof x.accessKey === "string" ? x.accessKey : undefined,
         };
       })
+      .filter((x) => !String(x.alias ?? "").startsWith("fallback:"))
       .filter((x) => x.alias);
 
     rustfsAliases.value = normalized;
 
     if (rustfsAliases.value.length === 1) {
       selectedRustfsAlias.value = rustfsAliases.value[0]!.alias;
+      showRustfsManualForm.value = false;
+      rustfsAliasError.value = null;
+    } else if (rustfsAliases.value.length === 0) {
+      selectedRustfsAlias.value = "";
+      showRustfsManualForm.value = true;
+      rustfsAliasError.value = "No auto-detected RustFS instance with usable credentials. Use manual setup.";
     }
   } catch (e: any) {
     rustfsAliases.value = [];
     selectedRustfsAlias.value = "";
+    showRustfsManualForm.value = true;
+    rustfsManualSaved.value = await listRustfsManualConnections().catch(() => []);
     console.warn("RustFS instance listing failed:", e);
   } finally {
     loadingRustfsAliases.value = false;
@@ -471,13 +459,52 @@ async function applyRustfsManualConnection() {
     return;
   }
 
+  const selected = selectedRustfsCandidate.value;
+  const protectedNonManual = rustfsAliases.value.find((entry) => {
+    const keyPrefix =
+      String(entry.accessKey ?? "").trim() || String(entry.alias).split(":", 1)[0] || "";
+    return !entry.manual && keyPrefix === accessKey;
+  });
+  if (protectedNonManual) {
+    pushNotification(
+      new Notification(
+        "Manual RustFS config",
+        `Access key "${accessKey}" belongs to an auto-detected entry and cannot be updated from Manual Setup.`,
+        "error"
+      )
+    );
+    return;
+  }
+
+  const endpoint = `http://${host}:${port}`;
+  if (
+    selected &&
+    !selected.manual &&
+    String(selected.accessKey ?? "").trim() === accessKey &&
+    String(selected.url ?? "").trim() === endpoint
+  ) {
+    pushNotification(
+      new Notification(
+        "Manual RustFS config",
+        "Auto-detected entries cannot be updated. Use a different access key or endpoint to add a manual entry.",
+        "error"
+      )
+    );
+    return;
+  }
+
   applyingRustfsManual.value = true;
   try {
-    setRustfsManualConnection({ host, port, accessKey, secretKey, region });
+    await setRustfsManualConnection({ host, port, accessKey, secretKey, region });
     await loadRustfsAliasesIfNeeded();
-    const manualSelector = `manual:http://${host}:${port}`;
-    selectedRustfsAlias.value = manualSelector;
-    setRustfsAlias(manualSelector);
+    const picked =
+      rustfsAliases.value.find((a) => String(a.url ?? "").trim() === endpoint)?.alias ??
+      rustfsAliases.value.find((a) => String(a.alias ?? "").includes(`:${endpoint}`))?.alias ??
+      "";
+    if (picked) {
+      selectedRustfsAlias.value = picked;
+      setRustfsAlias(picked);
+    }
     isRustfsAvailableFlag.value = true;
     rustfsAliasError.value = null;
     pushNotification(new Notification("RustFS", `Manual connection set to ${host}:${port}`, "success", 2000));
@@ -485,6 +512,61 @@ async function applyRustfsManualConnection() {
     pushNotification(new Notification("Manual RustFS config failed", e?.message ?? "Unable to apply manual connection.", "error"));
   } finally {
     applyingRustfsManual.value = false;
+  }
+}
+
+async function removeRustfsManualConnection(accessKey: string) {
+  const key = String(accessKey ?? "").trim();
+  if (!key) return;
+  deletingRustfsManual.value = key;
+  try {
+    await deleteRustfsManualConnection(key);
+    await loadRustfsAliasesIfNeeded();
+    if (selectedRustfsAlias.value.startsWith(`${key}:`)) {
+      selectedRustfsAlias.value = rustfsAliases.value[0]?.alias ?? "";
+      if (selectedRustfsAlias.value) setRustfsAlias(selectedRustfsAlias.value);
+    }
+    pushNotification(new Notification("RustFS", `Removed saved credential "${key}"`, "success", 2000));
+  } catch (e: any) {
+    pushNotification(new Notification("RustFS", e?.message ?? "Failed to remove saved credential", "error"));
+  } finally {
+    deletingRustfsManual.value = null;
+  }
+}
+
+function openRustfsManualEditor() {
+  showRustfsManualForm.value = true;
+  syncRustfsManualFormFromSelection();
+}
+
+async function removeSelectedRustfsManualConnection() {
+  const key = selectedRustfsManualAccessKey.value;
+  if (!key) return;
+  await removeRustfsManualConnection(key);
+}
+
+function syncRustfsManualFormFromSelection() {
+  const selected = selectedRustfsCandidate.value;
+  if (!selected) return;
+
+  const endpoint = String(selected.url ?? "").trim();
+  if (endpoint) {
+    try {
+      const u = new URL(endpoint);
+      rustfsManualHost.value = u.hostname || rustfsManualHost.value;
+      if (u.port) rustfsManualPort.value = u.port;
+    } catch {
+      // ignore parse errors
+    }
+  }
+
+  const keyPrefix = String(selected.accessKey ?? "").trim() || String(selected.alias).split(":", 1)[0] || "";
+  if (keyPrefix) rustfsManualAccessKey.value = keyPrefix;
+
+  if (selected.manual) {
+    const saved = selectedRustfsManualSaved.value;
+    if (saved?.secretKey) rustfsManualSecretKey.value = saved.secretKey;
+    if (saved?.region) rustfsManualRegion.value = saved.region;
   }
 }
 
@@ -580,6 +662,7 @@ watch(
       if (selectedBackend.value === "rustfs") {
         setMinioAlias(selected);
       }
+      syncRustfsManualFormFromSelection();
     }
   }
 );

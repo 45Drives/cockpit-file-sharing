@@ -24,13 +24,25 @@
         </span>
       </div>
 
-      <!-- Right: new bucket -->
-      <button type="button" @click="openCreateModal" :disabled="openingModal"
-        class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-60">
-        <LoadingSpinner v-if="openingModal" />
-        <ArchiveBoxIcon v-else class="size-icon" />
-        New bucket
-      </button>
+      <!-- Right: actions -->
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          @click="loadBuckets"
+          :disabled="loadingBuckets"
+          class="inline-flex btn-secondary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-60"
+        >
+          <ArrowPathIcon class="size-icon" />
+          Refresh
+        </button>
+
+        <button type="button" @click="openCreateModal" :disabled="openingModal"
+          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-60">
+          <LoadingSpinner v-if="openingModal" />
+          <ArchiveBoxIcon v-else class="size-icon" />
+          New bucket
+        </button>
+      </div>
     </div>
 
     <!-- Filters / sort controls -->
@@ -298,7 +310,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
 import type { RgwGateway, CephBucket, MinioBucket, RustfsBucket, GarageBucket, CephDeps, MinioDeps, RustfsDeps, GarageDeps, BackendKind } from "../../types/types";
-import { ArchiveBoxIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
+import { ArchiveBoxIcon, ArrowPathIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 import BucketFormModal from "./BucketFormModal.vue";
 import BucketDeleteModal from "./BucketDeleteModal.vue";
 import CephBucketDashboardView from "./CephBucketDashboardView.vue";
