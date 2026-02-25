@@ -20,15 +20,52 @@ import { server, Command, unwrap } from "@45drives/houston-common-lib";
 const bucketLimit = pLimit(6);
 
 let RUSTFS_ALIAS = process.env.RUSTFS_RC_ALIAS || "local";
+let RUSTFS_INSTANCE_SELECTOR = "";
 
 export function setRustfsAlias(alias: string): void {
   const trimmed = String(alias ?? "").trim();
   if (!trimmed) return;
-  RUSTFS_ALIAS = trimmed;
+  RUSTFS_INSTANCE_SELECTOR = trimmed;
+  rustfsConnectionCache = undefined;
 }
 
 export function getRustfsAlias(): string {
-  return RUSTFS_ALIAS;
+  return RUSTFS_INSTANCE_SELECTOR || RUSTFS_ALIAS;
+}
+
+export function setRustfsManualConnection(input: RustfsManualConnectionInput): void {
+  const host = String(input.host ?? "").trim();
+  const portRaw = String(input.port ?? "").trim();
+  const endpointRaw = String(input.endpointUrl ?? "").trim();
+  const apiBaseRaw = String(input.apiBase ?? "").trim();
+  const accessKey = String(input.accessKey ?? "").trim();
+  const secretKey = String(input.secretKey ?? "").trim();
+  const region = String(input.region ?? "us-east-1").trim() || "us-east-1";
+
+  if (!accessKey || !secretKey) {
+    throw new Error("setRustfsManualConnection: accessKey and secretKey are required");
+  }
+
+  let endpointUrl = normalizeApiBase(endpointRaw);
+  if (!endpointUrl && host && portRaw) {
+    endpointUrl = normalizeApiBase(`http://${host}:${portRaw}`);
+  }
+
+  let apiBase = normalizeApiBase(apiBaseRaw);
+  if (!apiBase && endpointUrl) {
+    apiBase = normalizeApiBase(`${endpointUrl}/rustfs/admin/v3`);
+  }
+  if (!endpointUrl && apiBase) {
+    endpointUrl = deriveRustfsS3EndpointFromAdminApiBase(apiBase) ?? "";
+  }
+
+  if (!endpointUrl || !apiBase) {
+    throw new Error("setRustfsManualConnection: endpoint or host/port is required");
+  }
+
+  rustfsManualOverride = { apiBase, endpointUrl, accessKey, secretKey, region };
+  rustfsConnectionCache = undefined;
+  rustfsDiscoveryCache = undefined;
 }
 
 type RunRcResult = {
@@ -37,14 +74,26 @@ type RunRcResult = {
   exitStatus: number;
 };
 
-type RustfsAliasConfig = {
-  url?: string;
-  accessKey?: string;
-  secretKey?: string;
-};
 type RustfsS3Creds = {
   accessKeyId: string;
   secretAccessKey: string;
+};
+type RustfsResolvedConnection = {
+  apiBase: string;
+  endpointUrl: string;
+  region: string;
+  accessKey: string;
+  secretKey: string;
+  source: "manual" | "env" | "systemd" | "container" | "fallback";
+};
+type RustfsManualConnectionInput = {
+  host?: string;
+  port?: string | number;
+  endpointUrl?: string;
+  apiBase?: string;
+  accessKey: string;
+  secretKey: string;
+  region?: string;
 };
 
 const BYTE_UNIT_FACTORS: Record<string, number> = {
@@ -111,20 +160,6 @@ function normalizeApiBase(v: string): string {
   return String(v ?? "").replace(/\/+$/, "");
 }
 
-function deriveRustfsAdminApiBaseFromAliasUrl(aliasUrl: string): string | undefined {
-  const raw = String(aliasUrl ?? "").trim();
-  if (!raw) return undefined;
-
-  try {
-    const u = new URL(raw);
-    const authority = u.host;
-    if (!authority) return undefined;
-    return normalizeApiBase(`${u.protocol}//${authority}/rustfs/admin/v3`);
-  } catch {
-    return undefined;
-  }
-}
-
 function deriveRustfsS3EndpointFromAdminApiBase(adminApiBase: string): string | undefined {
   const raw = String(adminApiBase ?? "").trim();
   if (!raw) return undefined;
@@ -138,168 +173,322 @@ function deriveRustfsS3EndpointFromAdminApiBase(adminApiBase: string): string | 
   }
 }
 
-async function getRustfsAliasConfig(alias: string): Promise<RustfsAliasConfig> {
-  let firstAliasFromRc: RustfsAliasConfig | undefined;
-  const normalizeUrl = (value: unknown): string | undefined => {
-    const raw = String(value ?? "").trim();
-    if (!raw) return undefined;
-    try {
-      const u = new URL(raw);
-      return normalizeApiBase(u.toString());
-    } catch {
-      return undefined;
+let rustfsConnectionCache:
+  | { value: RustfsResolvedConnection; expiresAtMs: number }
+  | undefined;
+let rustfsDiscoveryCache:
+  | { values: RustfsResolvedConnection[]; expiresAtMs: number }
+  | undefined;
+let rustfsManualOverride:
+  | { apiBase: string; endpointUrl: string; accessKey: string; secretKey: string; region: string }
+  | undefined;
+
+async function runRootShell(script: string, allowFailure = false): Promise<string> {
+  const cmd = new Command(["bash", "-lc", script], { superuser: "require" });
+  const proc = await unwrap(server.execute(cmd, false));
+  const stdout = String(proc.getStdout() ?? "");
+  const stderr = String(proc.getStderr() ?? "");
+  const exitStatus = proc.exitStatus;
+  if (exitStatus !== 0 && !allowFailure) {
+    throw new Error(stderr.trim() || stdout.trim() || `shell exited with status ${exitStatus}`);
+  }
+  return stdout;
+}
+
+function parsePortFromAddress(value: string | undefined): number | undefined {
+  const raw = String(value ?? "").trim();
+  if (!raw) return undefined;
+  const m = raw.match(/:(\d{2,5})$/) || raw.match(/^(\d{2,5})$/);
+  if (!m) return undefined;
+  const port = Number(m[1]);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return undefined;
+  return port;
+}
+
+function parseEnvFileContent(text: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const line of String(text ?? "").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const m = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!m) continue;
+    const key = m[1]!;
+    let val = m[2]!.trim();
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    ) {
+      val = val.slice(1, -1);
     }
+    out[key] = val;
+  }
+  return out;
+}
+
+function buildConnectionFromEnv(overrides?: Partial<RustfsResolvedConnection>): RustfsResolvedConnection | undefined {
+  const apiBaseRaw =
+    String(process.env.RUSTFS_ADMIN_API_BASE || process.env.RUSTFS_API_BASE || "").trim();
+  const endpointRaw = String(process.env.RUSTFS_S3_ENDPOINT || "").trim();
+  const apiBase = normalizeApiBase(overrides?.apiBase || apiBaseRaw);
+  const endpointUrl = normalizeApiBase(
+    overrides?.endpointUrl || endpointRaw || deriveRustfsS3EndpointFromAdminApiBase(apiBase)
+  );
+  if (!apiBase && !endpointUrl) return undefined;
+
+  const region = String(process.env.RUSTFS_ADMIN_REGION || process.env.AWS_REGION || "us-east-1");
+  const accessKey = String(
+    overrides?.accessKey ||
+      process.env.RUSTFS_ADMIN_ACCESS_KEY ||
+      process.env.RUSTFS_ACCESS_KEY ||
+      "rustfsadmin"
+  );
+  const secretKey = String(
+    overrides?.secretKey ||
+      process.env.RUSTFS_ADMIN_SECRET_KEY ||
+      process.env.RUSTFS_SECRET_KEY ||
+      "rustfsadmin"
+  );
+
+  const resolvedApiBase = apiBase || normalizeApiBase(`${endpointUrl}/rustfs/admin/v3`);
+  const resolvedEndpoint = endpointUrl || deriveRustfsS3EndpointFromAdminApiBase(resolvedApiBase);
+  if (!resolvedApiBase || !resolvedEndpoint) return undefined;
+
+  return {
+    apiBase: resolvedApiBase,
+    endpointUrl: resolvedEndpoint,
+    region,
+    accessKey,
+    secretKey,
+    source: overrides?.source || "env",
+  };
+}
+
+async function detectSystemdRustfsConnection(): Promise<RustfsResolvedConnection | undefined> {
+  console.log("[rustfs detect] probing systemd rustfs service...");
+  console.log("[rustfs detect cmd] systemctl cat rustfs 2>/dev/null || true");
+  const serviceText = await runRootShell("systemctl cat rustfs 2>/dev/null || true", true);
+  if (!serviceText.trim()) {
+    console.log("[rustfs detect] systemd: rustfs service not found");
+    return undefined;
+  }
+
+  const envFileMatch = serviceText.match(/^\s*EnvironmentFile=([^\n]+)$/m);
+  const envFileRaw = String(envFileMatch?.[1] ?? "").trim();
+  if (!envFileRaw) {
+    console.log("[rustfs detect] systemd: no EnvironmentFile configured");
+    return undefined;
+  }
+  const envFilePath = envFileRaw.replace(/^-/, "").trim();
+  if (!envFilePath) {
+    console.log("[rustfs detect] systemd: invalid EnvironmentFile path");
+    return undefined;
+  }
+
+  console.log(`[rustfs detect cmd] cat ${envFilePath} 2>/dev/null || true`);
+  const envFileText = await runRootShell(`cat ${shellQuote(envFilePath)} 2>/dev/null || true`, true);
+  if (!envFileText.trim()) {
+    console.log(`[rustfs detect] systemd: env file not readable or empty (${envFilePath})`);
+    return undefined;
+  }
+
+  const env = parseEnvFileContent(envFileText);
+  const host = String(process.env.RUSTFS_ADMIN_HOST || process.env.RUSTFS_HOST || "localhost").trim() || "localhost";
+  const s3Port = parsePortFromAddress(env.RUSTFS_ADDRESS) ?? 9000;
+  const endpointUrl = normalizeApiBase(`http://${host}:${s3Port}`);
+
+  const resolved = buildConnectionFromEnv({
+    endpointUrl,
+    accessKey: env.RUSTFS_ACCESS_KEY,
+    secretKey: env.RUSTFS_SECRET_KEY,
+    source: "systemd",
+  });
+  if (resolved) {
+    const masked =
+      resolved.accessKey.length > 4
+        ? `${resolved.accessKey.slice(0, 2)}***${resolved.accessKey.slice(-2)}`
+        : "***";
+    console.log(
+      `[rustfs detect] systemd: resolved endpoint=${resolved.endpointUrl} apiBase=${resolved.apiBase} accessKey=${masked}`
+    );
+  }
+  return resolved;
+}
+
+async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnection | undefined> {
+  console.log("[rustfs detect] probing container runtime...");
+  const detectRuntime = async (): Promise<"podman" | "docker" | undefined> => {
+    for (const runtime of ["podman", "docker"] as const) {
+      console.log(`[rustfs detect cmd] command -v ${runtime} >/dev/null 2>&1; echo $?`);
+      const exists = (await runRootShell(`command -v ${runtime} >/dev/null 2>&1; echo $?`, true)).trim();
+      if (exists === "0") return runtime;
+    }
+    return undefined;
   };
 
-  try {
-    const { stdout } = await runRc(["--json", "alias", "list"]);
-    const rows = parseJsonLines(stdout);
-
-    const push = (entry: any): RustfsAliasConfig | undefined => {
-      const a = String(entry?.alias ?? entry?.name ?? "").trim();
-      if (!a) return undefined;
-
-      const cfg: RustfsAliasConfig = {
-        url: normalizeUrl(
-          entry?.endpoint ??
-          entry?.Endpoint ??
-          entry?.url ??
-          entry?.URL
-        ),
-        accessKey: String(
-          entry?.AccessKey ??
-          entry?.accessKey ??
-          entry?.access_key ??
-          ""
-        ).trim() || undefined,
-        secretKey: String(
-          entry?.SecretKey ??
-          entry?.secretKey ??
-          entry?.secret_key ??
-          ""
-        ).trim() || undefined,
-      };
-      if (!firstAliasFromRc || (!firstAliasFromRc.url && cfg.url)) {
-        firstAliasFromRc = cfg;
-      }
-      if (a !== alias) return undefined;
-      return cfg;
-    };
-
-    for (const row of rows) {
-      if (Array.isArray((row as any)?.aliases)) {
-        for (const nested of (row as any).aliases) {
-          const cfg = push(nested);
-          if (cfg) return cfg;
-        }
-      } else {
-        const cfg = push(row);
-        if (cfg) return cfg;
-      }
-    }
-  } catch {
-    // no-op: we have defaults/env fallback below
+  const runtime = await detectRuntime();
+  if (!runtime) {
+    console.log("[rustfs detect] container: neither podman nor docker found");
+    return undefined;
   }
 
-  // Fallback: parse plain `rc alias list` output:
-  // rustfs   http://localhost:9200
-  try {
-    const { stdout } = await runRc(["alias", "list"], true);
-    const lines = String(stdout ?? "")
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-    const parsed: RustfsAliasConfig[] = [];
-    for (const line of lines) {
-      const m = line.match(/^([^\s]+)\s+(\S+)$/);
-      if (!m) continue;
-      const name = m[1]!;
-      const url = normalizeUrl(m[2]);
-      if (!url) continue;
-      const cfg: RustfsAliasConfig = { url };
-      if (!firstAliasFromRc || (!firstAliasFromRc.url && cfg.url)) {
-        firstAliasFromRc = cfg;
-      }
-      if (name === alias) return cfg;
-      parsed.push(cfg);
-    }
-    if (parsed.length > 0 && firstAliasFromRc?.url) return firstAliasFromRc;
-  } catch {
-    // no-op: continue with rc config fallback
+  console.log(`[rustfs detect cmd] ${runtime} ps --format '{{.Names}}\\t{{.Image}}' 2>/dev/null || true`);
+  const ps = await runRootShell(
+    `${runtime} ps --format '{{.Names}}\\t{{.Image}}' 2>/dev/null || true`,
+    true
+  );
+  const line = ps
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => /rustfs/i.test(l));
+  if (!line) {
+    console.log(`[rustfs detect] container: no rustfs container found via ${runtime}`);
+    return undefined;
+  }
+  const containerName = line.split(/\s+/)[0];
+  if (!containerName) {
+    console.log(`[rustfs detect] container: failed to parse container name from ${runtime} ps`);
+    return undefined;
   }
 
-  if (firstAliasFromRc?.url) return firstAliasFromRc;
-
-  // Fallback: parse rc config file directly (e.g. ~/.config/rc/config.toml)
-  // Sample:
-  // [[aliases]]
-  // name = "rustfs"
-  // url = "http://127.0.0.1:9200"
-  // access_key = "rustfsadmin"
-  // secret_key = "rustfsadmin"
+  console.log(`[rustfs detect cmd] ${runtime} inspect ${containerName} 2>/dev/null || true`);
+  const inspectRaw = await runRootShell(`${runtime} inspect ${shellQuote(containerName)} 2>/dev/null || true`, true);
+  if (!inspectRaw.trim()) {
+    console.log(`[rustfs detect] container: inspect returned no data for ${containerName}`);
+    return undefined;
+  }
+  let inspect: any;
   try {
-    const cmd = new Command(
-      ["bash", "-lc", "cat ~/.config/rc/config.toml 2>/dev/null || true"],
-      { superuser: "require" },
+    inspect = JSON.parse(inspectRaw);
+  } catch {
+    console.log(`[rustfs detect] container: failed to parse inspect JSON for ${containerName}`);
+    return undefined;
+  }
+  const first = Array.isArray(inspect) ? inspect[0] : inspect;
+  if (!first || typeof first !== "object") {
+    console.log(`[rustfs detect] container: inspect payload missing for ${containerName}`);
+    return undefined;
+  }
+
+  const envList: string[] = Array.isArray(first?.Config?.Env) ? first.Config.Env : [];
+  const envMap: Record<string, string> = {};
+  for (const row of envList) {
+    const idx = String(row).indexOf("=");
+    if (idx <= 0) continue;
+    envMap[String(row).slice(0, idx)] = String(row).slice(idx + 1);
+  }
+
+  let hostPort: string | undefined =
+    first?.NetworkSettings?.Ports?.["9000/tcp"]?.[0]?.HostPort;
+  if (!hostPort) {
+    console.log(`[rustfs detect cmd] ${runtime} port ${containerName} 2>/dev/null || true`);
+    const portText = await runRootShell(`${runtime} port ${shellQuote(containerName)} 2>/dev/null || true`, true);
+    const pm = portText.match(/9000\/tcp\s*->\s*[^:]+:(\d{2,5})/i);
+    if (pm?.[1]) hostPort = pm[1];
+  }
+  const port = parsePortFromAddress(hostPort) ?? 9000;
+  const host = String(process.env.RUSTFS_ADMIN_HOST || process.env.RUSTFS_HOST || "localhost").trim() || "localhost";
+  const endpointUrl = normalizeApiBase(`http://${host}:${port}`);
+
+  const resolved = buildConnectionFromEnv({
+    endpointUrl,
+    accessKey: envMap.RUSTFS_ACCESS_KEY,
+    secretKey: envMap.RUSTFS_SECRET_KEY,
+    source: "container",
+  });
+  if (resolved) {
+    const masked =
+      resolved.accessKey.length > 4
+        ? `${resolved.accessKey.slice(0, 2)}***${resolved.accessKey.slice(-2)}`
+        : "***";
+    console.log(
+      `[rustfs detect] container(${runtime}:${containerName}): resolved endpoint=${resolved.endpointUrl} apiBase=${resolved.apiBase} accessKey=${masked}`
     );
-    const proc = await unwrap(server.execute(cmd, false));
-    const text = String(proc.getStdout() ?? "");
-    if (!text.trim()) return {};
-
-    const lines = text.split("\n");
-    let inAliasBlock = false;
-    let current: Record<string, string> = {};
-    const parsedAliases: Array<{ name?: string; url?: string; access_key?: string; secret_key?: string }> = [];
-
-    const flush = () => {
-      if (!Object.keys(current).length) return;
-      parsedAliases.push({
-        name: current.name,
-        url: current.url,
-        access_key: current.access_key,
-        secret_key: current.secret_key,
-      });
-      current = {};
-    };
-
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (!line || line.startsWith("#")) continue;
-
-      if (line.startsWith("[[")) {
-        flush();
-        inAliasBlock = line === "[[aliases]]" || line === "[[alias]]";
-        continue;
-      }
-      if (line.startsWith("[")) {
-        flush();
-        inAliasBlock = false;
-        continue;
-      }
-      if (!inAliasBlock) continue;
-
-      const m = line.match(/^([A-Za-z0-9_]+)\s*=\s*"(.*)"\s*$/);
-      if (!m) continue;
-      const key = m[1]!;
-      const value = m[2]!;
-      current[key] = value;
-    }
-    flush();
-
-    const exact = parsedAliases.find((a) => String(a.name ?? "").trim() === alias);
-    const chosen = exact ?? parsedAliases[0];
-    if (!chosen) return {};
-    const url = normalizeUrl(chosen.url);
-    if (!url) return {};
-
-    return {
-      url,
-      accessKey: chosen.access_key || undefined,
-      secretKey: chosen.secret_key || undefined,
-    };
-  } catch {
-    return {};
   }
+  return resolved;
+}
+
+async function resolveRustfsConnection(): Promise<RustfsResolvedConnection> {
+  const selectCandidate = (candidates: RustfsResolvedConnection[]): RustfsResolvedConnection | undefined => {
+    const selected = String(RUSTFS_INSTANCE_SELECTOR ?? "").trim();
+    if (!selected) return candidates[0];
+
+    const bySelected = candidates.find(
+      (c) =>
+        c.source === selected ||
+        c.endpointUrl === selected ||
+        `${c.source}:${c.endpointUrl}` === selected
+    );
+    return bySelected ?? candidates[0];
+  };
+
+  const discoverCandidates = async (): Promise<RustfsResolvedConnection[]> => {
+    const now = Date.now();
+    if (rustfsDiscoveryCache && rustfsDiscoveryCache.expiresAtMs > now) {
+      return rustfsDiscoveryCache.values;
+    }
+
+    const out: RustfsResolvedConnection[] = [];
+    const push = (conn: RustfsResolvedConnection | undefined) => {
+      if (!conn) return;
+      if (out.some((x) => x.endpointUrl === conn.endpointUrl && x.source === conn.source)) return;
+      out.push(conn);
+    };
+
+    if (rustfsManualOverride) {
+      push(
+        buildConnectionFromEnv({
+          apiBase: rustfsManualOverride.apiBase,
+          endpointUrl: rustfsManualOverride.endpointUrl,
+          accessKey: rustfsManualOverride.accessKey,
+          secretKey: rustfsManualOverride.secretKey,
+          source: "manual",
+        })
+      );
+    }
+    push(buildConnectionFromEnv({ source: "env" }));
+    push(await detectSystemdRustfsConnection());
+    push(await detectContainerRustfsConnection());
+
+    if (out.length === 0) {
+      push(
+        buildConnectionFromEnv({
+          apiBase: "http://localhost:9200/rustfs/admin/v3",
+          endpointUrl: "http://localhost:9200",
+          accessKey: "rustfsadmin",
+          secretKey: "rustfsadmin",
+          source: "fallback",
+        })
+      );
+    }
+
+    rustfsDiscoveryCache = { values: out, expiresAtMs: now + 60_000 };
+    console.log(
+      `[rustfs detect] discovered ${out.length} candidate(s): ${out
+        .map((c) => `${c.source}@${c.endpointUrl}`)
+        .join(", ")}`
+    );
+    return out;
+  };
+
+  const now = Date.now();
+  if (rustfsConnectionCache && rustfsConnectionCache.expiresAtMs > now) {
+    console.log(
+      `[rustfs detect] cache hit source=${rustfsConnectionCache.value.source} endpoint=${rustfsConnectionCache.value.endpointUrl}`
+    );
+    return rustfsConnectionCache.value;
+  }
+  console.log("[rustfs detect] cache miss; starting auto-discovery");
+
+  const candidates = await discoverCandidates();
+  const selected = selectCandidate(candidates);
+  if (!selected) {
+    throw new Error("Unable to resolve RustFS connection parameters.");
+  }
+  console.log(
+    `[rustfs detect] selected source=${selected.source} endpoint=${selected.endpointUrl} (selector=${RUSTFS_INSTANCE_SELECTOR || "<default>"})`
+  );
+  rustfsConnectionCache = { value: selected, expiresAtMs: now + 60_000 };
+  return selected;
 }
 
 async function resolveRustfsAdminApiConfig(): Promise<{
@@ -308,63 +497,33 @@ async function resolveRustfsAdminApiConfig(): Promise<{
   accessKey: string;
   secretKey: string;
 }> {
-  const aliasCfg = await getRustfsAliasConfig(RUSTFS_ALIAS);
-
-  const apiBase =
-    normalizeApiBase(
-      process.env.RUSTFS_ADMIN_API_BASE ||
-      process.env.RUSTFS_API_BASE ||
-      deriveRustfsAdminApiBaseFromAliasUrl(aliasCfg.url ?? "")
-    );
-  if (!apiBase) {
-    throw new Error(
-      `Unable to resolve RustFS admin API base from rc alias "${RUSTFS_ALIAS}".`
-    );
-  }
-
-  const region = String(process.env.RUSTFS_ADMIN_REGION || process.env.AWS_REGION || "us-east-1");
-  const accessKey = String(process.env.RUSTFS_ADMIN_ACCESS_KEY || aliasCfg.accessKey || "rustfsadmin");
-  const secretKey = String(process.env.RUSTFS_ADMIN_SECRET_KEY || aliasCfg.secretKey || "rustfsadmin");
-
-  return { apiBase, region, accessKey, secretKey };
+  const resolved = await resolveRustfsConnection();
+  return {
+    apiBase: resolved.apiBase,
+    region: resolved.region,
+    accessKey: resolved.accessKey,
+    secretKey: resolved.secretKey,
+  };
 }
 
 async function resolveRustfsS3ApiConfig(): Promise<{
   endpointUrl: string;
   creds: RustfsS3Creds;
 }> {
-  const aliasCfg = await getRustfsAliasConfig(RUSTFS_ALIAS);
-  const adminApiBase =
-    process.env.RUSTFS_ADMIN_API_BASE ||
-    process.env.RUSTFS_API_BASE ||
-    deriveRustfsAdminApiBaseFromAliasUrl(aliasCfg.url ?? "");
-
-  const endpointUrl =
-    normalizeApiBase(
-      process.env.RUSTFS_S3_ENDPOINT ||
-      aliasCfg.url ||
-      deriveRustfsS3EndpointFromAdminApiBase(adminApiBase ?? "")
-    );
-  if (!endpointUrl) {
-    throw new Error(
-      `Unable to resolve RustFS S3 endpoint from rc alias "${RUSTFS_ALIAS}".`
-    );
-  }
-
+  const resolved = await resolveRustfsConnection();
   const accessKeyId = String(
     process.env.RUSTFS_ACCESS_KEY_ID ||
-    aliasCfg.accessKey ||
-    process.env.RUSTFS_ADMIN_ACCESS_KEY ||
-    "rustfsadmin"
+      process.env.RUSTFS_ACCESS_KEY ||
+      resolved.accessKey ||
+      "rustfsadmin"
   );
   const secretAccessKey = String(
     process.env.RUSTFS_SECRET_ACCESS_KEY ||
-    aliasCfg.secretKey ||
-    process.env.RUSTFS_ADMIN_SECRET_KEY ||
-    "rustfsadmin"
+      process.env.RUSTFS_SECRET_KEY ||
+      resolved.secretKey ||
+      "rustfsadmin"
   );
-
-  return { endpointUrl, creds: { accessKeyId, secretAccessKey } };
+  return { endpointUrl: resolved.endpointUrl, creds: { accessKeyId, secretAccessKey } };
 }
 
 async function execRustfsPython(
@@ -395,6 +554,23 @@ from botocore.config import Config
 
 endpoint = os.environ["RUSTFS_ENDPOINT"]
 bucket = os.environ["RUSTFS_BUCKET"]
+
+sess = botocore.session.get_session()
+client = sess.create_client(
+  "s3",
+  endpoint_url=endpoint,
+  aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+  aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+  config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+)
+`;
+
+const RUSTFS_PY_SETUP_NO_BUCKET = `
+import os
+import botocore.session
+from botocore.config import Config
+
+endpoint = os.environ["RUSTFS_ENDPOINT"]
 
 sess = botocore.session.get_session()
 client = sess.create_client(
@@ -595,6 +771,87 @@ print("ok")
   });
 }
 
+async function listRustfsBucketsViaS3Api(): Promise<Array<{ name: string; createdAt?: string }>> {
+  const { endpointUrl, creds } = await resolveRustfsS3ApiConfig();
+  const py =
+    RUSTFS_PY_SETUP_NO_BUCKET +
+    `
+import json
+
+resp = client.list_buckets()
+rows = []
+for b in resp.get("Buckets", []):
+  name = str(b.get("Name", "")).strip()
+  if not name:
+    continue
+  c = b.get("CreationDate")
+  created = c.isoformat() if c is not None else None
+  rows.append({"name": name, "createdAt": created})
+print(json.dumps(rows))
+`;
+  const out = await execRustfsPython(py, {
+    RUSTFS_ENDPOINT: endpointUrl,
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+  const rows = JSON.parse(out || "[]") as Array<{ name?: string; createdAt?: string }>;
+  return rows
+    .map((r) => ({
+      name: String(r?.name ?? "").trim(),
+      createdAt: String(r?.createdAt ?? "").trim() || undefined,
+    }))
+    .filter((r) => r.name);
+}
+
+async function getRustfsBucketVersioningViaS3Api(
+  bucketName: string
+): Promise<BucketVersioningStatus | undefined> {
+  const { endpointUrl, creds } = await resolveRustfsS3ApiConfig();
+  const py =
+    RUSTFS_PY_SETUP +
+    `
+resp = client.get_bucket_versioning(Bucket=bucket)
+status = str(resp.get("Status", "")).strip().lower()
+if status == "enabled":
+  print("Enabled")
+elif status in ("suspended", "disabled"):
+  print("Suspended")
+else:
+  print("")
+`;
+  const out = await execRustfsPython(py, {
+    RUSTFS_ENDPOINT: endpointUrl,
+    RUSTFS_BUCKET: bucketName,
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+  const value = String(out ?? "").trim();
+  if (value === "Enabled") return "Enabled";
+  if (value === "Suspended") return "Suspended";
+  return undefined;
+}
+
+async function setRustfsBucketVersioningViaS3Api(bucketName: string, enabled: boolean): Promise<void> {
+  const { endpointUrl, creds } = await resolveRustfsS3ApiConfig();
+  const py =
+    RUSTFS_PY_SETUP +
+    `
+status = "Enabled" if os.environ["RUSTFS_VERSIONING_ENABLED"] == "true" else "Suspended"
+client.put_bucket_versioning(
+  Bucket=bucket,
+  VersioningConfiguration={"Status": status},
+)
+print("ok")
+`;
+  await execRustfsPython(py, {
+    RUSTFS_ENDPOINT: endpointUrl,
+    RUSTFS_BUCKET: bucketName,
+    RUSTFS_VERSIONING_ENABLED: enabled ? "true" : "false",
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+}
+
 async function createRustfsBucketViaS3Api(
   bucketName: string,
   objectLockEnabled: boolean
@@ -728,7 +985,7 @@ except Exception as e:
           : "***";
       throw new Error(
         `RustFS tag API auth failed (InvalidAccessKeyId) for endpoint=${endpointUrl}, key=${maskedKey}. ` +
-        `Set valid S3 creds via RUSTFS_ACCESS_KEY_ID/RUSTFS_SECRET_ACCESS_KEY or fix rc alias "${RUSTFS_ALIAS}" credentials.`
+        `Set valid S3 creds via RUSTFS_ACCESS_KEY_ID/RUSTFS_SECRET_ACCESS_KEY.`
       );
     }
     throw e;
@@ -1134,39 +1391,50 @@ async function rcJsonSingleWithFallback(subArgsList: string[][]): Promise<any> {
 
 
 export async function listRustfsAliasCandidates(): Promise<McAliasCandidate[]> {
-  const { stdout } = await runRc(["--json", "alias", "list"]);
-  const rows = parseJsonLines(stdout);
-
-  const candidates: McAliasCandidate[] = [];
-  const pushAlias = (value: unknown) => {
-    const alias = String(value ?? "").trim();
-    if (!alias) return;
-    if (candidates.some((c) => c.alias === alias)) return;
-    candidates.push({ alias });
-  };
-
-  for (const r of rows) {
-    // rc may return a single JSON object with { aliases: [...] }
-    const nested = (r as any)?.aliases;
-    if (Array.isArray(nested)) {
-      for (const entry of nested) {
-        pushAlias((entry as any)?.alias ?? (entry as any)?.name);
-      }
-      continue;
-    }
-
-    pushAlias((r as any)?.alias ?? (r as any)?.name);
+  const candidates: RustfsResolvedConnection[] = [];
+  if (rustfsManualOverride) {
+    const manual = buildConnectionFromEnv({
+      apiBase: rustfsManualOverride.apiBase,
+      endpointUrl: rustfsManualOverride.endpointUrl,
+      accessKey: rustfsManualOverride.accessKey,
+      secretKey: rustfsManualOverride.secretKey,
+      source: "manual",
+    });
+    if (manual) candidates.push(manual);
+  }
+  const explicit = buildConnectionFromEnv({ source: "env" });
+  if (explicit) candidates.push(explicit);
+  const systemd = await detectSystemdRustfsConnection();
+  if (systemd && !candidates.some((c) => c.endpointUrl === systemd.endpointUrl && c.source === systemd.source)) {
+    candidates.push(systemd);
+  }
+  const container = await detectContainerRustfsConnection();
+  if (container && !candidates.some((c) => c.endpointUrl === container.endpointUrl && c.source === container.source)) {
+    candidates.push(container);
+  }
+  if (candidates.length === 0) {
+    const fallback = buildConnectionFromEnv({
+      apiBase: "http://localhost:9200/rustfs/admin/v3",
+      endpointUrl: "http://localhost:9200",
+      accessKey: "rustfsadmin",
+      secretKey: "rustfsadmin",
+      source: "fallback",
+    });
+    if (fallback) candidates.push(fallback);
   }
 
-  return candidates;
+  return candidates.map((c) => ({
+    alias: `${c.source}:${c.endpointUrl}`,
+    url: c.endpointUrl,
+  }));
 }
 
 export async function isRustfsAvailable(): Promise<boolean> {
   try {
-    await runRc(["--json", "alias", "list"]);
+    await runRustfsAdminApiGet("list-users");
     return true;
   } catch (e: any) {
-    console.warn("RustFS availability check failed (rc --json alias list):", {
+    console.warn("RustFS availability check failed (admin API probe):", {
       message: e?.message,
       stderr: e?.stderr,
       stdout: e?.stdout,
@@ -1976,15 +2244,11 @@ export async function getRustfsBucketStats(bucketName: string): Promise<{
   objectLockEnabled?: boolean;
   tagsFromStat?: Record<string, string>;
 }> {
-  const bucketPath = `${RUSTFS_ALIAS}/${bucketName}`;
   try {
-    const objects = await rcJsonLinesWithFallback([
-      ["find", bucketPath],
-    ]);
-
-    const payload = objects[0] as any;
-    const derivedCount = Number(payload?.total_count) || 0;
-    const derivedSize = Number(payload?.total_size_bytes) || 0;
+    const usage = await runRustfsAdminApiGet("datausageinfo");
+    const bucketUsage = (usage?.buckets_usage && usage.buckets_usage[bucketName]) || {};
+    const derivedCount = Number(bucketUsage?.objects_count) || 0;
+    const derivedSize = Number(bucketUsage?.size) || 0;
 
     return {
       createdAt: undefined,
@@ -2014,24 +2278,8 @@ export async function getRustfsBucketStats(bucketName: string): Promise<{
 export async function getRustfsBucketVersioningStatus(
   bucketName: string
 ): Promise<BucketVersioningStatus | undefined> {
-  const bucketPath = `${RUSTFS_ALIAS}/${bucketName}`;
   try {
-    const entry = await rcJsonSingleWithFallback([
-      ["version", "info", bucketPath],
-      ["version", "get", bucketPath],
-      ["version", "stat", bucketPath],
-    ]);
-
-    const status = String((entry as any)?.status ?? "").trim().toLowerCase();
-    if (status === "enabled") return "Enabled";
-    if (status === "suspended" || status === "disabled") return "Suspended";
-
-    const enabled = (entry as any)?.enabled;
-    if (typeof enabled === "boolean") {
-      return enabled ? "Enabled" : "Suspended";
-    }
-
-    return undefined;
+    return await getRustfsBucketVersioningViaS3Api(bucketName);
   } catch {
     return undefined;
   }
@@ -2101,52 +2349,41 @@ export async function getRustfsBucketDashboardStats(
 }
 
 export async function listBucketsFromRustfs(): Promise<RustfsBucket[]> {
-  const entriesRaw = await rcJsonLinesWithFallback([
-    ["ls", RUSTFS_ALIAS],
-  ]);
-
-  const entries =
-    entriesRaw.length === 1 && Array.isArray((entriesRaw[0] as any)?.items)
-      ? ((entriesRaw[0] as any).items as any[])
-      : entriesRaw;
-
-  const bucketEntries = entries.filter((e) => {
-    if ((e as any).is_dir === true) return true;
-    if (e.type === "folder" || e.type === "bucket") return true;
-    return false;
-  });
+  const bucketEntries = await listRustfsBucketsViaS3Api();
+  const usagePayload = await runRustfsAdminApiGet("datausageinfo").catch(() => undefined);
+  const usageByBucket = (usagePayload?.buckets_usage ?? {}) as Record<string, any>;
 
   const detailed = await Promise.all(
     bucketEntries.map((entry) =>
       bucketLimit(async () => {
-        const rawName: string =
-          entry.key || entry.name || entry.bucket || entry.target || "";
-        const bucketName = String(rawName).replace(/\/$/, "");
+        const bucketName = String(entry?.name ?? "").trim().replace(/\/$/, "");
 
         if (!bucketName) return undefined;
 
-        const [stats, quotaBytes, listedTags, currentVersioning] = await Promise.all([
-          getRustfsBucketStats(bucketName),
+        const [quotaBytes, listedTags, currentVersioning] = await Promise.all([
           getRustfsBucketQuotaBytes(bucketName),
           getRustfsBucketTags(bucketName),
           getRustfsBucketVersioningStatus(bucketName),
         ]);
 
-        const { createdAt, region, objectCount, sizeBytes, versionsCount, versioningStatus, objectLockEnabled, tagsFromStat } = stats;
-        const tags = tagsFromStat || listedTags;
+        const usage = usageByBucket[bucketName] || {};
+        const objectCount = Number(usage?.objects_count) || 0;
+        const sizeBytes = Number(usage?.size) || 0;
+        const versionsCountRaw = Number(usage?.versions_count ?? NaN);
+        const versionsCount = Number.isFinite(versionsCountRaw) ? versionsCountRaw : undefined;
+        const tags = listedTags;
         const owner: string | undefined =
           (tags && (tags.owner || tags.Owner || tags.bucketOwner)) || undefined;
 
         const inferredVersioning: BucketVersioningStatus | undefined =
           currentVersioning ??
-          versioningStatus ??
           (versionsCount && versionsCount > 0 ? "Enabled" : "Suspended");
 
         const bucket: RustfsBucket = {
           backendKind: "rustfs",
           name: bucketName,
-          createdAt,
-          region: region || "rustfs-default-region",
+          createdAt: entry.createdAt,
+          region: "rustfs-default-region",
           owner,
           policy: undefined,
           objectCount,
@@ -2154,7 +2391,7 @@ export async function listBucketsFromRustfs(): Promise<RustfsBucket[]> {
           quotaBytes,
           versioning: inferredVersioning,
           tags: tags || undefined,
-          objectLockEnabled,
+          objectLockEnabled: undefined,
         };
 
         return bucket;
@@ -2182,7 +2419,6 @@ export async function createBucketFromRustfs(
     throw new Error("createBucketFromRustfs: bucketName is required");
   }
 
-  const bucketPath = `${RUSTFS_ALIAS}/${bucketName}`;
   if (options.withLock) {
     await createRustfsBucketViaS3Api(bucketName, true);
     const lockEnabled = await isRustfsBucketObjectLockEnabledViaApi(bucketName);
@@ -2196,10 +2432,7 @@ export async function createBucketFromRustfs(
   }
 
   if (options.withVersioning) {
-    await runRcWithFallback([
-      ["version", "enable", bucketPath],
-      ["version", "set", "enabled", bucketPath],
-    ]);
+    await setRustfsBucketVersioningViaS3Api(bucketName, true);
   }
 
   if (options.quotaSize && options.quotaSize.trim()) {
@@ -2251,21 +2484,8 @@ export async function updateRustfsBucket(
     throw new Error("updateRustfsBucket: bucketName is required");
   }
 
-  const bucketPath = `${RUSTFS_ALIAS}/${bucketName}`;
-
   if (typeof options.versioning === "boolean") {
-    if (options.versioning) {
-      await runRcWithFallback([
-        ["version", "enable", bucketPath],
-        ["version", "set", "enabled", bucketPath],
-      ]);
-    } else {
-      await runRcWithFallback([
-        ["version", "suspend", bucketPath],
-        ["version", "disable", bucketPath],
-        ["version", "set", "disabled", bucketPath],
-      ]);
-    }
+    await setRustfsBucketVersioningViaS3Api(bucketName, options.versioning);
   }
 
   if (options.quotaSize !== undefined) {

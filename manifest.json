@@ -30,7 +30,8 @@
             "nfs-kernel-server",
             "samba-common-bin",
             "python3-pip",
-            "python3-botocore"
+            "python3-botocore",
+            "awscurl"
         ],
         "rocky_common": [
             "cockpit-bridge",
@@ -44,7 +45,8 @@
             "nfs-utils",
             "samba-common-tools",
             "python3-pip",
-            "python3-botocore"
+            "python3-botocore",
+            "awscurl"
         ]
     },
     "builds": [

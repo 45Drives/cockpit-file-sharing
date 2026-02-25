@@ -445,6 +445,7 @@ export type GarageBucketKeyGrant = {
 
 export type McAliasCandidate = {
   alias: string;
+  url?: string;
 };
 
 export type MinioAccessKeyStatus = "enabled" | "disabled";

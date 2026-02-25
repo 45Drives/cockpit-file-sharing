@@ -78,16 +78,21 @@
 
         <div v-if="selectedBackend === 'rustfs'" class="mb-6 w-9/12 mx-auto">
           <div class="flex items-center justify-between mb-2">
-            <h3 class="text-xl font-semibold">RustFS alias</h3>
+            <h3 class="text-xl font-semibold">RustFS instance</h3>
 
-            <button type="button" class="btn btn-secondary" @click="loadRustfsAliasesIfNeeded"
-              :disabled="loadingRustfsAliases">
-              Refresh
-            </button>
+            <div class="flex items-center gap-2">
+              <button type="button" class="btn btn-secondary" @click="showRustfsManualForm = !showRustfsManualForm">
+                {{ showRustfsManualForm ? "Hide Manual Setup" : "Manual Setup" }}
+              </button>
+              <button type="button" class="btn btn-secondary" @click="loadRustfsAliasesIfNeeded"
+                :disabled="loadingRustfsAliases">
+                Refresh
+              </button>
+            </div>
           </div>
 
           <div v-if="loadingRustfsAliases" class="opacity-80">
-            Loading aliases…
+            Detecting instances…
           </div>
 
           <div v-else-if="rustfsAliasError" class="text-red-600">
@@ -95,19 +100,56 @@
           </div>
 
           <div v-else-if="rustfsAliases.length === 0" class="opacity-80">
-            No usable RustFS aliases found.
+            No RustFS instance detected.
           </div>
 
           <div v-else>
             <select v-model="selectedRustfsAlias" class="w-full rounded-lg border border-default bg-accent px-4 py-3">
-              <option disabled value="">Select an alias…</option>
+              <option disabled value="">Select an instance…</option>
               <option v-for="a in rustfsAliases" :key="a.alias" :value="a.alias">
-                {{ a.alias }}
+                {{ a.alias }}{{ a.url ? ` (${a.url})` : "" }}
               </option>
             </select>
 
             <div class="mt-2 text-sm opacity-70">
-              Select the rc alias that points to the RustFS instance you want to manage.
+              Select the RustFS instance you want to manage.
+            </div>
+          </div>
+
+          <div v-if="showRustfsManualForm || rustfsNeedsManualCreds" class="mt-4 rounded-lg border border-default p-4">
+            <div class="text-sm font-semibold mb-2">Manual RustFS credentials</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label class="flex flex-col gap-1">
+                <span class="text-xs font-semibold">Host</span>
+                <input v-model="rustfsManualHost" type="text" placeholder="e.g. localhost"
+                  class="rounded-lg border border-default bg-accent px-3 py-2" />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span class="text-xs font-semibold">Port</span>
+                <input v-model="rustfsManualPort" type="text" placeholder="e.g. 9200"
+                  class="rounded-lg border border-default bg-accent px-3 py-2" />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span class="text-xs font-semibold">Access Key</span>
+                <input v-model="rustfsManualAccessKey" type="text" placeholder="Access key"
+                  class="rounded-lg border border-default bg-accent px-3 py-2" />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span class="text-xs font-semibold">Secret Key</span>
+                <input v-model="rustfsManualSecretKey" type="password" placeholder="Secret key"
+                  class="rounded-lg border border-default bg-accent px-3 py-2" />
+              </label>
+              <label class="flex flex-col gap-1 md:col-span-2">
+                <span class="text-xs font-semibold">Region</span>
+                <input v-model="rustfsManualRegion" type="text" placeholder="default: us-east-1"
+                  class="rounded-lg border border-default bg-accent px-3 py-2" />
+              </label>
+            </div>
+            <div class="mt-3 flex justify-end">
+              <button type="button" class="btn btn-secondary" :disabled="applyingRustfsManual"
+                @click="applyRustfsManualConnection">
+                {{ applyingRustfsManual ? "Testing..." : "Use Manual Connection" }}
+              </button>
             </div>
           </div>
         </div>
@@ -190,6 +232,7 @@ import {
   isRustfsAvailable,
   listRustfsAliasCandidates,
   setRustfsAlias,
+  setRustfsManualConnection,
 } from "../api/rustfsCliAdapter";
 import { isGarageHealthy } from "../api/garageCliAdapter";
 import UsersView from "./accessManagementViews/CephRgw/UsersView.vue";
@@ -241,6 +284,22 @@ const loadingRustfsAliases = ref(false);
 const rustfsAliases = ref<MinioAliasOption[]>([]);
 const selectedRustfsAlias = ref<string>("");
 const rustfsAliasError = ref<string | null>(null);
+const rustfsManualHost = ref("localhost");
+const rustfsManualPort = ref("9200");
+const rustfsManualAccessKey = ref("");
+const rustfsManualSecretKey = ref("");
+const rustfsManualRegion = ref("us-east-1");
+const applyingRustfsManual = ref(false);
+const showRustfsManualForm = ref(false);
+const rustfsNeedsManualCreds = computed(() => {
+  const msg = String(rustfsAliasError.value ?? "").toLowerCase();
+  return (
+    msg.includes("credential") ||
+    msg.includes("invalidaccesskeyid") ||
+    msg.includes("signaturedoesnotmatch") ||
+    msg.includes("auth")
+  );
+});
 
 const availableBackends = computed(() => {
   const list: { value: Backend; label: string }[] = [];
@@ -269,24 +328,16 @@ async function detectBackends() {
     isMinioAvailableFlag.value =
       minioRes.status === "fulfilled" ? !!minioRes.value : false;
 
-    isRustfsAvailableFlag.value =
-      rustfsRes.status === "fulfilled" ? !!rustfsRes.value : false;
-    if (rustfsRes.status === "rejected") {
-    } else {
-      if (!rustfsRes.value) {
-        try {
-          // Debug probe to surface concrete command failure details in UI console.
-          await listRustfsAliasCandidates();
-          console.warn("RustFS debug probe returned no aliases.");
-        } catch (e: any) {
-          console.error("RustFS debug probe failed:", {
-            message: e?.message,
-            stderr: e?.stderr,
-            stdout: e?.stdout,
-            exitStatus: e?.exitStatus,
-            raw: e,
-          });
+    isRustfsAvailableFlag.value = rustfsRes.status === "fulfilled" ? !!rustfsRes.value : false;
+    if (!isRustfsAvailableFlag.value) {
+      try {
+        const candidates = await listRustfsAliasCandidates();
+        if (candidates.length > 0) {
+          isRustfsAvailableFlag.value = true;
+          rustfsAliasError.value = "RustFS detected, but credentials may be missing or invalid. Enter them manually below.";
         }
+      } catch {
+        // ignore
       }
     }
 
@@ -389,6 +440,7 @@ async function loadRustfsAliasesIfNeeded() {
         if (typeof x === "string") return { alias: x };
         return {
           alias: String(x.alias ?? "").trim(),
+          url: typeof x.url === "string" ? x.url : undefined,
         };
       })
       .filter((x) => x.alias);
@@ -397,16 +449,42 @@ async function loadRustfsAliasesIfNeeded() {
 
     if (rustfsAliases.value.length === 1) {
       selectedRustfsAlias.value = rustfsAliases.value[0]!.alias;
-    } else if (rustfsAliases.value.length === 0) {
-      // Non-blocking fallback; RustFS may still be reachable via default alias.
-      selectedRustfsAlias.value = "local";
     }
   } catch (e: any) {
     rustfsAliases.value = [];
-    selectedRustfsAlias.value = "local";
-    console.warn("RustFS alias listing failed; falling back to alias 'local':", e);
+    selectedRustfsAlias.value = "";
+    console.warn("RustFS instance listing failed:", e);
   } finally {
     loadingRustfsAliases.value = false;
+  }
+}
+
+async function applyRustfsManualConnection() {
+  const host = rustfsManualHost.value.trim();
+  const port = rustfsManualPort.value.trim();
+  const accessKey = rustfsManualAccessKey.value.trim();
+  const secretKey = rustfsManualSecretKey.value.trim();
+  const region = rustfsManualRegion.value.trim() || "us-east-1";
+
+  if (!host || !port || !accessKey || !secretKey) {
+    pushNotification(new Notification("Manual RustFS config", "Host, port, access key and secret key are required.", "error"));
+    return;
+  }
+
+  applyingRustfsManual.value = true;
+  try {
+    setRustfsManualConnection({ host, port, accessKey, secretKey, region });
+    await loadRustfsAliasesIfNeeded();
+    const manualSelector = `manual:http://${host}:${port}`;
+    selectedRustfsAlias.value = manualSelector;
+    setRustfsAlias(manualSelector);
+    isRustfsAvailableFlag.value = true;
+    rustfsAliasError.value = null;
+    pushNotification(new Notification("RustFS", `Manual connection set to ${host}:${port}`, "success", 2000));
+  } catch (e: any) {
+    pushNotification(new Notification("Manual RustFS config failed", e?.message ?? "Unable to apply manual connection.", "error"));
+  } finally {
+    applyingRustfsManual.value = false;
   }
 }
 
