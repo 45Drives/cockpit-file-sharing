@@ -470,6 +470,35 @@ export interface MinioServiceAccountCreatePayload {
 
 }
 
+export interface RustfsServiceAccountCreatePayload {
+  accessKey: string;
+  secretKey: string;
+  name?: string;
+  description?: string;
+  expiration?: string;
+  policy?: unknown;
+}
+
+export interface RustfsServiceAccountInfo {
+  accessKey: string;
+  parentUser?: string;
+  accountStatus?: "on" | "off";
+  impliedPolicy?: boolean;
+  policy?: string;
+  name?: string;
+  description?: string;
+  expiration?: string;
+}
+
+export interface RustfsServiceAccountUpdatePayload {
+  accessKey: string;
+  newName?: string;
+  newDescription?: string;
+  newExpiration?: string;
+  newPolicy?: string;
+  newStatus?: "on" | "off";
+}
+
 export type MinioServiceAccountUpdatePayload = {
   accessKey: string;
   name?: string;

@@ -10,7 +10,7 @@
         <div class="flex items-center space-x-2">
           <!-- Edit button only in view mode -->
           <button v-if="isViewMode"
-            class="text-sm px-2 py-1 rounded btn-primary text-default hover:bg-primary disabled:opacity-60"
+            class="text-sm px-2 py-1 rounded btn-primary text-default hover:bg-primary disabled:opacity-60 font-semibold"
             @click="switchToEdit" :disabled="loading || !groupName">
             Edit
           </button>
@@ -32,7 +32,7 @@
           <!-- Members -->
           <section class="space-y-2">
             <div class="flex items-center justify-between">
-              <h4 class="text-xs font-semibold uppercase text-default">
+              <h4 class="text-sm font-semibold text-default">
                 Members
               </h4>
               <span class="text-sm text-default">
@@ -83,14 +83,14 @@
 
       <!-- Footer -->
       <div class="px-5 py-3 border-t border-default flex justify-end space-x-2 ">
-        <button class="px-3 py-1.5 text-xs bg-secondary rounded border border-default hover:bg-default"
+        <button class="px-3 py-1.5 text-xs bg-secondary rounded border border-default hover:bg-default font-semibold"
           @click="$emit('update:modelValue', false)" :disabled="loading">
           {{ isViewMode ? "Close" : "Cancel" }}
         </button>
 
         <!-- Only show Save in edit mode -->
         <button v-if="!isViewMode"
-          class="px-3 py-1.5 text-xs rounded border bg-primary text-default hover:bg-primary disabled:opacity-60"
+          class="px-3 py-1.5 text-xs rounded border bg-primary text-default hover:bg-primary disabled:opacity-60 font-semibold"
           @click="onSubmit" :disabled="loading || !groupName">
           Save changes
         </button>

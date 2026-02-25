@@ -10,7 +10,7 @@
       </div>
 
       <button
-        class="inline-flex items-center btn-primary text-default text-xs font-medium rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
+        class="inline-flex items-center btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
         @click="openCreateDialog" :disabled="loading || (!isRustfsBackend && !usernames.length)">
         Create group
       </button>
@@ -43,16 +43,17 @@
             </td>
             <td class="px-3 py-2 border-b border-default whitespace-nowrap">
               <button
-                class="inline-flex items-center btn-secondary text-xs font-medium rounded px-2 py-1 mr-1"
+                class="inline-flex items-center btn-secondary text-xs font-semibold rounded px-2 py-1 mr-1"
                 @click="onViewGroup(g)">
                 View
               </button>
               <button
-                class="inline-flex items-center btn-primary text-xs font-medium rounded px-2 py-1 mr-1"
+                class="inline-flex items-center btn-primary text-xs font-semibold rounded px-2 py-1 mr-1"
                 @click="onEditGroup(g)">
                 Edit
-              </button> <button
-                class="inline-flex items-center text-white border border-red-600 bg-red-500 text-default text-xs font-medium rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
+              </button>
+              <button
+                class="inline-flex items-center text-white border border-red-600 bg-red-500 text-default text-xs font-semibold rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
                 @click="onDeleteGroup(g)" :disabled="loading">
                 Delete
               </button>
@@ -99,12 +100,12 @@
         </div>
 
         <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-          <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100"
+          <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100 font-semibold"
             @click="closeDeleteDialog" :disabled="loading">
             Cancel
           </button>
           <button
-            class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60"
+            class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
             @click="confirmDeleteGroup" :disabled="loading">
             Delete
           </button>

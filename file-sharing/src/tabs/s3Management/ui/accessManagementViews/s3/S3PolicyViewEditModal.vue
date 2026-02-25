@@ -45,12 +45,12 @@
               </label>
               <div class="flex items-center space-x-2">
                 <button type="button"
-                  class="px-2 py-1 text-sm rounded btn-secondary hover:bg-gray-100"
+                  class="px-2 py-1 text-sm rounded btn-secondary hover:bg-gray-100 font-semibold"
                   @click="resetJson">
                   Reset
                 </button>
                 <button type="button"
-                  class="px-2 py-1 text-sm rounded btn-secondary hover:bg-gray-100"
+                  class="px-2 py-1 text-sm rounded btn-secondary hover:bg-gray-100 font-semibold"
                   @click="formatJson">
                   Format JSON
                 </button>
@@ -71,12 +71,12 @@
 
       <!-- Footer -->
       <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-        <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100" @click="close"
+        <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100 font-semibold" @click="close"
           :disabled="loading">
           Cancel
         </button>
         <button
-          class="px-3 py-1.5 text-xs rounded border border-danger bg-danger text-default hover:bg-danger disabled:opacity-60"
+          class="px-3 py-1.5 text-xs rounded border border-danger bg-danger text-default hover:bg-danger disabled:opacity-60 font-semibold"
           @click="save" :disabled="loading || !policyName">
           Save changes
         </button>

@@ -11,7 +11,7 @@
             Authentication: {{ user.authentication }}
           </p>
         </div>
-        <button class="text-xs px-2 py-1 rounded btn-secondary hover:bg-gray-50" @click="close"
+        <button class="text-xs px-2 py-1 rounded btn-secondary hover:bg-gray-50 font-semibold" @click="close"
           :disabled="loading">
           Close
         </button>

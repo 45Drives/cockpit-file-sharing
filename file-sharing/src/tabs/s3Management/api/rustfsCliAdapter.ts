@@ -1,6 +1,10 @@
 import type {
   BucketVersioningStatus,
   McAliasCandidate,
+  MinioServiceAccount,
+  RustfsServiceAccountInfo,
+  RustfsServiceAccountCreatePayload,
+  RustfsServiceAccountUpdatePayload,
   S3AccessUserGroupMembership,
   S3AccessGroupInfo,
   S3AccessUser,
@@ -591,6 +595,100 @@ print("ok")
   });
 }
 
+async function createRustfsBucketViaS3Api(
+  bucketName: string,
+  objectLockEnabled: boolean
+): Promise<void> {
+  const target = String(bucketName ?? "").trim();
+  if (!target) {
+    throw new Error("createRustfsBucketViaS3Api: bucketName is required");
+  }
+
+  const { endpointUrl, creds } = await resolveRustfsS3ApiConfig();
+  const region = String(process.env.RUSTFS_ADMIN_REGION || process.env.AWS_REGION || "us-east-1");
+  const bucketUrl = `${endpointUrl}/${encodeURIComponent(target)}/`;
+
+  const cmdParts = [
+    `AWS_ACCESS_KEY_ID=${shellQuote(creds.accessKeyId)}`,
+    `AWS_SECRET_ACCESS_KEY=${shellQuote(creds.secretAccessKey)}`,
+    "python3 -m awscurl --service s3",
+    `--region ${shellQuote(region)}`,
+    "-X 'PUT'",
+  ];
+  if (objectLockEnabled) {
+    cmdParts.push(`-H ${shellQuote("x-amz-bucket-object-lock-enabled: true")}`);
+  }
+  cmdParts.push(shellQuote(bucketUrl));
+
+  const commandString = cmdParts.join(" ");
+  const redacted = commandString.replace(
+    /AWS_SECRET_ACCESS_KEY='[^']*'/,
+    "AWS_SECRET_ACCESS_KEY='***'"
+  );
+  console.log(
+    `[rustfs bucket:create-s3] ${objectLockEnabled ? "lock=true " : ""}${redacted}`
+  );
+
+  const cmd = new Command(["bash", "-lc", commandString], { superuser: "require" });
+  const proc = await unwrap(server.execute(cmd, false));
+  const stdout = proc.getStdout();
+  const stderr = proc.getStderr();
+  const exitStatus = proc.exitStatus;
+  if (exitStatus !== 0) {
+    const msg = stderr.trim() || stdout.trim() || `awscurl exited with status ${exitStatus}`;
+    throw new Error(msg);
+  }
+
+  const trimmed = stdout.trim();
+  const apiError = extractRustfsApiErrorMessage(trimmed);
+  if (apiError) {
+    throw new Error(apiError);
+  }
+}
+
+async function deleteRustfsBucketViaS3Api(bucketName: string): Promise<void> {
+  const target = String(bucketName ?? "").trim();
+  if (!target) {
+    throw new Error("deleteRustfsBucketViaS3Api: bucketName is required");
+  }
+
+  const { endpointUrl, creds } = await resolveRustfsS3ApiConfig();
+  const region = String(process.env.RUSTFS_ADMIN_REGION || process.env.AWS_REGION || "us-east-1");
+  const bucketUrl = `${endpointUrl}/${encodeURIComponent(target)}/`;
+
+  const cmdParts = [
+    `AWS_ACCESS_KEY_ID=${shellQuote(creds.accessKeyId)}`,
+    `AWS_SECRET_ACCESS_KEY=${shellQuote(creds.secretAccessKey)}`,
+    "python3 -m awscurl --service s3",
+    `--region ${shellQuote(region)}`,
+    "-X 'DELETE'",
+    shellQuote(bucketUrl),
+  ];
+
+  const commandString = cmdParts.join(" ");
+  const redacted = commandString.replace(
+    /AWS_SECRET_ACCESS_KEY='[^']*'/,
+    "AWS_SECRET_ACCESS_KEY='***'"
+  );
+  console.log(`[rustfs bucket:delete-s3] ${redacted}`);
+
+  const cmd = new Command(["bash", "-lc", commandString], { superuser: "require" });
+  const proc = await unwrap(server.execute(cmd, false));
+  const stdout = proc.getStdout();
+  const stderr = proc.getStderr();
+  const exitStatus = proc.exitStatus;
+  if (exitStatus !== 0) {
+    const msg = stderr.trim() || stdout.trim() || `awscurl exited with status ${exitStatus}`;
+    throw new Error(msg);
+  }
+
+  const trimmed = stdout.trim();
+  const apiError = extractRustfsApiErrorMessage(trimmed);
+  if (apiError) {
+    throw new Error(apiError);
+  }
+}
+
 async function getRustfsBucketTaggingViaApi(
   bucketName: string,
 ): Promise<Record<string, string> | undefined> {
@@ -846,6 +944,62 @@ async function runRustfsAdminApiRequest(
   }
 }
 
+function normalizeRustfsPolicyJsonString(input: unknown): string {
+  const parsed =
+    typeof input === "string"
+      ? JSON.parse(input)
+      : input;
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Policy must be a JSON object");
+  }
+
+  const obj = parsed as Record<string, unknown>;
+  const stmtsRaw = Array.isArray(obj.Statement) ? obj.Statement : [];
+
+  // Preserve explicit "main-account policy" style payload.
+  if (stmtsRaw.length === 0) {
+    return JSON.stringify({
+      ID: typeof obj.ID === "string" ? obj.ID : "",
+      Version: typeof obj.Version === "string" ? obj.Version : "",
+      Statement: [],
+    });
+  }
+
+  const toStringArray = (v: unknown): string[] => {
+    if (Array.isArray(v)) {
+      return v.map((x) => String(x ?? "").trim()).filter(Boolean);
+    }
+    if (typeof v === "string") {
+      const s = v.trim();
+      return s ? [s] : [];
+    }
+    return [];
+  };
+
+  const statements = stmtsRaw.map((s) => {
+    const row = (s && typeof s === "object" && !Array.isArray(s)) ? (s as Record<string, unknown>) : {};
+    const effect = String(row.Effect ?? "Allow").trim() || "Allow";
+    const action = toStringArray(row.Action);
+    const resource = toStringArray(row.Resource);
+
+    const out: Record<string, unknown> = {
+      Effect: effect,
+      Action: action.length ? action : ["s3:*"],
+      Resource: resource.length ? resource : ["arn:aws:s3:::*"],
+    };
+
+    const sid = String(row.Sid ?? "").trim();
+    if (sid) out.Sid = sid;
+    return out;
+  });
+
+  return JSON.stringify({
+    Version: typeof obj.Version === "string" && obj.Version.trim() ? obj.Version : "2012-10-17",
+    Statement: statements,
+  });
+}
+
 function parseJsonLines(text: string): any[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
@@ -1068,6 +1222,178 @@ export async function listRustfsUsers(): Promise<S3AccessUser[]> {
   return users;
 }
 
+export async function listRustfsServiceAccounts(): Promise<MinioServiceAccount[]> {
+  const payload = await runRustfsAdminApiGet("list-service-accounts");
+
+  const normalizeStatus = (value: unknown): "enabled" | "disabled" | undefined => {
+    const s = String(value ?? "").trim().toLowerCase();
+    if (!s) return undefined;
+    if (s === "enabled" || s === "on" || s === "active") return "enabled";
+    if (s === "disabled" || s === "off" || s === "inactive") return "disabled";
+    return undefined;
+  };
+
+  const normalizeExpiry = (value: unknown): string | null | undefined => {
+    if (value == null) return null;
+    const raw = String(value).trim();
+    if (!raw || raw.toLowerCase() === "never") return null;
+    return raw;
+  };
+
+  const rows: any[] = [];
+
+  if (Array.isArray(payload)) {
+    rows.push(...payload);
+  } else if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    const fromList =
+      (Array.isArray(obj.serviceAccounts) && obj.serviceAccounts) ||
+      (Array.isArray((obj as any).svcaccs) && (obj as any).svcaccs) ||
+      (Array.isArray(obj.accounts) && obj.accounts);
+
+    if (Array.isArray(fromList)) {
+      rows.push(...fromList);
+    } else {
+      for (const [accessKey, value] of Object.entries(obj)) {
+        if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+        rows.push({ accessKey, ...(value as Record<string, unknown>) });
+      }
+    }
+  }
+
+  const out: MinioServiceAccount[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const accessKey = String(
+      (row as any).accessKey ?? (row as any).access_key ?? (row as any).id ?? ""
+    ).trim();
+    if (!accessKey) continue;
+
+    out.push({
+      accessKey,
+      name: String((row as any).name ?? "").trim() || undefined,
+      description: String((row as any).description ?? "").trim() || undefined,
+      expiresAt: normalizeExpiry(
+        (row as any).expiresAt ?? (row as any).expiration ?? (row as any).expiry
+      ),
+      status: normalizeStatus((row as any).status ?? (row as any).accountStatus),
+    });
+  }
+
+  return out.sort((a, b) => a.accessKey.localeCompare(b.accessKey));
+}
+
+export async function createRustfsServiceAccount(
+  payload: RustfsServiceAccountCreatePayload
+): Promise<void> {
+  const accessKey = String(payload?.accessKey ?? "").trim();
+  const secretKey = String(payload?.secretKey ?? "").trim();
+  const name = String(payload?.name ?? "").trim();
+  const description = String(payload?.description ?? "").trim();
+  const expirationRaw = String(payload?.expiration ?? "").trim();
+
+  if (!accessKey) throw new Error("createRustfsServiceAccount: accessKey is required");
+  if (!secretKey) throw new Error("createRustfsServiceAccount: secretKey is required");
+
+  const expiration = expirationRaw || "9999-01-01T00:00:00.000Z";
+  const normalizedPolicy =
+    payload?.policy == null ? null : normalizeRustfsPolicyJsonString(payload.policy);
+
+  await runRustfsAdminApiRequest(
+    "add-service-accounts",
+    "PUT",
+    "add-service-accounts",
+    {
+      accessKey,
+      secretKey,
+      name: name || undefined,
+      description: description || undefined,
+      expiration,
+      policy: normalizedPolicy,
+    }
+  );
+}
+
+export async function getRustfsServiceAccountInfo(accessKey: string): Promise<RustfsServiceAccountInfo> {
+  const key = String(accessKey ?? "").trim();
+  if (!key) throw new Error("getRustfsServiceAccountInfo: accessKey is required");
+
+  const info = await runRustfsAdminApiGet(`info-service-account?accessKey=${encodeURIComponent(key)}`);
+  return {
+    accessKey: key,
+    parentUser: String(info?.parentUser ?? "").trim() || undefined,
+    accountStatus:
+      String(info?.accountStatus ?? "").toLowerCase() === "off" ? "off" : "on",
+    impliedPolicy: Boolean(info?.impliedPolicy),
+    policy: typeof info?.policy === "string" ? info.policy : undefined,
+    name: String(info?.name ?? "").trim() || undefined,
+    description: typeof info?.description === "string" ? info.description : undefined,
+    expiration: String(info?.expiration ?? "").trim() || undefined,
+  };
+}
+
+export async function updateRustfsServiceAccount(
+  payload: RustfsServiceAccountUpdatePayload
+): Promise<void> {
+  const key = String(payload?.accessKey ?? "").trim();
+  if (!key) throw new Error("updateRustfsServiceAccount: accessKey is required");
+
+  const normalizeExpiration = (value: string | undefined): string | undefined => {
+    if (value === undefined) return undefined;
+    const raw = String(value).trim();
+    if (!raw) return raw;
+    return raw.replace(".000Z", "Z");
+  };
+
+  const body: Record<string, unknown> = {};
+  if (payload.newName !== undefined) body.newName = payload.newName;
+  if (payload.newDescription !== undefined) body.newDescription = payload.newDescription;
+  if (payload.newExpiration !== undefined) body.newExpiration = normalizeExpiration(payload.newExpiration);
+  if (payload.newPolicy !== undefined) {
+    body.newPolicy = normalizeRustfsPolicyJsonString(payload.newPolicy);
+  }
+  if (payload.newStatus !== undefined) body.newStatus = payload.newStatus;
+
+  await runRustfsAdminApiRequest(
+    "update-service-account",
+    "POST",
+    `update-service-account?accessKey=${encodeURIComponent(key)}`,
+    body
+  );
+}
+
+export async function deleteRustfsServiceAccount(accessKey: string): Promise<void> {
+  const key = String(accessKey ?? "").trim();
+  if (!key) throw new Error("deleteRustfsServiceAccount: accessKey is required");
+
+  const encoded = encodeURIComponent(key);
+  const attempts: Array<() => Promise<any>> = [
+    () =>
+      runRustfsAdminApiRequest(
+        "delete-service-accounts",
+        "DELETE",
+        `delete-service-accounts?accessKey=${encoded}`
+      ),
+    () =>
+      runRustfsAdminApiRequest(
+        "delete-service-account",
+        "DELETE",
+        `delete-service-account?accessKey=${encoded}`
+      ),
+  ];
+
+  let lastErr: unknown;
+  for (const fn of attempts) {
+    try {
+      await fn();
+      return;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("Failed to delete RustFS service account");
+}
+
 export async function getRustfsUserInfo(username: string): Promise<S3AccessUserDetails> {
   const target = String(username ?? "").trim();
   if (!target) {
@@ -1125,9 +1451,6 @@ export async function deleteRustfsUser(username: string): Promise<void> {
   const q = `remove-user?accessKey=${encodeURIComponent(target)}`;
   const variants: Array<() => Promise<any>> = [
     () => runRustfsAdminApiRequest("remove-user", "DELETE", q),
-    () => runRustfsAdminApiRequest("remove-user", "PUT", q, {}),
-    () => runRustfsAdminApiRequest("remove-user", "POST", q, {}),
-    () => runRc(["admin", "user", "remove", RUSTFS_ALIAS, target]),
   ];
 
   let lastErr: unknown;
@@ -1143,61 +1466,6 @@ export async function deleteRustfsUser(username: string): Promise<void> {
   throw lastErr instanceof Error ? lastErr : new Error("Failed to delete RustFS user");
 }
 
-function parseNameListFromOutput(
-  stdout: string,
-  expectedTopLevelKey: string,
-  candidateKeys: string[]
-): string[] {
-  const rows = parseJsonLines(stdout);
-  const names = new Set<string>();
-
-  const collectString = (value: unknown) => {
-    const text = String(value ?? "").trim();
-    if (!text) return;
-    names.add(text);
-  };
-
-  for (const row of rows) {
-    const nested = (row as any)?.[expectedTopLevelKey];
-    if (Array.isArray(nested)) {
-      for (const entry of nested) {
-        if (typeof entry === "string") {
-          collectString(entry);
-          continue;
-        }
-        for (const key of candidateKeys) {
-          collectString((entry as any)?.[key]);
-        }
-      }
-      continue;
-    }
-
-    if (typeof row === "string") {
-      collectString(row);
-      continue;
-    }
-
-    for (const key of candidateKeys) {
-      const value = (row as any)?.[key];
-      if (Array.isArray(value)) {
-        for (const v of value) collectString(v);
-      } else {
-        collectString(value);
-      }
-    }
-  }
-
-  if (names.size > 0) {
-    return Array.from(names).sort();
-  }
-
-  return stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => line.replace(/^[-*]\s*/, "").trim())
-    .filter(Boolean);
-}
 
 export async function listRustfsPolicies(): Promise<string[]> {
   const payload = await runRustfsAdminApiGet("list-canned-policies");
@@ -1629,10 +1897,13 @@ export async function updateRustfsUser(payload: S3AccessUserUpdatePayload): Prom
     new Set((payload.groups ?? []).map((g) => String(g ?? "").trim()).filter(Boolean))
   ).sort();
 
-  if (payload.status === "enabled") {
-    await runRc(["admin", "user", "enable", RUSTFS_ALIAS, username]);
-  } else if (payload.status === "disabled") {
-    await runRc(["admin", "user", "disable", RUSTFS_ALIAS, username]);
+  if (payload.status === "enabled" || payload.status === "disabled") {
+    await runRustfsAdminApiRequest(
+      "set-user-status",
+      "PUT",
+      `set-user-status?accessKey=${encodeURIComponent(username)}&status=${encodeURIComponent(payload.status)}`,
+      {}
+    );
   }
 
   if (desiredPolicies.join(",") !== currentPolicies.join(",")) {
@@ -1682,7 +1953,16 @@ export async function updateRustfsUser(payload: S3AccessUserUpdatePayload): Prom
     if (!newSecret) {
       throw new Error("updateRustfsUser: explicit secret is required when resetSecret is enabled");
     }
-    await runRc(["admin", "user", "add", RUSTFS_ALIAS, username, newSecret]);
+    const statusForSecretReset = payload.status ?? current.status ?? "enabled";
+    await runRustfsAdminApiRequest(
+      "add-user",
+      "PUT",
+      `add-user?accessKey=${encodeURIComponent(username)}`,
+      {
+        secretKey: newSecret,
+        status: statusForSecretReset,
+      }
+    );
   }
 }
 
@@ -1904,8 +2184,7 @@ export async function createBucketFromRustfs(
 
   const bucketPath = `${RUSTFS_ALIAS}/${bucketName}`;
   if (options.withLock) {
-    // Use the known-good path directly for lock-enabled buckets.
-    await createRustfsBucketWithObjectLockViaApi(bucketName);
+    await createRustfsBucketViaS3Api(bucketName, true);
     const lockEnabled = await isRustfsBucketObjectLockEnabledViaApi(bucketName);
     if (!lockEnabled) {
       throw new Error(
@@ -1913,8 +2192,7 @@ export async function createBucketFromRustfs(
       );
     }
   } else {
-    console.log(`[rustfs bucket:create] rc mb ${bucketPath}`);
-    await runRc(["mb", bucketPath]);
+    await createRustfsBucketViaS3Api(bucketName, false);
   }
 
   if (options.withVersioning) {
@@ -1954,9 +2232,7 @@ export async function deleteBucketFromRustfs(
     throw new Error("deleteBucketFromRustfs: bucketName is required");
   }
 
-  const bucketPath = `${RUSTFS_ALIAS}/${bucketName}`;
-
-  await runRc(["rb", bucketPath]);
+  await deleteRustfsBucketViaS3Api(bucketName);
 }
 
 export interface UpdateRustfsBucketOptions {

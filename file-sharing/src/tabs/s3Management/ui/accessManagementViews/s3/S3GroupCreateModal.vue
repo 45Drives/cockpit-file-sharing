@@ -18,7 +18,7 @@
 
         <!-- Group name -->
         <div>
-          <label class="block text-xs font-medium mb-1">
+          <label class="block text-xs font-semibold mb-1">
             Group name
           </label>
           <input v-model.trim="name" type="text"
@@ -28,7 +28,7 @@
         <!-- Members -->
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="text-xs font-medium ">
+            <label class="text-xs font-semibold ">
               Members
             </label>
             <span class="text-sm text-default">
@@ -62,12 +62,12 @@
       </div>
 
       <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-        <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100" @click="close"
+        <button class="px-3 py-1.5 text-xs font-semibold rounded btn-secondary hover:bg-gray-100" @click="close"
           :disabled="loading">
           Cancel
         </button>
         <button
-          class="px-3 py-1.5 text-xs rounded border text-white border-green-600 bg-green-600 text-default hover:bg-green-700 disabled:opacity-60"
+          class="px-3 py-1.5 text-xs font-semibold rounded border text-white border-green-600 bg-green-600 text-default hover:bg-green-700 disabled:opacity-60"
           @click="submit" :disabled="loading || (requireMember && !availableUsers.length)">
           Create group
         </button>
