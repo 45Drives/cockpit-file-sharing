@@ -443,7 +443,7 @@ export type GarageBucketKeyGrant = {
   owner: boolean;
 };
 
-export type McAliasCandidate = {
+export type S3AliasCandidate = {
   alias: string;
   url?: string;
   source?: string;
@@ -453,7 +453,7 @@ export type McAliasCandidate = {
 
 export type MinioAccessKeyStatus = "enabled" | "disabled";
 
-export interface MinioServiceAccount {
+export interface S3ServiceAccount {
   accessKey: string;
   name?: string;
   description?: string;
@@ -461,7 +461,7 @@ export interface MinioServiceAccount {
   status?: MinioAccessKeyStatus;
 }
 
-export interface MinioServiceAccountCreatePayload {
+export interface S3ServiceAccountCreatePayload {
   username: string; // parent user
   name?: string;
   description?: string;
@@ -503,7 +503,7 @@ export interface RustfsServiceAccountUpdatePayload {
   newStatus?: "on" | "off";
 }
 
-export type MinioServiceAccountUpdatePayload = {
+export type S3ServiceAccountUpdatePayload = {
   accessKey: string;
   name?: string;
   description?: string;

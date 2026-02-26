@@ -235,7 +235,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { MinioServiceAccount } from "@/tabs/s3Management/types/types";
+import type { S3ServiceAccount } from "@/tabs/s3Management/types/types";
 import {
   createMinioServiceAccount,
   updateMinioServiceAccount,
@@ -247,7 +247,7 @@ import { generateSecret, formatIsoLocal, localTimeZone } from "@/tabs/s3Manageme
 const props = defineProps<{
   modelValue: boolean;
   username: string;
-  serviceAccount?: MinioServiceAccount | null;
+  serviceAccount?: S3ServiceAccount | null;
 }>();
 
 const emit = defineEmits<{

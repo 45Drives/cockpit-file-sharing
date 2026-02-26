@@ -298,7 +298,7 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
 import type {
-  MinioServiceAccount,
+  S3ServiceAccount,
   S3AccessUserDetails,
   S3AccessUserUpdatePayload,
 } from "@/tabs/s3Management/types/types";
@@ -346,7 +346,7 @@ const localSecret = ref("");
 
 const activeAccessTab = ref<"policies" | "groups" | "serviceAccounts">("policies");
 
-const serviceAccounts = ref<MinioServiceAccount[]>([]);
+const serviceAccounts = ref<S3ServiceAccount[]>([]);
 const saLoading = ref(false);
 const saActionBusy = ref(false);
 
@@ -398,7 +398,7 @@ async function loadServiceAccounts() {
   }
 }
 
-async function toggleServiceAccount(sa: MinioServiceAccount) {
+async function toggleServiceAccount(sa: S3ServiceAccount) {
   if (!sa.accessKey) return;
 
   saActionBusy.value = true;
@@ -414,7 +414,7 @@ async function toggleServiceAccount(sa: MinioServiceAccount) {
   }
 }
 
-async function removeServiceAccount(sa: MinioServiceAccount) {
+async function removeServiceAccount(sa: S3ServiceAccount) {
   if (!sa.accessKey) return;
 
   saActionBusy.value = true;
@@ -428,14 +428,14 @@ async function removeServiceAccount(sa: MinioServiceAccount) {
 
 /* Modal handling */
 const saModalOpen = ref(false);
-const saModalServiceAccount = ref<MinioServiceAccount | null>(null);
+const saModalServiceAccount = ref<S3ServiceAccount | null>(null);
 
 function openCreateServiceAccountModal() {
   saModalServiceAccount.value = null; // create
   saModalOpen.value = true;
 }
 
-async function openEditServiceAccountModal(sa: MinioServiceAccount) {
+async function openEditServiceAccountModal(sa: S3ServiceAccount) {
   if (!sa.accessKey) return;
   if (sa.status === "disabled") return;
 

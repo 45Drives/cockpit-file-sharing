@@ -245,10 +245,10 @@ import {
   listRustfsServiceAccounts,
   updateRustfsServiceAccount,
 } from "../../../api/rustfsCliAdapter";
-import type { MinioServiceAccount } from "@/tabs/s3Management/types/types";
+import type { S3ServiceAccount } from "@/tabs/s3Management/types/types";
 import { Notification, pushNotification } from "@45drives/houston-common-ui";
 
-const accessKeys = ref<MinioServiceAccount[]>([]);
+const accessKeys = ref<S3ServiceAccount[]>([]);
 const searchQuery = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -327,7 +327,7 @@ function openCreateDialog() {
   showCreateDialog.value = true;
 }
 
-async function openEditDialog(sa: MinioServiceAccount) {
+async function openEditDialog(sa: S3ServiceAccount) {
   dialogMode.value = "edit";
   createError.value = null;
   createLoading.value = true;

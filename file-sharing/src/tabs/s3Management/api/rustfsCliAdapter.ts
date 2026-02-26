@@ -1,7 +1,7 @@
 import type {
   BucketVersioningStatus,
-  McAliasCandidate,
-  MinioServiceAccount,
+  S3AliasCandidate,
+  S3ServiceAccount,
   RustfsServiceAccountInfo,
   RustfsServiceAccountCreatePayload,
   RustfsServiceAccountUpdatePayload,
@@ -78,12 +78,6 @@ export async function setRustfsManualConnection(input: RustfsManualConnectionInp
   await persistRustfsManualConnectionToUserConfig();
 }
 
-type RunRcResult = {
-  stdout: string;
-  stderr: string;
-  exitStatus: number;
-};
-
 type RustfsS3Creds = {
   accessKeyId: string;
   secretAccessKey: string;
@@ -133,42 +127,6 @@ const BYTE_UNIT_FACTORS: Record<string, number> = {
   PB: 1024 ** 5,
   PIB: 1024 ** 5,
 };
-
-async function runRc(args: string[], allowFailure = false): Promise<RunRcResult> {
-  const cmd = new Command(["rc", ...args], {});
-  const proc = await unwrap(server.execute(cmd, false));
-  const res: RunRcResult = {
-    stdout: proc.getStdout(),
-    stderr: proc.getStderr(),
-    exitStatus: proc.exitStatus,
-  };
-  const { stdout, stderr, exitStatus } = res;
-
-  if (exitStatus !== 0 && !allowFailure) {
-    const msg = stderr.trim() || stdout.trim() || `rc exited with status ${exitStatus}`;
-    const e = new Error(msg) as any;
-    e.stdout = stdout;
-    e.stderr = stderr;
-    e.exitStatus = exitStatus;
-    e.cause = res;
-    throw e;
-  }
-
-  return { stdout, stderr, exitStatus };
-}
-
-async function runRcWithFallback(argVariants: string[][]): Promise<RunRcResult> {
-  let lastErr: unknown;
-  for (const args of argVariants) {
-    try {
-      return await runRc(args);
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-  throw lastErr instanceof Error ? lastErr : new Error("RustFS command failed");
-}
-
 
 
 function shellQuote(v: string): string {
@@ -268,7 +226,6 @@ async function loadRustfsManualConnectionFromUserConfig(): Promise<void> {
     if (!normalized.length) return;
     rustfsManualConnections = normalized;
     rustfsManualOverride = normalized[normalized.length - 1];
-    console.log(`[rustfs detect] loaded ${normalized.length} manual user connection(s)`);
   } catch {
     // ignore malformed or unavailable config
   }
@@ -365,10 +322,11 @@ function buildConnectionFromEnv(overrides?: Partial<RustfsResolvedConnection>): 
   const apiBaseRaw =
     String(process.env.RUSTFS_ADMIN_API_BASE || process.env.RUSTFS_API_BASE || "").trim();
   const endpointRaw = String(process.env.RUSTFS_S3_ENDPOINT || "").trim();
-  const apiBase = normalizeApiBase(overrides?.apiBase || apiBaseRaw);
-  const endpointUrl = normalizeApiBase(
-    overrides?.endpointUrl || endpointRaw || deriveRustfsS3EndpointFromAdminApiBase(apiBase)
-  );
+  const apiBaseSeed = overrides?.apiBase || apiBaseRaw || "";
+  const apiBase = normalizeApiBase(apiBaseSeed);
+  const endpointSeed =
+    overrides?.endpointUrl || endpointRaw || deriveRustfsS3EndpointFromAdminApiBase(apiBase) || "";
+  const endpointUrl = normalizeApiBase(endpointSeed);
   if (!apiBase && !endpointUrl) return undefined;
 
   const region = String(process.env.RUSTFS_ADMIN_REGION || process.env.AWS_REGION || "us-east-1");
@@ -400,30 +358,23 @@ function buildConnectionFromEnv(overrides?: Partial<RustfsResolvedConnection>): 
 }
 
 async function detectSystemdRustfsConnection(): Promise<RustfsResolvedConnection | undefined> {
-  console.log("[rustfs detect] probing systemd rustfs service...");
-  console.log("[rustfs detect cmd] systemctl cat rustfs 2>/dev/null || true");
   const serviceText = await runUserShell("systemctl cat rustfs 2>/dev/null || true", true);
   if (!serviceText.trim()) {
-    console.log("[rustfs detect] systemd: rustfs service not found");
     return undefined;
   }
 
   const envFileMatch = serviceText.match(/^\s*EnvironmentFile=([^\n]+)$/m);
   const envFileRaw = String(envFileMatch?.[1] ?? "").trim();
   if (!envFileRaw) {
-    console.log("[rustfs detect] systemd: no EnvironmentFile configured");
     return undefined;
   }
   const envFilePath = envFileRaw.replace(/^-/, "").trim();
   if (!envFilePath) {
-    console.log("[rustfs detect] systemd: invalid EnvironmentFile path");
     return undefined;
   }
 
-  console.log(`[rustfs detect cmd] cat ${envFilePath} 2>/dev/null || true`);
   const envFileText = await runUserShell(`cat ${shellQuote(envFilePath)} 2>/dev/null || true`, true);
   if (!envFileText.trim()) {
-    console.log(`[rustfs detect] systemd: env file not readable or empty (${envFilePath})`);
     return undefined;
   }
 
@@ -444,18 +395,13 @@ async function detectSystemdRustfsConnection(): Promise<RustfsResolvedConnection
       resolved.accessKey.length > 4
         ? `${resolved.accessKey.slice(0, 2)}***${resolved.accessKey.slice(-2)}`
         : "***";
-    console.log(
-      `[rustfs detect] systemd: resolved endpoint=${resolved.endpointUrl} apiBase=${resolved.apiBase} accessKey=${masked}`
-    );
   }
   return resolved;
 }
 
 async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnection | undefined> {
-  console.log("[rustfs detect] probing container runtime...");
   const detectRuntime = async (): Promise<"podman" | "docker" | undefined> => {
     for (const runtime of ["podman", "docker"] as const) {
-      console.log(`[rustfs detect cmd] command -v ${runtime} >/dev/null 2>&1; echo $?`);
       const exists = (await runUserShell(`command -v ${runtime} >/dev/null 2>&1; echo $?`, true)).trim();
       if (exists === "0") return runtime;
     }
@@ -464,11 +410,9 @@ async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnecti
 
   const runtime = await detectRuntime();
   if (!runtime) {
-    console.log("[rustfs detect] container: neither podman nor docker found");
     return undefined;
   }
 
-  console.log(`[rustfs detect cmd] ${runtime} ps --format '{{.Names}}\\t{{.Image}}' 2>/dev/null || true`);
   const ps = await runUserShell(
     `${runtime} ps --format '{{.Names}}\\t{{.Image}}' 2>/dev/null || true`,
     true
@@ -478,31 +422,25 @@ async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnecti
     .map((l) => l.trim())
     .find((l) => /rustfs/i.test(l));
   if (!line) {
-    console.log(`[rustfs detect] container: no rustfs container found via ${runtime}`);
     return undefined;
   }
   const containerName = line.split(/\s+/)[0];
   if (!containerName) {
-    console.log(`[rustfs detect] container: failed to parse container name from ${runtime} ps`);
     return undefined;
   }
 
-  console.log(`[rustfs detect cmd] ${runtime} inspect ${containerName} 2>/dev/null || true`);
   const inspectRaw = await runUserShell(`${runtime} inspect ${shellQuote(containerName)} 2>/dev/null || true`, true);
   if (!inspectRaw.trim()) {
-    console.log(`[rustfs detect] container: inspect returned no data for ${containerName}`);
     return undefined;
   }
   let inspect: any;
   try {
     inspect = JSON.parse(inspectRaw);
   } catch {
-    console.log(`[rustfs detect] container: failed to parse inspect JSON for ${containerName}`);
     return undefined;
   }
   const first = Array.isArray(inspect) ? inspect[0] : inspect;
   if (!first || typeof first !== "object") {
-    console.log(`[rustfs detect] container: inspect payload missing for ${containerName}`);
     return undefined;
   }
 
@@ -517,7 +455,6 @@ async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnecti
   let hostPort: string | undefined =
     first?.NetworkSettings?.Ports?.["9000/tcp"]?.[0]?.HostPort;
   if (!hostPort) {
-    console.log(`[rustfs detect cmd] ${runtime} port ${containerName} 2>/dev/null || true`);
     const portText = await runUserShell(`${runtime} port ${shellQuote(containerName)} 2>/dev/null || true`, true);
     const pm = portText.match(/9000\/tcp\s*->\s*[^:]+:(\d{2,5})/i);
     if (pm?.[1]) hostPort = pm[1];
@@ -538,9 +475,6 @@ async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnecti
       resolved.accessKey.length > 4
         ? `${resolved.accessKey.slice(0, 2)}***${resolved.accessKey.slice(-2)}`
         : "***";
-    console.log(
-      `[rustfs detect] container(${runtime}:${containerName}): resolved endpoint=${resolved.endpointUrl} apiBase=${resolved.apiBase} accessKey=${masked}`
-    );
   }
   return resolved;
 }
@@ -629,11 +563,6 @@ async function resolveRustfsConnection(): Promise<RustfsResolvedConnection> {
     }
 
     rustfsDiscoveryCache = { values: out, expiresAtMs: now + 60_000 };
-    console.log(
-      `[rustfs detect] discovered ${out.length} candidate(s): ${out
-        .map((c) => `${c.source}@${c.endpointUrl}`)
-        .join(", ")}`
-    );
     return out;
   };
 
@@ -651,21 +580,14 @@ async function resolveRustfsConnection(): Promise<RustfsResolvedConnection> {
     }
   }
   if (rustfsConnectionCache && rustfsConnectionCache.expiresAtMs > now) {
-    console.log(
-      `[rustfs detect] cache hit source=${rustfsConnectionCache.value.source} endpoint=${rustfsConnectionCache.value.endpointUrl}`
-    );
     return rustfsConnectionCache.value;
   }
-  console.log("[rustfs detect] cache miss; starting auto-discovery");
 
   const candidates = await discoverCandidates();
   const selected = selectCandidate(candidates);
   if (!selected) {
     throw new Error("Unable to resolve RustFS connection parameters.");
   }
-  console.log(
-    `[rustfs detect] selected source=${selected.source} endpoint=${selected.endpointUrl} (selector=${RUSTFS_INSTANCE_SELECTOR || "<default>"})`
-  );
   rustfsConnectionCache = { value: selected, expiresAtMs: now + 60_000 };
   return selected;
 }
@@ -787,7 +709,6 @@ client.put_object_lock_configuration(
 print("ok")
 `;
 
-  console.log(`[rustfs retention:set] endpoint=${endpointUrl} bucket=${bucketName} mode=${mode} days=${days}`);
   try {
     await execRustfsPython(py, {
       RUSTFS_ENDPOINT: endpointUrl,
@@ -941,7 +862,6 @@ except Exception as e:
 print("ok")
 `;
 
-  console.log(`[rustfs bucket:create-lock-api] endpoint=${endpointUrl} bucket=${bucketName}`);
   await execRustfsPython(py, {
     RUSTFS_ENDPOINT: endpointUrl,
     RUSTFS_BUCKET: bucketName,
@@ -1061,9 +981,6 @@ async function createRustfsBucketViaS3Api(
     /AWS_SECRET_ACCESS_KEY='[^']*'/,
     "AWS_SECRET_ACCESS_KEY='***'"
   );
-  console.log(
-    `[rustfs bucket:create-s3] ${objectLockEnabled ? "lock=true " : ""}${redacted}`
-  );
 
   const cmd = new Command(["bash", "-lc", commandString], {});
   const proc = await unwrap(server.execute(cmd, false));
@@ -1102,11 +1019,6 @@ async function deleteRustfsBucketViaS3Api(bucketName: string): Promise<void> {
   ];
 
   const commandString = cmdParts.join(" ");
-  const redacted = commandString.replace(
-    /AWS_SECRET_ACCESS_KEY='[^']*'/,
-    "AWS_SECRET_ACCESS_KEY='***'"
-  );
-  console.log(`[rustfs bucket:delete-s3] ${redacted}`);
 
   const cmd = new Command(["bash", "-lc", commandString], {});
   const proc = await unwrap(server.execute(cmd, false));
@@ -1146,7 +1058,6 @@ except Exception as e:
     raise
 `;
 
-  console.log(`[rustfs tags:get] endpoint=${endpointUrl} bucket=${bucketName}`);
   let out: string;
   try {
     out = await execRustfsPython(py, {
@@ -1199,7 +1110,6 @@ client.put_bucket_tagging(
 print("ok")
 `;
 
-  console.log(`[rustfs tags:set] endpoint=${endpointUrl} bucket=${bucketName} count=${tagset.length}`);
   await execRustfsPython(py, {
     RUSTFS_ENDPOINT: endpointUrl,
     RUSTFS_BUCKET: bucketName,
@@ -1227,7 +1137,6 @@ except Exception as e:
 print("ok")
 `;
 
-  console.log(`[rustfs tags:clear] endpoint=${endpointUrl} bucket=${bucketName}`);
   await execRustfsPython(py, {
     RUSTFS_ENDPOINT: endpointUrl,
     RUSTFS_BUCKET: bucketName,
@@ -1261,11 +1170,6 @@ async function runRustfsQuotaApiRequest(
   cmdParts.push(shellQuote(url));
 
   const commandString = cmdParts.join(" ");
-  const redacted = commandString.replace(
-    /AWS_SECRET_ACCESS_KEY='[^']*'/,
-    "AWS_SECRET_ACCESS_KEY='***'"
-  );
-  console.log(`[rustfs quota:${kind}] ${redacted}`);
 
   const cmd = new Command(["bash", "-lc", commandString], {});
   const proc = await unwrap(server.execute(cmd, false));
@@ -1301,11 +1205,7 @@ async function runRustfsAdminApiGet(path: string): Promise<any> {
   ];
 
   const commandString = cmdParts.join(" ");
-  const redacted = commandString.replace(
-    /AWS_SECRET_ACCESS_KEY='[^']*'/,
-    "AWS_SECRET_ACCESS_KEY='***'"
-  );
-  console.log(`[rustfs admin:get] ${redacted}`);
+
 
   const cmd = new Command(["bash", "-lc", commandString], {});
   const proc = await unwrap(server.execute(cmd, false));
@@ -1351,11 +1251,7 @@ async function runRustfsAdminApiRequest(
   cmdParts.push(shellQuote(url));
 
   const commandString = cmdParts.join(" ");
-  const redacted = commandString.replace(
-    /AWS_SECRET_ACCESS_KEY='[^']*'/,
-    "AWS_SECRET_ACCESS_KEY='***'"
-  );
-  console.log(`[rustfs admin:${kind}] ${redacted}`);
+
 
   const cmd = new Command(["bash", "-lc", commandString], {});
   const proc = await unwrap(server.execute(cmd, false));
@@ -1549,27 +1445,8 @@ async function clearRustfsBucketQuotaViaApi(bucketName: string): Promise<void> {
   await runRustfsQuotaApiRequest("clear", "DELETE", bucketName);
 }
 
-async function rcJsonLinesWithFallback(subArgsList: string[][]): Promise<any[]> {
-  let lastErr: unknown;
-  for (const subArgs of subArgsList) {
-    try {
-      const { stdout } = await runRc(["--json", ...subArgs]);
-      return parseJsonLines(stdout);
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-  throw lastErr instanceof Error ? lastErr : new Error("RustFS command failed");
-}
 
-async function rcJsonSingleWithFallback(subArgsList: string[][]): Promise<any> {
-  const list = await rcJsonLinesWithFallback(subArgsList);
-  return list[0] ?? {};
-}
-
-
-
-export async function listRustfsAliasCandidates(): Promise<McAliasCandidate[]> {
+export async function listRustfsAliasCandidates(): Promise<S3AliasCandidate[]> {
   await loadRustfsManualConnectionFromUserConfig();
   const candidates: RustfsResolvedConnection[] = [];
   for (const entry of rustfsManualConnections) {
@@ -1691,7 +1568,7 @@ export async function listRustfsUsers(): Promise<S3AccessUser[]> {
   return users;
 }
 
-export async function listRustfsServiceAccounts(): Promise<MinioServiceAccount[]> {
+export async function listRustfsServiceAccounts(): Promise<S3ServiceAccount[]> {
   const payload = await runRustfsAdminApiGet("list-service-accounts");
 
   const normalizeStatus = (value: unknown): "enabled" | "disabled" | undefined => {
@@ -1730,7 +1607,7 @@ export async function listRustfsServiceAccounts(): Promise<MinioServiceAccount[]
     }
   }
 
-  const out: MinioServiceAccount[] = [];
+  const out: S3ServiceAccount[] = [];
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;
     const accessKey = String(
@@ -2514,7 +2391,7 @@ export async function getRustfsBucketDashboardStats(
   const [quotaBytes, versioningStatus, lockCfg] = await Promise.all([
     getRustfsBucketQuotaBytes(bucketName).catch(() => undefined),
     getRustfsBucketVersioningStatus(bucketName).catch(() => undefined),
-    getRustfsBucketObjectLockConfiguration(bucketName).catch(() => ({})),
+    getRustfsBucketObjectLockConfiguration(bucketName),
   ]);
 
   const lastUpdateSecs = Number(dataUsage?.last_update?.secs_since_epoch ?? NaN);

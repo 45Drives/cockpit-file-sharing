@@ -160,7 +160,7 @@
 
 <script lang="ts" setup>
 import { ref, watch } from "vue";
-import type { MinioServiceAccount, S3AccessUserDetails } from "@/tabs/s3Management/types/types";
+import type { S3ServiceAccount, S3AccessUserDetails } from "@/tabs/s3Management/types/types";
 import { listMinioServiceAccounts } from "@/tabs/s3Management/api/minioCliAdapter";
 import { formatIsoLocal } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 
@@ -176,7 +176,7 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: boolean): void;
 }>();
 
-const serviceAccounts = ref<MinioServiceAccount[]>([]);
+const serviceAccounts = ref<S3ServiceAccount[]>([]);
 const saLoading = ref(false);
 const saError = ref<string | null>(null);
 const showServiceAccounts = props.showServiceAccounts !== false;

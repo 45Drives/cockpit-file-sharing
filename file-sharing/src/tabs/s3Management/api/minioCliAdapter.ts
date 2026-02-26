@@ -1,9 +1,9 @@
 
 import type {MinioBucket,BucketVersioningStatus,S3AccessUser,S3AccessUserCreatePayload,S3AccessUserDetails,S3AccessUserGroupMembership,S3AccessUserUpdatePayload,
-  MinioBucketDashboardStats,MinioReplicationUsage,S3AccessGroupInfo,McAliasCandidate,
-  MinioServiceAccount,
-  MinioServiceAccountCreatePayload,
-  MinioServiceAccountUpdatePayload,
+  MinioBucketDashboardStats,MinioReplicationUsage,S3AccessGroupInfo,S3AliasCandidate,
+  S3ServiceAccount,
+  S3ServiceAccountCreatePayload,
+  S3ServiceAccountUpdatePayload,
 } from "../types/types";
 import pLimit from "p-limit";
 
@@ -32,10 +32,10 @@ export function setAccessAdminCli(_cli: "mc" | "rc"): void {
   // no-op
 }
 
-export async function listMinioAliasCandidates(): Promise<McAliasCandidate[]> {
+export async function listMinioAliasCandidates(): Promise<S3AliasCandidate[]> {
   const rows = await mcJsonLines(["alias", "list"]);
 
-  const candidates: McAliasCandidate[] = [];
+  const candidates: S3AliasCandidate[] = [];
 
   const isTemplateOrPublic = (alias: string, url: string) => {
     const a = alias.toLowerCase();
@@ -74,7 +74,7 @@ export async function listMinioAliasCandidates(): Promise<McAliasCandidate[]> {
     candidates.push({ alias });
   }
 
-  const verified: McAliasCandidate[] = [];
+  const verified: S3AliasCandidate[] = [];
   for (const c of candidates) {
     try {
       await mcJsonSingle(["admin", "info", c.alias]);
@@ -1143,7 +1143,7 @@ export async function getMinioBucketDashboardStats(
 }
 
 
-export async function createMinioServiceAccount(payload: MinioServiceAccountCreatePayload) {
+export async function createMinioServiceAccount(payload: S3ServiceAccountCreatePayload) {
   const username = payload.username?.trim();
   if (!username) throw new Error("createMinioServiceAccount: username is required");
 
@@ -1170,7 +1170,7 @@ export async function createMinioServiceAccount(payload: MinioServiceAccountCrea
   const out = await runMc(args);
   return parseCreatedCreds(out.stdout);
 }
-export async function updateMinioServiceAccount(payload: MinioServiceAccountUpdatePayload): Promise<void> {
+export async function updateMinioServiceAccount(payload: S3ServiceAccountUpdatePayload): Promise<void> {
   const accessKey = payload.accessKey?.trim();
   if (!accessKey) throw new Error("updateMinioServiceAccount: accessKey is required");
 
@@ -1306,7 +1306,7 @@ export async function getMinioServiceAccountInfo(accessKey: string): Promise<{
     policyJson: obj?.policy ? JSON.stringify(obj.policy, null, 2) : undefined, // here
   };
 }
-export async function listMinioServiceAccounts(username: string): Promise<MinioServiceAccount[]> {
+export async function listMinioServiceAccounts(username: string): Promise<S3ServiceAccount[]> {
   const { stdout } = await runMc(
     ["admin", "accesskey", "list", MINIO_ALIAS, username, "--json"],
     false
@@ -1341,7 +1341,7 @@ export async function listMinioServiceAccounts(username: string): Promise<MinioS
         name: info.name,
         description: info.description,
         status: status ?? "enabled",
-      } satisfies MinioServiceAccount;
+      } satisfies S3ServiceAccount;
     })
   );
 
