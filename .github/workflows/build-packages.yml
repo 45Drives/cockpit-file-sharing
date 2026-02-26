@@ -2,7 +2,7 @@ name: Build Packages
 on:
   push:
     branches: 
-      - s3management
+      - rustfs
     tags:
       - 'v*.*.*'
 jobs:

@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.5.4-1focal) focal; urgency=medium
+
+  * building test pacakge for rust fs
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 26 Feb 2026 07:18:51 -0400
+
 cockpit-file-sharing (4.5.3-4focal) focal; urgency=medium
 
   * fixed tab visibilty logic for s3 management + building package
