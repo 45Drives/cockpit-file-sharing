@@ -6,6 +6,12 @@
         <h2 class="text-lg font-semibold">User list</h2>
 
         <div class="flex items-center space-x-2">
+          <input
+            v-model.trim="searchQuery"
+            type="text"
+            placeholder="Search users"
+            class="rounded-md border border-default bg-default px-3 py-1.5 text-xs text-default"
+          />
           <button
             class="inline-flex items-center btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-green-700 disabled:opacity-60 disabled:cursor-default"
             @click="openCreateDialog" :disabled="loading">
@@ -22,7 +28,7 @@
         Loading users...
       </div>
 
-      <div v-else-if="users.length" class="overflow-x-auto">
+      <div v-else-if="filteredUsers.length" class="overflow-x-auto">
         <table class="min-w-full border-collapse text-sm">
           <thead>
             <tr>
@@ -42,7 +48,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="u in users" :key="u.username" class="text-center">
+            <tr v-for="u in filteredUsers" :key="u.username" class="text-center">
               <td class="px-3 py-2 border-b border-default">
                 {{ u.username }}
               </td>
@@ -86,7 +92,7 @@
       </div>
 
       <div v-else class="py-3 text-sm text-muted">
-        No {{ backendDisplay }} users found.
+        {{ users.length ? "No matching users found." : `No ${backendDisplay} users found.` }}
       </div>
     </section>
 
@@ -135,7 +141,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
+import { computed, ref, onMounted } from "vue";
 import MinioUserCreateModal from "./S3UserCreateModal.vue";
 import MinioUserDetailsModal from "./S3UserDetailsModal.vue";
 import MinioUserEditModal from "./S3UserEditModal.vue";
@@ -166,8 +172,14 @@ const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "ru
 const backendDisplay = props.backendLabel?.trim() || "MinIO";
 
 const users = ref<S3AccessUser[]>([]);
+const searchQuery = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
+const filteredUsers = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return users.value;
+  return users.value.filter((u) => String(u.username ?? "").toLowerCase().includes(q));
+});
 
 // Delete dialog state
 const showDeleteDialog = ref(false);

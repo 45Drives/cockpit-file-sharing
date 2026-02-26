@@ -36,7 +36,7 @@
             class="px-3 py-2 border-b-2 font-semibold"
             :class="activeTab === 'users'
               ? 'border-default text-default'
-              : 'border-transparent text-secondary hover:text-default'"
+              : 'border-transparent text-muted hover:text-default'"
             @click="activeTab = 'users'"
           >
             Users
@@ -47,7 +47,7 @@
             class="px-3 py-2 border-b-2 font-semibold"
             :class="activeTab === 'policies'
               ? 'border-default text-default'
-              : 'border-transparent text-secondary hover:text-default'"
+              : 'border-transparent text-muted hover:text-default'"
             @click="activeTab = 'policies'"
           >
             Policies
@@ -58,10 +58,10 @@
             class="px-3 py-2 border-b-2 font-semibold"
             :class="activeTab === 'groups'
               ? 'border-default text-default'
-              : 'border-transparent text-secondary hover:text-default'"
+              : 'border-transparent text-muted hover:text-default'"
             @click="activeTab = 'groups'"
           >
-            Groups
+            {{ isRustfsBackend ? "User groups" : "Groups" }}
           </button>
 
           <button
@@ -70,7 +70,7 @@
             class="px-3 py-2 border-b-2 font-semibold"
             :class="activeTab === 'accessKeys'
               ? 'border-default text-default'
-              : 'border-transparent text-secondary hover:text-default'"
+              : 'border-transparent text-muted hover:text-default'"
             @click="activeTab = 'accessKeys'"
           >
             Access keys

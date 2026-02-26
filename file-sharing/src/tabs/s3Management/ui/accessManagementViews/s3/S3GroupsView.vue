@@ -9,11 +9,19 @@
         </p>
       </div>
 
-      <button
-        class="inline-flex items-center btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
-        @click="openCreateDialog" :disabled="loading || (!isRustfsBackend && !usernames.length)">
-        Create group
-      </button>
+      <div class="flex items-center gap-2">
+        <input
+          v-model.trim="searchQuery"
+          type="text"
+          placeholder="Search groups"
+          class="rounded-md border border-default bg-default px-3 py-1.5 text-xs text-default"
+        />
+        <button
+          class="inline-flex items-center btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
+          @click="openCreateDialog" :disabled="loading || (!isRustfsBackend && !usernames.length)">
+          Create group
+        </button>
+      </div>
     </div>
 
     <div v-if="error" class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -24,7 +32,7 @@
       Loading groups...
     </div>
 
-    <div v-else-if="groups.length" class="overflow-x-auto">
+    <div v-else-if="filteredGroups.length" class="overflow-x-auto">
       <table class="min-w-full border-collapse text-sm">
         <thead>
           <tr class="text-center">
@@ -37,7 +45,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="g in groups" :key="g" class="text-center">
+          <tr v-for="g in filteredGroups" :key="g" class="text-center">
             <td class="px-3 py-2 border-b border-default">
               <span class="font-mono text-xs">{{ g }}</span>
             </td>
@@ -64,7 +72,7 @@
     </div>
 
     <div v-else class="py-3 text-sm text-muted">
-      No groups found.
+      {{ groups.length ? "No matching groups found." : "No groups found." }}
     </div>
 
     <!-- Create group modal -->
@@ -146,9 +154,15 @@ const props = defineProps<{
 const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
 
 const groups = ref<string[]>([]);
+const searchQuery = ref("");
 const users = ref<S3AccessUser[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
+const filteredGroups = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return groups.value;
+  return groups.value.filter((g) => String(g ?? "").toLowerCase().includes(q));
+});
 
 // Create dialog state
 const showCreateDialog = ref(false);

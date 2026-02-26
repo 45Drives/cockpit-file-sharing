@@ -71,8 +71,8 @@
                     type="button"
                     class="rounded-md px-3 py-1.5 font-semibold"
                     :class="activeAccessTab === 'policies'
-                      ? 'bg-default text-default'
-                      : 'text-muted hover:text-default'"
+                      ? 'bg-default text-muted'
+                      : 'text-muted hover:text-muted'"
                     @click="activeAccessTab = 'policies'">
                     Policies
                   </button>
@@ -81,8 +81,8 @@
                     type="button"
                     class="rounded-md px-3 py-1.5 font-semibold"
                     :class="activeAccessTab === 'groups'
-                      ? 'bg-default text-default'
-                      : 'text-muted hover:text-default'"
+                      ? 'bg-default text-muted'
+                      : 'text-muted hover:text-muted'"
                     @click="activeAccessTab = 'groups'">
                     Groups
                   </button>
@@ -127,7 +127,7 @@
                   </div>
                 </div>
 
-                <div class="text-xs text-secondary">
+                <div class="text-xs text-muted">
                   Policies control which buckets and actions this user is allowed to access.
                 </div>
               </div>
@@ -229,7 +229,7 @@
             </section>
 
             <!-- Reset secret card -->
-            <section class="rounded-lg border border-default bg-default px-4 py-4 space-y-3">
+            <section v-if="showServiceAccounts" class="rounded-lg border border-default bg-default px-4 py-4 space-y-3">
               <div class="flex items-center justify-between">
                 <div>
                   <div class="text-sm font-medium text-default">Reset user Password</div>

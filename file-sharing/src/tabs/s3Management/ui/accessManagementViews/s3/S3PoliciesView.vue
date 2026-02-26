@@ -9,11 +9,19 @@
         </p>
       </div>
 
-      <button
-        class="inline-flex items-center btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
-        @click="openCreateDialog" :disabled="loading">
-        Create policy
-      </button>
+      <div class="flex items-center gap-2">
+        <input
+          v-model.trim="searchQuery"
+          type="text"
+          placeholder="Search policies"
+          class="rounded-md border border-default bg-default px-3 py-1.5 text-xs text-default"
+        />
+        <button
+          class="inline-flex items-center btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
+          @click="openCreateDialog" :disabled="loading">
+          Create policy
+        </button>
+      </div>
     </div>
 
     <div v-if="error" class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -24,7 +32,7 @@
       Loading policies...
     </div>
 
-    <div v-else-if="policies.length" class="overflow-x-auto">
+    <div v-else-if="filteredPolicies.length" class="overflow-x-auto">
       <table class="min-w-full border-collapse text-sm">
         <thead>
           <tr>
@@ -37,7 +45,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="p in policies" :key="p">
+          <tr v-for="p in filteredPolicies" :key="p">
             <td class="px-3 py-2 border-b border-default">
               <span class="font-mono text-xs">{{ p }}</span>
             </td>
@@ -59,7 +67,7 @@
     </div>
 
     <div v-else class="py-3 text-sm text-muted">
-      No policies found.
+      {{ policies.length ? "No matching policies found." : "No policies found." }}
     </div>
 
     <MinioPolicyCreateModal v-model="showCreateDialog" :loading="loading" :error-message="createDialogError"
@@ -108,7 +116,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
+import { computed, ref, onMounted } from "vue";
 import {
   listMinioPolicies,
   getMinioPolicy,
@@ -131,8 +139,14 @@ const props = defineProps<{
 const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
 
 const policies = ref<string[]>([]);
+const searchQuery = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
+const filteredPolicies = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return policies.value;
+  return policies.value.filter((p) => String(p ?? "").toLowerCase().includes(q));
+});
 
 // Create dialog
 const showCreateDialog = ref(false);

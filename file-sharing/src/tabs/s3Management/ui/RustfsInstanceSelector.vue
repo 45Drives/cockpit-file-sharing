@@ -41,7 +41,7 @@
       >
         <option disabled value="">Select an instance…</option>
         <option v-for="a in aliases" :key="a.alias" :value="a.alias">
-          {{ a.alias }}{{ a.url ? ` (${a.url})` : "" }}
+          {{ a.alias }}
         </option>
       </select>
 
@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <div v-if="showManualForm || needsManualCreds" class="mt-4 rounded-lg border border-default p-4">
+    <div v-if="showManualForm || needsManualCreds" class="mt-4 rounded-lg border border-default p-4 bg-default">
       <div class="mb-2 flex items-center justify-between">
         <div class="text-sm font-semibold">Manual RustFS credentials</div>
         <button type="button" class="btn btn-secondary" @click="emit('update:showManualForm', false)">

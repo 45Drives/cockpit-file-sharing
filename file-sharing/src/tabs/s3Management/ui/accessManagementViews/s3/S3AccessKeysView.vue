@@ -6,6 +6,12 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <input
+          v-model.trim="searchQuery"
+          type="text"
+          placeholder="Search access keys"
+          class="rounded-md border border-default bg-default px-3 py-1.5 text-xs text-default"
+        />
         <button
           class="inline-flex items-center btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 disabled:opacity-60"
           @click="openCreateDialog"
@@ -32,7 +38,7 @@
       Loading access keys...
     </div>
 
-    <div v-else-if="accessKeys.length" class="overflow-x-auto">
+    <div v-else-if="filteredAccessKeys.length" class="overflow-x-auto">
       <table class="min-w-full border-collapse text-sm">
         <thead>
           <tr class="text-center">
@@ -45,7 +51,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="key in accessKeys" :key="key.accessKey" class="text-center">
+          <tr v-for="key in filteredAccessKeys" :key="key.accessKey" class="text-center">
             <td class="px-3 py-2 border-b border-default font-mono text-xs">{{ key.accessKey }}</td>
             <td class="px-3 py-2 border-b border-default text-xs">
               {{ key.expiresAt ? formatIsoLocal(key.expiresAt) : "No expiry" }}
@@ -69,7 +75,7 @@
               </button>
               <button
                 class="inline-flex items-center text-white border border-red-600 bg-red-500 text-xs font-semibold rounded px-2 py-1 hover:bg-red-600"
-                @click="onDelete(key.accessKey)"
+                @click="openDeleteDialog(key.accessKey)"
               >
                 Delete
               </button>
@@ -80,7 +86,35 @@
     </div>
 
     <div v-else class="py-3 text-sm text-muted">
-      No RustFS access keys found.
+      {{ accessKeys.length ? "No matching RustFS access keys found." : "No RustFS access keys found." }}
+    </div>
+
+    <div v-if="showDeleteDialog && deleteTargetAccessKey" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div class="bg-accent rounded-lg shadow-lg max-w-md w-full mx-4">
+        <div class="px-5 py-4 border-b border-default">
+          <h3 class="text-base font-semibold">
+            Delete access key "{{ deleteTargetAccessKey }}"
+          </h3>
+        </div>
+
+        <div class="px-5 py-4 space-y-3 text-sm">
+          <p>Are you sure you want to delete this RustFS access key?</p>
+          <p class="text-xs text-red-600">This action cannot be undone.</p>
+        </div>
+
+        <div class="px-5 py-3 border-t border-default flex justify-end gap-2">
+          <button class="px-3 py-1.5 text-xs rounded btn-secondary font-semibold" @click="closeDeleteDialog" :disabled="deleteLoading">
+            Cancel
+          </button>
+          <button
+            class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
+            @click="confirmDelete"
+            :disabled="deleteLoading"
+          >
+            {{ deleteLoading ? "Deleting..." : "Delete" }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <div v-if="showCreateDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -201,7 +235,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { ArrowPathIcon } from "@heroicons/vue/20/solid";
 import { formatIsoLocal } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 import {
@@ -215,12 +249,33 @@ import type { MinioServiceAccount } from "@/tabs/s3Management/types/types";
 import { Notification, pushNotification } from "@45drives/houston-common-ui";
 
 const accessKeys = ref<MinioServiceAccount[]>([]);
+const searchQuery = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
+const filteredAccessKeys = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return accessKeys.value;
+  return accessKeys.value.filter((k) => {
+    const haystack = [
+      k.accessKey,
+      k.name,
+      k.description,
+      k.status,
+      k.expiresAt ? formatIsoLocal(k.expiresAt) : "no expiry",
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(q);
+  });
+});
 
 const showCreateDialog = ref(false);
 const createLoading = ref(false);
 const createError = ref<string | null>(null);
+const showDeleteDialog = ref(false);
+const deleteTargetAccessKey = ref<string | null>(null);
+const deleteLoading = ref(false);
 const dialogMode = ref<"create" | "edit">("create");
 const createForm = ref({
   accessKey: "",
@@ -384,15 +439,28 @@ async function submitCreate() {
   }
 }
 
-async function onDelete(accessKey: string) {
-  const ok = window.confirm(`Delete access key "${accessKey}"?`);
-  if (!ok) return;
+function openDeleteDialog(accessKey: string) {
+  deleteTargetAccessKey.value = accessKey;
+  showDeleteDialog.value = true;
+}
+
+function closeDeleteDialog() {
+  showDeleteDialog.value = false;
+  deleteTargetAccessKey.value = null;
+}
+
+async function confirmDelete() {
+  if (!deleteTargetAccessKey.value) return;
+  deleteLoading.value = true;
   try {
-    await deleteRustfsServiceAccount(accessKey);
+    await deleteRustfsServiceAccount(deleteTargetAccessKey.value);
     await loadAccessKeys();
-    pushNotification(new Notification("Access key deleted successfully", "success"));
+    closeDeleteDialog();
+    pushNotification(new Notification("Success","Access key deleted successfully", "success"));
   } catch (e: any) {
     pushNotification(new Notification("Failed to delete access key", e?.message ?? "Unknown error", "error"));
+  } finally {
+    deleteLoading.value = false;
   }
 }
 
