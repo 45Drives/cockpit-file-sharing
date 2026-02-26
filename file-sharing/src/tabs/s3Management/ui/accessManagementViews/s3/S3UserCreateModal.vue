@@ -21,7 +21,7 @@
               Username
             </label>
             <input v-model.trim="form.username" type="text" autocomplete="off"
-              class="w-full border border-default bg-default rounded px-2 py-1 text-sm" placeholder="minio username" />
+              class="w-full border border-default bg-default rounded px-2 py-1 text-sm" :placeholder="`${backendDisplay} username`" />
           </div>
 
           <div>

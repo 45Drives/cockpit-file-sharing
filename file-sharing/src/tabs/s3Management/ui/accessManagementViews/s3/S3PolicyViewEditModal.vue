@@ -33,7 +33,7 @@
             <input type="text" :value="policyName || ''"
               class="w-full border border-default bg-default rounded px-2 py-1 text-sm text-default" disabled />
             <p class="text-sm text-muted mt-1">
-              Policy names are managed in MinIO and cannot be changed here.
+              Policy names are managed in {{ backendDisplay }} and cannot be changed here.
             </p>
           </div>
 
@@ -94,6 +94,7 @@ const props = defineProps<{
   errorMessage?: string | null;
   policyName: string | null;
   policyJson: string | null;
+  backendLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -104,6 +105,7 @@ const emit = defineEmits<{
 const localJson = ref("");
 const originalJson = ref("");
 const localError = ref<string | null>(null);
+const backendDisplay = props.backendLabel?.trim() || "MinIO";
 
 // When the modal opens or the policy JSON changes, sync local state
 watch(

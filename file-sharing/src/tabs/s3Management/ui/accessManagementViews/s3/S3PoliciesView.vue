@@ -83,6 +83,7 @@
 
     <MinioPolicyViewEditModal v-model="showViewEditDialog" :policy-name="selectedPolicyName"
       :policy-json="selectedPolicyJson" :loading="viewEditLoading" :error-message="viewEditError"
+      :backend-label="isRustfsBackend ? 'RustFS' : 'MinIO'"
       @save="handlePolicySave" />
 
     <div v-if="showDeleteDialog && deleteTarget"
