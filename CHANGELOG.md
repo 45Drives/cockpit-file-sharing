@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.4-2
+## Cockpit File Sharing 4.5.4-3
 
-* building test pacakge for rust fs wit installing awscurl
+* building test pacakge for rust fs + ui improvements
