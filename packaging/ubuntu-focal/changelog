@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.5.4-2focal) focal; urgency=medium
+
+  * building test pacakge for rust fs wit installing awscurl
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 26 Feb 2026 08:09:21 -0400
+
 cockpit-file-sharing (4.5.4-1focal) focal; urgency=medium
 
   * building test pacakge for rust fs
