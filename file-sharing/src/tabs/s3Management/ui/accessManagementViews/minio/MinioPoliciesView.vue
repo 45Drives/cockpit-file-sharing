@@ -9,24 +9,11 @@
         </p>
       </div>
 
-      <div class="flex items-center gap-2">
-        <div class="relative">
-          <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-icon text-muted" />
-          <input
-            v-model.trim="searchQuery"
-            type="text"
-            placeholder="Search policies"
-            style="padding-left: 2rem;"
-            class="w-72 rounded-md border border-accent bg-accent pl-8 pr-3 py-2.5 text-sm text-default"
-          />
-        </div>
-        <button
-          class="inline-flex items-center gap-1 btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
-          @click="openCreateDialog" :disabled="loading">
-          <PlusIcon class="size-icon" />
-          Create policy
-        </button>
-      </div>
+      <button
+        class="inline-flex items-center btn-primary text-default text-xs font-medium rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
+        @click="openCreateDialog" :disabled="loading">
+        Create policy
+      </button>
     </div>
 
     <div v-if="error" class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -37,7 +24,7 @@
       Loading policies...
     </div>
 
-    <div v-else-if="filteredPolicies.length" class="overflow-x-auto">
+    <div v-else-if="policies.length" class="overflow-x-auto">
       <table class="min-w-full border-collapse text-sm">
         <thead>
           <tr>
@@ -50,21 +37,19 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="p in filteredPolicies" :key="p">
+          <tr v-for="p in policies" :key="p">
             <td class="px-3 py-2 border-b border-default">
-              <span class="font-mono text-sm">{{ p }}</span>
+              <span class="font-mono text-xs">{{ p }}</span>
             </td>
             <td class="px-3 py-2 border-b border-default whitespace-nowrap">
               <button
-                class="inline-flex items-center gap-1 btn-primary rounded px-2 py-1 mr-1 text-sm font-semibold"
+                class="inline-flex items-center btn-primary rounded px-2 py-1 mr-1"
                 @click="onViewEditPolicy(p)">
-                <EyeIcon class="size-icon" />
                 View
               </button>
               <button
-                class="inline-flex items-center gap-1 text-white border border-red-600 bg-red-500 text-default text-sm font-semibold rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
+                class="inline-flex items-center text-white border border-red-600 bg-red-500 text-default text-xs font-medium rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
                 @click="onDeletePolicy(p)" :disabled="loading">
-                <TrashIcon class="size-icon" />
                 Delete
               </button>
             </td>
@@ -74,7 +59,7 @@
     </div>
 
     <div v-else class="py-3 text-sm text-muted">
-      {{ policies.length ? "No matching policies found." : "No policies found." }}
+      No policies found.
     </div>
 
     <MinioPolicyCreateModal v-model="showCreateDialog" :loading="loading" :error-message="createDialogError"
@@ -107,14 +92,13 @@
         </div>
 
         <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-          <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100 font-semibold"
+          <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100"
             @click="closeDeleteDialog" :disabled="loading">
             Cancel
           </button>
           <button
-            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
+            class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60"
             @click="confirmDeletePolicy" :disabled="loading">
-            <TrashIcon class="size-icon" />
             Delete
           </button>
         </div>
@@ -124,7 +108,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import {
   listMinioPolicies,
   getMinioPolicy,
@@ -137,10 +121,9 @@ import {
   getRustfsPolicy,
   listRustfsPolicies,
 } from "../../../api/rustfsCliAdapter";
-import MinioPolicyCreateModal from "./S3PolicyCreateModal.vue";
-import MinioPolicyViewEditModal from "./S3PolicyViewEditModal.vue";
+import MinioPolicyCreateModal from "./MinioPolicyCreateModal.vue";
+import MinioPolicyViewEditModal from "./MinioPolicyViewEditModal.vue";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
-import { MagnifyingGlassIcon, PlusIcon, EyeIcon, TrashIcon } from "@heroicons/vue/20/solid";
 
 const props = defineProps<{
   backendLabel?: string;
@@ -148,14 +131,8 @@ const props = defineProps<{
 const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
 
 const policies = ref<string[]>([]);
-const searchQuery = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
-const filteredPolicies = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase();
-  if (!q) return policies.value;
-  return policies.value.filter((p) => String(p ?? "").toLowerCase().includes(q));
-});
 
 // Create dialog
 const showCreateDialog = ref(false);

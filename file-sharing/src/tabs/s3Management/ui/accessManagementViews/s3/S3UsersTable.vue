@@ -6,15 +6,20 @@
         <h2 class="text-lg font-semibold">User list</h2>
 
         <div class="flex items-center space-x-2">
-          <input
-            v-model.trim="searchQuery"
-            type="text"
-            placeholder="Search users"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-xs text-default"
-          />
+          <div class="relative">
+            <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-icon text-muted" />
+            <input
+              v-model.trim="searchQuery"
+              type="text"
+              placeholder="Search users"
+              style="padding-left: 2rem;"
+              class="w-72 rounded-md border border-accent bg-accent pl-8 pr-3 py-2.5 text-sm text-default"
+            />
+          </div>
           <button
-            class="inline-flex items-center btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-green-700 disabled:opacity-60 disabled:cursor-default"
+            class="inline-flex items-center gap-1 btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-green-700 disabled:opacity-60 disabled:cursor-default"
             @click="openCreateDialog" :disabled="loading">
+            <PlusIcon class="size-icon" />
             Create user
           </button>
         </div>
@@ -53,7 +58,7 @@
                 {{ u.username }}
               </td>
               <td class="px-3 py-2 border-b border-default">
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" :class="u.status === 'enabled'
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-sm font-medium" :class="u.status === 'enabled'
                     ? 'bg-emerald-50 text-emerald-700'
                     : 'bg-red-50 text-red-700'
                   ">
@@ -61,28 +66,31 @@
                 </span>
               </td>
               <td class="px-3 py-2 border-b border-default">
-                <span v-if="u.policies && u.policies.length" class="text-xs">
+                <span v-if="u.policies && u.policies.length" class="text-sm">
                   {{ u.policyCount }}
                 </span>
-                <span v-else class="text-xs italic text-muted">
+                <span v-else class="text-sm italic text-muted">
                   None
                 </span>
               </td>
               <td class="px-3 py-2 border-b border-default whitespace-nowrap">
                 <button
-                  class="inline-flex items-center btn-primary text-xs text-default font-semibold rounded px-2 py-1 mr-1"
+                  class="inline-flex items-center gap-1 btn-primary text-sm text-default font-semibold rounded px-2 py-1 mr-1"
                   @click="onViewUser(u)">
+                  <EyeIcon class="size-icon" />
                   View
                 </button>
                 <button
-                  class="inline-flex items-center btn-secondary text-default text-xs font-semibold rounded px-2 py-1 mr-1"
+                  class="inline-flex items-center gap-1 btn-secondary text-default text-sm font-semibold rounded px-2 py-1 mr-1"
                   @click="openEditDialog(u)">
+                  <PencilSquareIcon class="size-icon" />
                   Edit
                 </button>
 
                 <button
-                  class="inline-flex items-center text-white border border-red-600 bg-red-500 text-default text-xs font-semibold rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
+                  class="inline-flex items-center gap-1 text-white border border-red-600 bg-red-500 text-default text-sm font-semibold rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
                   @click="openDeleteDialog(u)">
+                  <TrashIcon class="size-icon" />
                   Delete
                 </button>
               </td>
@@ -98,7 +106,7 @@
 
     <!-- Delete user dialog -->
     <div v-if="showDeleteDialog && deleteTarget"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
       <div class="bg-accent rounded-lg shadow-lg max-w-md w-full mx-4">
         <div class="px-5 py-4 border-b border-default">
           <h3 class="text-base font-semibold">
@@ -121,8 +129,9 @@
             Cancel
           </button>
           <button
-            class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
+            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
             @click="confirmDelete" :disabled="loading">
+            <TrashIcon class="size-icon" />
             Delete
           </button>
         </div>
@@ -131,7 +140,8 @@
 
     <!-- Create MinIO user modal -->
     <MinioUserCreateModal v-model="showUserDialog" :loading="loading" :error-message="userDialogError"
-      :available-policies="availablePolicies" :available-groups="availableGroups" @submit="handleUserSubmit" />
+      :available-policies="availablePolicies" :available-groups="availableGroups"
+      :backend-label="backendDisplay" @submit="handleUserSubmit" />
     <MinioUserDetailsModal v-model="showUserDetailsDialog" :user="selectedUserDetails" :loading="userDetailsLoading"
       :error-message="userDetailsError" :show-service-accounts="!isRustfsBackend" />
     <MinioUserEditModal v-model="showEditDialog" :user="editTarget" :loading="loading" :error-message="editDialogError"
@@ -145,6 +155,7 @@ import { computed, ref, onMounted } from "vue";
 import MinioUserCreateModal from "./S3UserCreateModal.vue";
 import MinioUserDetailsModal from "./S3UserDetailsModal.vue";
 import MinioUserEditModal from "./S3UserEditModal.vue";
+import { MagnifyingGlassIcon, PlusIcon, EyeIcon, PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
 
 import {listMinioUsers,deleteMinioUser,createMinioUser,listMinioPolicies,getMinioUserInfo,updateMinioUser,listMinioGroups,
 } from "../../../api/minioCliAdapter";
@@ -253,7 +264,7 @@ async function confirmDelete() {
     } else {
       await deleteMinioUser(username);
     }
-    pushNotification(new Notification(`User "${username} deleted succesfully`, "success"));
+    pushNotification(new Notification("Success",`User "${username} deleted succesfully`, "success"));
 
   } catch (e: any) {
     const msg = (e?.message || "").toLowerCase();

@@ -7,8 +7,7 @@
 
     <div v-else-if="availableBackends.length === 0">
       <p class="error">
-        No storage backend is available. MinIO, RustFS, Ceph RGW, and Garage appear to be
-        misconfigured or unreachable.
+        Could not detect MinIO, RustFS, Ceph RGW, or Garage on this system.
       </p>
     </div>
 

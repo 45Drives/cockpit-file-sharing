@@ -6,17 +6,22 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <input
-          v-model.trim="searchQuery"
-          type="text"
-          placeholder="Search access keys"
-          class="rounded-md border border-default bg-default px-3 py-1.5 text-xs text-default"
-        />
+        <div class="relative">
+          <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-icon text-muted" />
+          <input
+            v-model.trim="searchQuery"
+            type="text"
+            placeholder="Search access keys"
+            style="padding-left: 2rem;"
+            class="w-72 rounded-md border border-accent bg-accent pl-8 pr-3 py-2.5 text-sm text-default"
+          />
+        </div>
         <button
-          class="inline-flex items-center btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 disabled:opacity-60"
+          class="inline-flex items-center gap-1 btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 disabled:opacity-60"
           @click="openCreateDialog"
           :disabled="loading"
         >
+          <PlusIcon class="size-icon" />
           Create key
         </button>
 
@@ -52,31 +57,33 @@
         </thead>
         <tbody>
           <tr v-for="key in filteredAccessKeys" :key="key.accessKey" class="text-center">
-            <td class="px-3 py-2 border-b border-default font-mono text-xs">{{ key.accessKey }}</td>
-            <td class="px-3 py-2 border-b border-default text-xs">
+            <td class="px-3 py-2 border-b border-default font-mono text-sm">{{ key.accessKey }}</td>
+            <td class="px-3 py-2 border-b border-default text-sm">
               {{ key.expiresAt ? formatIsoLocal(key.expiresAt) : "No expiry" }}
             </td>
             <td class="px-3 py-2 border-b border-default">
               <span
-                class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                class="inline-flex items-center rounded-full px-2 py-0.5 text-sm font-medium"
                 :class="(key.status ?? 'enabled') === 'enabled' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'"
               >
                 {{ (key.status ?? "enabled") === "enabled" ? "Enabled" : "Disabled" }}
               </span>
             </td>
-            <td class="px-3 py-2 border-b border-default text-xs">{{ key.name || "-" }}</td>
-            <td class="px-3 py-2 border-b border-default text-xs">{{ key.description || "-" }}</td>
+            <td class="px-3 py-2 border-b border-default text-sm">{{ key.name || "-" }}</td>
+            <td class="px-3 py-2 border-b border-default text-sm">{{ key.description || "-" }}</td>
             <td class="px-3 py-2 border-b border-default whitespace-nowrap space-x-1">
               <button
-                class="inline-flex items-center btn-secondary text-xs text-default font-semibold rounded px-2 py-1"
+                class="inline-flex items-center gap-1 btn-secondary text-sm text-default font-semibold rounded px-2 py-1"
                 @click="openEditDialog(key)"
               >
+                <PencilSquareIcon class="size-icon" />
                 Edit
               </button>
               <button
-                class="inline-flex items-center text-white border border-red-600 bg-red-500 text-xs font-semibold rounded px-2 py-1 hover:bg-red-600"
+                class="inline-flex items-center gap-1 text-white border border-red-600 bg-red-500 text-sm font-semibold rounded px-2 py-1 hover:bg-red-600"
                 @click="openDeleteDialog(key.accessKey)"
               >
+                <TrashIcon class="size-icon" />
                 Delete
               </button>
             </td>
@@ -89,7 +96,7 @@
       {{ accessKeys.length ? "No matching RustFS access keys found." : "No RustFS access keys found." }}
     </div>
 
-    <div v-if="showDeleteDialog && deleteTargetAccessKey" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div v-if="showDeleteDialog && deleteTargetAccessKey" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
       <div class="bg-accent rounded-lg shadow-lg max-w-md w-full mx-4">
         <div class="px-5 py-4 border-b border-default">
           <h3 class="text-base font-semibold">
@@ -107,17 +114,18 @@
             Cancel
           </button>
           <button
-            class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
+            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
             @click="confirmDelete"
             :disabled="deleteLoading"
           >
+            <TrashIcon class="size-icon" />
             {{ deleteLoading ? "Deleting..." : "Delete" }}
           </button>
         </div>
       </div>
     </div>
 
-    <div v-if="showCreateDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div v-if="showCreateDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
       <div class="bg-accent rounded-lg shadow-lg max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden">
         <div class="px-5 py-4 border-b border-default flex items-center justify-between">
           <h3 class="text-base font-semibold">{{ dialogMode === "edit" ? "Edit Key" : "Create Key" }}</h3>
@@ -144,7 +152,7 @@
                 />
               </div>
 
-              <div>
+              <div v-if="dialogMode === 'create'">
                 <label class="block text-xs font-semibold mb-1">Secret Key</label>
                 <input
                   v-model="createForm.secretKey"
@@ -152,6 +160,10 @@
                   required
                   class="w-full border border-default bg-default rounded px-2 py-1 text-xs font-mono"
                 />
+              </div>
+
+              <div v-if="dialogMode === 'create'" class="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Save this secret key now. For security reasons, it cannot be retrieved later.
               </div>
 
               <div>
@@ -236,7 +248,7 @@
 
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
-import { ArrowPathIcon } from "@heroicons/vue/20/solid";
+import { ArrowPathIcon, MagnifyingGlassIcon, PlusIcon, PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
 import { formatIsoLocal } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 import {
   createRustfsServiceAccount,
@@ -379,7 +391,7 @@ async function submitCreate() {
     createError.value = "Access key is required.";
     return;
   }
-  if (!secretKey) {
+  if (dialogMode.value === "create" && !secretKey) {
     createError.value = "Secret key is required.";
     return;
   }
@@ -427,7 +439,7 @@ async function submitCreate() {
     closeCreateDialog();
     await loadAccessKeys();
     pushNotification(
-      new Notification(
+      new Notification("Success",
         dialogMode.value === "edit" ? "Access key updated successfully" : "Access key created successfully",
         "success"
       )

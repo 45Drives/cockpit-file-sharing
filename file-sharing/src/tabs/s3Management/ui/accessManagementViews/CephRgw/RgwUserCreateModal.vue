@@ -1,5 +1,5 @@
 <template>
-  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
     <div class="bg-default rounded-lg shadow-lg max-w-md w-full mx-4 max-h-[85vh] overflow-y-auto">
       <div class="px-5 py-4 border-b border-default">
         <h3 class="text-base font-semibold">

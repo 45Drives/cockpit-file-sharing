@@ -49,12 +49,15 @@
     <div v-if="!showUsageDashboard"
       class="flex flex-col gap-3 rounded-lg border-default bg-plugin-header p-4 text-sm text-default m-4">
       <div class="flex flex-wrap gap-4">
-        <label class="flex min-w-[180px] flex-1 flex-col gap-1">
+        <label class="flex min-w-[13.75rem] flex-1 flex-col gap-1">
           <span class="text-xs font-medium uppercase tracking-wide text-label">
-            Name
+            Search
           </span>
-          <input v-model="nameFilter" type="text" placeholder="Filter by name"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-default placeholder:text-default outline-none focus:ring-1" />
+          <div class="relative">
+            <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-icon text-muted" />
+            <input v-model="nameFilter" type="text" placeholder="Search buckets by name" style="padding-left: 2rem;"
+              class="w-full rounded-md border border-default bg-default pl-8 pr-3 py-1.5 text-sm text-default placeholder:text-default outline-none focus:ring-1" />
+          </div>
         </label>
 
         <label v-if="backend != 'ceph'" class="flex min-w-[180px] flex-1 flex-col gap-1">
@@ -150,8 +153,9 @@
 
             <div class="flex items-center gap-2">
               <button type="button"
-                class="rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-50"
+                class="inline-flex items-center gap-1 rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-50"
                 :disabled="page <= 1" @click="page = Math.max(1, page - 1)">
+                <ChevronLeftIcon class="size-icon" />
                 Prev
               </button>
 
@@ -161,9 +165,10 @@
               </span>
 
               <button type="button"
-                class="rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-50"
+                class="inline-flex items-center gap-1 rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-50"
                 :disabled="page >= totalPages" @click="page = Math.min(totalPages, page + 1)">
                 Next
+                <ChevronRightIcon class="size-icon" />
               </button>
             </div>
           </div>
@@ -261,18 +266,23 @@
             <!-- Actions -->
             <div class="mt-3 flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
               <button type="button" @click="openEditModal(bucket)" :disabled="openingModal"
-                class="rounded-md btn-primary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-60">
+                class="inline-flex items-center gap-1 rounded-md btn-primary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-60">
                 <LoadingSpinner v-if="openingModal" />
-                <span v-else>Edit</span>
+                <template v-else>
+                  <PencilSquareIcon class="size-icon" />
+                  <span>Edit</span>
+                </template>
               </button>
 
               <button v-if="backend === 'ceph' || backend === 'minio' || backend === 'rustfs' || backend === 'garage'" type="button"
-                class="rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800"
+                class="inline-flex items-center gap-1 rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800"
                 @click="openUsageDashboard(bucket)">
+                <EyeIcon class="size-icon" />
                 Usage
               </button>
               <button type="button" @click="confirmDelete(bucket)"
-                class="rounded-md bg-red-600/90 px-2.5 py-1 text-xs text-white font-medium text- hover:bg-red-500">
+                class="inline-flex items-center gap-1 rounded-md bg-red-600/90 px-2.5 py-1 text-xs text-white font-medium text- hover:bg-red-500">
+                <TrashIcon class="size-icon" />
                 Delete
               </button>
             </div>
@@ -310,7 +320,17 @@
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
 import type { RgwGateway, CephBucket, MinioBucket, RustfsBucket, GarageBucket, CephDeps, MinioDeps, RustfsDeps, GarageDeps, BackendKind } from "../../types/types";
-import { ArchiveBoxIcon, ArrowPathIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
+import {
+  ArchiveBoxIcon,
+  ArrowPathIcon,
+  ArrowUturnLeftIcon,
+  MagnifyingGlassIcon,
+  EyeIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "@heroicons/vue/20/solid";
 import BucketFormModal from "./BucketFormModal.vue";
 import BucketDeleteModal from "./BucketDeleteModal.vue";
 import CephBucketDashboardView from "./CephBucketDashboardView.vue";

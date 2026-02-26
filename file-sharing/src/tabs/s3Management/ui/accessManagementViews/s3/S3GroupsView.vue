@@ -10,15 +10,20 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <input
-          v-model.trim="searchQuery"
-          type="text"
-          placeholder="Search groups"
-          class="rounded-md border border-default bg-default px-3 py-1.5 text-xs text-default"
-        />
+        <div class="relative">
+          <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-icon text-muted" />
+          <input
+            v-model.trim="searchQuery"
+            type="text"
+            placeholder="Search groups"
+            style="padding-left: 2rem;"
+            class="w-72 rounded-md border border-accent bg-accent pl-8 pr-3 py-2.5 text-sm text-default"
+          />
+        </div>
         <button
-          class="inline-flex items-center btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
+          class="inline-flex items-center gap-1 btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
           @click="openCreateDialog" :disabled="loading || (!isRustfsBackend && !usernames.length)">
+          <PlusIcon class="size-icon" />
           Create group
         </button>
       </div>
@@ -47,22 +52,25 @@
         <tbody>
           <tr v-for="g in filteredGroups" :key="g" class="text-center">
             <td class="px-3 py-2 border-b border-default">
-              <span class="font-mono text-xs">{{ g }}</span>
+              <span class="font-mono text-sm">{{ g }}</span>
             </td>
             <td class="px-3 py-2 border-b border-default whitespace-nowrap">
               <button
-                class="inline-flex items-center btn-secondary text-xs font-semibold rounded px-2 py-1 mr-1"
+                class="inline-flex items-center gap-1 btn-secondary text-sm font-semibold rounded px-2 py-1 mr-1"
                 @click="onViewGroup(g)">
+                <EyeIcon class="size-icon" />
                 View
               </button>
               <button
-                class="inline-flex items-center btn-primary text-xs font-semibold rounded px-2 py-1 mr-1"
+                class="inline-flex items-center gap-1 btn-primary text-sm font-semibold rounded px-2 py-1 mr-1"
                 @click="onEditGroup(g)">
+                <PencilSquareIcon class="size-icon" />
                 Edit
               </button>
               <button
-                class="inline-flex items-center text-white border border-red-600 bg-red-500 text-default text-xs font-semibold rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
+                class="inline-flex items-center gap-1 text-white border border-red-600 bg-red-500 text-default text-sm font-semibold rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
                 @click="onDeleteGroup(g)" :disabled="loading">
+                <TrashIcon class="size-icon" />
                 Delete
               </button>
             </td>
@@ -84,7 +92,7 @@
       :mode="groupDialogMode" @submit="handleGroupUpdate" @switch-mode="groupDialogMode = $event" />
     <!-- Delete confirm dialog -->
     <div v-if="showDeleteDialog && deleteTarget"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-10">
       <div class="bg-accent rounded-lg shadow-lg max-w-md w-full mx-4">
         <div class="px-5 py-4 border-b border-default">
           <h3 class="text-base font-semibold">
@@ -113,8 +121,9 @@
             Cancel
           </button>
           <button
-            class="px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
+            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
             @click="confirmDeleteGroup" :disabled="loading">
+            <TrashIcon class="size-icon" />
             Delete
           </button>
         </div>
@@ -147,6 +156,7 @@ import MinioGroupCreateModal from "./S3GroupCreateModal.vue";
 import type { S3AccessGroupInfo, S3AccessUser } from "@/tabs/s3Management/types/types";
 import MinioGroupModal from "./S3GroupModal.vue";
 import { pushNotification, Notification } from "@45drives/houston-common-ui";
+import { MagnifyingGlassIcon, PlusIcon, EyeIcon, PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
 
 const props = defineProps<{
   backendLabel?: string;

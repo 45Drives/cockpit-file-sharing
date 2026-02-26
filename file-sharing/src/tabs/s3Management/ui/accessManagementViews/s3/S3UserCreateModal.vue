@@ -1,10 +1,10 @@
 <template>
-  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
     <div class="bg-default rounded-lg shadow-lg max-w-md w-full mx-4">
       <!-- Header -->
       <div class="px-5 py-4 border-b border-default flex items-center justify-between">
         <h3 class="text-base font-semibold">
-          Create MinIO user
+          Create {{ backendDisplay }} user
         </h3>
       </div>
 
@@ -49,8 +49,8 @@
           </h4>
 
           <div class="flex items-center justify-between">
-            <span class="text-xs text-gray-600">
-              Password is required for MinIO user creation.
+            <span class="text-xs text-muted">
+              Password is required for {{ backendDisplay }} user creation.
             </span>
             <button type="button"
               class="text-xs px-2 py-1 rounded btn-primary text-default hover:bg-primary disabled:opacity-60 font-semibold"
@@ -96,7 +96,7 @@
               class="px-3 py-1.5 -mb-px border-b-2 font-semibold"
               :class="activeAccessTab === 'policies'
                 ? 'border-default text-default'
-                : 'border-transparent text-secondary hover:text-default'"
+                : 'border-transparent text-muted hover:text-default'"
               @click="activeAccessTab = 'policies'">
               Policies
             </button>
@@ -105,7 +105,7 @@
               class="px-3 py-1.5 -mb-px border-b-2 font-semibold"
               :class="activeAccessTab === 'groups'
                 ? 'border-default text-default'
-                : 'border-transparent text-secondary hover:text-default'"
+                : 'border-transparent text-muted hover:text-default'"
               @click="activeAccessTab = 'groups'">
               Groups
             </button>
@@ -114,10 +114,10 @@
           <!-- Policies pane -->
           <div v-if="activeAccessTab === 'policies'">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-smtext-default">
-                Attach one or more MinIO policies
+              <span class="text-sm text-default">
+                Attach one or more {{ backendDisplay }} policies
               </span>
-              <span class="text-smtext-default">
+              <span class="text-sm text-default">
                 Selected: {{ form.policies.length }}
               </span>
             </div>
@@ -135,18 +135,18 @@
                 </div>
               </label>
             </div>
-            <p v-else class="text-smtext-default italic">
-              No policies loaded. User will be created with no direct policies.
+            <p v-else class="text-sm text-default italic">
+              No policies loaded. User will be created with no direct {{ backendDisplay }} policies.
             </p>
           </div>
 
           <!-- Groups pane -->
           <div v-else>
             <div class="flex items-center justify-between mb-1">
-              <span class="text-smtext-default">
-                Attach user to one or more MinIO groups
+              <span class="text-sm text-default">
+                Attach user to one or more {{ backendDisplay }} groups
               </span>
-              <span class="text-smtext-default">
+              <span class="text-sm text-default">
                 Selected: {{ form.groups.length }}
               </span>
             </div>
@@ -164,8 +164,8 @@
                 </div>
               </label>
             </div>
-            <p v-else class="text-smtext-default italic">
-              No groups loaded. User will not be attached to any groups.
+            <p v-else class="text-sm text-default italic">
+              No groups loaded. User will not be attached to any {{ backendDisplay }} groups.
             </p>
           </div>
         </section>
@@ -206,6 +206,7 @@ const props = defineProps<{
   errorMessage?: string | null;
   availablePolicies: string[];
   availableGroups: string[];
+  backendLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -224,6 +225,7 @@ const form = ref({
 const localError = ref<string | null>(null);
 const showSecret = ref(false);
 const activeAccessTab = ref<"policies" | "groups">("policies");
+const backendDisplay = (props.backendLabel?.trim() || "MinIO");
 
 watch(
   () => props.modelValue,

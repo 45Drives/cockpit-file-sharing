@@ -88,7 +88,7 @@ type RustfsResolvedConnection = {
   region: string;
   accessKey: string;
   secretKey: string;
-  source: "manual" | "env" | "systemd" | "container" | "fallback";
+  source: "manual" | "env" | "systemd" | "container";
 };
 type RustfsManualConnectionInput = {
   host?: string;
@@ -318,7 +318,6 @@ function parseEnvFileContent(text: string): Record<string, string> {
 }
 
 function buildConnectionFromEnv(overrides?: Partial<RustfsResolvedConnection>): RustfsResolvedConnection | undefined {
-  const allowDefaultCreds = overrides?.source === "fallback";
   const apiBaseRaw =
     String(process.env.RUSTFS_ADMIN_API_BASE || process.env.RUSTFS_API_BASE || "").trim();
   const endpointRaw = String(process.env.RUSTFS_S3_ENDPOINT || "").trim();
@@ -333,14 +332,12 @@ function buildConnectionFromEnv(overrides?: Partial<RustfsResolvedConnection>): 
   const accessKey = String(
     overrides?.accessKey ||
       process.env.RUSTFS_ADMIN_ACCESS_KEY ||
-      process.env.RUSTFS_ACCESS_KEY ||
-      (allowDefaultCreds ? "rustfsadmin" : "")
+      process.env.RUSTFS_ACCESS_KEY
   );
   const secretKey = String(
     overrides?.secretKey ||
       process.env.RUSTFS_ADMIN_SECRET_KEY ||
-      process.env.RUSTFS_SECRET_KEY ||
-      (allowDefaultCreds ? "rustfsadmin" : "")
+      process.env.RUSTFS_SECRET_KEY
   );
 
   const resolvedApiBase = apiBase || normalizeApiBase(`${endpointUrl}/rustfs/admin/v3`);
@@ -549,18 +546,6 @@ async function resolveRustfsConnection(): Promise<RustfsResolvedConnection> {
     push(buildConnectionFromEnv({ source: "env" }));
     push(await detectSystemdRustfsConnection());
     push(await detectContainerRustfsConnection());
-
-    if (out.length === 0) {
-      push(
-        buildConnectionFromEnv({
-          apiBase: "http://localhost:9200/rustfs/admin/v3",
-          endpointUrl: "http://localhost:9200",
-          accessKey: "rustfsadmin",
-          secretKey: "rustfsadmin",
-          source: "fallback",
-        })
-      );
-    }
 
     rustfsDiscoveryCache = { values: out, expiresAtMs: now + 60_000 };
     return out;
@@ -1469,17 +1454,6 @@ export async function listRustfsAliasCandidates(): Promise<S3AliasCandidate[]> {
   if (container && !candidates.some((c) => c.endpointUrl === container.endpointUrl && c.source === container.source)) {
     candidates.push(container);
   }
-  if (candidates.length === 0) {
-    const fallback = buildConnectionFromEnv({
-      apiBase: "http://localhost:9200/rustfs/admin/v3",
-      endpointUrl: "http://localhost:9200",
-      accessKey: "rustfsadmin",
-      secretKey: "rustfsadmin",
-      source: "fallback",
-    });
-    if (fallback) candidates.push(fallback);
-  }
-
   return candidates.map((c) => {
     const keyPrefix = String(c.accessKey ?? "").trim() || c.source;
     return {
