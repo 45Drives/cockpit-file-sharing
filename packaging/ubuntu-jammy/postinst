@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ] || [ "$1" = "triggered" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c "import awscurl" >/dev/null 2>&1 || python3 -m pip install awscurl || :
+  fi
+fi
+
+exit 0
