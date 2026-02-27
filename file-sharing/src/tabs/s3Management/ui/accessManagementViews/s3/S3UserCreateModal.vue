@@ -225,7 +225,13 @@ const form = ref({
 const localError = ref<string | null>(null);
 const showSecret = ref(false);
 const activeAccessTab = ref<"policies" | "groups">("policies");
-const backendDisplay = (props.backendLabel?.trim() || "MinIO");
+const rawBackendLabel = props.backendLabel?.trim() || "MinIO";
+const backendDisplay =
+  rawBackendLabel.toLowerCase() === "rustfs"
+    ? "RustFS"
+    : rawBackendLabel.toLowerCase() === "minio"
+      ? "MinIO"
+      : rawBackendLabel;
 
 watch(
   () => props.modelValue,

@@ -1,5 +1,5 @@
 # cockpit-file-sharing
-A Cockpit plugin for managing Samba and NFS shares.
+A Cockpit plugin for managing Samba, NFS, iSCSI, and S3 storage services.
 
 ![Example of creating a Samba share](docs/create-samba-share-example.gif)
 ## Features
@@ -27,6 +27,31 @@ A Cockpit plugin for managing Samba and NFS shares.
 - Create, edit, and remove shares
 - Manage individual client settings
 - Export and import of configuration (same format as `/etc/exports`)
+
+### iSCSI
+- Manage virtual devices
+    - Create, edit, and remove devices
+    - Support for single-server and clustered environments
+- Manage targets
+    - Create, edit, and remove targets
+    - Manage target portals, initiator groups, and CHAP configuration
+    - View active sessions
+- Import and export iSCSI configuration
+
+### S3
+- Detect and manage supported S3 backends
+    - MinIO
+    - RustFS
+    - Ceph RGW
+    - Garage
+- Bucket management
+    - Create, edit, and delete buckets
+    - View bucket usage/statistics
+- Access management
+    - MinIO/RustFS: users, policies, and groups
+    - RustFS: access keys
+    - Ceph RGW: user/access management
+    - Garage: key management
 
 # Installation
 ## Ubuntu 20.04, Ubuntu 22.04
@@ -169,3 +194,11 @@ To allow cockpit-file-sharing to manage existing shares defined in `/etc/exports
 1. Create a backup copy of exports: `cp /etc/exports /etc/exports.bak`
 2. Move exports to cockpit-file-sharing managed location: `mv /etc/exports /etc/exports.d/cockpit-file-sharing.exports`
 3. Create an empty default exports file: `touch /etc/exports`
+
+## iSCSI Management Tab
+The iSCSI tab allows managing virtual devices and targets. For each target, you can manage portals, initiator groups, and CHAP settings, and view active sessions. In single-server mode, iSCSI configuration import/export is available from the tab.
+
+## S3 Management Tab
+The S3 tab detects supported backends available on the host (MinIO, RustFS, Ceph RGW, and Garage), then provides:
+1. Bucket Management for creating, editing, deleting, and viewing bucket usage/statistics.
+2. Access Management for backend-specific identity and policy operations (for example users, policies, groups, access keys, and keys).

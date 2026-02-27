@@ -107,6 +107,12 @@ const props = defineProps<{
   minioAlias?: string | null;
   backendLabel?: string;
 }>();
-const backendLabel = props.backendLabel?.trim() || "MinIO";
+const rawBackendLabel = props.backendLabel?.trim() || "MinIO";
+const backendLabel =
+  rawBackendLabel.toLowerCase() === "rustfs"
+    ? "RustFS"
+    : rawBackendLabel.toLowerCase() === "minio"
+      ? "MinIO"
+      : rawBackendLabel;
 const isRustfsBackend = computed(() => backendLabel.toLowerCase() === "rustfs");
 </script>

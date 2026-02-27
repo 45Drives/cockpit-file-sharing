@@ -180,7 +180,13 @@ const props = defineProps<{
   backendLabel?: string;
 }>();
 const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
-const backendDisplay = props.backendLabel?.trim() || "MinIO";
+const rawBackendLabel = props.backendLabel?.trim() || "MinIO";
+const backendDisplay =
+  rawBackendLabel.toLowerCase() === "rustfs"
+    ? "RustFS"
+    : rawBackendLabel.toLowerCase() === "minio"
+      ? "MinIO"
+      : rawBackendLabel;
 
 const users = ref<S3AccessUser[]>([]);
 const searchQuery = ref("");

@@ -827,33 +827,6 @@ except Exception as e:
   }
 }
 
-async function createRustfsBucketWithObjectLockViaApi(bucketName: string): Promise<void> {
-  const { endpointUrl, creds } = await resolveRustfsS3ApiConfig();
-  const py =
-    RUSTFS_PY_SETUP +
-    `
-try:
-  client.create_bucket(
-    Bucket=bucket,
-    ObjectLockEnabledForBucket=True,
-  )
-except Exception as e:
-  msg = str(e)
-  # Accept idempotent create response if bucket already exists/owned.
-  if "BucketAlreadyOwnedByYou" in msg or "BucketAlreadyExists" in msg:
-    pass
-  else:
-    raise
-print("ok")
-`;
-
-  await execRustfsPython(py, {
-    RUSTFS_ENDPOINT: endpointUrl,
-    RUSTFS_BUCKET: bucketName,
-    AWS_ACCESS_KEY_ID: creds.accessKeyId,
-    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
-  });
-}
 
 async function listRustfsBucketsViaS3Api(): Promise<Array<{ name: string; createdAt?: string }>> {
   const { endpointUrl, creds } = await resolveRustfsS3ApiConfig();
@@ -1317,24 +1290,6 @@ function normalizeRustfsPolicyJsonString(input: unknown): string {
   });
 }
 
-function parseJsonLines(text: string): any[] {
-  const trimmed = text.trim();
-  if (!trimmed) return [];
-
-  // Prefer parsing as one full JSON payload first (rc often returns pretty JSON).
-  try {
-    const parsed = JSON.parse(trimmed);
-    return Array.isArray(parsed) ? parsed : [parsed];
-  } catch {
-    // Fallback: JSONL parsing for commands that emit one JSON object per line.
-  }
-
-  return trimmed
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((line) => JSON.parse(line));
-}
 
 function extractRustfsApiErrorMessage(body: string): string | undefined {
   const trimmed = String(body ?? "").trim();
