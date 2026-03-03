@@ -413,8 +413,33 @@ function formatPolicyJson() {
 
 function generateAccessKey(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const alphabetLength = alphabet.length;
+  const keyLength = 20;
+  const hasWebCrypto =
+    typeof window !== "undefined" &&
+    !!window.crypto &&
+    typeof window.crypto.getRandomValues === "function";
+
+  if (hasWebCrypto) {
+    const maxUnbiasedByte = Math.floor(256 / alphabetLength) * alphabetLength;
+    const randomBytes = new Uint8Array(keyLength * 2);
+    let out = "";
+    let i = 0;
+
+    while (i < keyLength) {
+      window.crypto.getRandomValues(randomBytes);
+      for (let j = 0; j < randomBytes.length && i < keyLength; j += 1) {
+        const byte = randomBytes[j];
+        if (byte >= maxUnbiasedByte) continue;
+        out += alphabet[byte % alphabetLength];
+        i += 1;
+      }
+    }
+    return out;
+  }
+
   let out = "";
-  for (let i = 0; i < 20; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  for (let i = 0; i < keyLength; i += 1) out += alphabet[Math.floor(Math.random() * alphabetLength)];
   return out;
 }
 

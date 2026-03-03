@@ -302,8 +302,32 @@ const createForm = ref({
 
 function randomAlphaNum(len: number): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const charsLength = chars.length;
+  const hasWebCrypto =
+    typeof window !== "undefined" &&
+    !!window.crypto &&
+    typeof window.crypto.getRandomValues === "function";
+
+  if (hasWebCrypto) {
+    const maxUnbiasedByte = Math.floor(256 / charsLength) * charsLength;
+    let out = "";
+    const randomBytes = new Uint8Array(len * 2);
+    let i = 0;
+
+    while (i < len) {
+      window.crypto.getRandomValues(randomBytes);
+      for (let j = 0; j < randomBytes.length && i < len; j += 1) {
+        const byte = randomBytes[j];
+        if (byte >= maxUnbiasedByte) continue;
+        out += chars[byte % charsLength];
+        i += 1;
+      }
+    }
+    return out;
+  }
+
   let out = "";
-  for (let i = 0; i < len; i += 1) out += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < len; i += 1) out += chars[Math.floor(Math.random() * charsLength)];
   return out;
 }
 
