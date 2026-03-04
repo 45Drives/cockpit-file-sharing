@@ -25,7 +25,14 @@ make OS_PACKAGE_RELEASE=el8
 make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el8 install
 
 %post
-/usr/bin/python3 -c "import awscurl" >/dev/null 2>&1 || /usr/bin/python3 -m pip install awscurl || :
+VENV_DIR="/usr/share/cockpit/file-sharing/venv"
+/usr/bin/python3 -m venv "$VENV_DIR" 2>/dev/null || :
+if [ -x "$VENV_DIR/bin/pip" ]; then
+  "$VENV_DIR/bin/pip" install awscurl || :
+fi
+if [ -x "$VENV_DIR/bin/awscurl" ]; then
+  ln -sf "$VENV_DIR/bin/awscurl" /usr/local/bin/awscurl
+fi
 
 %files
 /usr/share/cockpit/file-sharing/*
