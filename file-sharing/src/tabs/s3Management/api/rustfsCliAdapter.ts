@@ -609,24 +609,6 @@ async function execRustfsPython(
   return stdout;
 }
 
-const RUSTFS_PY_SETUP = `
-import os
-import botocore.session
-from botocore.config import Config
-
-endpoint = os.environ["RUSTFS_ENDPOINT"]
-bucket = os.environ["RUSTFS_BUCKET"]
-
-sess = botocore.session.get_session()
-client = sess.create_client(
-  "s3",
-  endpoint_url=endpoint,
-  aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-  aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-  config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
-)
-`;
-
 const RUSTFS_PY_SETUP_NO_BUCKET = `
 import os
 import botocore.session
@@ -642,6 +624,10 @@ client = sess.create_client(
   aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
   config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
 )
+`;
+
+const RUSTFS_PY_SETUP = RUSTFS_PY_SETUP_NO_BUCKET + `
+bucket = os.environ["RUSTFS_BUCKET"]
 `;
 
 async function putRustfsBucketObjectLockConfiguration(
