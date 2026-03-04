@@ -107,7 +107,7 @@
 
                     <button
                       class="inline-flex items-center border border-red-600 bg-red-500 text-white text-xs font-medium rounded px-2 py-1 hover:bg-red-600"
-                      @click="openDeleteDialog(user)">
+                      @click="onDeleteUser(user)">
                       Delete
                     </button>
                   </template>
@@ -125,51 +125,6 @@
         <div v-else class="py-3 text-sm">No RGW users found.</div>
       </section>
 
-      <!-- Delete user dialog -->
-      <div v-if="showDeleteDialog && deleteTarget"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
-        <div class="rounded-lg shadow-lg max-w-md w-full mx-4 bg-default border border-default overflow-hidden">
-          <div class="px-5 py-4 border-b border-default">
-            <h3 class="text-base font-semibold">Delete user "{{ deleteTarget.uid }}"</h3>
-          </div>
-
-          <div class="px-5 py-4 space-y-3 text-sm">
-            <p>Are you sure you want to delete this user?</p>
-
-            <label class="flex items-start space-x-2">
-              <input type="checkbox" v-model="purgeData" class="mt-0.5 h-4 w-4 rounded border-default" />
-              <span>
-                Delete all buckets and objects owned by this user
-                (<span class="font-semibold">--purge-data</span>)
-              </span>
-            </label>
-
-            <label class="flex items-start space-x-2">
-              <input type="checkbox" v-model="purgeKeys" class="mt-0.5 h-4 w-4 rounded border-default" />
-              <span>
-                Delete this user's access keys
-                (<span class="font-semibold">--purge-keys</span>)
-              </span>
-            </label>
-
-            <p class="text-xs text-red-600" v-if="purgeData">
-              Warning: purging data will remove all buckets and objects owned by this user. This cannot be undone.
-            </p>
-          </div>
-
-          <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-            <button class="px-3 py-1.5 text-xs rounded btn-secondary " @click="closeDeleteDialog"
-              :disabled="loading">
-              Cancel
-            </button>
-            <button
-              class="px-3 py-1.5 text-xs rounded border text-white border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60"
-              @click="confirmDelete" :disabled="loading">
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <RgwUserCreateModal v-model="showUserDialog" :loading="loading" :error-message="userDialogError"
@@ -188,16 +143,12 @@ import RgwUserCreateModal from "./RgwUserCreateModal.vue";
 import { ArrowPathIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
 import { formatBytes } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 import RgwUserDetailsModal from "./RgwUserDetailsModal.vue";
-import { pushNotification, Notification } from "@45drives/houston-common-ui";
+import { confirm, pushNotification, Notification } from "@45drives/houston-common-ui";
+import { unwrap } from "@45drives/houston-common-lib";
 
 const users = ref<RgwUser[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
-
-const showDeleteDialog = ref(false);
-const deleteTarget = ref<RgwUser | null>(null);
-const purgeData = ref(false);
-const purgeKeys = ref(true);
 
 const showUserDialog = ref(false);
 const userDialogMode = ref<"create" | "edit">("create");
@@ -228,36 +179,40 @@ function refresh() {
   loadUsers();
 }
 
-function openDeleteDialog(user: RgwUser) {
+async function onDeleteUser(user: RgwUser) {
   if (isProtectedUser(user)) return;
-  deleteTarget.value = user;
-  purgeData.value = false;
-  purgeKeys.value = true;
-  showDeleteDialog.value = true;
-}
-
-
-function closeDeleteDialog() {
-  showDeleteDialog.value = false;
-  deleteTarget.value = null;
-}
-
-async function confirmDelete() {
-  if (!deleteTarget.value) return;
-
-  const user = deleteTarget.value;
+  const purgeData = await unwrap(confirm({
+    header: `Purge data for "${user.uid}"?`,
+    body: "Delete all buckets and objects owned by this user (--purge-data). This cannot be undone.",
+    confirmButtonText: "Purge data",
+    cancelButtonText: "Keep data",
+    dangerous: true,
+  }));
+  const purgeKeys = await unwrap(confirm({
+    header: `Delete access keys for "${user.uid}"?`,
+    body: "Delete this user's access keys (--purge-keys).",
+    confirmButtonText: "Delete keys",
+    cancelButtonText: "Keep keys",
+    dangerous: true,
+  }));
+  const confirmed = await unwrap(confirm({
+    header: `Delete user "${user.uid}"?`,
+    body: `Are you sure you want to delete this user?\n\npurge-data: ${purgeData ? "yes" : "no"}\npurge-keys: ${purgeKeys ? "yes" : "no"}`,
+    confirmButtonText: "Delete",
+    dangerous: true,
+  }));
+  if (!confirmed) return;
 
   try {
     loading.value = true;
     error.value = null;
 
     await deleteRgwUser(user.uid, {
-      purgeData: purgeData.value,
-      purgeKeys: purgeKeys.value,
+      purgeData,
+      purgeKeys,
     });
 
     users.value = users.value.filter((u) => u.uid !== user.uid);
-    closeDeleteDialog();
     pushNotification(new Notification("Success", `User "${user.displayName}"deleted successfuly`, "success", 2000))
 
   } catch (e: any) {

@@ -81,7 +81,7 @@
               </button>
               <button
                 class="inline-flex items-center gap-1 text-white border border-red-600 bg-red-500 text-sm font-semibold rounded px-2 py-1 hover:bg-red-600"
-                @click="openDeleteDialog(key.accessKey)"
+                @click="onDeleteAccessKey(key.accessKey)"
               >
                 <TrashIcon class="size-icon" />
                 Delete
@@ -94,35 +94,6 @@
 
     <div v-else class="py-3 text-sm text-muted">
       {{ accessKeys.length ? "No matching RustFS access keys found." : "No RustFS access keys found." }}
-    </div>
-
-    <div v-if="showDeleteDialog && deleteTargetAccessKey" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
-      <div class="bg-accent rounded-lg shadow-lg max-w-md w-full mx-4">
-        <div class="px-5 py-4 border-b border-default">
-          <h3 class="text-base font-semibold">
-            Delete access key "{{ deleteTargetAccessKey }}"
-          </h3>
-        </div>
-
-        <div class="px-5 py-4 space-y-3 text-sm">
-          <p>Are you sure you want to delete this RustFS access key?</p>
-          <p class="text-xs text-red-600">This action cannot be undone.</p>
-        </div>
-
-        <div class="px-5 py-3 border-t border-default flex justify-end gap-2">
-          <button class="px-3 py-1.5 text-xs rounded btn-secondary font-semibold" @click="closeDeleteDialog" :disabled="deleteLoading">
-            Cancel
-          </button>
-          <button
-            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
-            @click="confirmDelete"
-            :disabled="deleteLoading"
-          >
-            <TrashIcon class="size-icon" />
-            {{ deleteLoading ? "Deleting..." : "Delete" }}
-          </button>
-        </div>
-      </div>
     </div>
 
     <div v-if="showCreateDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
@@ -258,7 +229,8 @@ import {
   updateRustfsServiceAccount,
 } from "../../../api/rustfsCliAdapter";
 import type { S3ServiceAccount } from "@/tabs/s3Management/types/types";
-import { Notification, pushNotification } from "@45drives/houston-common-ui";
+import { confirm, Notification, pushNotification } from "@45drives/houston-common-ui";
+import { unwrap } from "@45drives/houston-common-lib";
 
 const accessKeys = ref<S3ServiceAccount[]>([]);
 const searchQuery = ref("");
@@ -285,9 +257,6 @@ const filteredAccessKeys = computed(() => {
 const showCreateDialog = ref(false);
 const createLoading = ref(false);
 const createError = ref<string | null>(null);
-const showDeleteDialog = ref(false);
-const deleteTargetAccessKey = ref<string | null>(null);
-const deleteLoading = ref(false);
 const dialogMode = ref<"create" | "edit">("create");
 const createForm = ref({
   accessKey: "",
@@ -475,28 +444,20 @@ async function submitCreate() {
   }
 }
 
-function openDeleteDialog(accessKey: string) {
-  deleteTargetAccessKey.value = accessKey;
-  showDeleteDialog.value = true;
-}
-
-function closeDeleteDialog() {
-  showDeleteDialog.value = false;
-  deleteTargetAccessKey.value = null;
-}
-
-async function confirmDelete() {
-  if (!deleteTargetAccessKey.value) return;
-  deleteLoading.value = true;
+async function onDeleteAccessKey(accessKey: string) {
+  const confirmed: boolean = await unwrap(confirm({
+    header: `Delete access key "${accessKey}"?`,
+    body: "Are you sure you want to delete this RustFS access key?\n\nThis action cannot be undone.",
+    confirmButtonText: "Delete",
+    dangerous: true,
+  }));
+  if (!confirmed) return;
   try {
-    await deleteRustfsServiceAccount(deleteTargetAccessKey.value);
+    await deleteRustfsServiceAccount(accessKey);
     await loadAccessKeys();
-    closeDeleteDialog();
     pushNotification(new Notification("Success","Access key deleted successfully", "success"));
   } catch (e: any) {
     pushNotification(new Notification("Failed to delete access key", e?.message ?? "Unknown error", "error"));
-  } finally {
-    deleteLoading.value = false;
   }
 }
 

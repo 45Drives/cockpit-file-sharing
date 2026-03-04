@@ -10,7 +10,7 @@ const GARAGE_CMD = "garage";
 /**
  * Run `garage ...` and return stdout as a trimmed string.
  */
-export async function runGarage(subArgs: string[]): Promise<string> {
+async function runGarage(subArgs: string[]): Promise<string> {
   const cmd = new Command([GARAGE_CMD, ...subArgs]);
   const proc = await unwrap(server.execute(cmd));
 
@@ -411,7 +411,7 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
   }
   
 
-  export function parseGarageKeyInfoOutput(text: string): GarageKeyDetail {
+  function parseGarageKeyInfoOutput(text: string): GarageKeyDetail {
     const t = String(text ?? "").replace(/\r\n/g, "\n");
   
     const pick = (label: string): string | undefined => {
@@ -822,18 +822,6 @@ export async function getGarageBucketDashboardStats(
   return parseGarageBucketInfo(out);
 }
 
-/**
- * Object-level stats is the same as bucket usage in Garage.
- */
-export async function getBucketObjectStatsFromGarage(
-  bucketNameOrId: string
-): Promise<{ objectCount: number; sizeBytes: number }> {
-  const info = await getGarageBucketDashboardStats(bucketNameOrId);
-  return {
-    objectCount: info.objectCount,
-    sizeBytes: info.totalSizeBytes,
-  };
-}
 export async function getGarageBucket(bucketNameOrId: string): Promise<GarageBucket> {
   const info = await getGarageBucketDashboardStats(bucketNameOrId);
 

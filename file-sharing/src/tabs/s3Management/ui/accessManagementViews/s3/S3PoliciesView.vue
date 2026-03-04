@@ -86,41 +86,6 @@
       :backend-label="isRustfsBackend ? 'RustFS' : 'MinIO'"
       @save="handlePolicySave" />
 
-    <div v-if="showDeleteDialog && deleteTarget"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
-      <div class="bg-accent rounded-lg shadow-lg max-w-md w-full mx-4">
-        <div class="px-5 py-4 border-b border-default">
-          <h3 class="text-base font-semibold">
-            Delete policy "{{ deleteTarget }}"
-          </h3>
-        </div>
-
-        <div class="px-5 py-4 space-y-3 text-sm">
-          <p>
-            Are you sure you want to delete this {{ isRustfsBackend ? "RustFS" : "MinIO" }} policy?
-          </p>
-          <p v-if="!isRustfsBackend" class="text-xs text-red-600">
-            Any users or groups attached to this policy will lose its permissions.
-          </p>
-          <p v-else class="text-xs text-red-600">
-            RustFS may reject deletion if this policy is still in use.
-          </p>
-        </div>
-
-        <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-          <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100 font-semibold"
-            @click="closeDeleteDialog" :disabled="loading">
-            Cancel
-          </button>
-          <button
-            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
-            @click="confirmDeletePolicy" :disabled="loading">
-            <TrashIcon class="size-icon" />
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
   </section>
 </template>
 
@@ -140,7 +105,8 @@ import {
 } from "../../../api/rustfsCliAdapter";
 import MinioPolicyCreateModal from "./S3PolicyCreateModal.vue";
 import MinioPolicyViewEditModal from "./S3PolicyViewEditModal.vue";
-import { pushNotification, Notification } from "@45drives/houston-common-ui";
+import { confirm, pushNotification, Notification } from "@45drives/houston-common-ui";
+import { unwrap } from "@45drives/houston-common-lib";
 import { MagnifyingGlassIcon, PlusIcon, EyeIcon, TrashIcon } from "@heroicons/vue/20/solid";
 
 const props = defineProps<{
@@ -168,10 +134,6 @@ const viewEditError = ref<string | null>(null);
 const viewEditLoading = ref(false);
 const selectedPolicyName = ref<string | null>(null);
 const selectedPolicyJson = ref<string | null>(null);
-
-// Delete confirm
-const showDeleteDialog = ref(false);
-const deleteTarget = ref<string | null>(null);
 
 async function loadPolicies() {
   loading.value = true;
@@ -257,20 +219,16 @@ async function handlePolicySave(payload: { name: string; json: string }) {
   }
 }
 
-function onDeletePolicy(name: string) {
-  deleteTarget.value = name;
-  showDeleteDialog.value = true;
-}
-
-function closeDeleteDialog() {
-  showDeleteDialog.value = false;
-  deleteTarget.value = null;
-}
-
-async function confirmDeletePolicy() {
-  if (!deleteTarget.value) return;
-
-  const name = deleteTarget.value;
+async function onDeletePolicy(name: string) {
+  const confirmed: boolean = await unwrap(confirm({
+    header: `Delete policy "${name}"?`,
+    body: isRustfsBackend
+      ? "Are you sure you want to delete this RustFS policy?"
+      : "Are you sure you want to delete this MinIO policy? Any users or groups attached to this policy will lose its permissions.",
+    confirmButtonText: "Delete",
+    dangerous: true,
+  }));
+  if (!confirmed) return;
   try {
     loading.value = true;
     error.value = null;
@@ -280,7 +238,6 @@ async function confirmDeletePolicy() {
       await deleteMinioPolicy(name);
     }
     await loadPolicies();
-    closeDeleteDialog();
     pushNotification(new Notification("Success", `Policy  "${name}". deleted succesfully`, "success", 2000));
 
   } catch (e: any) {

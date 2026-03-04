@@ -22,9 +22,6 @@ export function setMinioAlias(alias: string): void {
   MINIO_ALIAS = trimmed;
 }
 
-export function getMinioAlias(): string {
-  return MINIO_ALIAS;
-}
 
 export async function listMinioAliasCandidates(): Promise<S3AliasCandidate[]> {
   const rows = await mcJsonLines(["alias", "list"]);
@@ -85,16 +82,6 @@ export async function listMinioAliasCandidates(): Promise<S3AliasCandidate[]> {
 export async function isMinioAvailable(): Promise<boolean> {
   const cands = await listMinioAliasCandidates();
   return cands.length > 0;
-}
-
-export async function isMinioHealthy(): Promise<boolean> {
-  try {
-    await mcJsonSingle(["admin", "info", MINIO_ALIAS]);
-    return true;
-  } catch (e) {
-    console.warn("MinIO health check failed:", e);
-    return false;
-  }
 }
 
 
@@ -324,24 +311,6 @@ export async function getMinioBucketQuotaBytes(
     );
     return undefined;
   }
-}
-
-/**
- * Object-level stats for a single bucket using `mc stat --json`.
- */
-export async function getBucketObjectStatsFromMinio(
-  bucketName: string
-): Promise<{ objectCount: number; sizeBytes: number }> {
-  const stat = await mcJsonSingle([
-    "stat",
-    `${MINIO_ALIAS}/${bucketName}`,
-  ]);
-
-  const usage = stat.Usage || stat.usage || {};
-  const sizeBytes: number = usage.totalSize ?? usage.size ?? 0;
-  const objectCount: number = usage.objectsCount ?? usage.objects ?? 0;
-
-  return { objectCount, sizeBytes };
 }
 
 

@@ -90,45 +90,6 @@
     <MinioGroupModal v-model="showGroupDialog" :group="selectedGroup" :loading="groupDialogLoading"
       :error-message="groupDialogError" :available-users="usernames" :available-policies="availablePolicies"
       :mode="groupDialogMode" @submit="handleGroupUpdate" @switch-mode="groupDialogMode = $event" />
-    <!-- Delete confirm dialog -->
-    <div v-if="showDeleteDialog && deleteTarget"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-10">
-      <div class="bg-accent rounded-lg shadow-lg max-w-md w-full mx-4">
-        <div class="px-5 py-4 border-b border-default">
-          <h3 class="text-base font-semibold">
-            Delete group "{{ deleteTarget }}"
-          </h3>
-        </div>
-
-        <div class="px-5 py-4 space-y-3 text-sm">
-          <p>
-            Are you sure you want to delete this {{ isRustfsBackend ? "RustFS" : "MinIO" }} group?
-          </p>
-          <p v-if="!isRustfsBackend" class="text-xs text-red-600">
-            All users will be removed from this group. This action cannot be undone.
-          </p>
-          <p v-else-if="deleteTargetMemberCount > 0" class="text-xs text-red-600">
-            This group has {{ deleteTargetMemberCount }} member(s). Continue to remove all members and delete the group?
-          </p>
-          <p v-else class="text-xs text-red-600">
-            This action cannot be undone.
-          </p>
-        </div>
-
-        <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-          <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100 font-semibold"
-            @click="closeDeleteDialog" :disabled="loading">
-            Cancel
-          </button>
-          <button
-            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
-            @click="confirmDeleteGroup" :disabled="loading">
-            <TrashIcon class="size-icon" />
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
   </section>
 </template>
 
@@ -155,7 +116,8 @@ import {
 import MinioGroupCreateModal from "./S3GroupCreateModal.vue";
 import type { S3AccessGroupInfo, S3AccessUser } from "@/tabs/s3Management/types/types";
 import MinioGroupModal from "./S3GroupModal.vue";
-import { pushNotification, Notification } from "@45drives/houston-common-ui";
+import { confirm, pushNotification, Notification } from "@45drives/houston-common-ui";
+import { unwrap } from "@45drives/houston-common-lib";
 import { MagnifyingGlassIcon, PlusIcon, EyeIcon, PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
 
 const props = defineProps<{
@@ -177,11 +139,6 @@ const filteredGroups = computed(() => {
 // Create dialog state
 const showCreateDialog = ref(false);
 const createDialogError = ref<string | null>(null);
-
-// Delete dialog state
-const showDeleteDialog = ref(false);
-const deleteTarget = ref<string | null>(null);
-const deleteTargetMemberCount = ref<number>(0);
 
 const usernames = computed(() => users.value.map((u) => u.username));
 
@@ -318,30 +275,27 @@ function onEditGroup(name: string) {
   openGroupDialog(name, "edit");
 }
 async function onDeleteGroup(name: string) {
-  deleteTarget.value = name;
+  let deleteTargetMemberCount = 0;
   if (isRustfsBackend) {
     try {
       const info = await getRustfsGroupInfo(name);
-      deleteTargetMemberCount.value = info.members?.length ?? 0;
+      deleteTargetMemberCount = info.members?.length ?? 0;
     } catch {
-      deleteTargetMemberCount.value = 0;
+      deleteTargetMemberCount = 0;
     }
-  } else {
-    deleteTargetMemberCount.value = 0;
   }
-  showDeleteDialog.value = true;
-}
-
-function closeDeleteDialog() {
-  showDeleteDialog.value = false;
-  deleteTarget.value = null;
-  deleteTargetMemberCount.value = 0;
-}
-
-async function confirmDeleteGroup() {
-  if (!deleteTarget.value) return;
-
-  const name = deleteTarget.value;
+  const body = !isRustfsBackend
+    ? "Are you sure you want to delete this MinIO group?\n\nAll users will be removed from this group. This action cannot be undone."
+    : deleteTargetMemberCount > 0
+      ? `Are you sure you want to delete this RustFS group?\n\nThis group has ${deleteTargetMemberCount} member(s). Continue to remove all members and delete the group?`
+      : "Are you sure you want to delete this RustFS group?\n\nThis action cannot be undone.";
+  const confirmed: boolean = await unwrap(confirm({
+    header: `Delete group "${name}"?`,
+    body,
+    confirmButtonText: "Delete",
+    dangerous: true,
+  }));
+  if (!confirmed) return;
   try {
     loading.value = true;
     error.value = null;
@@ -351,10 +305,9 @@ async function confirmDeleteGroup() {
       await deleteMinioGroup(name);
     }
     await loadGroups();
-    closeDeleteDialog();
-    pushNotification(new Notification("Success", `Deleted MinIo group "${name}"`, "success", 2000));
+    pushNotification(new Notification("Success", `Deleted ${isRustfsBackend ? "RustFS" : "MinIO"} group "${name}"`, "success", 2000));
   } catch (e: any) {
-    pushNotification(new Notification(`Failed to delete MinIo group "{$name}"`, e?.message, "error"));
+    pushNotification(new Notification(`Failed to delete ${isRustfsBackend ? "RustFS" : "MinIO"} group "${name}"`, e?.message, "error"));
 
     // error.value = e?.message || "Failed to delete MinIO group.";
   } finally {

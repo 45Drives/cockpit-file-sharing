@@ -89,7 +89,7 @@
 
                 <button
                   class="inline-flex items-center gap-1 text-white border border-red-600 bg-red-500 text-default text-sm font-semibold rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
-                  @click="openDeleteDialog(u)">
+                  @click="onDeleteUser(u)">
                   <TrashIcon class="size-icon" />
                   Delete
                 </button>
@@ -103,40 +103,6 @@
         {{ users.length ? "No matching users found." : `No ${backendDisplay} users found.` }}
       </div>
     </section>
-
-    <!-- Delete user dialog -->
-    <div v-if="showDeleteDialog && deleteTarget"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
-      <div class="bg-accent rounded-lg shadow-lg max-w-md w-full mx-4">
-        <div class="px-5 py-4 border-b border-default">
-          <h3 class="text-base font-semibold">
-            Delete user "{{ deleteTarget.username }}"
-          </h3>
-        </div>
-
-        <div class="px-5 py-4 space-y-3 text-sm">
-          <p>
-            Are you sure you want to delete this {{ backendDisplay }} user?
-          </p>
-          <p class="text-xs text-red-600">
-            This will revoke their access to {{ backendDisplay }}. This action cannot be undone.
-          </p>
-        </div>
-
-        <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-          <button class="px-3 py-1.5 text-xs rounded btn-secondary font-semibold" @click="closeDeleteDialog"
-            :disabled="loading">
-            Cancel
-          </button>
-          <button
-            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded border border-red-600 bg-red-500 text-default hover:bg-red-600 disabled:opacity-60 font-semibold"
-            @click="confirmDelete" :disabled="loading">
-            <TrashIcon class="size-icon" />
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Create MinIO user modal -->
     <MinioUserCreateModal v-model="showUserDialog" :loading="loading" :error-message="userDialogError"
@@ -174,7 +140,8 @@ import type {
   S3AccessUserDetails,
   S3AccessUserUpdatePayload,
 } from "@/tabs/s3Management/types/types";
-import { pushNotification, Notification } from "@45drives/houston-common-ui";
+import { confirm, pushNotification, Notification } from "@45drives/houston-common-ui";
+import { unwrap } from "@45drives/houston-common-lib";
 
 const props = defineProps<{
   backendLabel?: string;
@@ -197,10 +164,6 @@ const filteredUsers = computed(() => {
   if (!q) return users.value;
   return users.value.filter((u) => String(u.username ?? "").toLowerCase().includes(q));
 });
-
-// Delete dialog state
-const showDeleteDialog = ref(false);
-const deleteTarget = ref<S3AccessUser | null>(null);
 
 // Create dialog state
 const showUserDialog = ref(false);
@@ -246,20 +209,15 @@ function openCreateDialog() {
   showUserDialog.value = true;
 }
 
-function openDeleteDialog(user: S3AccessUser) {
-  deleteTarget.value = user;
-  showDeleteDialog.value = true;
-}
-
-function closeDeleteDialog() {
-  showDeleteDialog.value = false;
-  deleteTarget.value = null;
-}
-
-async function confirmDelete() {
-  if (!deleteTarget.value) return;
-
-  const username = deleteTarget.value.username;
+async function onDeleteUser(user: S3AccessUser) {
+  const username = user.username;
+  const confirmed: boolean = await unwrap(confirm({
+    header: `Delete user "${username}"?`,
+    body: `Are you sure you want to delete this ${backendDisplay} user?\n\nThis will revoke their access to ${backendDisplay}. This action cannot be undone.`,
+    confirmButtonText: "Delete",
+    dangerous: true,
+  }));
+  if (!confirmed) return;
 
   try {
     loading.value = true;
@@ -292,7 +250,6 @@ async function confirmDelete() {
 
   // Locally remove the user from the list regardless
   users.value = users.value.filter((u) => u.username !== username);
-  closeDeleteDialog();
 }
 
 async function handleUserSubmit(payload: S3AccessUserCreatePayload) {

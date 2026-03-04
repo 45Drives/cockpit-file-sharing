@@ -56,13 +56,6 @@ export type S3Bucket = CephBucket | GarageBucket | MinioBucket | RustfsBucket;
 
 export type BucketByKind<K extends BackendKind> = Extract<S3Bucket, { backendKind: K }>;
 
-export type BucketAclPermission =| "FULL_CONTROL"| "READ"| "WRITE"| "READ_ACP"| "WRITE_ACP";
-
-export type BucketAclGrant = {
-  grantee: string;
-  permission: BucketAclPermission | string; // keep string for safety if unsure
-};
-
 export type BucketVersioningStatus = "Enabled" | "Suspended" | "Disabled";
 
 export interface GarageBucketOptions {
@@ -251,8 +244,6 @@ export interface MinioBucketUpdateOptions {
     objectLockRetentionDays?: number;
   }
 
-  export interface RustfsBucketUpdateOptions extends MinioBucketUpdateOptions {}
-  
   export interface CephBucketUpdatePayload {
     cephAclRules: CephAclRule[] | undefined;
     name: string;          
@@ -431,11 +422,6 @@ export type RustfsDeps = {
 
 export type ModalDeps = CephDeps | GarageDeps | MinioDeps | RustfsDeps;
 
-export type GarageBucketAliasPatch = {
-  aliasesAdd?: string[];
-  aliasesRemove?: string[];
-};
-
 export type GarageBucketKeyGrant = {
   keyIdOrName: string;   
   read: boolean;
@@ -451,7 +437,7 @@ export type S3AliasCandidate = {
   accessKey?: string;
 };
 
-export type MinioAccessKeyStatus = "enabled" | "disabled";
+type MinioAccessKeyStatus = "enabled" | "disabled";
 
 export interface S3ServiceAccount {
   accessKey: string;
