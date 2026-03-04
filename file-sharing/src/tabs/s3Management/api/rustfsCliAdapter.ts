@@ -1063,89 +1063,7 @@ print("ok")
   });
 }
 
-async function runRustfsQuotaApiRequest(
-  kind: "info" | "set" | "clear",
-  method: "GET" | "PUT" | "DELETE",
-  bucketName: string,
-  body?: unknown,
-): Promise<any> {
-  const { apiBase, region, accessKey, secretKey } = await resolveRustfsAdminApiConfig();
-  const url = `${apiBase}/quota/${encodeURIComponent(bucketName)}`;
-  const bodyJson = body === undefined ? "" : JSON.stringify(body);
-
-  const cmdParts = [
-    `AWS_ACCESS_KEY_ID=${shellQuote(accessKey)}`,
-    `AWS_SECRET_ACCESS_KEY=${shellQuote(secretKey)}`,
-    "python3 -m awscurl --service s3",
-    `--region ${shellQuote(region)}`,
-    `-X ${shellQuote(method)}`,
-  ];
-
-  if (body !== undefined) {
-    cmdParts.push(`-H ${shellQuote("Content-Type: application/json")}`);
-    cmdParts.push(`-d ${shellQuote(bodyJson)}`);
-  }
-  cmdParts.push(shellQuote(url));
-
-  const commandString = cmdParts.join(" ");
-
-  const cmd = new Command(["bash", "-lc", commandString], {});
-  const proc = await unwrap(server.execute(cmd, false));
-  const stdout = proc.getStdout();
-  const stderr = proc.getStderr();
-  const exitStatus = proc.exitStatus;
-
-  if (exitStatus !== 0) {
-    const msg = stderr.trim() || stdout.trim() || `awscurl exited with status ${exitStatus}`;
-    throw new Error(msg);
-  }
-
-  const trimmed = stdout.trim();
-  const apiError = extractRustfsApiErrorMessage(trimmed);
-  if (apiError) {
-    throw new Error(apiError);
-  }
-  if (!trimmed) return {};
-  return JSON.parse(trimmed);
-}
-
-async function runRustfsAdminApiGet(path: string): Promise<any> {
-  const { apiBase, region, accessKey, secretKey } = await resolveRustfsAdminApiConfig();
-  const url = `${apiBase}/${String(path).replace(/^\/+/, "")}`;
-
-  const cmdParts = [
-    `AWS_ACCESS_KEY_ID=${shellQuote(accessKey)}`,
-    `AWS_SECRET_ACCESS_KEY=${shellQuote(secretKey)}`,
-    "python3 -m awscurl --service s3",
-    `--region ${shellQuote(region)}`,
-    "-X 'GET'",
-    shellQuote(url),
-  ];
-
-  const commandString = cmdParts.join(" ");
-
-
-  const cmd = new Command(["bash", "-lc", commandString], {});
-  const proc = await unwrap(server.execute(cmd, false));
-  const stdout = proc.getStdout();
-  const stderr = proc.getStderr();
-  const exitStatus = proc.exitStatus;
-  if (exitStatus !== 0) {
-    const msg = stderr.trim() || stdout.trim() || `awscurl exited with status ${exitStatus}`;
-    throw new Error(msg);
-  }
-
-  const trimmed = stdout.trim();
-  const apiError = extractRustfsApiErrorMessage(trimmed);
-  if (apiError) {
-    throw new Error(apiError);
-  }
-  if (!trimmed) return {};
-  return JSON.parse(trimmed);
-}
-
 async function runRustfsAdminApiRequest(
-  kind: string,
   method: "GET" | "PUT" | "POST" | "DELETE",
   path: string,
   body?: unknown,
@@ -1325,7 +1243,7 @@ function extractQuotaBytesFromRows(rows: any[]): number | undefined {
 }
 
 async function getRustfsBucketQuotaBytesViaApi(bucketName: string): Promise<number | undefined> {
-  const payload = await runRustfsQuotaApiRequest("info", "GET", bucketName);
+  const payload = await runRustfsAdminApiRequest("GET", `quota/${encodeURIComponent(bucketName)}`);
   return extractQuotaBytesFromRows([payload]);
 }
 
@@ -1335,14 +1253,14 @@ async function setRustfsBucketQuotaViaApi(bucketName: string, quotaBytes: number
   }
 
   const bytes = String(Math.round(quotaBytes));
-  await runRustfsQuotaApiRequest("set", "PUT", bucketName, {
+  await runRustfsAdminApiRequest("PUT", `quota/${encodeURIComponent(bucketName)}`, {
     quota: Number(bytes),
     quota_type: "HARD",
   });
 }
 
 async function clearRustfsBucketQuotaViaApi(bucketName: string): Promise<void> {
-  await runRustfsQuotaApiRequest("clear", "DELETE", bucketName);
+  await runRustfsAdminApiRequest("DELETE", `quota/${encodeURIComponent(bucketName)}`);
 }
 
 
@@ -1381,7 +1299,7 @@ export async function listRustfsAliasCandidates(): Promise<S3AliasCandidate[]> {
 
 export async function isRustfsAvailable(): Promise<boolean> {
   try {
-    await runRustfsAdminApiGet("list-users");
+    await runRustfsAdminApiRequest("GET", "list-users");
     return true;
   } catch (e: any) {
     console.warn("RustFS availability check failed (admin API probe); checking install/runtime presence:", {
@@ -1410,7 +1328,7 @@ export async function isRustfsAvailable(): Promise<boolean> {
 }
 
 export async function listRustfsUsers(): Promise<S3AccessUser[]> {
-  const payload = await runRustfsAdminApiGet("list-users");
+  const payload = await runRustfsAdminApiRequest("GET", "list-users");
   const objs: any[] = [];
 
   if (payload && typeof payload === "object" && !Array.isArray(payload)) {
@@ -1456,7 +1374,7 @@ export async function listRustfsUsers(): Promise<S3AccessUser[]> {
 }
 
 export async function listRustfsServiceAccounts(): Promise<S3ServiceAccount[]> {
-  const payload = await runRustfsAdminApiGet("list-service-accounts");
+  const payload = await runRustfsAdminApiRequest("GET", "list-service-accounts");
 
   const normalizeStatus = (value: unknown): "enabled" | "disabled" | undefined => {
     const s = String(value ?? "").trim().toLowerCase();
@@ -1533,7 +1451,6 @@ export async function createRustfsServiceAccount(
     payload?.policy == null ? null : normalizeRustfsPolicyJsonString(payload.policy);
 
   await runRustfsAdminApiRequest(
-    "add-service-accounts",
     "PUT",
     "add-service-accounts",
     {
@@ -1551,7 +1468,7 @@ export async function getRustfsServiceAccountInfo(accessKey: string): Promise<Ru
   const key = String(accessKey ?? "").trim();
   if (!key) throw new Error("getRustfsServiceAccountInfo: accessKey is required");
 
-  const info = await runRustfsAdminApiGet(`info-service-account?accessKey=${encodeURIComponent(key)}`);
+  const info = await runRustfsAdminApiRequest("GET", `info-service-account?accessKey=${encodeURIComponent(key)}`);
   return {
     accessKey: key,
     parentUser: String(info?.parentUser ?? "").trim() || undefined,
@@ -1588,7 +1505,6 @@ export async function updateRustfsServiceAccount(
   if (payload.newStatus !== undefined) body.newStatus = payload.newStatus;
 
   await runRustfsAdminApiRequest(
-    "update-service-account",
     "POST",
     `update-service-account?accessKey=${encodeURIComponent(key)}`,
     body
@@ -1603,13 +1519,11 @@ export async function deleteRustfsServiceAccount(accessKey: string): Promise<voi
   const attempts: Array<() => Promise<any>> = [
     () =>
       runRustfsAdminApiRequest(
-        "delete-service-accounts",
         "DELETE",
         `delete-service-accounts?accessKey=${encoded}`
       ),
     () =>
       runRustfsAdminApiRequest(
-        "delete-service-account",
         "DELETE",
         `delete-service-account?accessKey=${encoded}`
       ),
@@ -1633,7 +1547,8 @@ export async function getRustfsUserInfo(username: string): Promise<S3AccessUserD
     throw new Error("getRustfsUserInfo: username is required");
   }
 
-  const info = await runRustfsAdminApiGet(
+  const info = await runRustfsAdminApiRequest(
+    "GET",
     `user-info?accessKey=${encodeURIComponent(target)}`
   );
 
@@ -1683,7 +1598,7 @@ export async function deleteRustfsUser(username: string): Promise<void> {
 
   const q = `remove-user?accessKey=${encodeURIComponent(target)}`;
   const variants: Array<() => Promise<any>> = [
-    () => runRustfsAdminApiRequest("remove-user", "DELETE", q),
+    () => runRustfsAdminApiRequest("DELETE", q),
   ];
 
   let lastErr: unknown;
@@ -1701,7 +1616,7 @@ export async function deleteRustfsUser(username: string): Promise<void> {
 
 
 export async function listRustfsPolicies(): Promise<string[]> {
-  const payload = await runRustfsAdminApiGet("list-canned-policies");
+  const payload = await runRustfsAdminApiRequest("GET", "list-canned-policies");
 
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return [];
 
@@ -1733,7 +1648,8 @@ export async function getRustfsPolicy(name: string): Promise<string> {
 
   // Fast path: fetch only the requested policy.
   try {
-    const single = await runRustfsAdminApiGet(
+    const single = await runRustfsAdminApiRequest(
+      "GET",
       `info-canned-policy?name=${encodeURIComponent(policyName)}`
     );
     const policyRaw = (single as any)?.policy;
@@ -1752,7 +1668,7 @@ export async function getRustfsPolicy(name: string): Promise<string> {
   }
 
   // Fallback: list all and select one by key.
-  const payload = await runRustfsAdminApiGet("list-canned-policies");
+  const payload = await runRustfsAdminApiRequest("GET", "list-canned-policies");
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new Error("getRustfsPolicy: invalid RustFS policy response");
   }
@@ -1789,7 +1705,6 @@ export async function createOrUpdateRustfsPolicy(
   }
 
   await runRustfsAdminApiRequest(
-    "add-canned-policy",
     "PUT",
     `add-canned-policy?name=${encodeURIComponent(policyName)}`,
     doc
@@ -1803,7 +1718,6 @@ export async function deleteRustfsPolicy(name: string): Promise<void> {
   }
 
   await runRustfsAdminApiRequest(
-    "remove-canned-policy",
     "DELETE",
     `remove-canned-policy?name=${encodeURIComponent(policyName)}`
   );
@@ -1845,7 +1759,7 @@ export async function listRustfsGroups(): Promise<string[]> {
     return [];
   };
 
-  const payload = await runRustfsAdminApiGet("groups");
+  const payload = await runRustfsAdminApiRequest("GET", "groups");
   return parseGroupNames(payload);
 }
 
@@ -1855,7 +1769,7 @@ export async function getRustfsGroupInfo(name: string): Promise<S3AccessGroupInf
     throw new Error("getRustfsGroupInfo: group name is required");
   }
 
-  const payload = await runRustfsAdminApiGet(`group?group=${encodeURIComponent(groupName)}`);
+  const payload = await runRustfsAdminApiRequest("GET", `group?group=${encodeURIComponent(groupName)}`);
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new Error(`getRustfsGroupInfo: invalid response for group "${groupName}"`);
   }
@@ -1905,7 +1819,6 @@ export async function deleteRustfsGroup(
   if (hasMembers && removeMembersFirst) {
     try {
       await runRustfsAdminApiRequest(
-        "update-group-members",
         "PUT",
         "update-group-members",
         {
@@ -1918,7 +1831,6 @@ export async function deleteRustfsGroup(
     } catch {
       // Compatibility fallback for builds that expect "clear members" payload.
       await runRustfsAdminApiRequest(
-        "update-group-members",
         "PUT",
         "update-group-members",
         {
@@ -1932,7 +1844,6 @@ export async function deleteRustfsGroup(
   }
 
   await runRustfsAdminApiRequest(
-    "group-delete",
     "DELETE",
     `group/${encodeURIComponent(groupName)}`
   );
@@ -1961,7 +1872,6 @@ export async function updateRustfsGroup(
 
   if (toAdd.length > 0) {
     await runRustfsAdminApiRequest(
-      "update-group-members",
       "PUT",
       "update-group-members",
       {
@@ -1975,7 +1885,6 @@ export async function updateRustfsGroup(
 
   if (toRemove.length > 0) {
     await runRustfsAdminApiRequest(
-      "update-group-members",
       "PUT",
       "update-group-members",
       {
@@ -1993,7 +1902,6 @@ export async function updateRustfsGroup(
   if (desiredPolicies.length > 0) {
     const policyName = desiredPolicies.join(",");
     await runRustfsAdminApiRequest(
-      "set-user-or-group-policy",
       "PUT",
       `set-user-or-group-policy?policyName=${policyName}&userOrGroup=${encodeURIComponent(groupName)}&isGroup=true`,
       {}
@@ -2015,7 +1923,6 @@ export async function createRustfsGroup(
   );
 
   await runRustfsAdminApiRequest(
-    "update-group-members",
     "PUT",
     "update-group-members",
     {
@@ -2044,7 +1951,6 @@ export async function createRustfsUser(
   }
 
   await runRustfsAdminApiRequest(
-    "add-user",
     "PUT",
     `add-user?accessKey=${encodeURIComponent(username)}`,
     {
@@ -2060,7 +1966,6 @@ export async function createRustfsUser(
     const policyName = selectedPolicies.join(",");
     const userOrGroup = encodeURIComponent(username);
     await runRustfsAdminApiRequest(
-      "set-user-or-group-policy",
       "PUT",
       `set-user-or-group-policy?policyName=${policyName}&userOrGroup=${userOrGroup}&isGroup=false`,
       {}
@@ -2068,7 +1973,8 @@ export async function createRustfsUser(
 
     // Some RustFS builds return success but do not persist user policies.
     // Verify via RustFS admin API (avoid rc dependency for user info readback).
-    const info = await runRustfsAdminApiGet(
+    const info = await runRustfsAdminApiRequest(
+      "GET",
       `user-info?accessKey=${encodeURIComponent(username)}`
     );
     const attachedFromList = Array.isArray((info as any)?.policies)
@@ -2096,7 +2002,6 @@ export async function createRustfsUser(
     const g = String(group ?? "").trim();
     if (!g) continue;
     await runRustfsAdminApiRequest(
-      "update-group-members",
       "PUT",
       "update-group-members",
       {
@@ -2132,7 +2037,6 @@ export async function updateRustfsUser(payload: S3AccessUserUpdatePayload): Prom
 
   if (payload.status === "enabled" || payload.status === "disabled") {
     await runRustfsAdminApiRequest(
-      "set-user-status",
       "PUT",
       `set-user-status?accessKey=${encodeURIComponent(username)}&status=${encodeURIComponent(payload.status)}`,
       {}
@@ -2143,7 +2047,6 @@ export async function updateRustfsUser(payload: S3AccessUserUpdatePayload): Prom
     const policyName = desiredPolicies.join(",");
     const userOrGroup = encodeURIComponent(username);
     await runRustfsAdminApiRequest(
-      "set-user-or-group-policy",
       "PUT",
       `set-user-or-group-policy?policyName=${policyName}&userOrGroup=${userOrGroup}&isGroup=false`,
       {}
@@ -2155,7 +2058,6 @@ export async function updateRustfsUser(payload: S3AccessUserUpdatePayload): Prom
 
   for (const g of groupsToAdd) {
     await runRustfsAdminApiRequest(
-      "update-group-members",
       "PUT",
       "update-group-members",
       {
@@ -2169,7 +2071,6 @@ export async function updateRustfsUser(payload: S3AccessUserUpdatePayload): Prom
 
   for (const g of groupsToRemove) {
     await runRustfsAdminApiRequest(
-      "update-group-members",
       "PUT",
       "update-group-members",
       {
@@ -2188,7 +2089,6 @@ export async function updateRustfsUser(payload: S3AccessUserUpdatePayload): Prom
     }
     const statusForSecretReset = payload.status ?? current.status ?? "enabled";
     await runRustfsAdminApiRequest(
-      "add-user",
       "PUT",
       `add-user?accessKey=${encodeURIComponent(username)}`,
       {
@@ -2210,7 +2110,7 @@ export async function getRustfsBucketStats(bucketName: string): Promise<{
   tagsFromStat?: Record<string, string>;
 }> {
   try {
-    const usage = await runRustfsAdminApiGet("datausageinfo");
+    const usage = await runRustfsAdminApiRequest("GET", "datausageinfo");
     const bucketUsage = (usage?.buckets_usage && usage.buckets_usage[bucketName]) || {};
     const derivedCount = Number(bucketUsage?.objects_count) || 0;
     const derivedSize = Number(bucketUsage?.size) || 0;
@@ -2267,7 +2167,7 @@ export async function getRustfsBucketDashboardStats(
     throw new Error("getRustfsBucketDashboardStats: bucketName is required");
   }
 
-  const dataUsage = await runRustfsAdminApiGet("datausageinfo");
+  const dataUsage = await runRustfsAdminApiRequest("GET", "datausageinfo");
   const bucketUsage = (dataUsage?.buckets_usage && dataUsage.buckets_usage[bucketName]) || {};
 
   const totalSizeBytes = Number(bucketUsage?.size ?? 0) || 0;
@@ -2315,7 +2215,7 @@ export async function getRustfsBucketDashboardStats(
 
 export async function listBucketsFromRustfs(): Promise<RustfsBucket[]> {
   const bucketEntries = await listRustfsBucketsViaS3Api();
-  const usagePayload = await runRustfsAdminApiGet("datausageinfo").catch(() => undefined);
+  const usagePayload = await runRustfsAdminApiRequest("GET", "datausageinfo").catch(() => undefined);
   const usageByBucket = (usagePayload?.buckets_usage ?? {}) as Record<string, any>;
 
   const detailed = await Promise.all(
