@@ -1,6 +1,6 @@
 export type S3BucketTagMap = Record<string, string>;
 export interface S3BucketBase {
-  backendKind: BackendKind;
+  backendKind: string;
   name: string;
   region?: string;
   owner?: string;
@@ -21,8 +21,6 @@ export interface S3BucketBase {
   policy?: string;
   tags?: S3BucketTagMap;
 }
-export type BackendKind = "minio" | "rustfs" | "ceph" | "garage"; 
-
 
 export interface CephBucket extends S3BucketBase {
   backendKind: "ceph";
@@ -53,6 +51,7 @@ export interface RustfsBucket extends S3BucketBase {
 }
 
 export type S3Bucket = CephBucket | GarageBucket | MinioBucket | RustfsBucket;
+export type BackendKind = S3Bucket["backendKind"];
 
 export type BucketByKind<K extends BackendKind> = Extract<S3Bucket, { backendKind: K }>;
 
