@@ -179,7 +179,6 @@ import { isCephRgwHealthy, listRgwGateways } from "../api/cephCliAdapter";
 import {
   isMinioAvailable,
   listMinioAliasCandidates,
-  setAccessAdminCli,
   setMinioAlias,
 } from "../api/minioCliAdapter";
 import {
@@ -573,12 +572,6 @@ async function chooseBackend(backend: Backend) {
   selectedBackend.value = backend;
   selectedView.value = null;
 
-  if (backend === "rustfs") {
-    setAccessAdminCli("rc");
-  } else if (backend === "minio") {
-    setAccessAdminCli("mc");
-  }
-
   if (backend !== "ceph") {
     gateways.value = [];
     selectedGatewayId.value = null;
@@ -667,7 +660,6 @@ watch(
 );
 
 onMounted(() => {
-  setAccessAdminCli("mc");
   detectBackends();
 });
 </script>

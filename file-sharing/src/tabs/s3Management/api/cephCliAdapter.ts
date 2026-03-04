@@ -890,19 +890,7 @@ function splitTenantFromUid(fullUid: string): { tenant?: string; uid: string } {
 export async function getCephS3Connection(): Promise<CephS3Connection> {
   if (cachedCephS3Conn) return cachedCephS3Conn;
 
-  // 1) Optional env overrides
-  const envEndpoint = process.env.CEPH_S3_ENDPOINT;
-
-  if (envEndpoint) {
-    const endpointUrl = envEndpoint.startsWith("http") ? envEndpoint : `http://${envEndpoint}`;
-
-    cachedCephS3Conn = {
-      endpointUrl,
-    };
-    return cachedCephS3Conn;
-  }
-
-  // 2) Derive from RGW servicemap
+  // Derive from RGW servicemap
   const gateways = await listRgwGateways();
   const gw = gateways.find((g) => g.isDefault) || gateways[0];
 

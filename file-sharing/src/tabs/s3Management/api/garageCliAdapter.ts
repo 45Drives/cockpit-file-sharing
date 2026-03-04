@@ -5,7 +5,7 @@ import type { GarageBucket, GarageBucketOptions, GarageKeyListEntry, GarageKeyDe
 const { errorString } = legacy; // useSpawn no longer needed
 import { legacy, server, Command, unwrap } from "@45drives/houston-common-lib";
 
-const GARAGE_CMD = process.env.GARAGE_CMD || "garage";
+const GARAGE_CMD = "garage";
 
 /**
  * Run `garage ...` and return stdout as a trimmed string.

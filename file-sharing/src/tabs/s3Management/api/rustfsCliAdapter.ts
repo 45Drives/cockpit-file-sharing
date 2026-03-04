@@ -19,7 +19,6 @@ import { server, Command, unwrap } from "@45drives/houston-common-lib";
 
 const bucketLimit = pLimit(6);
 
-let RUSTFS_ALIAS = process.env.RUSTFS_RC_ALIAS || "local";
 let RUSTFS_INSTANCE_SELECTOR = "";
 
 export function setRustfsAlias(alias: string): void {
@@ -30,7 +29,7 @@ export function setRustfsAlias(alias: string): void {
 }
 
 export function getRustfsAlias(): string {
-  return RUSTFS_INSTANCE_SELECTOR || RUSTFS_ALIAS;
+  return RUSTFS_INSTANCE_SELECTOR ;
 }
 
 export async function setRustfsManualConnection(input: RustfsManualConnectionInput): Promise<void> {
@@ -88,7 +87,7 @@ type RustfsResolvedConnection = {
   region: string;
   accessKey: string;
   secretKey: string;
-  source: "manual" | "env" | "systemd" | "container";
+  source: "manual" | "systemd" | "container";
 };
 type RustfsManualConnectionInput = {
   host?: string;
@@ -112,19 +111,19 @@ export type RustfsManualSavedConnection = {
 const BYTE_UNIT_FACTORS: Record<string, number> = {
   B: 1,
   K: 1024,
-  KB: 1024,
+  KB: 1000,
   KIB: 1024,
   M: 1024 ** 2,
-  MB: 1024 ** 2,
+  MB: 1000 ** 2,
   MIB: 1024 ** 2,
   G: 1024 ** 3,
-  GB: 1024 ** 3,
+  GB: 1000 ** 3,
   GIB: 1024 ** 3,
   T: 1024 ** 4,
-  TB: 1024 ** 4,
+  TB: 1000 ** 4,
   TIB: 1024 ** 4,
   P: 1024 ** 5,
-  PB: 1024 ** 5,
+  PB: 1000 ** 5,
   PIB: 1024 ** 5,
 };
 
@@ -317,28 +316,15 @@ function parseEnvFileContent(text: string): Record<string, string> {
   return out;
 }
 
-function buildConnectionFromEnv(overrides?: Partial<RustfsResolvedConnection>): RustfsResolvedConnection | undefined {
-  const apiBaseRaw =
-    String(process.env.RUSTFS_ADMIN_API_BASE || process.env.RUSTFS_API_BASE || "").trim();
-  const endpointRaw = String(process.env.RUSTFS_S3_ENDPOINT || "").trim();
-  const apiBaseSeed = overrides?.apiBase || apiBaseRaw || "";
-  const apiBase = normalizeApiBase(apiBaseSeed);
-  const endpointSeed =
-    overrides?.endpointUrl || endpointRaw || deriveRustfsS3EndpointFromAdminApiBase(apiBase) || "";
+function buildConnection(overrides?: Partial<RustfsResolvedConnection>): RustfsResolvedConnection | undefined {
+  const apiBase = normalizeApiBase(String(overrides?.apiBase ?? "").trim());
+  const endpointSeed = overrides?.endpointUrl || deriveRustfsS3EndpointFromAdminApiBase(apiBase) || "";
   const endpointUrl = normalizeApiBase(endpointSeed);
   if (!apiBase && !endpointUrl) return undefined;
 
-  const region = String(process.env.RUSTFS_ADMIN_REGION || process.env.AWS_REGION || "us-east-1");
-  const accessKey = String(
-    overrides?.accessKey ||
-      process.env.RUSTFS_ADMIN_ACCESS_KEY ||
-      process.env.RUSTFS_ACCESS_KEY
-  );
-  const secretKey = String(
-    overrides?.secretKey ||
-      process.env.RUSTFS_ADMIN_SECRET_KEY ||
-      process.env.RUSTFS_SECRET_KEY
-  );
+  const region = String(overrides?.region ?? "us-east-1").trim() || "us-east-1";
+  const accessKey = String(overrides?.accessKey ?? "").trim();
+  const secretKey = String(overrides?.secretKey ?? "").trim();
 
   const resolvedApiBase = apiBase || normalizeApiBase(`${endpointUrl}/rustfs/admin/v3`);
   const resolvedEndpoint = endpointUrl || deriveRustfsS3EndpointFromAdminApiBase(resolvedApiBase);
@@ -350,7 +336,7 @@ function buildConnectionFromEnv(overrides?: Partial<RustfsResolvedConnection>): 
     region,
     accessKey,
     secretKey,
-    source: overrides?.source || "env",
+    source: overrides?.source || "manual",
   };
 }
 
@@ -377,11 +363,11 @@ async function detectSystemdRustfsConnection(): Promise<RustfsResolvedConnection
 
   const env = parseEnvFileContent(envFileText);
   const canUseDiscoveredCreds = await isRootSessionUser();
-  const host = String(process.env.RUSTFS_ADMIN_HOST || process.env.RUSTFS_HOST || "localhost").trim() || "localhost";
+  const host = "localhost";
   const s3Port = parsePortFromAddress(env.RUSTFS_ADDRESS) ?? 9000;
   const endpointUrl = normalizeApiBase(`http://${host}:${s3Port}`);
 
-  const resolved = buildConnectionFromEnv({
+  const resolved = buildConnection({
     endpointUrl,
     accessKey: canUseDiscoveredCreds ? env.RUSTFS_ACCESS_KEY : undefined,
     secretKey: canUseDiscoveredCreds ? env.RUSTFS_SECRET_KEY : undefined,
@@ -458,10 +444,10 @@ async function detectContainerRustfsConnection(): Promise<RustfsResolvedConnecti
   }
   const canUseDiscoveredCreds = await isRootSessionUser();
   const port = parsePortFromAddress(hostPort) ?? 9000;
-  const host = String(process.env.RUSTFS_ADMIN_HOST || process.env.RUSTFS_HOST || "localhost").trim() || "localhost";
+  const host = "localhost";
   const endpointUrl = normalizeApiBase(`http://${host}:${port}`);
 
-  const resolved = buildConnectionFromEnv({
+  const resolved = buildConnection({
     endpointUrl,
     accessKey: canUseDiscoveredCreds ? envMap.RUSTFS_ACCESS_KEY : undefined,
     secretKey: canUseDiscoveredCreds ? envMap.RUSTFS_SECRET_KEY : undefined,
@@ -534,7 +520,7 @@ async function resolveRustfsConnection(): Promise<RustfsResolvedConnection> {
 
     for (const entry of rustfsManualConnections) {
       push(
-        buildConnectionFromEnv({
+        buildConnection({
           apiBase: entry.apiBase,
           endpointUrl: entry.endpointUrl,
           accessKey: entry.accessKey,
@@ -543,7 +529,6 @@ async function resolveRustfsConnection(): Promise<RustfsResolvedConnection> {
         })
       );
     }
-    push(buildConnectionFromEnv({ source: "env" }));
     push(await detectSystemdRustfsConnection());
     push(await detectContainerRustfsConnection());
 
@@ -594,22 +579,13 @@ async function resolveRustfsAdminApiConfig(): Promise<{
 
 async function resolveRustfsS3ApiConfig(): Promise<{
   endpointUrl: string;
+  region: string;
   creds: RustfsS3Creds;
 }> {
   const resolved = await resolveRustfsConnection();
-  const accessKeyId = String(
-    process.env.RUSTFS_ACCESS_KEY_ID ||
-      process.env.RUSTFS_ACCESS_KEY ||
-      resolved.accessKey ||
-      "rustfsadmin"
-  );
-  const secretAccessKey = String(
-    process.env.RUSTFS_SECRET_ACCESS_KEY ||
-      process.env.RUSTFS_SECRET_KEY ||
-      resolved.secretKey ||
-      "rustfsadmin"
-  );
-  return { endpointUrl: resolved.endpointUrl, creds: { accessKeyId, secretAccessKey } };
+  const accessKeyId = String(resolved.accessKey || "rustfsadmin");
+  const secretAccessKey = String(resolved.secretKey || "rustfsadmin");
+  return { endpointUrl: resolved.endpointUrl, region: resolved.region, creds: { accessKeyId, secretAccessKey } };
 }
 
 async function execRustfsPython(
@@ -918,8 +894,7 @@ async function createRustfsBucketViaS3Api(
     throw new Error("createRustfsBucketViaS3Api: bucketName is required");
   }
 
-  const { endpointUrl, creds } = await resolveRustfsS3ApiConfig();
-  const region = String(process.env.RUSTFS_ADMIN_REGION || process.env.AWS_REGION || "us-east-1");
+  const { endpointUrl, region, creds } = await resolveRustfsS3ApiConfig();
   const bucketUrl = `${endpointUrl}/${encodeURIComponent(target)}/`;
 
   const cmdParts = [
@@ -963,8 +938,7 @@ async function deleteRustfsBucketViaS3Api(bucketName: string): Promise<void> {
     throw new Error("deleteRustfsBucketViaS3Api: bucketName is required");
   }
 
-  const { endpointUrl, creds } = await resolveRustfsS3ApiConfig();
-  const region = String(process.env.RUSTFS_ADMIN_REGION || process.env.AWS_REGION || "us-east-1");
+  const { endpointUrl, region, creds } = await resolveRustfsS3ApiConfig();
   const bucketUrl = `${endpointUrl}/${encodeURIComponent(target)}/`;
 
   const cmdParts = [
@@ -1390,7 +1364,7 @@ export async function listRustfsAliasCandidates(): Promise<S3AliasCandidate[]> {
   await loadRustfsManualConnectionFromUserConfig();
   const candidates: RustfsResolvedConnection[] = [];
   for (const entry of rustfsManualConnections) {
-    const manual = buildConnectionFromEnv({
+    const manual = buildConnection({
       apiBase: entry.apiBase,
       endpointUrl: entry.endpointUrl,
       accessKey: entry.accessKey,
@@ -1399,8 +1373,6 @@ export async function listRustfsAliasCandidates(): Promise<S3AliasCandidate[]> {
     });
     if (manual) candidates.push(manual);
   }
-  const explicit = buildConnectionFromEnv({ source: "env" });
-  if (explicit) candidates.push(explicit);
   const systemd = await detectSystemdRustfsConnection();
   if (systemd && !candidates.some((c) => c.endpointUrl === systemd.endpointUrl && c.source === systemd.source)) {
     candidates.push(systemd);

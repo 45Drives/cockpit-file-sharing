@@ -13,7 +13,7 @@ import { legacy, server, Command, unwrap } from "@45drives/houston-common-lib";
 const bucketLimit = pLimit(6);
 const { errorString } = legacy;
 
-let MINIO_ALIAS = process.env.MINIO_MC_ALIAS || "gw01";
+let MINIO_ALIAS = "";
 
 // Expose setter so UI can select alias
 export function setMinioAlias(alias: string): void {
@@ -24,12 +24,6 @@ export function setMinioAlias(alias: string): void {
 
 export function getMinioAlias(): string {
   return MINIO_ALIAS;
-}
-
-// Backward-compatible API used by S3ManagementMain.
-// Current MinIO adapter operations are implemented via `mc`.
-export function setAccessAdminCli(_cli: "mc" | "rc"): void {
-  // no-op
 }
 
 export async function listMinioAliasCandidates(): Promise<S3AliasCandidate[]> {
