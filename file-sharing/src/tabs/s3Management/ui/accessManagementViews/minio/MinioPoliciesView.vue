@@ -142,7 +142,7 @@ async function handlePolicyCreate(payload: { name: string; json: string }) {
     }
     await loadPolicies();
     showCreateDialog.value = false;
-    pushNotification(new Notification("Success",`Pollicy "${payload.name} created successfully"`, "success"));
+    pushNotification(new Notification("Success",`Policy "${payload.name} created successfully"`, "success"));
 
   } catch (e: any) {
     pushNotification(new Notification(`Failed to create MinIO policy`, e?.message, "error"));

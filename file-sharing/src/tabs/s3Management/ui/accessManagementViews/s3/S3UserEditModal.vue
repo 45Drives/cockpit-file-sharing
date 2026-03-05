@@ -302,7 +302,7 @@ import type {
   S3AccessUserDetails,
   S3AccessUserUpdatePayload,
 } from "@/tabs/s3Management/types/types";
-import { generateSecret, formatIsoLocal, localTimeZone } from "@/tabs/s3Management/bucketBackends/bucketUtils";
+import { generateSecret, formatIsoLocal } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 import {
   listMinioServiceAccounts,
   disableMinioServiceAccount,

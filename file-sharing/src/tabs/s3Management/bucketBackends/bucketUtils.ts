@@ -56,6 +56,37 @@ export function parseTags(text: string): Record<string, string> {
     return result;
   }
 
+  export function generateAccessKey(length = 20): string {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const alphabetLength = alphabet.length;
+    const hasWebCrypto =
+      typeof window !== "undefined" &&
+      !!window.crypto &&
+      typeof window.crypto.getRandomValues === "function";
+
+    if (hasWebCrypto) {
+      const maxUnbiasedByte = Math.floor(256 / alphabetLength) * alphabetLength;
+      const randomBytes = new Uint8Array(length * 2);
+      let out = "";
+      let i = 0;
+
+      while (i < length) {
+        window.crypto.getRandomValues(randomBytes);
+        for (let j = 0; j < randomBytes.length && i < length; j += 1) {
+          const byte = randomBytes[j]!;
+          if (byte >= maxUnbiasedByte) continue;
+          out += alphabet[byte % alphabetLength];
+          i += 1;
+        }
+      }
+      return out;
+    }
+
+    let out = "";
+    for (let i = 0; i < length; i += 1) out += alphabet[Math.floor(Math.random() * alphabetLength)];
+    return out;
+  }
+
   // datetime.ts
 export function formatIsoLocal(iso: string): string {
   const d = new Date(iso);

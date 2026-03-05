@@ -220,7 +220,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
 import { ArrowPathIcon, MagnifyingGlassIcon, PlusIcon, PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
-import { formatIsoLocal } from "@/tabs/s3Management/bucketBackends/bucketUtils";
+import { formatIsoLocal, generateAccessKey, generateSecret } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 import {
   createRustfsServiceAccount,
   deleteRustfsServiceAccount,
@@ -269,41 +269,10 @@ const createForm = ref({
   statusEnabled: true,
 });
 
-function randomAlphaNum(len: number): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  const charsLength = chars.length;
-  const hasWebCrypto =
-    typeof window !== "undefined" &&
-    !!window.crypto &&
-    typeof window.crypto.getRandomValues === "function";
-
-  if (hasWebCrypto) {
-    const maxUnbiasedByte = Math.floor(256 / charsLength) * charsLength;
-    let out = "";
-    const randomBytes = new Uint8Array(len * 2);
-    let i = 0;
-
-    while (i < len) {
-      window.crypto.getRandomValues(randomBytes);
-      for (let j = 0; j < randomBytes.length && i < len; j += 1) {
-        const byte = randomBytes[j];
-        if (byte >= maxUnbiasedByte) continue;
-        out += chars[byte % charsLength];
-        i += 1;
-      }
-    }
-    return out;
-  }
-
-  let out = "";
-  for (let i = 0; i < len; i += 1) out += chars[Math.floor(Math.random() * charsLength)];
-  return out;
-}
-
 function resetCreateForm() {
   createForm.value = {
-    accessKey: randomAlphaNum(20),
-    secretKey: randomAlphaNum(40),
+    accessKey: generateAccessKey(20),
+    secretKey: generateSecret(40),
     expirationLocal: "",
     name: "",
     description: "",
