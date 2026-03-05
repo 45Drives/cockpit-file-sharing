@@ -15,7 +15,7 @@ import type {
   RustfsBucketDashboardStats,
 } from "../types/types";
 import pLimit from "p-limit";
-import { server, Command, unwrap } from "@45drives/houston-common-lib";
+import { server, Command, unwrap, File, Directory } from "@45drives/houston-common-lib";
 
 const bucketLimit = pLimit(6);
 
@@ -588,6 +588,25 @@ async function resolveRustfsS3ApiConfig(): Promise<{
   return { endpointUrl: resolved.endpointUrl, region: resolved.region, creds: { accessKeyId, secretAccessKey } };
 }
 
+let _pythonVenvPathCache: string | undefined;
+async function getPythonVenvPath(): Promise<string> {
+  if (_pythonVenvPathCache) {
+    return _pythonVenvPathCache;
+  }
+  const candidates = [
+    "/usr/share/cockpit-file-sharing/venv",
+    "~/.local/share/cockpit-file-sharing/venv",
+    "~/.local/share/cockpit-file-sharing-test/venv",
+  ];
+  for (const candidate of candidates) {
+    if (await unwrap(new Directory(server, candidate).exists())) {
+      _pythonVenvPathCache = candidate;
+      return _pythonVenvPathCache;
+    }
+  }
+  return "/usr/share/cockpit-file-sharing/venv";
+}
+
 async function execRustfsPython(
   pythonSource: string,
   env: Record<string, string>,
@@ -596,7 +615,7 @@ async function execRustfsPython(
     .map(([k, v]) => `export ${k}=${shellQuote(v)}`)
     .join("; ");
 
-  const cmdLine = `${exports}; python3 - <<'PY'\n${pythonSource}\nPY`;
+  const cmdLine = `${exports}; ${getPythonVenvPath()}/bin/python3 - <<'PY'\n${pythonSource}\nPY`;
   const cmd = new Command(["bash", "-lc", cmdLine], {});
   const proc = await unwrap(server.execute(cmd, false));
   const stdout = proc.getStdout().toString().trim();
@@ -886,7 +905,7 @@ async function createRustfsBucketViaS3Api(
   const cmdParts = [
     `AWS_ACCESS_KEY_ID=${shellQuote(creds.accessKeyId)}`,
     `AWS_SECRET_ACCESS_KEY=${shellQuote(creds.secretAccessKey)}`,
-    "awscurl --service s3",
+    `${getPythonVenvPath()}/bin/awscurl --service s3`,
     `--region ${shellQuote(region)}`,
     "-X 'PUT'",
   ];
@@ -930,7 +949,7 @@ async function deleteRustfsBucketViaS3Api(bucketName: string): Promise<void> {
   const cmdParts = [
     `AWS_ACCESS_KEY_ID=${shellQuote(creds.accessKeyId)}`,
     `AWS_SECRET_ACCESS_KEY=${shellQuote(creds.secretAccessKey)}`,
-    "awscurl --service s3",
+    `${getPythonVenvPath()}/bin/awscurl --service s3`,
     `--region ${shellQuote(region)}`,
     "-X 'DELETE'",
     shellQuote(bucketUrl),
@@ -1075,7 +1094,7 @@ async function runRustfsAdminApiRequest(
   const cmdParts = [
     `AWS_ACCESS_KEY_ID=${shellQuote(accessKey)}`,
     `AWS_SECRET_ACCESS_KEY=${shellQuote(secretKey)}`,
-    "awscurl --service s3",
+    `${getPythonVenvPath()}/bin/awscurl --service s3`,
     `--region ${shellQuote(region)}`,
     `-X ${shellQuote(method)}`,
   ];

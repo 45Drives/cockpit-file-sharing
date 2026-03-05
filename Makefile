@@ -115,18 +115,31 @@ plugin-install-% plugin-install-local-% plugin-install-remote-%:
 	@test -z "$(SSH)" && \
 		cp -af $*/dist/* $(DESTDIR)$(INSTALL_PREFIX)/$*$(INSTALL_SUFFIX) || \
 		rsync -avh $*/dist/* $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST):$(DESTDIR)$(INSTALL_PREFIX)/$*$(INSTALL_SUFFIX)
+	@if [ -n "$(PYTHON_VENV_SETUP)" ]; then \
+		echo Setting up Python virtual environment and installing dependencies in $(PYTHON_VENV_SETUP); \
+		$(SSH) python3 -m venv $(PYTHON_VENV_SETUP) && \
+		$(SSH) $(PYTHON_VENV_SETUP)/bin/pip install --upgrade pip && \
+		$(SSH) $(PYTHON_VENV_SETUP)/bin/pip install -r $(DESTDIR)$(INSTALL_PREFIX)/$*$(INSTALL_SUFFIX)/requirements.txt; \
+	fi
 	@echo -e $(call greentext,Done installing $*)
 	@echo
 
 plugin-install-% : INSTALL_PREFIX?=/usr/share/cockpit
+ifndef DESTDIR
+# For system install, set up Python venv in plugin directory
+# this is skipped while packaging since DESTDIR is defined, and the postinst script sets up the venv on the target system
+plugin-install-% : PYTHON_VENV_SETUP=$(INSTALL_PREFIX)/$*/venv
+endif
 
 plugin-install-local-% : INSTALL_PREFIX=$(HOME)/.local/share/cockpit
 plugin-install-local-% : INSTALL_SUFFIX=-test
+plugin-install-local-% : PYTHON_VENV_SETUP=$(HOME)/.local/share/cockpit/$*-test/venv
 
 plugin-install-remote-% : INSTALL_PREFIX=$(REMOTE_TEST_HOME)/.local/share/cockpit
 plugin-install-remote-% : INSTALL_SUFFIX=-test
 plugin-install-remote-% : SSH=ssh $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST)
 plugin-install-remote-% : REMOTE_TEST_HOME=$(shell ssh $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST) 'echo $$HOME')
+plugin-install-remote-% : PYTHON_VENV_SETUP=$(REMOTE_TEST_HOME)/.local/share/cockpit/$*-test/venv
 
 system-files-install:
 	-cp -af system_files/* $(DESTDIR)/
