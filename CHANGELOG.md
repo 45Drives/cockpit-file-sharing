@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.4-6
+## Cockpit File Sharing 4.5.4-7
 
-* building test pacakage
+* building release  pacakage
