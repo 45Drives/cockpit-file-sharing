@@ -1,5 +1,5 @@
 <template>
-  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
     <div class="bg-accent rounded-lg shadow-lg max-w-5xl w-full mx-4">
       <!-- Header -->
       <div class="px-5 py-4 border-b border-default flex items-center justify-between">
@@ -11,7 +11,7 @@
             Authentication: {{ user.authentication }}
           </p>
         </div>
-        <button class="text-xs px-2 py-1 rounded btn-secondary hover:bg-gray-50" @click="close"
+        <button class="text-xs px-2 py-1 rounded btn-secondary hover:bg-gray-50 font-semibold" @click="close"
           :disabled="loading">
           Close
         </button>
@@ -100,7 +100,7 @@
           </section>
 
           <!-- Service accounts -->
-          <section class="space-y-1 mt-4">
+          <section v-if="showServiceAccounts" class="space-y-1 mt-4">
             <h4 class="text-xs font-semibold uppercase text-default mb-2">
               Service accounts
             </h4>
@@ -160,7 +160,7 @@
 
 <script lang="ts" setup>
 import { ref, watch } from "vue";
-import type { MinioServiceAccount, MinioUserDetails } from "@/tabs/s3Management/types/types";
+import type { S3ServiceAccount, S3AccessUserDetails } from "@/tabs/s3Management/types/types";
 import { listMinioServiceAccounts } from "@/tabs/s3Management/api/minioCliAdapter";
 import { formatIsoLocal } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 
@@ -168,18 +168,21 @@ const props = defineProps<{
   modelValue: boolean;
   loading?: boolean;
   errorMessage?: string | null;
-  user: MinioUserDetails | null;
+  user: S3AccessUserDetails | null;
+  showServiceAccounts?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: boolean): void;
 }>();
 
-const serviceAccounts = ref<MinioServiceAccount[]>([]);
+const serviceAccounts = ref<S3ServiceAccount[]>([]);
 const saLoading = ref(false);
 const saError = ref<string | null>(null);
+const showServiceAccounts = props.showServiceAccounts !== false;
 
 async function loadServiceAccounts() {
+  if (!showServiceAccounts) return;
   if (!props.user?.username) return;
   saLoading.value = true;
   saError.value = null;

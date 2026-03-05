@@ -7,12 +7,14 @@ import type { CephBucketCreateOptions, CephBucketUpdatePayload, GarageBucketOpti
 export type BucketCreateForm =
   | ({ backend: "ceph";  } & CephBucketCreateOptions)
   | ({ backend: "garage"; name: string } & { garage: GarageBucketOptions; grants?: GarageBucketKeyGrant[] })
-  | ({ backend: "minio"; name: string } & { minio: MinioBucketUpdateOptions });
+  | ({ backend: "minio"; name: string } & { minio: MinioBucketUpdateOptions })
+  | ({ backend: "rustfs"; name: string } & { rustfs: MinioBucketUpdateOptions });
 
 export type BucketEditForm =
   | ({ backend: "ceph" } & CephBucketUpdatePayload)
   | ({ backend: "garage"; name: string } & { garage: GarageBucketOptions; grants?: GarageBucketKeyGrant[] })
-  | ({ backend: "minio"; name: string } & { minio: MinioBucketUpdateOptions });
+  | ({ backend: "minio"; name: string } & { minio: MinioBucketUpdateOptions })
+  | ({ backend: "rustfs"; name: string } & { rustfs: MinioBucketUpdateOptions });
 
 export type BucketFormData = BucketCreateForm | BucketEditForm;
 export interface BackendContext {
@@ -28,6 +30,7 @@ export type BucketModalDepsByKind = {
     garageKeys: GarageKeyDetail[];
   };
   minio: {};
+  rustfs: {};
 };
 export interface BucketBackend<B extends S3Bucket = S3Bucket> {
   label: string;

@@ -5,12 +5,12 @@ import type { GarageBucket, GarageBucketOptions, GarageKeyListEntry, GarageKeyDe
 const { errorString } = legacy; // useSpawn no longer needed
 import { legacy, server, Command, unwrap } from "@45drives/houston-common-lib";
 
-const GARAGE_CMD = process.env.GARAGE_CMD || "garage";
+const GARAGE_CMD = "garage";
 
 /**
  * Run `garage ...` and return stdout as a trimmed string.
  */
-export async function runGarage(subArgs: string[]): Promise<string> {
+async function runGarage(subArgs: string[]): Promise<string> {
   const cmd = new Command([GARAGE_CMD, ...subArgs]);
   const proc = await unwrap(server.execute(cmd));
 
@@ -332,42 +332,6 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
     return entries;
   }
   
-  function parseGarageKeyInfo(output: string): GarageKeyDetail {
-    const lines = output.split(/\r?\n/);
-    const fields: Record<string, string> = {};
-  
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-  
-      if (trimmed.startsWith("==== BUCKETS FOR THIS KEY")) {
-        break;
-      }
-  
-      if (trimmed.startsWith("====")) {
-        continue;
-      }
-  
-      const m = trimmed.match(/^([^:]+):\s*(.*)$/);
-      if (!m) continue;
-  
-      const key = m[1]!.trim();
-      const value = m[2]!.trim();
-      fields[key] = value;
-    }
-  
-    return {
-      id: fields["Key ID"] ?? "",
-      name: fields["Key name"] ?? "",
-      created: fields["Created"] ?? "",
-      expiration: fields["Expiration"] ?? "",
-      validity: fields["Validity"],
-      canCreateBuckets:
-        fields["Can create buckets"] !== undefined
-          ? fields["Can create buckets"].toLowerCase() === "true"
-          : undefined,
-    };
-  }
   export async function listGarageKeysWithInfo(
   ): Promise<GarageKeyDetail[]> {
     let listOut: string;
@@ -411,7 +375,7 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
   }
   
 
-  export function parseGarageKeyInfoOutput(text: string): GarageKeyDetail {
+  function parseGarageKeyInfo(text: string): GarageKeyDetail {
     const t = String(text ?? "").replace(/\r\n/g, "\n");
   
     const pick = (label: string): string | undefined => {
@@ -469,7 +433,7 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
   
       // 1) Create (this is the only place secretKey appears)
       const createOut = await runGarage(args);
-      const created = parseGarageKeyInfoOutput(createOut);
+      const created = parseGarageKeyInfo(createOut);
   
       const identifier = created.id || created.name || name;
       if (!identifier) {
@@ -485,7 +449,7 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
       // 3) Refresh info (preserve secretKey from create output)
       try {
         const infoOut = await runGarage(["key", "info", identifier]);
-        const full = parseGarageKeyInfoOutput(infoOut);
+        const full = parseGarageKeyInfo(infoOut);
         return { ...full, secretKey: created.secretKey };
       } catch {
         return created;
@@ -518,7 +482,7 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
       try {
         // Get current state
         const currentInfoOut = await runGarage(["key", "info", idOrName]);
-        const current = parseGarageKeyInfoOutput(currentInfoOut);
+        const current = parseGarageKeyInfo(currentInfoOut);
     
         let handle = idOrName;
     
@@ -542,7 +506,7 @@ function parseGarageKeyList(output: string): GarageKeyListEntry[] {
     
         // 3) Return fresh info
         const finalInfoOut = await runGarage(["key", "info", handle]);
-        return parseGarageKeyInfoOutput(finalInfoOut);
+        return parseGarageKeyInfo(finalInfoOut);
       } catch (e: any) {
         const msg = errorString(e);
         console.error("Failed to update Garage key:", idOrName, msg);
@@ -822,18 +786,6 @@ export async function getGarageBucketDashboardStats(
   return parseGarageBucketInfo(out);
 }
 
-/**
- * Object-level stats is the same as bucket usage in Garage.
- */
-export async function getBucketObjectStatsFromGarage(
-  bucketNameOrId: string
-): Promise<{ objectCount: number; sizeBytes: number }> {
-  const info = await getGarageBucketDashboardStats(bucketNameOrId);
-  return {
-    objectCount: info.objectCount,
-    sizeBytes: info.totalSizeBytes,
-  };
-}
 export async function getGarageBucket(bucketNameOrId: string): Promise<GarageBucket> {
   const info = await getGarageBucketDashboardStats(bucketNameOrId);
 

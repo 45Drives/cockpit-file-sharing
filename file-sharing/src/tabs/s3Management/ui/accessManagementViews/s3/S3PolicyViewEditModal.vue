@@ -1,6 +1,6 @@
 <!-- MinioPolicyViewEditModal.vue -->
 <template>
-  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
     <div class="bg-default rounded-lg shadow-lg max-w-xl w-full mx-4">
       <!-- Header -->
       <div class="px-5 py-4 border-b border-default flex items-center justify-between">
@@ -33,7 +33,7 @@
             <input type="text" :value="policyName || ''"
               class="w-full border border-default bg-default rounded px-2 py-1 text-sm text-default" disabled />
             <p class="text-sm text-muted mt-1">
-              Policy names are managed in MinIO and cannot be changed here.
+              Policy names are managed in {{ backendDisplay }} and cannot be changed here.
             </p>
           </div>
 
@@ -45,12 +45,12 @@
               </label>
               <div class="flex items-center space-x-2">
                 <button type="button"
-                  class="px-2 py-1 text-sm rounded btn-secondary hover:bg-gray-100"
+                  class="px-2 py-1 text-sm rounded btn-secondary hover:bg-gray-100 font-semibold"
                   @click="resetJson">
                   Reset
                 </button>
                 <button type="button"
-                  class="px-2 py-1 text-sm rounded btn-secondary hover:bg-gray-100"
+                  class="px-2 py-1 text-sm rounded btn-secondary hover:bg-gray-100 font-semibold"
                   @click="formatJson">
                   Format JSON
                 </button>
@@ -71,12 +71,12 @@
 
       <!-- Footer -->
       <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-        <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100" @click="close"
+        <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100 font-semibold" @click="close"
           :disabled="loading">
           Cancel
         </button>
         <button
-          class="px-3 py-1.5 text-xs rounded border border-danger bg-danger text-default hover:bg-danger disabled:opacity-60"
+          class="px-3 py-1.5 text-xs rounded border border-danger bg-danger text-default hover:bg-danger disabled:opacity-60 font-semibold"
           @click="save" :disabled="loading || !policyName">
           Save changes
         </button>
@@ -94,6 +94,7 @@ const props = defineProps<{
   errorMessage?: string | null;
   policyName: string | null;
   policyJson: string | null;
+  backendLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -104,6 +105,7 @@ const emit = defineEmits<{
 const localJson = ref("");
 const originalJson = ref("");
 const localError = ref<string | null>(null);
+const backendDisplay = props.backendLabel?.trim() || "MinIO";
 
 // When the modal opens or the policy JSON changes, sync local state
 watch(

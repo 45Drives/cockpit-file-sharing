@@ -1,5 +1,5 @@
 <template>
-    <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
         <div class="bg-default rounded-lg shadow-xl max-w-lg w-full mx-4 overflow-hidden border border-default">
             <div class="px-5 py-4 border-b border-default flex items-center justify-between">
                 <h3 class="text-base font-semibold">Key created</h3>

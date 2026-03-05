@@ -1,5 +1,5 @@
 # cockpit-file-sharing
-A Cockpit plugin for managing Samba and NFS shares.
+A Cockpit plugin for managing Samba, NFS, iSCSI, and S3 storage services.
 
 ![Example of creating a Samba share](docs/create-samba-share-example.gif)
 ## Features
@@ -28,6 +28,31 @@ A Cockpit plugin for managing Samba and NFS shares.
 - Manage individual client settings
 - Export and import of configuration (same format as `/etc/exports`)
 
+### iSCSI
+- Manage virtual devices
+    - Create, edit, and remove devices
+    - Support for single-server and clustered environments
+- Manage targets
+    - Create, edit, and remove targets
+    - Manage target portals, initiator groups, and CHAP configuration
+    - View active sessions
+- Import and export iSCSI configuration
+
+### S3
+- Detect and manage supported S3 backends
+    - MinIO
+    - RustFS
+    - Ceph RGW
+    - Garage
+- Bucket management
+    - Create, edit, and delete buckets
+    - View bucket usage/statistics
+- Access management
+    - MinIO/RustFS: users, policies, and groups
+    - RustFS: access keys
+    - Ceph RGW: user/access management
+    - Garage: key management
+
 # Installation
 ## Ubuntu 20.04, Ubuntu 22.04
 ### From 45Drives Repo (Recommended)
@@ -39,8 +64,8 @@ sudo apt install cockpit-file-sharing
 ### Direct from .deb
 Installing this way may work for other versions of Ubuntu and Debian, but it is unsupported. You won't get automatic updates this way.
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.5.2/cockpit-file-sharing_4.5.2-1jammy_all.deb
-sudo apt install ./cockpit-file-sharing_4.5.2-1jammy_all.deb
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.5.4/cockpit-file-sharing_4.5.4-6jammy_all.deb
+sudo apt install ./cockpit-file-sharing_4.5.4-6jammy_all.deb
 ```
 ## Rocky 8, Rocky 9
 ### From 45Drives Repo (Recommended)
@@ -52,7 +77,7 @@ sudo dnf install cockpit-file-sharing
 Installing this way may work for other versions of Rocky/Centos/RHEL/Fedora/etc, but it is unsupported. You won't get automatic updates this way.
 ```bash
 # dnf or yum
-sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.5.2/cockpit-file-sharing-4.5.2-1.el9.noarch.rpm
+sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.5.4/cockpit-file-sharing-4.5.4-6.el9.noarch.rpm
 ```
 ## Generic Installation
 1. Install Dependencies
@@ -169,3 +194,11 @@ To allow cockpit-file-sharing to manage existing shares defined in `/etc/exports
 1. Create a backup copy of exports: `cp /etc/exports /etc/exports.bak`
 2. Move exports to cockpit-file-sharing managed location: `mv /etc/exports /etc/exports.d/cockpit-file-sharing.exports`
 3. Create an empty default exports file: `touch /etc/exports`
+
+## iSCSI Management Tab
+The iSCSI tab allows managing virtual devices and targets. For each target, you can manage portals, initiator groups, and CHAP settings, and view active sessions. In single-server mode, iSCSI configuration import/export is available from the tab.
+
+## S3 Management Tab
+The S3 tab detects supported backends available on the host (MinIO, RustFS, Ceph RGW, and Garage), then provides:
+1. Bucket Management for creating, editing, deleting, and viewing bucket usage/statistics.
+2. Access Management for backend-specific identity and policy operations (for example users, policies, groups, access keys, and keys).

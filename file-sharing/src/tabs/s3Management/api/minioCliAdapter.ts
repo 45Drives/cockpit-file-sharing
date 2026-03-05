@@ -1,9 +1,9 @@
 
-import type {MinioBucket,BucketVersioningStatus,MinioUser,MinioUserCreatePayload,MinioUserDetails,MinioUserGroupMembership,MinioUserUpdatePayload,
-  MinioBucketDashboardStats,MinioReplicationUsage,MinioGroupInfo,McAliasCandidate,
-  MinioServiceAccount,
-  MinioServiceAccountCreatePayload,
-  MinioServiceAccountUpdatePayload,
+import type {MinioBucket,BucketVersioningStatus,S3AccessUser,S3AccessUserCreatePayload,S3AccessUserDetails,S3AccessUserGroupMembership,S3AccessUserUpdatePayload,
+  MinioBucketDashboardStats,MinioReplicationUsage,S3AccessGroupInfo,S3AliasCandidate,
+  S3ServiceAccount,
+  S3ServiceAccountCreatePayload,
+  S3ServiceAccountUpdatePayload,
 } from "../types/types";
 import pLimit from "p-limit";
 
@@ -13,7 +13,7 @@ import { legacy, server, Command, unwrap } from "@45drives/houston-common-lib";
 const bucketLimit = pLimit(6);
 const { errorString } = legacy;
 
-let MINIO_ALIAS = process.env.MINIO_MC_ALIAS || "gw01";
+let MINIO_ALIAS = "";
 
 // Expose setter so UI can select alias
 export function setMinioAlias(alias: string): void {
@@ -22,14 +22,11 @@ export function setMinioAlias(alias: string): void {
   MINIO_ALIAS = trimmed;
 }
 
-export function getMinioAlias(): string {
-  return MINIO_ALIAS;
-}
 
-export async function listMinioAliasCandidates(): Promise<McAliasCandidate[]> {
+export async function listMinioAliasCandidates(): Promise<S3AliasCandidate[]> {
   const rows = await mcJsonLines(["alias", "list"]);
 
-  const candidates: McAliasCandidate[] = [];
+  const candidates: S3AliasCandidate[] = [];
 
   const isTemplateOrPublic = (alias: string, url: string) => {
     const a = alias.toLowerCase();
@@ -68,7 +65,7 @@ export async function listMinioAliasCandidates(): Promise<McAliasCandidate[]> {
     candidates.push({ alias });
   }
 
-  const verified: McAliasCandidate[] = [];
+  const verified: S3AliasCandidate[] = [];
   for (const c of candidates) {
     try {
       await mcJsonSingle(["admin", "info", c.alias]);
@@ -85,16 +82,6 @@ export async function listMinioAliasCandidates(): Promise<McAliasCandidate[]> {
 export async function isMinioAvailable(): Promise<boolean> {
   const cands = await listMinioAliasCandidates();
   return cands.length > 0;
-}
-
-export async function isMinioHealthy(): Promise<boolean> {
-  try {
-    await mcJsonSingle(["admin", "info", MINIO_ALIAS]);
-    return true;
-  } catch (e) {
-    console.warn("MinIO health check failed:", e);
-    return false;
-  }
 }
 
 
@@ -326,24 +313,6 @@ export async function getMinioBucketQuotaBytes(
   }
 }
 
-/**
- * Object-level stats for a single bucket using `mc stat --json`.
- */
-export async function getBucketObjectStatsFromMinio(
-  bucketName: string
-): Promise<{ objectCount: number; sizeBytes: number }> {
-  const stat = await mcJsonSingle([
-    "stat",
-    `${MINIO_ALIAS}/${bucketName}`,
-  ]);
-
-  const usage = stat.Usage || stat.usage || {};
-  const sizeBytes: number = usage.totalSize ?? usage.size ?? 0;
-  const objectCount: number = usage.objectsCount ?? usage.objects ?? 0;
-
-  return { objectCount, sizeBytes };
-}
-
 
 
 /**
@@ -435,9 +404,9 @@ if (hasSizeQuota) {
 }
 
 
-export async function listMinioUsers(): Promise<MinioUser[]> {
+export async function listMinioUsers(): Promise<S3AccessUser[]> {
   const objs = await mcJsonLines(["admin", "user", "list", MINIO_ALIAS]);
-  const users: MinioUser[] = [];
+  const users: S3AccessUser[] = [];
 
   for (const obj of objs) {
     const username: string =
@@ -493,7 +462,7 @@ export async function deleteMinioUser(username: string): Promise<void> {
 }
 
 /**
- * createMinioUser(payload: MinioUserCreatePayload): Promise<void>
+ * createMinioUser(payload: S3AccessUserCreatePayload): Promise<void>
  *
  * Uses:
  *   mc admin user add ALIAS USERNAME PASSWORD
@@ -501,7 +470,7 @@ export async function deleteMinioUser(username: string): Promise<void> {
  *   mc admin policy set ALIAS POLICY user=USERNAME
  */
 export async function createMinioUser(
-  payload: MinioUserCreatePayload
+  payload: S3AccessUserCreatePayload
 ): Promise<void> {
   const { username, secretKey, status, policies } = payload;
 
@@ -565,7 +534,7 @@ export async function listMinioPolicies(): Promise<string[]> {
   return Array.from(names).sort();
 }
 
-export async function getMinioUserInfo(username: string): Promise<MinioUserDetails> {
+export async function getMinioUserInfo(username: string): Promise<S3AccessUserDetails> {
   if (!username) {
     throw new Error("getMinioUserInfo: username is required");
   }
@@ -611,7 +580,7 @@ export async function getMinioUserInfo(username: string): Promise<MinioUserDetai
     info.authentication || info.Authentication;
 
   const memberOfRaw = info.memberOf || info.member_of || [];
-  const memberOf: MinioUserGroupMembership[] = Array.isArray(memberOfRaw)
+  const memberOf: S3AccessUserGroupMembership[] = Array.isArray(memberOfRaw)
     ? memberOfRaw.map((g: any) => ({
         name: g.name || g.group || "",
         policies: Array.isArray(g.policies)
@@ -622,7 +591,7 @@ export async function getMinioUserInfo(username: string): Promise<MinioUserDetai
       }))
     : [];
 
-  const details: MinioUserDetails = {
+  const details: S3AccessUserDetails = {
     username: accessKey || username,status,policies,accessKey,authentication,memberOf,raw: info,
   };
 
@@ -630,7 +599,7 @@ export async function getMinioUserInfo(username: string): Promise<MinioUserDetai
 }
 
 
-export async function updateMinioUser(payload: MinioUserUpdatePayload): Promise<void> {
+export async function updateMinioUser(payload: S3AccessUserUpdatePayload): Promise<void> {
   const {
     username,
     status,
@@ -645,7 +614,7 @@ export async function updateMinioUser(payload: MinioUserUpdatePayload): Promise<
   }
 
   // 1) Fetch current state so can diff policies & groups and get accessKey
-  const current: MinioUserDetails = await getMinioUserInfo(username);
+  const current: S3AccessUserDetails = await getMinioUserInfo(username);
 
   const currentPolicies: string[] = (current.policies ?? []) as string[];
   const currentGroups: string[] = (current.memberOf ?? [])
@@ -697,7 +666,7 @@ export async function updateMinioUser(payload: MinioUserUpdatePayload): Promise<
   if (resetSecret) {
     // If the user provided a specific secret, set that
     if (newSecretKey && newSecretKey.trim().length > 0) {
-      // Prefer explicit accessKey from MinioUserDetails, fallback to username
+      // Prefer explicit accessKey from user details, fallback to username
       const accessKey = current.accessKey || username;
 
       await runMc(["admin", "user", "add", MINIO_ALIAS, username, newSecretKey.trim()]);
@@ -868,7 +837,7 @@ export async function deleteMinioPolicy(name: string): Promise<void> {
 }
 
 
-export async function getMinioGroupInfo(name: string): Promise<MinioGroupInfo> {
+export async function getMinioGroupInfo(name: string): Promise<S3AccessGroupInfo> {
   const info = await mcJsonSingle(["admin", "group", "info", MINIO_ALIAS, name]);
 
   const toStringArray = (v: any): string[] => {
@@ -1137,7 +1106,7 @@ export async function getMinioBucketDashboardStats(
 }
 
 
-export async function createMinioServiceAccount(payload: MinioServiceAccountCreatePayload) {
+export async function createMinioServiceAccount(payload: S3ServiceAccountCreatePayload) {
   const username = payload.username?.trim();
   if (!username) throw new Error("createMinioServiceAccount: username is required");
 
@@ -1164,7 +1133,7 @@ export async function createMinioServiceAccount(payload: MinioServiceAccountCrea
   const out = await runMc(args);
   return parseCreatedCreds(out.stdout);
 }
-export async function updateMinioServiceAccount(payload: MinioServiceAccountUpdatePayload): Promise<void> {
+export async function updateMinioServiceAccount(payload: S3ServiceAccountUpdatePayload): Promise<void> {
   const accessKey = payload.accessKey?.trim();
   if (!accessKey) throw new Error("updateMinioServiceAccount: accessKey is required");
 
@@ -1300,7 +1269,7 @@ export async function getMinioServiceAccountInfo(accessKey: string): Promise<{
     policyJson: obj?.policy ? JSON.stringify(obj.policy, null, 2) : undefined, // here
   };
 }
-export async function listMinioServiceAccounts(username: string): Promise<MinioServiceAccount[]> {
+export async function listMinioServiceAccounts(username: string): Promise<S3ServiceAccount[]> {
   const { stdout } = await runMc(
     ["admin", "accesskey", "list", MINIO_ALIAS, username, "--json"],
     false
@@ -1335,7 +1304,7 @@ export async function listMinioServiceAccounts(username: string): Promise<MinioS
         name: info.name,
         description: info.description,
         status: status ?? "enabled",
-      } satisfies MinioServiceAccount;
+      } satisfies S3ServiceAccount;
     })
   );
 

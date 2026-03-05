@@ -21,7 +21,7 @@
           </div>
 
           <button type="button"
-            class="inline-flex items-center rounded-md btn-secondary px-3 py-1.5 text-xs text-default disabled:opacity-60"
+            class="inline-flex items-center rounded-md btn-secondary px-3 py-1.5 text-xs text-default disabled:opacity-60 font-semibold"
             @click="emit('update:modelValue', false)" :disabled="saving">
             Close
           </button>
@@ -129,7 +129,7 @@
                       <input v-model="form.accessKey"
                         class="w-full rounded-md border border-default bg-default px-2 py-1 text-xs font-mono text-default"
                         :disabled="saving || hasCreatedCreds" />
-                      <button type="button" class="rounded-md btn-secondary px-2 py-1 text-xs"
+                      <button type="button" class="rounded-md btn-secondary px-2 py-1 text-xs font-semibold"
                         @click="form.accessKey = generateAccessKey()" :disabled="saving || hasCreatedCreds">
                         Generate
                       </button>
@@ -142,7 +142,7 @@
                       <input v-model="form.secretKey"
                         class="w-full rounded-md border border-default bg-default px-2 py-1 text-xs font-mono text-default"
                         :disabled="saving || hasCreatedCreds" />
-                      <button type="button" class="rounded-md btn-secondary px-2 py-1 text-xs"
+                      <button type="button" class="rounded-md btn-secondary px-2 py-1 text-xs font-semibold"
                         @click="form.secretKey = generateSecret()" :disabled="saving || hasCreatedCreds">
                         Generate
                       </button>
@@ -198,7 +198,7 @@
                   placeholder='{"Version":"2012-10-17","Statement":[...]}' :disabled="saving || hasCreatedCreds" />
 
                 <div class="flex items-center justify-between gap-3">
-                  <button type="button" class="rounded-md btn-secondary px-2 py-1 text-xs"
+                  <button type="button" class="rounded-md btn-secondary px-2 py-1 text-xs font-semibold"
                     @click="formatPolicyJson" :disabled="saving || hasCreatedCreds || !policyJson.trim()">
                     Format JSON
                   </button>
@@ -217,13 +217,13 @@
 
         <div class="flex justify-end gap-2 border-t border-default bg-accent px-6 py-4">
           <button type="button"
-            class="rounded-md btn-secondary px-3 py-1.5 text-xs disabled:opacity-60"
+            class="rounded-md btn-secondary px-3 py-1.5 text-xs disabled:opacity-60 font-semibold"
             @click="emit('update:modelValue', false)" :disabled="saving">
             {{ hasCreatedCreds ? "Done" : "Cancel" }}
           </button>
 
           <button v-if="!hasCreatedCreds" type="button"
-            class="rounded-md btn-primary px-3 py-1.5 text-xs text-default disabled:opacity-60"
+            class="rounded-md btn-primary px-3 py-1.5 text-xs text-default disabled:opacity-60 font-semibold"
             @click="submit" :disabled="saving || !username">
             {{ saving ? (isEdit ? "Updating..." : "Creating...") : (isEdit ? "Update" : "Create") }}
           </button>
@@ -235,19 +235,19 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { MinioServiceAccount } from "@/tabs/s3Management/types/types";
+import type { S3ServiceAccount } from "@/tabs/s3Management/types/types";
 import {
   createMinioServiceAccount,
   updateMinioServiceAccount,
   enableMinioServiceAccount,
   disableMinioServiceAccount,
 } from "@/tabs/s3Management/api/minioCliAdapter";
-import { generateSecret, formatIsoLocal, localTimeZone } from "@/tabs/s3Management/bucketBackends/bucketUtils";
+import { generateSecret, generateAccessKey, formatIsoLocal, localTimeZone } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 
 const props = defineProps<{
   modelValue: boolean;
   username: string;
-  serviceAccount?: MinioServiceAccount | null;
+  serviceAccount?: S3ServiceAccount | null;
 }>();
 
 const emit = defineEmits<{
@@ -411,12 +411,6 @@ function formatPolicyJson() {
   }
 }
 
-function generateAccessKey(): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 20; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return out;
-}
 
 async function onToggleEnabled(ev: Event) {
   if (!isEdit.value) return;

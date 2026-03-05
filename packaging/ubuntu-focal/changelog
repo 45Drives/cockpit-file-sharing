@@ -1,3 +1,51 @@
+cockpit-file-sharing (4.5.4-6focal) focal; urgency=medium
+
+  * building test pacakage
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 05 Mar 2026 06:55:59 -0400
+
+cockpit-file-sharing (4.5.4-5focal) focal; urgency=medium
+
+  * building test pacakage
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 05 Mar 2026 06:17:31 -0400
+
+cockpit-file-sharing (4.5.4-4focal) focal; urgency=medium
+
+  * building test pacakge for rust fs + ui improvements
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 26 Feb 2026 10:19:33 -0400
+
+cockpit-file-sharing (4.5.4-3focal) focal; urgency=medium
+
+  * building test pacakge for rust fs + ui improvements
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 26 Feb 2026 09:52:11 -0400
+
+cockpit-file-sharing (4.5.4-2focal) focal; urgency=medium
+
+  * building test pacakge for rust fs wit installing awscurl
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 26 Feb 2026 08:09:21 -0400
+
+cockpit-file-sharing (4.5.4-1focal) focal; urgency=medium
+
+  * building test pacakge for rust fs
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 26 Feb 2026 07:18:51 -0400
+
+cockpit-file-sharing (4.5.3-4focal) focal; urgency=medium
+
+  * fixed tab visibilty logic for s3 management + building package
+
+ -- Rachit Hans <rhans@45drives.com>  Wed, 11 Feb 2026 08:44:39 -0400
+
+cockpit-file-sharing (4.5.3-3focal) focal; urgency=medium
+
+  * building package with s3 management tab
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 10 Feb 2026 13:15:51 -0400
+
 cockpit-file-sharing (4.5.3-2focal) focal; urgency=medium
 
   * fixed light mode view + added view mode for minio service accounts + building

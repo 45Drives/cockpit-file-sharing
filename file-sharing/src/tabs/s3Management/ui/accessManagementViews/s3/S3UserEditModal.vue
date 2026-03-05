@@ -13,12 +13,12 @@
               Edit user "{{ user?.username }}"
             </h3>
             <p class="mt-0.5 text-xs text-muted">
-              Manage status, access policies/groups, service accounts, and credentials.
+              Manage status, access policies/groups, and credentials.
             </p>
           </div>
 
           <button type="button"
-            class="inline-flex items-center rounded-md btn-secondary px-3 py-1.5 text-xs text-default hover:opacity-90"
+            class="inline-flex items-center rounded-md btn-secondary px-3 py-1.5 text-xs text-default hover:opacity-90 font-semibold"
             @click="$emit('update:modelValue', false)" :disabled="loading">
             Close
           </button>
@@ -59,7 +59,7 @@
                 <div>
                   <div class="text-xs font-semibold uppercase tracking-wide text-default">Access</div>
                   <div class="mt-0.5 text-xs text-muted">
-                    Configure policies, groups, and service accounts for this user.
+                    Configure policies and groups for this user.
                   </div>
                 </div>
               </div>
@@ -67,28 +67,40 @@
               <!-- Tabs + New service account button -->
               <div class="px-4 pt-3 flex items-center justify-between gap-3">
                 <div class="inline-flex rounded-md border border-default bg-accent p-1 text-xs">
-                  <button type="button" class="rounded-md px-3 py-1.5" :class="activeAccessTab === 'policies'
-                    ? 'bg-default text-default font-medium'
-                    : 'text-muted hover:text-default'" @click="activeAccessTab = 'policies'">
+                  <button
+                    type="button"
+                    class="rounded-md px-3 py-1.5 font-semibold"
+                    :class="activeAccessTab === 'policies'
+                      ? 'bg-default text-muted'
+                      : 'text-muted hover:text-muted'"
+                    @click="activeAccessTab = 'policies'">
                     Policies
                   </button>
 
-                  <button type="button" class="rounded-md px-3 py-1.5" :class="activeAccessTab === 'groups'
-                    ? 'bg-default text-default font-medium'
-                    : 'text-muted hover:text-default'" @click="activeAccessTab = 'groups'">
+                  <button
+                    type="button"
+                    class="rounded-md px-3 py-1.5 font-semibold"
+                    :class="activeAccessTab === 'groups'
+                      ? 'bg-default text-muted'
+                      : 'text-muted hover:text-muted'"
+                    @click="activeAccessTab = 'groups'">
                     Groups
                   </button>
 
-                  <button type="button" class="rounded-md px-3 py-1.5" :class="activeAccessTab === 'serviceAccounts'
-                    ? 'bg-default text-default font-medium'
-                    : 'text-muted hover:text-default'"
+                  <button
+                    v-if="showServiceAccounts"
+                    type="button"
+                    class="rounded-md px-3 py-1.5 font-semibold"
+                    :class="activeAccessTab === 'serviceAccounts'
+                      ? 'bg-default text-default'
+                      : 'text-muted hover:text-default'"
                     @click="activeAccessTab = 'serviceAccounts'; loadServiceAccounts()">
                     Service accounts
                   </button>
                 </div>
 
-                <button v-if="activeAccessTab === 'serviceAccounts'" type="button"
-                  class="inline-flex items-center justify-center rounded-md btn-primary px-3 py-1.5 text-xs text-default disabled:opacity-60"
+                <button v-if="showServiceAccounts && activeAccessTab === 'serviceAccounts'" type="button"
+                  class="inline-flex items-center justify-center rounded-md btn-primary px-3 py-1.5 text-xs text-default disabled:opacity-60 font-semibold"
                   @click="openCreateServiceAccountModal()" :disabled="loading || !user">
                   New access key
                 </button>
@@ -115,7 +127,7 @@
                   </div>
                 </div>
 
-                <div class="text-xs text-secondary">
+                <div class="text-xs text-muted">
                   Policies control which buckets and actions this user is allowed to access.
                 </div>
               </div>
@@ -146,7 +158,7 @@
               </div>
 
               <!-- Service accounts -->
-              <div v-else class="px-4 py-4 space-y-4">
+              <div v-else-if="showServiceAccounts && activeAccessTab === 'serviceAccounts'" class="px-4 py-4 space-y-4">
                 <div v-if="saLoading" class="text-xs text-muted">Loading...</div>
 
                 <div v-else class="rounded-md border border-default overflow-hidden">
@@ -183,19 +195,19 @@
                         <td class="px-3 py-2">
                           <div class="flex justify-end gap-2">
                             <button type="button"
-                              class="rounded-md btn-secondary px-2 py-1 text-xs"
+                              class="rounded-md btn-secondary px-2 py-1 text-xs font-semibold"
                               @click="toggleServiceAccount(sa)" :disabled="saActionBusy">
                               {{ sa.status === "disabled" ? "Enable" : "Disable" }}
                             </button>
 
                             <button type="button"
-                              class="rounded-md border border-default bg-danger px-2 py-1 text-xs text-white"
+                              class="rounded-md border border-default bg-danger px-2 py-1 text-xs text-white font-semibold"
                               @click="removeServiceAccount(sa)" :disabled="saActionBusy">
                               Delete
                             </button>
 
                             <button type="button"
-                              class="rounded-md btn-secondary px-2 py-1 text-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                              class="rounded-md btn-secondary px-2 py-1 text-xs disabled:opacity-60 disabled:cursor-not-allowed font-semibold"
                               @click="openEditServiceAccountModal(sa)"
                               :disabled="saActionBusy || sa.status === 'disabled'"
                               :title="sa.status === 'disabled' ? 'Enable this access key to edit' : 'Edit'">
@@ -217,7 +229,7 @@
             </section>
 
             <!-- Reset secret card -->
-            <section class="rounded-lg border border-default bg-default px-4 py-4 space-y-3">
+            <section v-if="showServiceAccounts" class="rounded-lg border border-default bg-default px-4 py-4 space-y-3">
               <div class="flex items-center justify-between">
                 <div>
                   <div class="text-sm font-medium text-default">Reset user Password</div>
@@ -240,7 +252,7 @@
                   placeholder="Enter a secret key or generate one" />
 
                 <div class="flex items-center justify-between gap-3">
-                  <button type="button" class="rounded-md btn-secondary px-2.5 py-1 text-xs"
+                  <button type="button" class="rounded-md btn-secondary px-2.5 py-1 text-xs font-semibold"
                     @click="localSecret = generateSecret()">
                     Generate Password
                   </button>
@@ -261,13 +273,13 @@
         <!-- Footer (sticky) -->
         <div class="sticky bottom-0 z-10 flex justify-end gap-2 border-t border-default bg-accent px-6 py-4">
           <button type="button"
-            class="rounded-md btn-secondary px-3 py-1.5 text-xs disabled:opacity-60"
+            class="rounded-md btn-secondary px-3 py-1.5 text-xs disabled:opacity-60 font-semibold"
             @click="$emit('update:modelValue', false)" :disabled="loading">
             Cancel
           </button>
 
           <button type="button"
-            class="rounded-md border text-white border-default bg-danger px-3 py-1.5 text-xs text-default disabled:opacity-60"
+            class="rounded-md border text-white border-default bg-danger px-3 py-1.5 text-xs text-default disabled:opacity-60 font-semibold"
             @click="onSubmit" :disabled="loading || !user">
             Save changes
           </button>
@@ -277,7 +289,7 @@
   </div>
 
   <!-- Single source of truth: modal for create/edit service accounts -->
-  <MinioServiceAccountModal v-if="saModalOpen" :modelValue="saModalOpen" :username="user?.username ?? ''"
+  <MinioServiceAccountModal v-if="showServiceAccounts && saModalOpen" :modelValue="saModalOpen" :username="user?.username ?? ''"
     :serviceAccount="saModalServiceAccount"
     @update:modelValue="(v: boolean) => { saModalOpen = v; if (!v) closeServiceAccountModal(); }"
     @created="async () => { await loadServiceAccounts(); }" @updated="async () => { await loadServiceAccounts(); }" />
@@ -285,8 +297,12 @@
 
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
-import type { MinioServiceAccount, MinioUserDetails, MinioUserUpdatePayload } from "@/tabs/s3Management/types/types";
-import { generateSecret, formatIsoLocal, localTimeZone } from "@/tabs/s3Management/bucketBackends/bucketUtils";
+import type {
+  S3ServiceAccount,
+  S3AccessUserDetails,
+  S3AccessUserUpdatePayload,
+} from "@/tabs/s3Management/types/types";
+import { generateSecret, formatIsoLocal } from "@/tabs/s3Management/bucketBackends/bucketUtils";
 import {
   listMinioServiceAccounts,
   disableMinioServiceAccount,
@@ -302,14 +318,15 @@ interface Props {
   errorMessage: string | null;
   availablePolicies: string[];
   availableGroups: string[];
-  user: MinioUserDetails | null;
+  user: S3AccessUserDetails | null;
+  showServiceAccounts?: boolean;
 }
 
 const props = defineProps<Props>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: boolean): void;
-  (e: "submit", payload: MinioUserUpdatePayload): void;
+  (e: "submit", payload: S3AccessUserUpdatePayload): void;
 }>();
 
 const user = computed(() => props.user);
@@ -318,6 +335,7 @@ const loading = computed(() => props.loading);
 
 const availablePolicies = computed(() => props.availablePolicies ?? []);
 const availableGroups = computed(() => props.availableGroups ?? []);
+const showServiceAccounts = computed(() => props.showServiceAccounts !== false);
 
 const localPolicies = ref<string[]>([]);
 const localGroups = ref<string[]>([]);
@@ -328,7 +346,7 @@ const localSecret = ref("");
 
 const activeAccessTab = ref<"policies" | "groups" | "serviceAccounts">("policies");
 
-const serviceAccounts = ref<MinioServiceAccount[]>([]);
+const serviceAccounts = ref<S3ServiceAccount[]>([]);
 const saLoading = ref(false);
 const saActionBusy = ref(false);
 
@@ -356,7 +374,7 @@ watch(
 function onSubmit() {
   if (!props.user) return;
 
-  const payload: MinioUserUpdatePayload = {
+  const payload: S3AccessUserUpdatePayload = {
     username: props.user.username,
     status: localStatusEnabled.value ? "enabled" : "disabled",
     policies: [...localPolicies.value],
@@ -369,6 +387,7 @@ function onSubmit() {
 }
 
 async function loadServiceAccounts() {
+  if (!showServiceAccounts.value) return;
   if (!props.user) return;
   saLoading.value = true;
 
@@ -379,7 +398,7 @@ async function loadServiceAccounts() {
   }
 }
 
-async function toggleServiceAccount(sa: MinioServiceAccount) {
+async function toggleServiceAccount(sa: S3ServiceAccount) {
   if (!sa.accessKey) return;
 
   saActionBusy.value = true;
@@ -395,7 +414,7 @@ async function toggleServiceAccount(sa: MinioServiceAccount) {
   }
 }
 
-async function removeServiceAccount(sa: MinioServiceAccount) {
+async function removeServiceAccount(sa: S3ServiceAccount) {
   if (!sa.accessKey) return;
 
   saActionBusy.value = true;
@@ -409,14 +428,14 @@ async function removeServiceAccount(sa: MinioServiceAccount) {
 
 /* Modal handling */
 const saModalOpen = ref(false);
-const saModalServiceAccount = ref<MinioServiceAccount | null>(null);
+const saModalServiceAccount = ref<S3ServiceAccount | null>(null);
 
 function openCreateServiceAccountModal() {
   saModalServiceAccount.value = null; // create
   saModalOpen.value = true;
 }
 
-async function openEditServiceAccountModal(sa: MinioServiceAccount) {
+async function openEditServiceAccountModal(sa: S3ServiceAccount) {
   if (!sa.accessKey) return;
   if (sa.status === "disabled") return;
 

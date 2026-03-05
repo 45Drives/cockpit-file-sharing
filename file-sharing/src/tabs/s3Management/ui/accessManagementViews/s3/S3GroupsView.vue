@@ -1,0 +1,333 @@
+<!-- MinioGroupsView.vue -->
+<template>
+  <section class="bg-default rounded-lg border border-default px-5 py-4 shadow-sm">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <h2 class="text-lg font-semibold">Groups</h2>
+        <p class="text-xs text-muted">
+          Manage {{ isRustfsBackend ? "RustFS" : "MinIO" }} groups that can hold multiple users and shared policies.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-icon text-muted" />
+          <input
+            v-model.trim="searchQuery"
+            type="text"
+            placeholder="Search groups"
+            style="padding-left: 2rem;"
+            class="w-72 rounded-md border border-accent bg-accent pl-8 pr-3 py-2.5 text-sm text-default"
+          />
+        </div>
+        <button
+          class="inline-flex items-center gap-1 btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
+          @click="openCreateDialog" :disabled="loading || (!isRustfsBackend && !usernames.length)">
+          <PlusIcon class="size-icon" />
+          Create group
+        </button>
+      </div>
+    </div>
+
+    <div v-if="error" class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {{ error }}
+    </div>
+
+    <div v-if="loading" class="py-3 text-sm text-gray-600">
+      Loading groups...
+    </div>
+
+    <div v-else-if="filteredGroups.length" class="overflow-x-auto">
+      <table class="min-w-full border-collapse text-sm">
+        <thead>
+          <tr class="text-center">
+            <th class="px-3 py-2 border-b border-default font-semibold whitespace-nowrap">
+              Group
+            </th>
+            <th class="px-3 py-2 border-b border-default  font-semibold whitespace-nowrap">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="g in filteredGroups" :key="g" class="text-center">
+            <td class="px-3 py-2 border-b border-default">
+              <span class="font-mono text-sm">{{ g }}</span>
+            </td>
+            <td class="px-3 py-2 border-b border-default whitespace-nowrap">
+              <button
+                class="inline-flex items-center gap-1 btn-secondary text-sm font-semibold rounded px-2 py-1 mr-1"
+                @click="onViewGroup(g)">
+                <EyeIcon class="size-icon" />
+                View
+              </button>
+              <button
+                class="inline-flex items-center gap-1 btn-primary text-sm font-semibold rounded px-2 py-1 mr-1"
+                @click="onEditGroup(g)">
+                <PencilSquareIcon class="size-icon" />
+                Edit
+              </button>
+              <button
+                class="inline-flex items-center gap-1 text-white border border-red-600 bg-red-500 text-default text-sm font-semibold rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
+                @click="onDeleteGroup(g)" :disabled="loading">
+                <TrashIcon class="size-icon" />
+                Delete
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div v-else class="py-3 text-sm text-muted">
+      {{ groups.length ? "No matching groups found." : "No groups found." }}
+    </div>
+
+    <!-- Create group modal -->
+    <MinioGroupCreateModal v-model="showCreateDialog" :loading="loading" :error-message="createDialogError"
+      :available-users="usernames" :require-member="!isRustfsBackend" :backend-label="isRustfsBackend ? 'RustFS' : 'MinIO'"
+      @submit="handleGroupCreate" />
+    <MinioGroupModal v-model="showGroupDialog" :group="selectedGroup" :loading="groupDialogLoading"
+      :error-message="groupDialogError" :available-users="usernames" :available-policies="availablePolicies"
+      :mode="groupDialogMode" @submit="handleGroupUpdate" @switch-mode="groupDialogMode = $event" />
+  </section>
+</template>
+
+<script lang="ts" setup>
+import { ref, computed, onMounted } from "vue";
+import {
+  listMinioGroups,
+  createMinioGroup,
+  deleteMinioGroup,
+  listMinioUsers,
+  getMinioGroupInfo,
+  updateMinioGroup,
+  listMinioPolicies,
+} from "../../../api/minioCliAdapter";
+import {
+  createRustfsGroup,
+  listRustfsGroups,
+  getRustfsGroupInfo,
+  listRustfsPolicies,
+  listRustfsUsers,
+  deleteRustfsGroup,
+  updateRustfsGroup,
+} from "../../../api/rustfsCliAdapter";
+import MinioGroupCreateModal from "./S3GroupCreateModal.vue";
+import type { S3AccessGroupInfo, S3AccessUser } from "@/tabs/s3Management/types/types";
+import MinioGroupModal from "./S3GroupModal.vue";
+import { confirm, pushNotification, Notification } from "@45drives/houston-common-ui";
+import { unwrap } from "@45drives/houston-common-lib";
+import { MagnifyingGlassIcon, PlusIcon, EyeIcon, PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
+
+const props = defineProps<{
+  backendLabel?: string;
+}>();
+const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
+
+const groups = ref<string[]>([]);
+const searchQuery = ref("");
+const users = ref<S3AccessUser[]>([]);
+const loading = ref(false);
+const error = ref<string | null>(null);
+const filteredGroups = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return groups.value;
+  return groups.value.filter((g) => String(g ?? "").toLowerCase().includes(q));
+});
+
+// Create dialog state
+const showCreateDialog = ref(false);
+const createDialogError = ref<string | null>(null);
+
+const usernames = computed(() => users.value.map((u) => u.username));
+
+// Combined view/edit group dialog
+const showGroupDialog = ref(false);
+const groupDialogLoading = ref(false);
+const groupDialogError = ref<string | null>(null);
+const selectedGroup = ref<S3AccessGroupInfo | null>(null);
+const groupDialogMode = ref<"view" | "edit">("view");
+
+// Policies for group edit
+const availablePolicies = ref<string[]>([]);
+
+
+async function loadGroups() {
+  loading.value = true;
+  error.value = null;
+  try {
+    groups.value = isRustfsBackend
+      ? await listRustfsGroups()
+      : await listMinioGroups();
+  } catch (e: any) {
+    pushNotification(new Notification(
+      isRustfsBackend ? `Failed to load RustFS groups` : `Failed to load MinIO groups`,
+      e?.message,
+      "error"
+    ));
+
+    // error.value = e?.message || "Failed to load MinIO groups.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function loadUsers() {
+  try {
+    users.value = isRustfsBackend
+      ? await listRustfsUsers()
+      : await listMinioUsers();
+  } catch (e) {
+    pushNotification(new Notification(`Failed to load MinIO users for group creation`, e as any, "error"));
+  }
+}
+
+function openCreateDialog() {
+  createDialogError.value = null;
+  showCreateDialog.value = true;
+}
+
+async function handleGroupCreate(payload: { name: string; members: string[] }) {
+  createDialogError.value = null;
+  try {
+    loading.value = true;
+    if (isRustfsBackend) {
+      await createRustfsGroup(payload.name, payload.members);
+    } else {
+      await createMinioGroup(payload.name, payload.members);
+    }
+    showCreateDialog.value = false;
+    try {
+      await loadGroups();
+    } catch {
+      // Keep dialog closed when create succeeded; reload failure is non-fatal here.
+    }
+    pushNotification(new Notification(
+      "Success",
+      `${isRustfsBackend ? "RustFS" : "MinIO"} group "${payload.name}" created`,
+      "success",
+      2000
+    ));
+
+  } catch (e: any) {
+    pushNotification(new Notification(
+      `Failed to create ${isRustfsBackend ? "RustFS" : "MinIO"} group`,
+      e?.message,
+      "error"
+    ));
+
+    // createDialogError.value = e?.message || "Failed to create MinIO group.";
+  } finally {
+    loading.value = false;
+  }
+}
+async function handleGroupUpdate(payload: { name: string; members: string[]; policies: string[] }) {
+  groupDialogError.value = null;
+  try {
+    groupDialogLoading.value = true;
+    if (isRustfsBackend) {
+      await updateRustfsGroup(payload.name, payload.members, payload.policies);
+    } else {
+      await updateMinioGroup(payload.name, payload.members, payload.policies);
+    }
+    showGroupDialog.value = false;
+    selectedGroup.value = null;
+    try {
+      await loadGroups();
+    } catch {
+      // Keep dialog closed when update succeeded; reload failure is non-fatal here.
+    }
+  } catch (e: any) {
+    pushNotification(new Notification(`Failed to update MinIO group"`, e?.message, "error"));
+
+    // groupDialogError.value = e?.message || "Failed to update MinIO group.";
+  } finally {
+    groupDialogLoading.value = false;
+  }
+}
+
+async function openGroupDialog(name: string, mode: "view" | "edit") {
+  groupDialogError.value = null;
+  selectedGroup.value = null;
+  groupDialogMode.value = mode;
+  showGroupDialog.value = true;
+  groupDialogLoading.value = true;
+
+  try {
+    selectedGroup.value = isRustfsBackend
+      ? await getRustfsGroupInfo(name)
+      : await getMinioGroupInfo(name);
+  } catch (e: any) {
+    pushNotification(new Notification(`Failed to load group details"`, e?.message, "error"));
+
+    // groupDialogError.value = e?.message || "Failed to load group details.";
+  } finally {
+    groupDialogLoading.value = false;
+  }
+}
+
+function onViewGroup(name: string) {
+  openGroupDialog(name, "view");
+}
+
+function onEditGroup(name: string) {
+  openGroupDialog(name, "edit");
+}
+async function onDeleteGroup(name: string) {
+  let deleteTargetMemberCount = 0;
+  if (isRustfsBackend) {
+    try {
+      const info = await getRustfsGroupInfo(name);
+      deleteTargetMemberCount = info.members?.length ?? 0;
+    } catch {
+      deleteTargetMemberCount = 0;
+    }
+  }
+  const body = !isRustfsBackend
+    ? "Are you sure you want to delete this MinIO group?\n\nAll users will be removed from this group. This action cannot be undone."
+    : deleteTargetMemberCount > 0
+      ? `Are you sure you want to delete this RustFS group?\n\nThis group has ${deleteTargetMemberCount} member(s). Continue to remove all members and delete the group?`
+      : "Are you sure you want to delete this RustFS group?\n\nThis action cannot be undone.";
+  const confirmed: boolean = await unwrap(confirm({
+    header: `Delete group "${name}"?`,
+    body,
+    confirmButtonText: "Delete",
+    dangerous: true,
+  }));
+  if (!confirmed) return;
+  try {
+    loading.value = true;
+    error.value = null;
+    if (isRustfsBackend) {
+      await deleteRustfsGroup(name, { removeMembersFirst: true });
+    } else {
+      await deleteMinioGroup(name);
+    }
+    await loadGroups();
+    pushNotification(new Notification("Success", `Deleted ${isRustfsBackend ? "RustFS" : "MinIO"} group "${name}"`, "success", 2000));
+  } catch (e: any) {
+    pushNotification(new Notification(`Failed to delete ${isRustfsBackend ? "RustFS" : "MinIO"} group "${name}"`, e?.message, "error"));
+
+    // error.value = e?.message || "Failed to delete MinIO group.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function loadPolicies() {
+  try {
+    availablePolicies.value = isRustfsBackend
+      ? await listRustfsPolicies()
+      : await listMinioPolicies();
+  } catch (e: any) {
+    pushNotification(new Notification(`Failed to load MinIO policies for groups"`, e?.message, "error"));
+
+  }
+}
+onMounted(() => {
+  loadGroups();
+  loadUsers();
+  loadPolicies();
+});
+</script>
