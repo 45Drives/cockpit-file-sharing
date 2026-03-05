@@ -45,21 +45,6 @@ export async function listBucketsFromCeph(): Promise<CephBucket[]> {
   return statsList.map((stats) => buildS3BucketFromRgwStats(stats));
 }
 
-export async function getBucketObjectStats(
-  bucketName: string
-): Promise<{ objectCount: number; sizeBytes: number }> {
-  const stats = await rgwJson(["bucket", "stats", "--bucket", bucketName]);
-
-  const usage = stats.usage || {};
-  const usageKey = "rgw.main" in usage ? "rgw.main" : Object.keys(usage)[0];
-  const usageMain = usageKey ? usage[usageKey] || {} : {};
-
-  const sizeBytes: number = usageMain.size ?? 0;
-  const objectCount: number = usageMain.num_objects ?? 0;
-
-  return { objectCount, sizeBytes };
-}
-
 export async function isCephRgwHealthy(): Promise<boolean> {
   try {
     // Any lightweight admin call that fails fast if RGW is unreachable/unauthorized
@@ -154,7 +139,7 @@ async function httpProbeViaCurl(endpointUrl: string, timeoutSec = 1): Promise<bo
   return rc === "0";
 }
 
-export async function firstWorkingRgwGateway(): Promise<RgwGateway | null> {
+async function firstWorkingRgwGateway(): Promise<RgwGateway | null> {
   const report = await cephJson(["report"]);
 
   const svcMap = report.servicemap || report.service_map || {};
@@ -887,22 +872,10 @@ function splitTenantFromUid(fullUid: string): { tenant?: string; uid: string } {
   };
 }
 
-export async function getCephS3Connection(): Promise<CephS3Connection> {
+async function getCephS3Connection(): Promise<CephS3Connection> {
   if (cachedCephS3Conn) return cachedCephS3Conn;
 
-  // 1) Optional env overrides
-  const envEndpoint = process.env.CEPH_S3_ENDPOINT;
-
-  if (envEndpoint) {
-    const endpointUrl = envEndpoint.startsWith("http") ? envEndpoint : `http://${envEndpoint}`;
-
-    cachedCephS3Conn = {
-      endpointUrl,
-    };
-    return cachedCephS3Conn;
-  }
-
-  // 2) Derive from RGW servicemap
+  // Derive from RGW servicemap
   const gateways = await listRgwGateways();
   const gw = gateways.find((g) => g.isDefault) || gateways[0];
 
@@ -1912,20 +1885,4 @@ export async function listRgwPlacementTargets(zonegroup?: string): Promise<strin
   }
 
   return [];
-}
-
-export async function getRgwZonegroupName(): Promise<string | null> {
-  const out = await rgwJson(["zonegroup", "list", "--format", "json"]);
-  const zgs = (out as any)?.zonegroups;
-  if (Array.isArray(zgs) && zgs.length) return String(zgs[0]);
-  return null;
-}
-
-export async function getRgwZonegroupApiName(zonegroup?: string): Promise<string | null> {
-  const zg = zonegroup ?? (await getRgwZonegroupName());
-  if (!zg) return null;
-
-  const out = await rgwJson(["zonegroup", "get", "--rgw-zonegroup", zg, "--format", "json"]);
-  const api = (out as any)?.api_name;
-  return typeof api === "string" && api.trim() ? api.trim() : null;
 }

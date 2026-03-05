@@ -1,6 +1,6 @@
 export type S3BucketTagMap = Record<string, string>;
 export interface S3BucketBase {
-  backendKind: BackendKind;
+  backendKind: string;
   name: string;
   region?: string;
   owner?: string;
@@ -11,6 +11,8 @@ export interface S3BucketBase {
   quotaBytes?: number;
 
   objectLockEnabled?: boolean;
+  objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
+  objectLockRetentionDays?: number;
   versioning?: BucketVersioningStatus;
   versionCount?: number;
 
@@ -19,8 +21,6 @@ export interface S3BucketBase {
   policy?: string;
   tags?: S3BucketTagMap;
 }
-export type BackendKind = "minio" | "ceph" | "garage"; 
-
 
 export interface CephBucket extends S3BucketBase {
   backendKind: "ceph";
@@ -46,16 +46,14 @@ export interface MinioBucket extends S3BucketBase {
   backendKind: "minio";
 }
 
-export type S3Bucket = CephBucket | GarageBucket | MinioBucket;
+export interface RustfsBucket extends S3BucketBase {
+  backendKind: "rustfs";
+}
+
+export type S3Bucket = CephBucket | GarageBucket | MinioBucket | RustfsBucket;
+export type BackendKind = S3Bucket["backendKind"];
 
 export type BucketByKind<K extends BackendKind> = Extract<S3Bucket, { backendKind: K }>;
-
-export type BucketAclPermission =| "FULL_CONTROL"| "READ"| "WRITE"| "READ_ACP"| "WRITE_ACP";
-
-export type BucketAclGrant = {
-  grantee: string;
-  permission: BucketAclPermission | string; // keep string for safety if unsure
-};
 
 export type BucketVersioningStatus = "Enabled" | "Suspended" | "Disabled";
 
@@ -176,32 +174,33 @@ export type RgwDashboardS3Creds = {
   }
   
 
-  export interface MinioUser {
+  export interface S3AccessUser {
     username: string;
     status: "enabled" | "disabled";
     policies?: string[];
     policyCount?: number;
   }
   
-  export interface MinioUserCreatePayload {
+  export interface S3AccessUserCreatePayload {
     username: string;
     secretKey: string;
     status: "enabled" | "disabled";
     policies: string[];
+    groups?: string[];
   }
   
-  export interface MinioUserGroupMembership {
+  export interface S3AccessUserGroupMembership {
     name: string;
     policies?: string[];
   }
-  export interface MinioUserDetails extends MinioUser {
+  export interface S3AccessUserDetails extends S3AccessUser {
     accessKey?: string;
     authentication?: string;
-    memberOf?: MinioUserGroupMembership[];
+    memberOf?: S3AccessUserGroupMembership[];
     raw?: any;
   }
 
-  export interface MinioUserUpdatePayload {
+  export interface S3AccessUserUpdatePayload {
     username: string;
     status?: "enabled" | "disabled";
     policies?: string[];
@@ -210,7 +209,7 @@ export type RgwDashboardS3Creds = {
     groups: string[];
   }
   
-  export interface MinioGroupInfo {
+  export interface S3AccessGroupInfo {
     name: string;
     members: string[];
     policies: string[];
@@ -235,13 +234,15 @@ export type RgwDashboardS3Creds = {
   }
   
 
-  export interface MinioBucketUpdateOptions {
+export interface MinioBucketUpdateOptions {
     versioning?: boolean;
     quotaSize?: string | null;
     tags?: Record<string, string> | null;
-    objectLock?: boolean
+    objectLock?: boolean;
+    objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
+    objectLockRetentionDays?: number;
   }
-  
+
   export interface CephBucketUpdatePayload {
     cephAclRules: CephAclRule[] | undefined;
     name: string;          
@@ -376,6 +377,21 @@ export type GarageBucketDashboardStats = {
   raw: string;
 };
 
+export type RustfsBucketDashboardStats = {
+  bucket: string;
+  totalSizeBytes: number;
+  objectCount: number;
+  versionCount?: number;
+  deleteMarkersCount?: number;
+  quotaBytes?: number;
+  versioningStatus?: BucketVersioningStatus;
+  objectLockEnabled?: boolean;
+  objectLockMode?: "GOVERNANCE" | "COMPLIANCE";
+  objectLockRetentionDays?: number;
+  lastUpdate?: string;
+  raw: any;
+};
+
 
 
 export type CephDeps = {
@@ -399,12 +415,11 @@ export type MinioDeps = {
   backend: "minio";
 };
 
-export type ModalDeps = CephDeps | GarageDeps | MinioDeps;
-
-export type GarageBucketAliasPatch = {
-  aliasesAdd?: string[];
-  aliasesRemove?: string[];
+export type RustfsDeps = {
+  backend: "rustfs";
 };
+
+export type ModalDeps = CephDeps | GarageDeps | MinioDeps | RustfsDeps;
 
 export type GarageBucketKeyGrant = {
   keyIdOrName: string;   
@@ -413,13 +428,17 @@ export type GarageBucketKeyGrant = {
   owner: boolean;
 };
 
-export type McAliasCandidate = {
+export type S3AliasCandidate = {
   alias: string;
+  url?: string;
+  source?: string;
+  manual?: boolean;
+  accessKey?: string;
 };
 
-export type MinioAccessKeyStatus = "enabled" | "disabled";
+type MinioAccessKeyStatus = "enabled" | "disabled";
 
-export interface MinioServiceAccount {
+export interface S3ServiceAccount {
   accessKey: string;
   name?: string;
   description?: string;
@@ -427,7 +446,7 @@ export interface MinioServiceAccount {
   status?: MinioAccessKeyStatus;
 }
 
-export interface MinioServiceAccountCreatePayload {
+export interface S3ServiceAccountCreatePayload {
   username: string; // parent user
   name?: string;
   description?: string;
@@ -440,7 +459,36 @@ export interface MinioServiceAccountCreatePayload {
 
 }
 
-export type MinioServiceAccountUpdatePayload = {
+export interface RustfsServiceAccountCreatePayload {
+  accessKey: string;
+  secretKey: string;
+  name?: string;
+  description?: string;
+  expiration?: string;
+  policy?: unknown;
+}
+
+export interface RustfsServiceAccountInfo {
+  accessKey: string;
+  parentUser?: string;
+  accountStatus?: "on" | "off";
+  impliedPolicy?: boolean;
+  policy?: string;
+  name?: string;
+  description?: string;
+  expiration?: string;
+}
+
+export interface RustfsServiceAccountUpdatePayload {
+  accessKey: string;
+  newName?: string;
+  newDescription?: string;
+  newExpiration?: string;
+  newPolicy?: string;
+  newStatus?: "on" | "off";
+}
+
+export type S3ServiceAccountUpdatePayload = {
   accessKey: string;
   name?: string;
   description?: string;

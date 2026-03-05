@@ -78,8 +78,8 @@
         </div>
 
         <!-- Backend forms -->
-        <MinioBucketForm v-if="backend === 'minio'" ref="minioRef" :mode="mode"
-          :bucket="(bucketToEdit as MinioBucket | null)" />
+        <MinioBucketForm v-if="backend === 'minio' || backend === 'rustfs'" ref="minioRef" :mode="mode"
+          :bucket="(bucketToEdit as MinioBucket | RustfsBucket | null)" :backend="backend" />
 
         <GarageBucketForm v-else-if="backend === 'garage'" ref="garageRef" :mode="mode"
           :bucket="(bucketToEdit as GarageBucket | null)" :deps="(deps as GarageDeps | null)" />
@@ -111,7 +111,7 @@ import GarageBucketForm from "./forms/GarageBucketForm.vue";
 import MinioBucketForm from "./forms/MinioBucketForm.vue";
 import CephBucketForm from "./forms/CephBucketForm.vue";
 import type {
-  RgwGateway, MinioBucketUpdateOptions, CephBucket, MinioBucket, GarageBucket, CephDeps, MinioDeps, GarageDeps,
+  RgwGateway, MinioBucketUpdateOptions, CephBucket, MinioBucket, RustfsBucket, GarageBucket, CephDeps, MinioDeps, RustfsDeps, GarageDeps,
 } from "../../types/types";
 
 import type { BucketFormData } from "../../bucketBackends/bucketBackend";
@@ -145,6 +145,14 @@ type BucketFormModalProps =
     backend: "minio";
     bucketToEdit: MinioBucket | null;
     deps: MinioDeps | null;
+  }
+  | {
+    visible: boolean;
+    mode: "create" | "edit";
+    submitting: boolean;
+    backend: "rustfs";
+    bucketToEdit: RustfsBucket | null;
+    deps: RustfsDeps | null;
   }
   | {
     visible: boolean;
@@ -208,7 +216,7 @@ function initFromProps() {
       modalForm.tags = tagsObjectToArray(b.tags);
       return;
     }
-    if (props.backend === "minio") {
+    if (props.backend === "minio" || props.backend === "rustfs") {
       const b = props.bucketToEdit;
 
       modalForm.name = b.name;
@@ -259,12 +267,12 @@ function submit() {
     return;
   }
 
-  if (props.backend === "minio") {
-    const api = minioRef.value;
-    if (!api) return;
-    if (!api.validate()) return;
+    if (props.backend === "minio" || props.backend === "rustfs") {
+      const api = minioRef.value;
+      if (!api) return;
+      if (!api.validate()) return;
 
-    const built = api.build();
+      const built = api.build();
 
     const tagsMap = modalForm.tags
       .filter((t) => t.key.trim() && t.value.trim())
@@ -272,20 +280,21 @@ function submit() {
         acc[t.key.trim()] = t.value.trim();
         return acc;
       }, {});
-    const hasTags = Object.keys(tagsMap).length > 0;
+      const hasTags = Object.keys(tagsMap).length > 0;
+      const supportsBucketTags = props.backend === "minio" || props.backend === "rustfs";
 
-    emit("submit", {
-      mode: props.mode,
-      form: {
-        ...built,
-        name: modalForm.name,
-        backend: "minio",
-        minio: {
-          ...(built as any).minio,
-          tags: hasTags ? tagsMap : null,
-        } as MinioBucketUpdateOptions,
-      },
-    });
+      emit("submit", {
+        mode: props.mode,
+        form: {
+          ...built,
+          name: modalForm.name,
+          backend: props.backend,
+          [props.backend]: {
+            ...(built as any)[props.backend],
+            tags: supportsBucketTags && hasTags ? tagsMap : null,
+          } as MinioBucketUpdateOptions,
+        },
+      });
     return;
   }
 

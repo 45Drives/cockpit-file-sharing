@@ -2,7 +2,7 @@ name: Build Packages
 on:
   push:
     branches: 
-      - s3management
+      - build
     tags:
       - 'v*.*.*'
 jobs:

@@ -1,10 +1,10 @@
 <template>
-  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
     <div class="bg-default rounded-lg shadow-lg max-w-md w-full mx-4">
       <!-- Header -->
       <div class="px-5 py-4 border-b border-default flex items-center justify-between">
         <h3 class="text-base font-semibold">
-          Create MinIO user
+          Create {{ backendDisplay }} user
         </h3>
       </div>
 
@@ -21,7 +21,7 @@
               Username
             </label>
             <input v-model.trim="form.username" type="text" autocomplete="off"
-              class="w-full border border-default bg-default rounded px-2 py-1 text-sm" placeholder="minio username" />
+              class="w-full border border-default bg-default rounded px-2 py-1 text-sm" :placeholder="`${backendDisplay} username`" />
           </div>
 
           <div>
@@ -49,11 +49,11 @@
           </h4>
 
           <div class="flex items-center justify-between">
-            <span class="text-xs text-gray-600">
-              Password is required for MinIO user creation.
+            <span class="text-xs text-muted">
+              Password is required for {{ backendDisplay }} user creation.
             </span>
             <button type="button"
-              class="text-xs px-2 py-1 rounded btn-primary text-default hover:bg-primary disabled:opacity-60"
+              class="text-xs px-2 py-1 rounded btn-primary text-default hover:bg-primary disabled:opacity-60 font-semibold"
               @click="form.secretKey = generateSecret()" :disabled="loading">
               Generate
             </button>
@@ -68,7 +68,7 @@
                 class="w-full border border-default bg-default rounded px-2 py-1 text-xs font-mono"
                 placeholder="required" />
               <button type="button"
-                class="px-2 py-1 text-smrounded btn-secondary hover:bg-gray-100 whitespace-nowrap"
+                class="px-2 py-1 text-smrounded btn-secondary hover:bg-gray-100 whitespace-nowrap font-semibold"
                 @click="showSecret = !showSecret">
                 {{ showSecret ? "Hide" : "Show" }}
               </button>
@@ -91,14 +91,22 @@
 
           <!-- Tabs -->
           <div class="flex border-b border-default mb-2 text-xs">
-            <button type="button" class="px-3 py-1.5 -mb-px border-b-2" :class="activeAccessTab === 'policies'
-              ? 'border-default text-default font-medium'
-              : 'border-transparent text-secondary hover:text-default'" @click="activeAccessTab = 'policies'">
+            <button
+              type="button"
+              class="px-3 py-1.5 -mb-px border-b-2 font-semibold"
+              :class="activeAccessTab === 'policies'
+                ? 'border-default text-default'
+                : 'border-transparent text-muted hover:text-default'"
+              @click="activeAccessTab = 'policies'">
               Policies
             </button>
-            <button type="button" class="px-3 py-1.5 -mb-px border-b-2" :class="activeAccessTab === 'groups'
-              ? 'border-default text-default font-medium'
-              : 'border-transparent text-secondary hover:text-default'" @click="activeAccessTab = 'groups'">
+            <button
+              type="button"
+              class="px-3 py-1.5 -mb-px border-b-2 font-semibold"
+              :class="activeAccessTab === 'groups'
+                ? 'border-default text-default'
+                : 'border-transparent text-muted hover:text-default'"
+              @click="activeAccessTab = 'groups'">
               Groups
             </button>
           </div>
@@ -106,10 +114,10 @@
           <!-- Policies pane -->
           <div v-if="activeAccessTab === 'policies'">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-smtext-default">
-                Attach one or more MinIO policies
+              <span class="text-sm text-default">
+                Attach one or more {{ backendDisplay }} policies
               </span>
-              <span class="text-smtext-default">
+              <span class="text-sm text-default">
                 Selected: {{ form.policies.length }}
               </span>
             </div>
@@ -127,18 +135,18 @@
                 </div>
               </label>
             </div>
-            <p v-else class="text-smtext-default italic">
-              No policies loaded. User will be created with no direct policies.
+            <p v-else class="text-sm text-default italic">
+              No policies loaded. User will be created with no direct {{ backendDisplay }} policies.
             </p>
           </div>
 
           <!-- Groups pane -->
           <div v-else>
             <div class="flex items-center justify-between mb-1">
-              <span class="text-smtext-default">
-                Attach user to one or more MinIO groups
+              <span class="text-sm text-default">
+                Attach user to one or more {{ backendDisplay }} groups
               </span>
-              <span class="text-smtext-default">
+              <span class="text-sm text-default">
                 Selected: {{ form.groups.length }}
               </span>
             </div>
@@ -156,8 +164,8 @@
                 </div>
               </label>
             </div>
-            <p v-else class="text-smtext-default italic">
-              No groups loaded. User will not be attached to any groups.
+            <p v-else class="text-sm text-default italic">
+              No groups loaded. User will not be attached to any {{ backendDisplay }} groups.
             </p>
           </div>
         </section>
@@ -173,12 +181,12 @@
 
       <!-- Footer -->
       <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-        <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100" @click="close"
+        <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100 font-semibold" @click="close"
           :disabled="loading">
           Cancel
         </button>
         <button
-          class="px-3 py-1.5 text-xs rounded border  border-green-600 bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
+          class="px-3 py-1.5 text-xs rounded border  border-green-600 bg-green-600 text-white hover:bg-green-700 disabled:opacity-60 font-semibold"
           @click="submit" :disabled="loading">
           Create user
         </button>
@@ -190,14 +198,7 @@
 <script lang="ts" setup>
 import { ref, watch } from "vue";
 import { generateSecret } from "@/tabs/s3Management/bucketBackends/bucketUtils";
-
-export interface MinioUserCreatePayload {
-  username: string;
-  secretKey: string;
-  status: "enabled" | "disabled";
-  policies: string[];
-  groups: string[];
-}
+import type { S3AccessUserCreatePayload } from "@/tabs/s3Management/types/types";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -205,11 +206,12 @@ const props = defineProps<{
   errorMessage?: string | null;
   availablePolicies: string[];
   availableGroups: string[];
+  backendLabel?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: boolean): void;
-  (e: "submit", payload: MinioUserCreatePayload): void;
+  (e: "submit", payload: S3AccessUserCreatePayload): void;
 }>();
 
 const form = ref({
@@ -223,6 +225,13 @@ const form = ref({
 const localError = ref<string | null>(null);
 const showSecret = ref(false);
 const activeAccessTab = ref<"policies" | "groups">("policies");
+const rawBackendLabel = props.backendLabel?.trim() || "MinIO";
+const backendDisplay =
+  rawBackendLabel.toLowerCase() === "rustfs"
+    ? "RustFS"
+    : rawBackendLabel.toLowerCase() === "minio"
+      ? "MinIO"
+      : rawBackendLabel;
 
 watch(
   () => props.modelValue,
@@ -265,7 +274,7 @@ function submit() {
     return;
   }
 
-  const payload: MinioUserCreatePayload = {
+  const payload: S3AccessUserCreatePayload = {
     username: form.value.username.trim(),
     secretKey: form.value.secretKey,
     status: form.value.status,

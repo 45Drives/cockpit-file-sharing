@@ -24,10 +24,35 @@ make OS_PACKAGE_RELEASE=el8
 %install
 make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el8 install
 
+%post
+PLUGIN_DIR="/usr/share/cockpit/file-sharing"
+VENV_DIR="$PLUGIN_DIR/venv"
+/usr/bin/python3 -m venv "$VENV_DIR" 2>/dev/null || :
+if [ -x "$VENV_DIR/bin/pip" ]; then
+  "$VENV_DIR/bin/pip" install --upgrade pip || :
+  "$VENV_DIR/bin/pip" install -r "$PLUGIN_DIR/requirements.txt" || :
+fi
+
 %files
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Thu Mar 05 2026 Rachit Hans <rhans@45drives.com> 4.5.4-6
+- building test pacakage
+* Thu Mar 05 2026 Rachit Hans <rhans@45drives.com> 4.5.4-5
+- building test pacakage
+* Thu Feb 26 2026 Rachit Hans <rhans@45drives.com> 4.5.4-4
+- building test pacakge for rust fs + ui improvements
+* Thu Feb 26 2026 Rachit Hans <rhans@45drives.com> 4.5.4-3
+- building test pacakge for rust fs + ui improvements
+* Thu Feb 26 2026 Rachit Hans <rhans@45drives.com> 4.5.4-2
+- building test pacakge for rust fs wit installing awscurl
+* Thu Feb 26 2026 Rachit Hans <rhans@45drives.com> 4.5.4-1
+- building test pacakge for rust fs
+* Wed Feb 11 2026 Rachit Hans <rhans@45drives.com> 4.5.3-4
+- fixed tab visibilty logic for s3 management + building package
+* Tue Feb 10 2026 Rachit Hans <rhans@45drives.com> 4.5.3-3
+- building package with s3 management tab
 * Wed Feb 04 2026 Rachit Hans <rhans@45drives.com> 4.5.3-2
 - fixed light mode view + added view mode for minio service accounts + building
   test package

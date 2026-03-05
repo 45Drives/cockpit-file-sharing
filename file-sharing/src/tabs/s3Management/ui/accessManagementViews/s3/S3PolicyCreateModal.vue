@@ -1,13 +1,13 @@
 <!-- MinioPolicyCreateModal.vue -->
 <template>
-  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
     <div class="bg-accent rounded-lg shadow-lg max-w-xl w-full mx-4">
       <!-- Header -->
       <div class="px-5 py-4 border-b border-default flex items-center justify-between">
         <h3 class="text-base font-semibold">
-          Create MinIO policy
+          Create {{ backendLabel }} policy
         </h3>
-        <button class="px-2 py-1 text-xs rounded btn-secondary hover:bg-gray-100" @click="close"
+        <button class="px-2 py-1 text-xs rounded btn-secondary hover:bg-gray-100 font-semibold" @click="close"
           :disabled="loading">
           Close
         </button>
@@ -25,14 +25,14 @@
 
         <!-- Name -->
         <div>
-          <label class="block text-xs font-medium mb-1">
+          <label class="block text-xs font-semibold mb-1">
             Policy name
           </label>
           <input v-model.trim="name" type="text"
             class="w-full border border-default bg-default rounded px-2 py-1 text-sm"
             placeholder="e.g. backups-readwrite" />
           <p class="text-xs text-muted mt-1">
-            This is the name MinIO will use for the policy (e.g. in
+            This is the name {{ backendLabel }} will use for the policy (e.g. in
             <span class="font-mono">mc admin policy attach</span>.
           </p>
         </div>
@@ -40,17 +40,17 @@
         <!-- JSON editor -->
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="text-xs font-medium">
+            <label class="text-xs font-semibold">
               Policy JSON
             </label>
             <div class="flex items-center space-x-2">
               <button type="button"
-                class="px-2 py-1 text-sm rounded btn-primary hover:bg-gray-100"
+                class="px-2 py-1 text-sm rounded btn-primary hover:bg-gray-100 font-semibold"
                 @click="insertTemplate">
                 Insert bucket template
               </button>
               <button type="button"
-                class="px-2 py-1 text-sm rounded btn-secondary hover:bg-gray-100"
+                class="px-2 py-1 text-sm rounded btn-secondary hover:bg-gray-100 font-semibold"
                 @click="formatJson">
                 Format JSON
               </button>
@@ -79,12 +79,12 @@
 
       <!-- Footer -->
       <div class="px-5 py-3 border-t border-default flex justify-end space-x-2">
-        <button class="px-3 py-1.5 text-xs rounded btn-secondary hover:bg-gray-100" @click="close"
+        <button class="px-3 py-1.5 text-xs font-semibold rounded btn-secondary hover:bg-gray-100" @click="close"
           :disabled="loading">
           Cancel
         </button>
         <button
-          class="px-3 py-1.5 text-xs rounded border border-green-600 bg-green-600 text-default hover:bg-green-700disabled:opacity-60"
+          class="px-3 py-1.5 text-xs font-semibold rounded border border-green-600 bg-green-600 text-default hover:bg-green-700disabled:opacity-60"
           @click="submit" :disabled="loading">
           Create policy
         </button>
@@ -100,6 +100,7 @@ const props = defineProps<{
   modelValue: boolean;
   loading?: boolean;
   errorMessage?: string | null;
+  backendLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -110,6 +111,7 @@ const emit = defineEmits<{
 const name = ref("");
 const json = ref("");
 const localError = ref<string | null>(null);
+const backendLabel = props.backendLabel?.trim() || "MinIO";
 
 watch(
   () => props.modelValue,

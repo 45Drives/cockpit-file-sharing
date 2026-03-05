@@ -1,5 +1,5 @@
 <template>
-  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+  <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20">
     <div class="bg-accent rounded-lg shadow-lg max-w-lg w-full mx-4">
       <!-- Header -->
       <div class="px-5 py-4 border-b border-default flex items-center justify-between">
@@ -10,7 +10,7 @@
         <div class="flex items-center space-x-2">
           <!-- Edit button only in view mode -->
           <button v-if="isViewMode"
-            class="text-sm px-2 py-1 rounded btn-primary text-default hover:bg-primary disabled:opacity-60"
+            class="text-sm px-2 py-1 rounded btn-primary text-default hover:bg-primary disabled:opacity-60 font-semibold"
             @click="switchToEdit" :disabled="loading || !groupName">
             Edit
           </button>
@@ -32,7 +32,7 @@
           <!-- Members -->
           <section class="space-y-2">
             <div class="flex items-center justify-between">
-              <h4 class="text-xs font-semibold uppercase text-default">
+              <h4 class="text-sm font-semibold text-default">
                 Members
               </h4>
               <span class="text-sm text-default">
@@ -83,14 +83,14 @@
 
       <!-- Footer -->
       <div class="px-5 py-3 border-t border-default flex justify-end space-x-2 ">
-        <button class="px-3 py-1.5 text-xs bg-secondary rounded border border-default hover:bg-default"
+        <button class="px-3 py-1.5 text-xs bg-secondary rounded border border-default hover:bg-default font-semibold"
           @click="$emit('update:modelValue', false)" :disabled="loading">
           {{ isViewMode ? "Close" : "Cancel" }}
         </button>
 
         <!-- Only show Save in edit mode -->
         <button v-if="!isViewMode"
-          class="px-3 py-1.5 text-xs rounded border bg-primary text-default hover:bg-primary disabled:opacity-60"
+          class="px-3 py-1.5 text-xs rounded border bg-primary text-default hover:bg-primary disabled:opacity-60 font-semibold"
           @click="onSubmit" :disabled="loading || !groupName">
           Save changes
         </button>
@@ -101,13 +101,13 @@
 
 <script lang="ts" setup>
 import { ref, watch, computed } from "vue";
-import type { MinioGroupInfo } from "../../../types/types";
+import type { S3AccessGroupInfo } from "../../../types/types";
 
 const props = defineProps<{
   modelValue: boolean;
   loading: boolean;
   errorMessage: string | null;
-  group: MinioGroupInfo | null;
+  group: S3AccessGroupInfo | null;
   availableUsers: string[];
   availablePolicies: string[];
   mode: "view" | "edit";

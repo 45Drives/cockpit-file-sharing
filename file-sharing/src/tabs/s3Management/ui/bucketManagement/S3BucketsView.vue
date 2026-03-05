@@ -24,25 +24,40 @@
         </span>
       </div>
 
-      <!-- Right: new bucket -->
-      <button type="button" @click="openCreateModal" :disabled="openingModal"
-        class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-60">
-        <LoadingSpinner v-if="openingModal" />
-        <ArchiveBoxIcon v-else class="size-icon" />
-        New bucket
-      </button>
+      <!-- Right: actions -->
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          @click="loadBuckets"
+          :disabled="loadingBuckets"
+          class="inline-flex btn-secondary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-60"
+        >
+          <ArrowPathIcon class="size-icon" />
+          Refresh
+        </button>
+
+        <button type="button" @click="openCreateModal" :disabled="openingModal"
+          class="inline-flex btn-primary items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-default shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-60">
+          <LoadingSpinner v-if="openingModal" />
+          <ArchiveBoxIcon v-else class="size-icon" />
+          New bucket
+        </button>
+      </div>
     </div>
 
     <!-- Filters / sort controls -->
     <div v-if="!showUsageDashboard"
       class="flex flex-col gap-3 rounded-lg border-default bg-plugin-header p-4 text-sm text-default m-4">
       <div class="flex flex-wrap gap-4">
-        <label class="flex min-w-[180px] flex-1 flex-col gap-1">
+        <label class="flex min-w-[13.75rem] flex-1 flex-col gap-1">
           <span class="text-xs font-medium uppercase tracking-wide text-label">
-            Name
+            Search
           </span>
-          <input v-model="nameFilter" type="text" placeholder="Filter by name"
-            class="rounded-md border border-default bg-default px-3 py-1.5 text-sm text-default placeholder:text-default outline-none focus:ring-1" />
+          <div class="relative">
+            <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-icon text-muted" />
+            <input v-model="nameFilter" type="text" placeholder="Search buckets by name" style="padding-left: 2rem;"
+              class="w-full rounded-md border border-default bg-default pl-8 pr-3 py-1.5 text-sm text-default placeholder:text-default outline-none focus:ring-1" />
+          </div>
         </label>
 
         <label v-if="backend != 'ceph'" class="flex min-w-[180px] flex-1 flex-col gap-1">
@@ -106,6 +121,8 @@
 
         <MinioBucketDashboardView v-else-if="backend === 'minio'" :bucket-name="usageBucketName"
           :bucket="minioUsageBucket!" :show-back-button="true" @back="closeUsageDashboard" />
+        <RustfsBucketDashboardView v-else-if="backend === 'rustfs'" :bucket-name="usageBucketName"
+          :bucket="rustfsUsageBucket!" :show-back-button="true" @back="closeUsageDashboard" />
         <GarageBucketDashboardView v-else-if="backend === 'garage'"
           :bucket-name="garageUsageBucket?.garageId || usageBucketName" :bucket="garageUsageBucket!"
           :show-back-button="true" @back="closeUsageDashboard" />
@@ -136,8 +153,9 @@
 
             <div class="flex items-center gap-2">
               <button type="button"
-                class="rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-50"
+                class="inline-flex items-center gap-1 rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-50"
                 :disabled="page <= 1" @click="page = Math.max(1, page - 1)">
+                <ChevronLeftIcon class="size-icon" />
                 Prev
               </button>
 
@@ -147,9 +165,10 @@
               </span>
 
               <button type="button"
-                class="rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-50"
+                class="inline-flex items-center gap-1 rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-50"
                 :disabled="page >= totalPages" @click="page = Math.min(totalPages, page + 1)">
                 Next
+                <ChevronRightIcon class="size-icon" />
               </button>
             </div>
           </div>
@@ -247,18 +266,23 @@
             <!-- Actions -->
             <div class="mt-3 flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
               <button type="button" @click="openEditModal(bucket)" :disabled="openingModal"
-                class="rounded-md btn-primary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-60">
+                class="inline-flex items-center gap-1 rounded-md btn-primary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800 disabled:opacity-60">
                 <LoadingSpinner v-if="openingModal" />
-                <span v-else>Edit</span>
+                <template v-else>
+                  <PencilSquareIcon class="size-icon" />
+                  <span>Edit</span>
+                </template>
               </button>
 
-              <button v-if="backend === 'ceph' || backend === 'minio' || backend === 'garage'" type="button"
-                class="rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800"
+              <button v-if="backend === 'ceph' || backend === 'minio' || backend === 'rustfs' || backend === 'garage'" type="button"
+                class="inline-flex items-center gap-1 rounded-md btn-secondary px-2.5 py-1 text-xs font-medium text-default hover:bg-slate-800"
                 @click="openUsageDashboard(bucket)">
+                <EyeIcon class="size-icon" />
                 Usage
               </button>
               <button type="button" @click="confirmDelete(bucket)"
-                class="rounded-md bg-red-600/90 px-2.5 py-1 text-xs text-white font-medium text- hover:bg-red-500">
+                class="inline-flex items-center gap-1 rounded-md bg-red-600/90 px-2.5 py-1 text-xs text-white font-medium text- hover:bg-red-500">
+                <TrashIcon class="size-icon" />
                 Delete
               </button>
             </div>
@@ -280,6 +304,9 @@
     <BucketFormModal  :submitting="submittingBucket" v-else-if="backend === 'minio'" :visible="showModal" :mode="modalMode" backend="minio"
       :bucketToEdit="minioEditingBucket" :deps="minioModalDeps" @close="closeModal" @submit="handleFormSubmit" />
 
+    <BucketFormModal  :submitting="submittingBucket" v-else-if="backend === 'rustfs'" :visible="showModal" :mode="modalMode" backend="rustfs" :bucketToEdit="rustfsEditingBucket"
+      :deps="rustfsModalDeps" @close="closeModal" @submit="handleFormSubmit" />
+
     <BucketFormModal  :submitting="submittingBucket" v-else :visible="showModal" :mode="modalMode" backend="garage" :bucketToEdit="garageEditingBucket"
       :deps="garageModalDeps" @close="closeModal" @submit="handleFormSubmit" />
 
@@ -292,14 +319,25 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
-import type { RgwGateway, CephBucket, MinioBucket, GarageBucket, CephDeps, MinioDeps, GarageDeps, BackendKind } from "../../types/types";
-import { ArchiveBoxIcon, ArrowUturnLeftIcon } from "@heroicons/vue/20/solid";
+import type { RgwGateway, CephBucket, MinioBucket, RustfsBucket, GarageBucket, CephDeps, MinioDeps, RustfsDeps, GarageDeps, BackendKind } from "../../types/types";
+import {
+  ArchiveBoxIcon,
+  ArrowPathIcon,
+  ArrowUturnLeftIcon,
+  MagnifyingGlassIcon,
+  EyeIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "@heroicons/vue/20/solid";
 import BucketFormModal from "./BucketFormModal.vue";
 import BucketDeleteModal from "./BucketDeleteModal.vue";
 import CephBucketDashboardView from "./CephBucketDashboardView.vue";
 import { useBucketBackend } from "../../composables/useBucketBackend";
 import MinioBucketDashboardView from "./MinioBucketDashboard.vue";
 import GarageBucketDashboardView from "./GarageBucketDashboard.vue";
+import RustfsBucketDashboardView from "./RustfsBucketDashboard.vue";
 import type { BackendContext } from "../../bucketBackends/bucketBackend";
 import { LoadingSpinner } from "@45drives/houston-common-ui";
 import type { ModalDeps } from "../../types/types";
@@ -307,7 +345,7 @@ import { pushNotification, Notification } from "@45drives/houston-common-ui";
 import { formatBytes } from "../../bucketBackends/bucketUtils";
 
 const props = defineProps<{
-  backend: "minio" | "ceph" | "garage";
+  backend: "minio" | "rustfs" | "ceph" | "garage";
   cephGateway?: RgwGateway | null;
   showBackButton?: boolean;
   minioAlias?: string | null;
@@ -346,6 +384,10 @@ const garageEditingBucket = computed<GarageBucket | null>(() => {
   const b = editingBucket.value;
   return b && b.backendKind === "garage" ? (b as GarageBucket) : null;
 });
+const rustfsEditingBucket = computed<RustfsBucket | null>(() => {
+  const b = editingBucket.value;
+  return b && b.backendKind === "rustfs" ? (b as RustfsBucket) : null;
+});
 
 const cephModalDeps = computed<CephDeps | null>(() => {
   if (props.backend !== "ceph") return null;
@@ -354,6 +396,10 @@ const cephModalDeps = computed<CephDeps | null>(() => {
 const minioModalDeps = computed<MinioDeps | null>(() => {
   if (props.backend !== "minio") return null;
   return (modalDeps.value as MinioDeps | null) ?? null;
+});
+const rustfsModalDeps = computed<RustfsDeps | null>(() => {
+  if (props.backend !== "rustfs") return null;
+  return (modalDeps.value as RustfsDeps | null) ?? null;
 });
 const garageModalDeps = computed<GarageDeps | null>(() => {
   if (props.backend !== "garage") return null;
@@ -381,6 +427,7 @@ const bucketToDelete = ref<BucketType | null>(null);
 
 const backendLabel = computed(() => {
   if (props.backend === "minio") return "MinIO";
+  if (props.backend === "rustfs") return "RustFS";
   if (props.backend === "ceph") return "Ceph RGW";
   return "Garage";
 });
@@ -499,6 +546,11 @@ const minioUsageBucket = computed<MinioBucket | null>(() => {
   return b && b.backendKind === "minio" ? (b as MinioBucket) : null;
 });
 
+const rustfsUsageBucket = computed<RustfsBucket | null>(() => {
+  const b = usageBucket.value;
+  return b && b.backendKind === "rustfs" ? (b as RustfsBucket) : null;
+});
+
 const garageUsageBucket = computed<GarageBucket | null>(() => {
   const b = usageBucket.value;
   return b && b.backendKind === "garage" ? (b as GarageBucket) : null;
@@ -547,7 +599,8 @@ async function handleFormSubmit(payload: { mode: "create" | "edit"; form: any })
 
     closeModal();
   } catch (e: any) {
-    pushNotification(new Notification(`Failed to save bucket "${bucketToDelete.value?.name}"`, e?.message, "error"));
+    const targetName = payload.form?.name ?? editingBucket.value?.name ?? "";
+    pushNotification(new Notification(`Failed to save bucket "${targetName}"`, e?.message, "error"));
   }
   finally {
     submittingBucket.value = false;
@@ -652,8 +705,8 @@ function tagsTextToObject(tagsText?: string | null): Record<string, string> | un
 }
 
 function formTagsToObject(form: any): Record<string, string> | undefined {
-  if (props.backend === "minio") {
-    const t = form?.minio?.tags;
+  if (props.backend === "minio" || props.backend === "rustfs") {
+    const t = form?.[props.backend]?.tags;
     return t && typeof t === "object" ? t : undefined;
   }
 

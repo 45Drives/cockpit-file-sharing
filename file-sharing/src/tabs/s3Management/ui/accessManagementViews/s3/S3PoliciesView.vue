@@ -9,11 +9,24 @@
         </p>
       </div>
 
-      <button
-        class="inline-flex items-center btn-primary text-default text-xs font-medium rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
-        @click="openCreateDialog" :disabled="loading">
-        Create policy
-      </button>
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-icon text-muted" />
+          <input
+            v-model.trim="searchQuery"
+            type="text"
+            placeholder="Search policies"
+            style="padding-left: 2rem;"
+            class="w-72 rounded-md border border-accent bg-accent pl-8 pr-3 py-2.5 text-sm text-default"
+          />
+        </div>
+        <button
+          class="inline-flex items-center gap-1 btn-primary text-default text-xs font-semibold rounded px-3 py-1.5 hover:bg-default disabled:opacity-60"
+          @click="openCreateDialog" :disabled="loading">
+          <PlusIcon class="size-icon" />
+          Create policy
+        </button>
+      </div>
     </div>
 
     <div v-if="error" class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -24,7 +37,7 @@
       Loading policies...
     </div>
 
-    <div v-else-if="policies.length" class="overflow-x-auto">
+    <div v-else-if="filteredPolicies.length" class="overflow-x-auto">
       <table class="min-w-full border-collapse text-sm">
         <thead>
           <tr>
@@ -37,19 +50,21 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="p in policies" :key="p">
+          <tr v-for="p in filteredPolicies" :key="p">
             <td class="px-3 py-2 border-b border-default">
-              <span class="font-mono text-xs">{{ p }}</span>
+              <span class="font-mono text-sm">{{ p }}</span>
             </td>
             <td class="px-3 py-2 border-b border-default whitespace-nowrap">
               <button
-                class="inline-flex items-center btn-primary rounded px-2 py-1 mr-1"
+                class="inline-flex items-center gap-1 btn-primary rounded px-2 py-1 mr-1 text-sm font-semibold"
                 @click="onViewEditPolicy(p)">
+                <EyeIcon class="size-icon" />
                 View
               </button>
               <button
-                class="inline-flex items-center text-white border border-red-600 bg-red-500 text-default text-xs font-medium rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
+                class="inline-flex items-center gap-1 text-white border border-red-600 bg-red-500 text-default text-sm font-semibold rounded px-2 py-1 hover:bg-red-600 disabled:opacity-60"
                 @click="onDeletePolicy(p)" :disabled="loading">
+                <TrashIcon class="size-icon" />
                 Delete
               </button>
             </td>
@@ -59,7 +74,7 @@
     </div>
 
     <div v-else class="py-3 text-sm text-muted">
-      No policies found.
+      {{ policies.length ? "No matching policies found." : "No policies found." }}
     </div>
 
     <MinioPolicyCreateModal v-model="showCreateDialog" :loading="loading" :error-message="createDialogError"
@@ -68,13 +83,14 @@
 
     <MinioPolicyViewEditModal v-model="showViewEditDialog" :policy-name="selectedPolicyName"
       :policy-json="selectedPolicyJson" :loading="viewEditLoading" :error-message="viewEditError"
+      :backend-label="isRustfsBackend ? 'RustFS' : 'MinIO'"
       @save="handlePolicySave" />
 
   </section>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
+import { computed, ref, onMounted } from "vue";
 import {
   listMinioPolicies,
   getMinioPolicy,
@@ -87,10 +103,11 @@ import {
   getRustfsPolicy,
   listRustfsPolicies,
 } from "../../../api/rustfsCliAdapter";
-import MinioPolicyCreateModal from "./MinioPolicyCreateModal.vue";
-import MinioPolicyViewEditModal from "./MinioPolicyViewEditModal.vue";
+import MinioPolicyCreateModal from "./S3PolicyCreateModal.vue";
+import MinioPolicyViewEditModal from "./S3PolicyViewEditModal.vue";
 import { confirm, pushNotification, Notification } from "@45drives/houston-common-ui";
 import { unwrap } from "@45drives/houston-common-lib";
+import { MagnifyingGlassIcon, PlusIcon, EyeIcon, TrashIcon } from "@heroicons/vue/20/solid";
 
 const props = defineProps<{
   backendLabel?: string;
@@ -98,8 +115,14 @@ const props = defineProps<{
 const isRustfsBackend = (props.backendLabel?.trim() || "").toLowerCase() === "rustfs";
 
 const policies = ref<string[]>([]);
+const searchQuery = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
+const filteredPolicies = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return policies.value;
+  return policies.value.filter((p) => String(p ?? "").toLowerCase().includes(q));
+});
 
 // Create dialog
 const showCreateDialog = ref(false);

@@ -21,6 +21,7 @@ import { ResultAsync, ok } from "neverthrow";
 import { BashCommand, Directory, getServer } from "@45drives/houston-common-lib";
 import S3ManagementMain from "./tabs/s3Management/ui/S3ManagementMain.vue";
 import { isMinioAvailable } from "@/tabs/s3Management/api/minioCliAdapter";
+import { isRustfsAvailable } from "@/tabs/s3Management/api/rustfsCliAdapter";
 import { isGarageHealthy } from "@/tabs/s3Management/api/garageCliAdapter";
 import { isCephRgwHealthy } from "@/tabs/s3Management/api/cephCliAdapter";
 
@@ -56,7 +57,12 @@ const iscsiConfigured = (): ResultAsync<boolean, never> => {
 
 const s3Configured = (): ResultAsync<boolean, never> => {
   return ResultAsync.fromPromise(
-    Promise.allSettled([isMinioAvailable(), isGarageHealthy(), isCephRgwHealthy()]).then(
+    Promise.allSettled([
+      isMinioAvailable(),
+      isRustfsAvailable(),
+      isGarageHealthy(),
+      isCephRgwHealthy(),
+    ]).then(
       (results) => results.some((r) => r.status === "fulfilled" && r.value === true)
     ),
     () => null
