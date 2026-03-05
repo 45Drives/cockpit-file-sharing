@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.4-4
+## Cockpit File Sharing 4.5.4-5
 
-* building test pacakge for rust fs + ui improvements
+* building test pacakage
