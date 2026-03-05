@@ -886,7 +886,7 @@ async function createRustfsBucketViaS3Api(
   const cmdParts = [
     `AWS_ACCESS_KEY_ID=${shellQuote(creds.accessKeyId)}`,
     `AWS_SECRET_ACCESS_KEY=${shellQuote(creds.secretAccessKey)}`,
-    "python3 -m awscurl --service s3",
+    "awscurl --service s3",
     `--region ${shellQuote(region)}`,
     "-X 'PUT'",
   ];
@@ -930,7 +930,7 @@ async function deleteRustfsBucketViaS3Api(bucketName: string): Promise<void> {
   const cmdParts = [
     `AWS_ACCESS_KEY_ID=${shellQuote(creds.accessKeyId)}`,
     `AWS_SECRET_ACCESS_KEY=${shellQuote(creds.secretAccessKey)}`,
-    "python3 -m awscurl --service s3",
+    "awscurl --service s3",
     `--region ${shellQuote(region)}`,
     "-X 'DELETE'",
     shellQuote(bucketUrl),
@@ -1075,7 +1075,7 @@ async function runRustfsAdminApiRequest(
   const cmdParts = [
     `AWS_ACCESS_KEY_ID=${shellQuote(accessKey)}`,
     `AWS_SECRET_ACCESS_KEY=${shellQuote(secretKey)}`,
-    "python3 -m awscurl --service s3",
+    "awscurl --service s3",
     `--region ${shellQuote(region)}`,
     `-X ${shellQuote(method)}`,
   ];
