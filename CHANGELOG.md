@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.4-7
+## Cockpit File Sharing 4.5.4-8
 
-* building release  pacakage
+* fixed build  yml file + making relase package

@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.5.4-8bookworm) bookworm; urgency=medium
+
+  * fixed build  yml file + making relase package
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 06 Mar 2026 09:11:25 -0400
+
 cockpit-file-sharing (4.5.4-7bookworm) bookworm; urgency=medium
 
   * building release  pacakage
