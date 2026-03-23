@@ -7,7 +7,7 @@ import {
   reportSuccess,
   assertConfirm,
 } from "@45drives/houston-common-ui";
-import { Upload, Download, getServerCluster } from "@45drives/houston-common-lib";
+import { Upload, /* Download, */ getServerCluster, server, Command } from "@45drives/houston-common-lib";
 import { computed, provide, ref } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
 
@@ -68,15 +68,23 @@ const removeExport = (nfsExport: NFSExport) =>
 const exportConfig = () =>
   nfsManager.value
     .andThen((m) => m.exportConfig())
-    .map((config) =>
-      Download.text(
-        config,
-        `cockpit-file-sharing_nfs_exported_${new Date()
-          .toISOString()
-          .replace(/:/g, "-")
-          .replace(/T/, "_")}.exports`
+    .map((config) => 
+      server.downloadCommandOutput(
+        new Command(['echo', config]),
+        `cockpit-file-sharing_nfs_exported_${
+          new Date().toISOString().replace(/:/g, "-").replace(/T/, "_").split('.')[0]
+        }.exports`
       )
     );
+    // .map((config) =>
+    //   Download.text(
+    //     config,
+    //     `cockpit-file-sharing_nfs_exported_${new Date()
+    //       .toISOString()
+    //       .replace(/:/g, "-")
+    //       .replace(/T/, "_")}.exports`
+    //   )
+    // );
 
 const importConfig = () =>
   assertConfirm({

@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.4-6
+## Cockpit File Sharing 4.5.5-1
 
-* building test pacakage
+* Allow quoted values in imported smb.conf

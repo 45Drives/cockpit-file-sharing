@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import {
   getServer,
-  Download,
+  // Download,
   Upload,
   getServerCluster,
   type SambaShareConfig,
   type SambaGlobalConfig,
+  Command,
 } from "@45drives/houston-common-lib";
 import {
   CenteredCardColumn,
@@ -164,15 +165,23 @@ const importConfig = () =>
 const exportConfig = () =>
   sambaManager
     .andThen((sm) => sm.exportConfig())
-    .map((config) =>
-      Download.text(
-        config,
-        `cockpit-file-sharing_samba_exported_${new Date()
-          .toISOString()
-          .replace(/:/g, "-")
-          .replace(/T/, "_")}.conf`
+    .andThen((config) => server.map(s =>
+      s.downloadCommandOutput(
+        new Command(['echo', config]),
+        `cockpit-file-sharing_samba_exported_${
+          new Date().toISOString().replace(/:/g, "-").replace(/T/, "_").split('.')[0]
+        }.conf`
       )
-    );
+    ));
+    // .map((config) =>
+    //   Download.text(
+    //     config,
+    //     `cockpit-file-sharing_samba_exported_${new Date()
+    //       .toISOString()
+    //       .replace(/:/g, "-")
+    //       .replace(/T/, "_")}.conf`
+    //   )
+    // );
 
 const importFromSmbConf = (smbConfPath: string) =>
   assertConfirm({
