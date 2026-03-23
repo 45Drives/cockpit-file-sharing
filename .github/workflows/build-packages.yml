@@ -85,7 +85,7 @@ jobs:
           echo "REVISION=$(cat ${{github.workspace}}/manifest.json | jq --raw-output '.build_number')" >> $GITHUB_ENV
       - name: GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: ${{env.TITLE}} ${{env.VERSION}}
           prerelease: ${{env.PRERELEASE}}
