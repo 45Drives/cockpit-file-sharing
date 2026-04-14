@@ -64,7 +64,7 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
     // console.log(" primary constructor server ", server);
   }
   initialize() {
-    return new Directory(this.server, "/sys/kernel/scst_tgt").exists().andThen((exists) => {
+    return new Directory(this.server, "/sys/kernel/scst_tgt").exists({ superuser: "try" }).andThen((exists) => {
       if (!exists) {
         return err(new ProcessError("/sys/kernel/scst_tgt was not found. Is SCST installed?"));
       }
