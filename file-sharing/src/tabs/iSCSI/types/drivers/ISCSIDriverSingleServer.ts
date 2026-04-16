@@ -45,7 +45,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "add_device $1 $2" > $3`,
             [virtualDevice.deviceName, "filename=" + virtualDevice.filePath + ";blocksize=" + virtualDevice.blockSize, this.deviceTypeToHandlerDirectory[virtualDevice.deviceType] + "/mgmt"],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -55,7 +55,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "del_device $1" > $2`,
             [virtualDevice.deviceName, this.deviceTypeToHandlerDirectory[virtualDevice.deviceType] + "/mgmt"],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -65,10 +65,10 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "add_target $1" > $2`,
             [target.name, this.targetManagementDirectory + "/mgmt"],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
-        .andThen(() => this.server.execute(new BashCommand(`echo 1 > $1`, [this.targetManagementDirectory + "/enabled"], { superuser: "require" })))
-        .andThen(() => this.server.execute(new BashCommand(`echo 1 > $1`, [`${this.targetManagementDirectory}/${target.name}/enabled`], { superuser: "require" })))
+        .andThen(() => this.server.execute(new BashCommand(`echo 1 > $1`, [this.targetManagementDirectory + "/enabled"], { superuser: "try" })))
+        .andThen(() => this.server.execute(new BashCommand(`echo 1 > $1`, [`${this.targetManagementDirectory}/${target.name}/enabled`], { superuser: "try" })))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
     }
@@ -77,7 +77,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "del_target $1" > $2`,
             [target.name, this.targetManagementDirectory + "/mgmt"],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -87,7 +87,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "add_target_attribute $1 $2" > $3`,
             [target.name, `allowed_portal=${portal.address}`, `${this.getTargetPath(target)}/../mgmt`],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -97,7 +97,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "del_target_attribute $1 $2" > $3`,
             [target.name, `allowed_portal=${portal.address}`, `${this.getTargetPath(target)}/../mgmt`],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -107,7 +107,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "create $1" > $2`,
             [initiatorGroup.name, `${this.getTargetPath(target)}/ini_groups/mgmt`],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -117,7 +117,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "del $1" > $2`,
             [initiatorGroup.name, `${this.getTargetPath(target)}/ini_groups/mgmt`],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -127,7 +127,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "add $1" > $2`,
             [initiator.name, `${initiatorGroup.devicePath}/initiators/mgmt`],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -137,7 +137,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "del $1" > $2`,
             [initiator.name, `${initiatorGroup.devicePath}/initiators/mgmt`],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -147,7 +147,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "add $1 $2" > $3`,
             [logicalUnitNumber.name, logicalUnitNumber.unitNumber.toString(), `${initiatorGroup.devicePath}/luns/mgmt`],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -157,7 +157,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "del $1" > $2`,
             [logicalUnitNumber.unitNumber.toString(), `${initiatorGroup.devicePath}/luns/mgmt`],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -167,7 +167,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server.execute(new BashCommand(
             `echo "add_target_attribute $1 $2" > $3`,
             [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username} ${chapConfiguration.password}`, `${this.getTargetPath(target)}/../mgmt`],
-            { superuser: "require" }
+            { superuser: "try" }
         ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -177,7 +177,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
                 return this.server.execute(new BashCommand(
                         `echo "del_target_attribute $1 $2" > $3`,
                         [target.name, `${chapConfiguration.chapType}=${chapConfiguration.username}`, `${this.getTargetPath(target)}/../mgmt`],
-                        { superuser: "require" }
+                        { superuser: "try" }
                 ))
         .andThen(() => this.configurationManager.saveCurrentConfiguration())
         .map(() => undefined);
@@ -186,7 +186,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         return this.server
           .execute(
             new Command(["bash","-lc","cat /sys/kernel/scst_tgt/targets/iscsi/*/ini_groups/*/luns/*/device/prod_id 2>/dev/null || true",
-                        ], { superuser: "require" })
+                        ], { superuser: "try" })
           )
           .map((proc) => {
             const names = proc
@@ -216,7 +216,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
       
 
     getVirtualDevicesOfDeviceType(deviceType: DeviceType): ResultAsync<VirtualDevice[], ProcessError> { 
-        return this.server.execute(new Command(["find", this.deviceTypeToHandlerDirectory[deviceType], ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")], { superuser: "require" })).map(
+        return this.server.execute(new Command(["find", this.deviceTypeToHandlerDirectory[deviceType], ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")], { superuser: "try" })).map(
             (proc) => {
                 const virtualDeviceNames = proc.getStdout().split("\0").slice(0, -1);
                 return virtualDeviceNames;
@@ -225,7 +225,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
             return ResultAsync.combine(virtualDeviceNames.map((virtualDeviceName) => {
                 const virtualDevicePath = this.deviceTypeToHandlerDirectory[deviceType] + "/" + virtualDeviceName;
 
-                const blockSizeResult =  this.server.execute(new Command(["cat", virtualDevicePath + "/blocksize"], { superuser: "require" })).andThen((proc) => {
+                const blockSizeResult =  this.server.execute(new Command(["cat", virtualDevicePath + "/blocksize"], { superuser: "try" })).andThen((proc) => {
                     const blockSizeString = proc.getStdout().trim();
                     const maybeBlockSize = StringToIntCaster()(blockSizeString);
 
@@ -235,7 +235,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
                     return ok(maybeBlockSize.some());
                 }); 
                 
-                const filePathResult =  this.server.execute(new Command(["cat", virtualDevicePath + "/filename"], { superuser: "require" })).andThen((proc) => {
+                const filePathResult =  this.server.execute(new Command(["cat", virtualDevicePath + "/filename"], { superuser: "try" })).andThen((proc) => {
                     const filePathString = proc.getStdout().split('\n')[0];
     
                     if (filePathString === undefined)
@@ -255,7 +255,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         
         const targetDirectory = "/sys/kernel/scst_tgt/targets/iscsi";
 
-        return this.server.execute(new Command(["find", targetDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")], { superuser: "require" })).map(
+        return this.server.execute(new Command(["find", targetDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")], { superuser: "try" })).map(
             (proc) => {
                 const targetNames = proc.getStdout().split("\0").slice(0, -1);
                 return targetNames;
@@ -281,7 +281,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     getPortalsOfTarget(target: Pick<Target, "name">): ResultAsync<Portal[], ProcessError> {
-        return this.server.execute(new Command(["find", this.getTargetPath(target), ..."-name allowed_portal* -printf %f\\0".split(" ")], { superuser: "require" })).map(
+        return this.server.execute(new Command(["find", this.getTargetPath(target), ..."-name allowed_portal* -printf %f\\0".split(" ")], { superuser: "try" })).map(
             (proc) => {
                 const portalAddressFileNames = proc.getStdout().split("\0").slice(0, -1);
                 return portalAddressFileNames;
@@ -289,7 +289,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         ).andThen((portalAddressFileNames) => {
             const addressResults = portalAddressFileNames.map((portalAddressFileName) => {
                 const file = new File(this.server, `${this.getTargetPath(target)}/${portalAddressFileName}`)
-                return file.read({ superuser: "require" }).andThen((fileContent) => {
+                return file.read({ superuser: "try" }).andThen((fileContent) => {
                     const address = fileContent.split('\n')[0]
 
                     if (address === undefined)
@@ -307,7 +307,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         const self = this;
         const initiatorGroupDirectory = `${this.getTargetPath(target)}/ini_groups`;
 
-        return this.server.execute(new Command(["find", initiatorGroupDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")], { superuser: "require" })).map(
+        return this.server.execute(new Command(["find", initiatorGroupDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")], { superuser: "try" })).map(
             (proc) => {
                 const groupNames = proc.getStdout().split("\0").slice(0, -1);
                 return groupNames;
@@ -336,11 +336,11 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
 
         const sessionsDirectory = `${this.getTargetPath(target)}/sessions`;
 
-        return new Directory(this.server, sessionsDirectory).exists({ superuser: "require" })
+        return new Directory(this.server, sessionsDirectory).exists({ superuser: "try" })
         .andThen((exists) => {
             if (exists)
             {
-                return this.server.execute(new Command(["find", sessionsDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")], { superuser: "require" }))
+                return this.server.execute(new Command(["find", sessionsDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")], { superuser: "try" }))
                 .map((proc) => proc.getStdout().split("\0").slice(0, -1))
                 .andThen((initiatorNames) => {
                     return ResultAsync.combine(initiatorNames.map((initiatorName) => {
@@ -352,8 +352,8 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
         
                             return ok<Session>({
                                 ...partialSession,
-                                readAmountKB:  StringToIntCaster()((yield * self.server.execute(new Command(["cat", `${partialSession.devicePath}/read_io_count_kb`], { superuser: "require" })).safeUnwrap()).getStdout()).some(),
-                                writeAmountKB: StringToIntCaster()((yield * self.server.execute(new Command(["cat", `${partialSession.devicePath}/write_io_count_kb`], { superuser: "require" })).safeUnwrap()).getStdout()).some(),
+                                readAmountKB:  StringToIntCaster()((yield * self.server.execute(new Command(["cat", `${partialSession.devicePath}/read_io_count_kb`], { superuser: "try" })).safeUnwrap()).getStdout()).some(),
+                                writeAmountKB: StringToIntCaster()((yield * self.server.execute(new Command(["cat", `${partialSession.devicePath}/write_io_count_kb`], { superuser: "try" })).safeUnwrap()).getStdout()).some(),
                                 connections: yield * self.getConnectionsOfSession(partialSession).safeUnwrap(),
                             });
                         }))
@@ -367,13 +367,13 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
     }
 
     getCHAPConfigurationsOfTarget(target: Pick<Target, "name">): ResultAsync<CHAPConfiguration[], ProcessError> {
-        return this.server.execute(new Command(["find", this.getTargetPath(target), ..."-type f ( -name IncomingUser* -o -name OutgoingUser* ) -printf %f\\0".split(" ")], { superuser: "require" })).map(
+        return this.server.execute(new Command(["find", this.getTargetPath(target), ..."-type f ( -name IncomingUser* -o -name OutgoingUser* ) -printf %f\\0".split(" ")], { superuser: "try" })).map(
             (proc) => proc.getStdout().split("\0").slice(0, -1)
         ).andThen((configurationFileNames) => {
             return ResultAsync.combine(configurationFileNames.map((configurationFileName) => {
                 const file = new File(this.server, `${this.getTargetPath(target)}/${configurationFileName}`);
                 
-                return file.read({ superuser: "require" }).andThen((fileContent) => {
+                return file.read({ superuser: "try" }).andThen((fileContent) => {
                     const credentialLine = fileContent.split('\n')[0]
 
                     if (credentialLine === undefined)
@@ -401,7 +401,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
 
         const ignoredNames = ["latency", "lun", "."];
 
-        return this.server.execute(new Command(["find", `${session.devicePath}/`, ..."-type d -mindepth 1 -maxdepth 1 -printf %f\\0".split(" ")], { superuser: "require" })).map(
+        return this.server.execute(new Command(["find", `${session.devicePath}/`, ..."-type d -mindepth 1 -maxdepth 1 -printf %f\\0".split(" ")], { superuser: "try" })).map(
             (proc) => {
                 const connectionFileNames = proc.getStdout().split("\0").slice(0, -1);
                 return connectionFileNames.filter(directoryName => 
@@ -421,8 +421,8 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
 
                     return ok<Connection>({
                         ...partialConnection,
-                        connectionID: yield * connectionIDFile.read({ superuser: "require" }).safeUnwrap(),
-                        ipAddress: yield * ipFile.read({ superuser: "require" }).safeUnwrap(),
+                        connectionID: yield * connectionIDFile.read({ superuser: "try" }).safeUnwrap(),
+                        ipAddress: yield * ipFile.read({ superuser: "try" }).safeUnwrap(),
                     });
                 }))
             }))
@@ -434,7 +434,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
 
         const lunsDirectory = `${initiatorGroup.devicePath}/luns`;
 
-        return this.server.execute(new Command(["find", lunsDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")], { superuser: "require" })).map(
+        return this.server.execute(new Command(["find", lunsDirectory, ..."-mindepth 1 -maxdepth 1 ( -type d -o -type l ) -printf %f\\0".split(" ")], { superuser: "try" })).map(
             (proc) => {
                 return proc.getStdout().split("\0").slice(0, -1);
             }
@@ -445,7 +445,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
                         unitNumber: StringToIntCaster()(number).some(),
                     };
 
-                    const lunDeviceName = (yield * self.server.execute(new Command(["cat", `${lunsDirectory}/${partialLogicalUnitNumber.unitNumber}/device/prod_id`], { superuser: "require" })).safeUnwrap()).getStdout();
+                    const lunDeviceName = (yield * self.server.execute(new Command(["cat", `${lunsDirectory}/${partialLogicalUnitNumber.unitNumber}/device/prod_id`], { superuser: "try" })).safeUnwrap()).getStdout();
                     const device = (yield * self.getVirtualDevices().safeUnwrap()).find((device) => device.deviceName === lunDeviceName);
 
                     return ok<LogicalUnitNumber>({
@@ -463,7 +463,7 @@ export class ISCSIDriverSingleServer implements ISCSIDriver {
 
         const initiatorDirectory = `${initiatorGroup.devicePath}/initiators`;
 
-        return this.server.execute(new Command(["find", initiatorDirectory, ..."-mindepth 1 -maxdepth 1 -printf %f\\0".split(" ")], { superuser: "require" })).map(
+        return this.server.execute(new Command(["find", initiatorDirectory, ..."-mindepth 1 -maxdepth 1 -printf %f\\0".split(" ")], { superuser: "try" })).map(
             (proc) => {
                 const initiatorNames = proc.getStdout().split("\0").slice(0, -1);
                 return initiatorNames.filter(name => !ignoredNames.includes(name));

@@ -18,7 +18,7 @@ export class ConfigurationManager {
                             new BashCommand(
                                 `scstadmin -write_config ${userSettings.value.iscsi.confPath}`,
                                 [],
-                                { superuser: "require" }
+                                { superuser: "try" }
                             )
             )
             .andThen(() =>
@@ -27,7 +27,7 @@ export class ConfigurationManager {
                                     new BashCommand(
                                         `cat ${userSettings.value.iscsi.confPath}`,
                                         [],
-                                        { superuser: "require" }
+                                        { superuser: "try" }
                                     )
                                 )
                 .map((proc) => proc.getStdout())
@@ -38,14 +38,14 @@ export class ConfigurationManager {
     importConfiguration(newConfig: string) {
         return userSettingsResult.andThen((userSettings) => {
             return new File(this.server, userSettings.value.iscsi.confPath)
-                                .create(false, { superuser: "require" })
-                                .andThen((file) => file.write(newConfig, { superuser: "require" }))
+                                .create(false, { superuser: "try" })
+                                .andThen((file) => file.write(newConfig, { superuser: "try" }))
                                 .andThen(() =>
                                     this.server.execute(
                                         new BashCommand(
                                             `scstadmin -check_config ${userSettings.value.iscsi.confPath}`,
                                             [],
-                                            { superuser: "require" }
+                                            { superuser: "try" }
                                         )
                                     )
                                 )
@@ -54,7 +54,7 @@ export class ConfigurationManager {
                                         new BashCommand(
                                             `scstadmin -config ${userSettings.value.iscsi.confPath} -force -noprompt`,
                                             [],
-                                            { superuser: "require" }
+                                            { superuser: "try" }
                                         )
                                     )
                                 )
@@ -65,13 +65,13 @@ export class ConfigurationManager {
     saveCurrentConfiguration(): ResultAsync<File, ProcessError> {
         return userSettingsResult.andThen((userSettings) => {
             return new File(this.server, userSettings.value.iscsi.confPath)
-                                .create(true, { superuser: "require" })
+                                .create(true, { superuser: "try" })
                 .andThen((file) =>
                     this.exportConfiguration()
-                                                .andThen((config) => file.write(config, { superuser: "require" }))
+                                                .andThen((config) => file.write(config, { superuser: "try" }))
                                                 .andThen(() =>
                                                     this.server.execute(
-                                                        new BashCommand(`systemctl enable scst`, [], { superuser: "require" })
+                                                        new BashCommand(`systemctl enable scst`, [], { superuser: "try" })
                                                     )
                                                 )
                                                 .andThen(() =>
@@ -79,7 +79,7 @@ export class ConfigurationManager {
                                                         new BashCommand(
                                                             `scstadmin -config ${userSettings.value.iscsi.confPath}`,
                                                             [],
-                                                            { superuser: "require" }
+                                                            { superuser: "try" }
                                                         )
                                                     )
                                                 )
