@@ -15,11 +15,21 @@ export class ConfigurationManager {
         return userSettingsResult.andThen((userSettings) => {
           return this.server
             .execute(
-              new BashCommand(`scstadmin -write_config ${userSettings.value.iscsi.confPath}`)
+                            new BashCommand(
+                                `scstadmin -write_config ${userSettings.value.iscsi.confPath}`,
+                                [],
+                                { superuser: "try" }
+                            )
             )
             .andThen(() =>
               this.server
-                .execute(new BashCommand(`cat ${userSettings.value.iscsi.confPath}`))
+                                .execute(
+                                    new BashCommand(
+                                        `cat ${userSettings.value.iscsi.confPath}`,
+                                        [],
+                                        { superuser: "try" }
+                                    )
+                                )
                 .map((proc) => proc.getStdout())
             );
         });
@@ -28,10 +38,26 @@ export class ConfigurationManager {
     importConfiguration(newConfig: string) {
         return userSettingsResult.andThen((userSettings) => {
             return new File(this.server, userSettings.value.iscsi.confPath)
-                .create()
-                .andThen((file) => file.write(newConfig))
-                .andThen(() => this.server.execute(new BashCommand(`scstadmin -check_config ${userSettings.value.iscsi.confPath}`)))
-                .map(() => this.server.execute(new BashCommand(`scstadmin -config ${userSettings.value.iscsi.confPath} -force -noprompt`)))
+                                .create(false, { superuser: "try" })
+                                .andThen((file) => file.write(newConfig, { superuser: "try" }))
+                                .andThen(() =>
+                                    this.server.execute(
+                                        new BashCommand(
+                                            `scstadmin -check_config ${userSettings.value.iscsi.confPath}`,
+                                            [],
+                                            { superuser: "try" }
+                                        )
+                                    )
+                                )
+                                .andThen(() =>
+                                    this.server.execute(
+                                        new BashCommand(
+                                            `scstadmin -config ${userSettings.value.iscsi.confPath} -force -noprompt`,
+                                            [],
+                                            { superuser: "try" }
+                                        )
+                                    )
+                                )
                 .mapErr(() => new ProcessError("Config file syntax validation failed."))
         });
     }
@@ -39,12 +65,24 @@ export class ConfigurationManager {
     saveCurrentConfiguration(): ResultAsync<File, ProcessError> {
         return userSettingsResult.andThen((userSettings) => {
             return new File(this.server, userSettings.value.iscsi.confPath)
-                .create(true)
+                                .create(true, { superuser: "try" })
                 .andThen((file) =>
                     this.exportConfiguration()
-                        .map((config) => file.write(config))
-                        .andThen(() => this.server.execute(new BashCommand(`systemctl enable scst`)))
-                        .andThen(() => this.server.execute(new BashCommand(`scstadmin -config ${userSettings.value.iscsi.confPath}`)))
+                                                .andThen((config) => file.write(config, { superuser: "try" }))
+                                                .andThen(() =>
+                                                    this.server.execute(
+                                                        new BashCommand(`systemctl enable scst`, [], { superuser: "try" })
+                                                    )
+                                                )
+                                                .andThen(() =>
+                                                    this.server.execute(
+                                                        new BashCommand(
+                                                            `scstadmin -config ${userSettings.value.iscsi.confPath}`,
+                                                            [],
+                                                            { superuser: "try" }
+                                                        )
+                                                    )
+                                                )
                         .map(() => file)
                 );
         });
