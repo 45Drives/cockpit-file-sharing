@@ -51,7 +51,7 @@ const nfsConfigured = (): ResultAsync<boolean, never> => {
 
 const iscsiConfigured = (): ResultAsync<boolean, never> => {
   return getServer()
-    .andThen((server) => new Directory(server, "/sys/kernel/scst_tgt").exists())
+    .andThen((server) => new Directory(server, "/sys/kernel/scst_tgt").exists({ superuser: "try" }))
     .orElse((_) => ok(false));
 };
 

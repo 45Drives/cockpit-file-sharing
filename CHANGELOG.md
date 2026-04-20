@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.4-8
+## Cockpit File Sharing 4.5.5-1
 
-* fixed build  yml file + making relase package
+* Allow quoted values in imported smb.conf

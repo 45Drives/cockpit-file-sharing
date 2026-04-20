@@ -21,8 +21,6 @@ A Cockpit plugin for managing Samba, NFS, iSCSI, and S3 storage services.
         - Cephfs remount for properly reporting quota to client
     - Export and import of configuration (same format as `/etc/samba/smb.conf`)  
 
-~~User and group management was removed from cockpit-file-sharing in favour of managing Samba users through the new [cockpit-identities](https://github.com/45drives/cockpit-identities) plugin. Install that plugin to manage groups and Samba passwords.~~
-
 ### NFS
 - Create, edit, and remove shares
 - Manage individual client settings
@@ -58,14 +56,14 @@ A Cockpit plugin for managing Samba, NFS, iSCSI, and S3 storage services.
 ### From 45Drives Repo (Recommended)
 ```bash
 curl -sSL https://repo.45drives.com/setup | sudo bash
-sudo apt-get update
+sudo apt update
 sudo apt install cockpit-file-sharing
 ```
 ### Direct from .deb
 Installing this way may work for other versions of Ubuntu and Debian, but it is unsupported. You won't get automatic updates this way.
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.5.4/cockpit-file-sharing_4.5.4-6jammy_all.deb
-sudo apt install ./cockpit-file-sharing_4.5.4-6jammy_all.deb
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.5.5/cockpit-file-sharing_4.5.5-1jammy_all.deb
+sudo apt install ./cockpit-file-sharing_4.5.5-1jammy_all.deb
 ```
 ## Rocky 8, Rocky 9
 ### From 45Drives Repo (Recommended)
@@ -77,7 +75,7 @@ sudo dnf install cockpit-file-sharing
 Installing this way may work for other versions of Rocky/Centos/RHEL/Fedora/etc, but it is unsupported. You won't get automatic updates this way.
 ```bash
 # dnf or yum
-sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.5.4/cockpit-file-sharing-4.5.4-6.el9.noarch.rpm
+sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.5.5/cockpit-file-sharing-4.5.5-1.el9.noarch.rpm
 ```
 ## Generic Installation
 1. Install Dependencies
@@ -172,10 +170,9 @@ Simply click the `+` in the top right of the shares list, fill out the required 
 Click the pencil icon at the right side of the share list entry to edit the share. Settings are the same as creating a share, except you cannot change the share name or path.
 ### Removing a Share
 Click the trash can icon at the right side of the share list entry, then click `Yes` in the confirmation prompt to delete the share. This only removes the share definition from Samba, it does **not** remove any files.
-### User and Group Management
-User and group management was removed from cockpit-file-sharing, in favour of implementing it in a separate plugin, [cockpit-identities](https://github.com/45drives/cockpit-identities)
-### SeDiskOperatorPrivilege
-This section was removed from cockpit-file-sharing.
+### Samba User Password Management
+Samba passwords for user accounts can be managed by clicking the `Manage Samba Passwords` button at the bottom of the Global Configuration section.
+This opens a dialog where you can view all users and set/change/remove their Samba passwords. Note that the user must already exist on the system, and this only sets the Samba password, not the Linux account password.
 ### Import Shares from `/etc/samba/smb.conf`
 To allow cockpit-file-sharing to manage existing shares defined in `/etc/samba/smb.conf`, click the `Import configuration from /etc/samba/smb.conf` button at the bottom of the page.
 It will confirm before overwriting your current share settings, and prompt to replace the content of `/etc/samba/smb.conf` with only `include = registry` in the `[global]` section,
