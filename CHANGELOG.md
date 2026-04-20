@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.5-1
+## Cockpit File Sharing 4.5.6-1
 
-* Allow quoted values in imported smb.conf
+* allowed non root user with esclated priviliges to modify iscsi resources +  building pacakge

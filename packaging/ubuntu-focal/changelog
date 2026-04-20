@@ -1,8 +1,27 @@
+cockpit-file-sharing (4.5.6-1focal) focal; urgency=medium
+
+  * allowed non root user with esclated priviliges to modify iscsi resources +  building
+    pacakge
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 20 Apr 2026 12:39:28 -0300
+
 cockpit-file-sharing (4.5.5-1focal) focal; urgency=medium
 
   * Allow quoted values in imported smb.conf
 
  -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 23 Mar 2026 11:52:11 -0300
+
+cockpit-file-sharing (4.5.4-8focal) focal; urgency=medium
+
+  * fixed build  yml file + making relase package
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 06 Mar 2026 09:11:25 -0400
+
+cockpit-file-sharing (4.5.4-7focal) focal; urgency=medium
+
+  * building release  pacakage
+
+ -- Rachit Hans <rhans@45drives.com>  Thu, 05 Mar 2026 10:11:45 -0400
 
 cockpit-file-sharing (4.5.4-6focal) focal; urgency=medium
 
