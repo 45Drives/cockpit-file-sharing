@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.5-1
+## Cockpit File Sharing 4.5.7-1
 
-* Allow quoted values in imported smb.conf
+* added python3-venv dependency in manifest.json

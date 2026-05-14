@@ -75,6 +75,8 @@ jobs:
       - sign
       - update_repositories
     runs-on: buildinator-5
+    permissions:
+      contents: write
     steps:
       - name: Set Variables
         if: startsWith(github.ref, 'refs/tags/')

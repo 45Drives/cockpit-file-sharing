@@ -3,7 +3,7 @@
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
     "description": "A cockpit module to make file sharing with Samba and NFS easier.",
-    "version": "4.5.5",
+    "version": "4.5.7",
     "build_number": "1",
     "stable": false,
     "author": "Josh Boudreau <jboudreau@45drives.com>",
@@ -30,6 +30,7 @@
             "nfs-kernel-server",
             "samba-common-bin",
             "python3-pip",
+            "python3-venv",
             "python3-botocore"
         ],
         "rocky_common": [
@@ -44,6 +45,7 @@
             "nfs-utils",
             "samba-common-tools",
             "python3-pip",
+            "python3-venv",
             "python3-botocore"
         ]
     },
@@ -80,7 +82,7 @@
     ],
     "changelog": {
         "urgency": "medium",
-        "version": "4.5.5",
+        "version": "4.5.7",
         "build_number": "1",
         "date": null,
         "packager": "Josh Boudreau <jboudreau@45drives.com>",
