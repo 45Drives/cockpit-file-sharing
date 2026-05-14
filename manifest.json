@@ -45,7 +45,6 @@
             "nfs-utils",
             "samba-common-tools",
             "python3-pip",
-            "python3-venv",
             "python3-botocore"
         ]
     },
