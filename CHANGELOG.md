@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.5.6-1
+## Cockpit File Sharing 4.5.7-1
 
-* allowed non root user with esclated priviliges to modify iscsi resources +  building pacakge
+* added python3-venv dependency in manifest.json
