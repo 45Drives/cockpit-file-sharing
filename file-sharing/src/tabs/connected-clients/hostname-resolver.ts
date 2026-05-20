@@ -89,7 +89,7 @@ done
     .orElse(() => okAsync(empty()));
 }
 
-function parseNmblookup(stdout: string, ips: string[]): Map<string, string | null> {
+export function parseNmblookup(stdout: string, ips: string[]): Map<string, string | null> {
   const out = new Map<string, string | null>();
   for (const ip of ips) out.set(ip, null);
   if (!stdout.trim()) return out;

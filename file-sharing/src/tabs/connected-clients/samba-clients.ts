@@ -63,7 +63,7 @@ function parseDate(s: string | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function buildClients(status: SmbStatusJson): ConnectedClient[] {
+export function buildClients(status: SmbStatusJson): ConnectedClient[] {
   const sessions = status.sessions ?? {};
   const tcons = status.tcons ?? {};
   const openFiles = status.open_files ?? {};

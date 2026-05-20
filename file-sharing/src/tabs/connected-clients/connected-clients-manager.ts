@@ -14,7 +14,7 @@ type GetClientsError = ProcessError | ParsingError;
  * this aggregation they'd appear as separate rows and a single kick would
  * fan out into multiple connect/disconnect notifications.
  */
-function aggregateByLogicalClient(rows: ConnectedClient[]): ConnectedClient[] {
+export function aggregateByLogicalClient(rows: ConnectedClient[]): ConnectedClient[] {
   const groups = new Map<string, ConnectedClient[]>();
   for (const r of rows) {
     const key = `${r.protocol}:${r.user ?? ""}:${r.ip}`;
