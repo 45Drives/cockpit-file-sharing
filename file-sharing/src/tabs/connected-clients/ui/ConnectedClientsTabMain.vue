@@ -56,7 +56,9 @@ const startTimer = () => {
   if (refreshTimer !== undefined) window.clearInterval(refreshTimer);
   const ms = Math.max(1, refreshIntervalSeconds.value) * 1000;
   refreshTimer = window.setInterval(() => {
-    actions.reloadClients();
+    // Background polling: silence errors so a chronic failure doesn't spam
+    // notifications every tick. Manual refresh (below) still surfaces them.
+    reloadClients().mapErr(() => undefined);
   }, ms);
 };
 
@@ -66,19 +68,21 @@ onUnmounted(() => {
 });
 watch(refreshIntervalSeconds, startTimer);
 
-const kickClient = (client: ConnectedClient) =>
-  assertConfirm({
+const kickClient = (client: ConnectedClient) => {
+  const label = client.hostname ? `${client.hostname} (${client.ip})` : client.ip;
+  return assertConfirm({
     header: _("Disconnect Samba client?"),
     body:
-      _("This drops all sessions from") +
-      ` ${client.ip}` +
-      ` (smbcontrol smbd kill-client-ip).`,
+      _("All open sessions and file handles from") +
+      ` ${label} ` +
+      _("will be closed. The client may reconnect automatically."),
     dangerous: true,
   })
     .andThen(() => manager)
     .andThen((m) => m.kickSamba(client.ip))
     .andThen(() => reloadClients())
-    .map(() => reportSuccess(_("Disconnected") + ` ${client.ip}`));
+    .map(() => reportSuccess(_("Disconnected") + ` ${label}`));
+};
 
 const actions = wrapActions({
   reloadClients,
@@ -97,11 +101,7 @@ const fallback = (v: string | null | undefined): string =>
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <span>{{ _("Connected Clients") }}</span>
           <div class="flex items-center gap-2">
-            <SelectMenu
-              v-model="filter"
-              :options="filterOptions"
-              class="min-w-[8rem]"
-            />
+            <SelectMenu v-model="filter" :options="filterOptions" />
             <button
               class="btn btn-secondary inline-flex flex-row items-center gap-1"
               @click="actions.reloadClients()"
@@ -117,7 +117,6 @@ const fallback = (v: string | null | undefined): string =>
         <div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
           <Table
             emptyText="No connected clients."
-            noScroll
             class="!border-none !shadow-none"
           >
             <template #thead>

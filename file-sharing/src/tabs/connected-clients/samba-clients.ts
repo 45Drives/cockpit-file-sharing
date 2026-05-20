@@ -1,9 +1,10 @@
 import {
   BashCommand,
+  ParsingError,
   ProcessError,
   Server,
 } from "@45drives/houston-common-lib";
-import { ResultAsync, okAsync } from "neverthrow";
+import { ResultAsync, err, ok, okAsync } from "neverthrow";
 import type { ConnectedClient } from "@/tabs/connected-clients/data-types";
 
 const superuserOpts = { superuser: "try" as const };
@@ -42,17 +43,9 @@ interface SmbStatusJson {
   open_files?: Record<string, SmbOpenFile>;
 }
 
-// `hostname` field looks like "ipv4:1.2.3.4:54321" or "ipv6:[::1]:1234"; pull
-// the printable address if we have it, else fall back to remote_machine.
-function parseHostname(session: SmbSession): string | null {
-  const h = session.hostname;
-  if (!h) return null;
-  const ipv4 = h.match(/^ipv4:([^:]+):\d+$/);
-  if (ipv4) return ipv4[1] ?? null;
-  const ipv6 = h.match(/^ipv6:\[([^\]]+)\]:\d+$/);
-  if (ipv6) return ipv6[1] ?? null;
-  return null;
-}
+// smbstatus -j's `hostname` field is just the connection endpoint string
+// (e.g. "ipv4:1.2.3.4:54321") — not a real DNS name. Samba doesn't surface a
+// resolved hostname here, so leave it null and let the UI show "—".
 
 function isEncrypted(enc: SmbStatusEncryption | undefined): boolean {
   if (!enc) return false;
@@ -92,7 +85,7 @@ function buildClients(status: SmbStatusJson): ConnectedClient[] {
       protocol: "samba",
       user: session.username ?? null,
       ip: session.remote_machine ?? tcon.machine ?? "",
-      hostname: parseHostname(session),
+      hostname: null,
       protocolVersion: session.session_dialect ?? "SMB",
       share: tcon.service ?? null,
       connectedSince: parseDate(tcon.connected_at) ?? parseDate(session.auth_time),
@@ -112,7 +105,7 @@ function buildClients(status: SmbStatusJson): ConnectedClient[] {
       protocol: "samba",
       user: session.username ?? null,
       ip: session.remote_machine ?? "",
-      hostname: parseHostname(session),
+      hostname: null,
       protocolVersion: session.session_dialect ?? "SMB",
       share: null,
       connectedSince: parseDate(session.auth_time),
@@ -124,7 +117,9 @@ function buildClients(status: SmbStatusJson): ConnectedClient[] {
   return rows;
 }
 
-export function getSambaClients(server: Server): ResultAsync<ConnectedClient[], ProcessError> {
+export function getSambaClients(
+  server: Server
+): ResultAsync<ConnectedClient[], ProcessError | ParsingError> {
   // Empty list if smbstatus is unavailable — keeps the tab functional on NFS-only boxes.
   return server
     .execute(new BashCommand("command -v smbstatus >/dev/null 2>&1"), false)
@@ -132,14 +127,15 @@ export function getSambaClients(server: Server): ResultAsync<ConnectedClient[], 
       if (!proc.succeeded()) return okAsync([] as ConnectedClient[]);
       return server
         .execute(new BashCommand("smbstatus -j 2>/dev/null", [], superuserOpts))
-        .map((p) => {
+        .andThen((p) => {
           const out = p.getStdout().trim();
-          if (!out) return [] as ConnectedClient[];
+          if (!out) return ok([] as ConnectedClient[]);
           try {
             const parsed = JSON.parse(out) as SmbStatusJson;
-            return buildClients(parsed);
-          } catch {
-            return [] as ConnectedClient[];
+            return ok(buildClients(parsed));
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            return err(new ParsingError(`smbstatus -j returned invalid JSON: ${msg}`));
           }
         });
     });

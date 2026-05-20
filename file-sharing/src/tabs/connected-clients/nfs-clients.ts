@@ -3,7 +3,7 @@ import {
   ProcessError,
   Server,
 } from "@45drives/houston-common-lib";
-import { ResultAsync, okAsync } from "neverthrow";
+import { ResultAsync } from "neverthrow";
 import type { ConnectedClient } from "@/tabs/connected-clients/data-types";
 
 const superuserOpts = { superuser: "try" as const };
@@ -114,8 +114,10 @@ function parseDump(stdout: string): ConnectedClient[] {
 }
 
 export function getNfsClients(server: Server): ResultAsync<ConnectedClient[], ProcessError> {
+  // The dump script itself handles "directory not present" (NFSv4 server not
+  // running) by exiting cleanly with empty stdout. Any other failure is real
+  // and should propagate so the UI can surface it.
   return server
     .execute(new BashCommand(dumpScript, [], superuserOpts))
-    .map((proc) => parseDump(proc.getStdout()))
-    .orElse(() => okAsync([] as ConnectedClient[]));
+    .map((proc) => parseDump(proc.getStdout()));
 }
