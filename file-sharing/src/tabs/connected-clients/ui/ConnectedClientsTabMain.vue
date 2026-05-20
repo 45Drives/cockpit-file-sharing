@@ -122,7 +122,7 @@ const fallback = (v: string | null | undefined): string =>
         <div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-x-auto [contain:layout]">
           <Table
             noScroll
-            emptyText="No connected clients."
+            :emptyText='_("No connected clients.")'
             class="!border-none !shadow-none"
           >
             <template #thead>

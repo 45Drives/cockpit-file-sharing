@@ -12,6 +12,11 @@ const superuserOpts = { superuser: "try" as const };
  * Bash payload that dumps every /proc/fs/nfsd/clients/<id>/{info,states} in a
  * single round-trip, framed by markers we parse below. We accept that this is
  * NFSv4-only: v3 clients have no kernel-side client identity.
+ *
+ * Requires the kernel's NFSv4 client tracking interface, available on Linux
+ * 5.3+. On older kernels (or hosts not running the NFS server) the directory
+ * is absent and this script exits cleanly with empty stdout — the UI then
+ * shows no NFS rows, which is the correct outcome.
  */
 const dumpScript = `
 if [ ! -d /proc/fs/nfsd/clients ]; then exit 0; fi
