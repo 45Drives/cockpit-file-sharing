@@ -34,6 +34,8 @@ export type UserSettings = {
     tabVisibility: TabVisibility;
     /** Auto-refresh interval in seconds. */
     refreshIntervalSeconds: number;
+    /** Whether to push toast notifications when clients connect or disconnect between polls. */
+    notifyOnChange: boolean;
   };
   /**
    * iSCSI-specific settings
@@ -73,7 +75,8 @@ const defaultSettings = (): UserSettings => ({
   },
   connectedClients: {
     tabVisibility: "auto",
-    refreshIntervalSeconds: 30,
+    refreshIntervalSeconds: 5,
+    notifyOnChange: true,
   },
   iscsi: {
     // confPath: "/etc/scst/cockpit-iscsi.conf",
@@ -119,6 +122,10 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
             refreshIntervalSeconds:
               contents.connectedClients?.refreshIntervalSeconds ||
               defaultSettings().connectedClients.refreshIntervalSeconds,
+            // `??` not `||`: false is a valid user choice, don't overwrite with default.
+            notifyOnChange:
+              contents.connectedClients?.notifyOnChange ??
+              defaultSettings().connectedClients.notifyOnChange,
           },
           iscsi: {
             // confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,

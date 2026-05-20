@@ -174,6 +174,12 @@ const refreshIntervalOptions: SelectMenuOption<number>[] = [
           :options="refreshIntervalOptions"
         />
       </InputLabelWrapper>
+      <ToggleSwitch v-model="tempUserSettings.connectedClients.notifyOnChange">
+        {{ _("Notify on connect/disconnect") }}
+        <template #description>
+          {{ _("Show a toast when a client connects or disconnects between polls. Latency is bounded by the auto-refresh interval.") }}
+        </template>
+      </ToggleSwitch>
     </div>
     <template #footer>
       <div class="button-group-row justify-end">

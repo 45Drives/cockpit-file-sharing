@@ -2,16 +2,19 @@
 import {
   CardContainer,
   CenteredCardColumn,
+  Notification,
   SelectMenu,
   Table,
   assertConfirm,
   computedResult,
+  pushNotification,
   reportSuccess,
   wrapActions,
   type SelectMenuOption,
 } from "@45drives/houston-common-ui";
 import { getServer } from "@45drives/houston-common-lib";
 import { ArrowPathIcon } from "@heroicons/vue/20/solid";
+import { okAsync } from "neverthrow";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import { ConnectedClientsManager } from "@/tabs/connected-clients/connected-clients-manager";
@@ -30,16 +33,42 @@ const manager = server.map((s) => new ConnectedClientsManager(s));
 
 type Filter = "all" | ClientProtocol;
 const filter = ref<Filter>("all");
-const filterOptions: SelectMenuOption<Filter>[] = [
-  { label: _("All"), value: "all" },
-  { label: _("Samba"), value: "samba" },
-  { label: _("NFS"), value: "nfs" },
-];
 
 const [clients, reloadClients] = computedResult<ConnectedClient[]>(
   () => manager.andThen((m) => m.getClients()),
   []
 );
+
+// Track previously-seen clients (full record, so we can label dropped rows
+// after they're gone). `null` baseline = no diff yet (first load just records,
+// never notifies). The baseline updates regardless of notifyOnChange so
+// toggling that setting on doesn't backfire stale events.
+const previousByID = ref<Map<string, ConnectedClient> | null>(null);
+const clientLabel = (c: ConnectedClient): string => {
+  const who = c.hostname ?? c.ip;
+  return c.user ? `${c.user}@${who}` : who;
+};
+watch(clients, (newClients) => {
+  const newMap = new Map(newClients.map((c) => [c.id, c]));
+  const prev = previousByID.value;
+  if (prev !== null && userSettings.value.connectedClients.notifyOnChange) {
+    for (const c of newClients) {
+      if (!prev.has(c.id)) {
+        pushNotification(
+          new Notification(_("Client connected"), clientLabel(c), "info")
+        );
+      }
+    }
+    for (const [id, c] of prev) {
+      if (!newMap.has(id)) {
+        pushNotification(
+          new Notification(_("Client disconnected"), clientLabel(c), "warning")
+        );
+      }
+    }
+  }
+  previousByID.value = newMap;
+});
 
 const filteredClients = computed(() =>
   filter.value === "all"
@@ -47,19 +76,75 @@ const filteredClients = computed(() =>
     : clients.value.filter((c) => c.protocol === filter.value)
 );
 
+const filterOptions = computed<SelectMenuOption<Filter>[]>(() => {
+  const sambaCount = clients.value.filter((c) => c.protocol === "samba").length;
+  const nfsCount = clients.value.filter((c) => c.protocol === "nfs").length;
+  const total = clients.value.length;
+  return [
+    { label: `${_("All")} (${total})`, value: "all" },
+    { label: `${_("Samba")} (${sambaCount})`, value: "samba" },
+    { label: `${_("NFS")} (${nfsCount})`, value: "nfs" },
+  ];
+});
+
 const refreshIntervalSeconds = computed(
   () => userSettings.value.connectedClients.refreshIntervalSeconds
 );
+
+// `inFlight` gates concurrent fetches AND drives the spinner animation on
+// the refresh icon. Two reasons for the single source of truth:
+//  1) Skip-overlap: if a poll is still running when the next tick (or a
+//     manual click) fires, the new one no-ops. Cancelling + restarting
+//     hung calls (DNS timeout, slow nmblookup) just produces a fresh
+//     hang — and Cockpit lacks first-class cancellation primitives.
+//  2) Min-spin duration: local fetches usually finish in <100ms, so the
+//     animate-spin barely registers visually. Holding inFlight true for
+//     at least MIN_SPIN_MS lets the user perceive each refresh tick.
+const inFlight = ref(false);
+const MIN_SPIN_MS = 400;
+let spinStartedAt = 0;
+const beginInFlight = () => {
+  inFlight.value = true;
+  spinStartedAt = performance.now();
+};
+const releaseInFlight = () => {
+  const remaining = MIN_SPIN_MS - (performance.now() - spinStartedAt);
+  if (remaining <= 0) {
+    inFlight.value = false;
+  } else {
+    window.setTimeout(() => {
+      inFlight.value = false;
+    }, remaining);
+  }
+};
+
+// Background poll: silence errors so a chronic failure doesn't spam
+// notifications every tick. ResultAsync is PromiseLike, not Promise, so
+// we use .then(success, error) instead of .finally for cleanup.
+const pollTick = () => {
+  if (inFlight.value) return;
+  beginInFlight();
+  reloadClients()
+    .mapErr(() => undefined)
+    .then(releaseInFlight, releaseInFlight);
+};
+
+// Manual refresh: surfaces errors via wrapActions's notification handler.
+// If a poll is already in flight, return an immediately-resolved ok so
+// the click silently no-ops.
+const refreshNow = () => {
+  if (inFlight.value) return okAsync(undefined as void);
+  beginInFlight();
+  const r = reloadClients();
+  r.then(releaseInFlight, releaseInFlight);
+  return r;
+};
 
 let refreshTimer: number | undefined;
 const startTimer = () => {
   if (refreshTimer !== undefined) window.clearInterval(refreshTimer);
   const ms = Math.max(1, refreshIntervalSeconds.value) * 1000;
-  refreshTimer = window.setInterval(() => {
-    // Background polling: silence errors so a chronic failure doesn't spam
-    // notifications every tick. Manual refresh (below) still surfaces them.
-    reloadClients().mapErr(() => undefined);
-  }, ms);
+  refreshTimer = window.setInterval(pollTick, ms);
 };
 
 onMounted(startTimer);
@@ -85,7 +170,7 @@ const kickClient = (client: ConnectedClient) => {
 };
 
 const actions = wrapActions({
-  reloadClients,
+  refreshNow,
   kickClient,
 });
 
@@ -104,10 +189,13 @@ const fallback = (v: string | null | undefined): string =>
             <SelectMenu v-model="filter" :options="filterOptions" />
             <button
               class="btn btn-secondary inline-flex flex-row items-center gap-1"
-              @click="actions.reloadClients()"
+              @click="actions.refreshNow()"
               :title="_('Refresh now')"
             >
-              <ArrowPathIcon class="size-icon icon-default" />
+              <ArrowPathIcon
+                class="size-icon icon-default"
+                :class="{ 'animate-spin': inFlight }"
+              />
               <span>{{ _("Refresh") }}</span>
             </button>
           </div>
