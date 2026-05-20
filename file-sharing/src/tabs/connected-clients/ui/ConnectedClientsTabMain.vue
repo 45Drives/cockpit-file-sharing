@@ -112,6 +112,15 @@ const toggleSort = (field: SortField) => {
   }
 };
 
+// Zero-pad each IPv4 octet so a lexicographic compare sorts numerically.
+// IPv6 falls through as-is (expanding `::` for proper ordering is a v2
+// concern; in practice CIFS/NFS clients on a LAN are overwhelmingly v4).
+const ipSortKey = (ip: string): string => {
+  const m = ip.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (!m) return ip;
+  return m.slice(1).map((s) => s.padStart(3, "0")).join(".");
+};
+
 const sortValue = (c: ConnectedClient, f: SortField): string | number => {
   switch (f) {
     case "protocol":
@@ -119,7 +128,7 @@ const sortValue = (c: ConnectedClient, f: SortField): string | number => {
     case "user":
       return c.user ?? "";
     case "ip":
-      return c.ip;
+      return ipSortKey(c.ip);
     case "protocolVersion":
       return c.protocolVersion;
     case "share":
