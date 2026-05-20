@@ -28,26 +28,70 @@ const [clients, reloadClients] = computedResult<ConnectedClient[]>(
   []
 );
 
-// Diff successive polls to fire connect/disconnect toasts. Rows are
-// aggregated by logical client (protocol + user + IP) in the manager, so
-// client.id IS the logical-client key here — no further grouping needed.
-// `null` baseline = no diff yet (first load just records, never notifies);
-// baseline updates regardless of notifyOnChange so toggling that setting
-// on doesn't backfire stale events.
+// Diff successive polls to fire toasts covering five kinds of events:
+//  - Client connected: first time we see this logical client
+//  - Client disconnected: logical client gone
+//  - Client reconnected: same logical client, new session (different
+//    connectedSince) — typical kick → auto-reconnect case
+//  - Share connected: same logical client, same session, share appeared
+//  - Share disconnected: same logical client, same session, share dropped
+//
+// Rows are aggregated by logical client (protocol + user + IP) in the
+// manager, so client.id IS the logical-client key. `null` baseline = no
+// diff yet (first load just records, never notifies); baseline updates
+// regardless of notifyOnChange so toggling that setting on doesn't
+// backfire stale events.
 const previousByID = ref<Map<string, ConnectedClient> | null>(null);
-const clientLabel = (c: ConnectedClient): string => {
+const clientIdentity = (c: ConnectedClient): string => {
   const who = c.hostname ?? c.ip;
   return c.user ? `${c.user}@${who}` : who;
+};
+const clientLabel = (c: ConnectedClient): string => {
+  const id = clientIdentity(c);
+  return c.share ? `${id} · ${c.share}` : id;
+};
+const shareLabel = (c: ConnectedClient, share: string): string =>
+  `${share} · ${clientIdentity(c)}`;
+const shareSet = (s: string | null): Set<string> =>
+  new Set(s ? s.split(", ") : []);
+const sessionDiffers = (a: Date | null, b: Date | null): boolean => {
+  if (a === null && b === null) return false;
+  if (a === null || b === null) return true;
+  return a.getTime() !== b.getTime();
 };
 watch(clients, (newClients) => {
   const newMap = new Map(newClients.map((c) => [c.id, c]));
   const prev = previousByID.value;
   if (prev !== null && userSettings.value.connectedClients.notifyOnChange) {
     for (const c of newClients) {
-      if (!prev.has(c.id)) {
+      const old = prev.get(c.id);
+      if (!old) {
         pushNotification(
           new Notification(_("Client connected"), clientLabel(c), "info")
         );
+      } else if (sessionDiffers(c.connectedSince, old.connectedSince)) {
+        pushNotification(
+          new Notification(_("Client reconnected"), clientLabel(c), "info")
+        );
+      } else {
+        // Same id, same session — check for share-set delta. A user can
+        // mount additional shares or drop some while keeping their session.
+        const oldShares = shareSet(old.share);
+        const newShares = shareSet(c.share);
+        for (const s of newShares) {
+          if (!oldShares.has(s)) {
+            pushNotification(
+              new Notification(_("Share connected"), shareLabel(c, s), "info")
+            );
+          }
+        }
+        for (const s of oldShares) {
+          if (!newShares.has(s)) {
+            pushNotification(
+              new Notification(_("Share disconnected"), shareLabel(c, s), "info")
+            );
+          }
+        }
       }
     }
     for (const [id, c] of prev) {
