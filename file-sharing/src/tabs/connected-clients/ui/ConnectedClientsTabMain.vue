@@ -114,8 +114,14 @@ const fallback = (v: string | null | undefined): string =>
         </div>
       </template>
       <div class="card">
-        <div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-hidden">
+        <!-- noScroll + outer overflow-x-auto + contain:layout: the houston-common-ui
+             Table's default scroll wrapper leaks the table's natural width up to
+             <html>, which combined with SelectMenu's scrollIntoView() causes the
+             page to scroll horizontally when the dropdown opens. Keeping the
+             scroll container at this level (and isolating layout) avoids it. -->
+        <div class="sm:shadow sm:rounded-lg sm:border sm:border-default overflow-x-auto [contain:layout]">
           <Table
+            noScroll
             emptyText="No connected clients."
             class="!border-none !shadow-none"
           >
