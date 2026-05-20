@@ -43,6 +43,14 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
     value: "never",
   },
 ];
+
+const refreshIntervalOptions: SelectMenuOption<number>[] = [
+  { label: _("5 seconds"), value: 5 },
+  { label: _("10 seconds"), value: 10 },
+  { label: _("15 seconds"), value: 15 },
+  { label: _("30 seconds"), value: 30 },
+  { label: _("60 seconds"), value: 60 },
+];
 </script>
 
 <template>
@@ -145,6 +153,25 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
         <SelectMenu
           v-model="tempUserSettings.s3.tabVisibility"
           :options="tabVisibilityOptions"
+        />
+      </InputLabelWrapper>
+      <div class="text-header">{{ _("Connected Clients") }}</div>
+      <InputLabelWrapper>
+        <template #label>
+          {{ _("Connected Clients Tab Visibility") }}
+        </template>
+        <SelectMenu
+          v-model="tempUserSettings.connectedClients.tabVisibility"
+          :options="tabVisibilityOptions"
+        />
+      </InputLabelWrapper>
+      <InputLabelWrapper>
+        <template #label>
+          {{ _("Auto-refresh interval") }}
+        </template>
+        <SelectMenu
+          v-model="tempUserSettings.connectedClients.refreshIntervalSeconds"
+          :options="refreshIntervalOptions"
         />
       </InputLabelWrapper>
     </div>

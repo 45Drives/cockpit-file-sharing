@@ -28,6 +28,14 @@ export type UserSettings = {
     tabVisibility: TabVisibility;
   };
   /**
+   * Connected-clients tab settings
+   */
+  connectedClients: {
+    tabVisibility: TabVisibility;
+    /** Auto-refresh interval in seconds. */
+    refreshIntervalSeconds: number;
+  };
+  /**
    * iSCSI-specific settings
    */
   iscsi: {
@@ -62,6 +70,10 @@ const defaultSettings = (): UserSettings => ({
   },
   s3: {
     tabVisibility: "auto",
+  },
+  connectedClients: {
+    tabVisibility: "auto",
+    refreshIntervalSeconds: 30,
   },
   iscsi: {
     // confPath: "/etc/scst/cockpit-iscsi.conf",
@@ -99,6 +111,14 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
           },
           s3: {
             tabVisibility: contents.s3?.tabVisibility || defaultSettings().s3.tabVisibility,
+          },
+          connectedClients: {
+            tabVisibility:
+              contents.connectedClients?.tabVisibility ||
+              defaultSettings().connectedClients.tabVisibility,
+            refreshIntervalSeconds:
+              contents.connectedClients?.refreshIntervalSeconds ||
+              defaultSettings().connectedClients.refreshIntervalSeconds,
           },
           iscsi: {
             // confPath: contents.iscsi?.confPath || defaultSettings().iscsi.confPath,
