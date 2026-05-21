@@ -90,6 +90,12 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
           :options="tabVisibilityOptions"
         />
       </InputLabelWrapper>
+      <ToggleSwitch v-model="tempUserSettings.samba.readOnly">
+        {{ _("Read-only mode") }}
+        <template #description>
+          {{ _("Hide every edit affordance in the Samba tab (add/edit/delete/import). Useful when the Samba config is owned externally (config-as-code, Ansible, manual edits) and Cockpit is only meant to visualize.") }}
+        </template>
+      </ToggleSwitch>
       <div class="text-header">NFS</div>
       <InputLabelWrapper>
         <template #label>
@@ -107,6 +113,12 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
         </template>
         <SelectMenu v-model="tempUserSettings.nfs.tabVisibility" :options="tabVisibilityOptions" />
       </InputLabelWrapper>
+      <ToggleSwitch v-model="tempUserSettings.nfs.readOnly">
+        {{ _("Read-only mode") }}
+        <template #description>
+          {{ _("Hide every edit affordance in the NFS tab (add/edit/delete/import). Useful when /etc/exports (or the configured file) is owned externally and Cockpit is only meant to visualize.") }}
+        </template>
+      </ToggleSwitch>
       <div class="text-header">iSCSI</div>
       <InputLabelWrapper>
         <template #label>
@@ -137,6 +149,12 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
           :options="tabVisibilityOptions"
         />
       </InputLabelWrapper>
+      <ToggleSwitch v-model="tempUserSettings.iscsi.readOnly">
+        {{ _("Read-only mode") }}
+        <template #description>
+          {{ _("Hide top-level edit affordances across the iSCSI sub-screens. iSCSI is composed of many screens (portals, initiator groups, LUNs, CHAP, …); this flag gates their primary add/edit/delete buttons.") }}
+        </template>
+      </ToggleSwitch>
        <div class="text-header">S3</div>
              <InputLabelWrapper>
         <template #label>
