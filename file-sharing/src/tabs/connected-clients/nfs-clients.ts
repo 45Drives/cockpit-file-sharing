@@ -28,6 +28,16 @@ const superuserOpts = { superuser: "try" as const };
  */
 const dumpScript = `
 if [ ! -d /proc/fs/nfsd/clients ]; then exit 0; fi
+# Global context for share derivation (see deriveShares). Emitted once at the
+# top of the dump so it lives outside any CLIENT block. The MOUNTINFO maps a
+# superblock id (from the states file) back to a mount point; EXPORTS lists
+# the server's exported paths. Per-client states entries reference files by
+# (superblock, relative path) — joining these three lets us name the export(s)
+# a client is actively using.
+echo "---MOUNTINFO---"
+cat /proc/self/mountinfo 2>/dev/null
+echo "---EXPORTS---"
+cat /etc/exports /etc/exports.d/*.exports 2>/dev/null
 for d in /proc/fs/nfsd/clients/*/; do
   # When the directory exists but is empty, bash's default glob behavior keeps
   # the literal pattern, so $d would be ".../clients/*/" and basename would
@@ -107,12 +117,109 @@ function countStates(block: string): number {
     .filter((l) => l.length > 0).length;
 }
 
+/**
+ * Parse /proc/self/mountinfo into a map from "major:minor" (decimal, as
+ * mountinfo writes it) to the mount point path. We use the kernel's own
+ * device numbering as the join key for matching states-file entries below.
+ */
+function parseMountInfo(content: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const raw of content.split("\n")) {
+    const parts = raw.trim().split(/\s+/);
+    if (parts.length < 5) continue;
+    const majorMinor = parts[2];
+    const mountPath = parts[4];
+    if (majorMinor && mountPath && /^\d+:\d+$/.test(majorMinor)) {
+      map.set(majorMinor, mountPath);
+    }
+  }
+  return map;
+}
+
+/**
+ * Parse one-or-more /etc/exports-style files into a set of exported paths.
+ * Skips comment and blank lines; first whitespace-delimited token on each
+ * remaining line is the export path. Wildcard / netgroup paths aren't
+ * supported by NFSv4 anyway, so a strict starts-with-"/" filter is enough.
+ */
+function parseExports(content: string): Set<string> {
+  const set = new Set<string>();
+  for (const raw of content.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const path = line.split(/\s+/)[0];
+    if (path && path.startsWith("/")) set.add(path);
+  }
+  return set;
+}
+
+interface ParsedStateEntry {
+  filename: string;
+  /** "major:minor" in decimal, normalized to match parseMountInfo output. */
+  superblock: string;
+}
+
+/**
+ * Extract (filename, superblock) tuples from a client's states file. Each
+ * entry looks like:
+ *   - 0x<hex>: { type: open, ..., superblock: "00:4a:1260", filename: "foo/bar" }
+ * The superblock value is hex `major:minor:inode`; we drop the inode and
+ * convert major:minor to decimal so it joins against mountinfo's format.
+ */
+function parseStates(content: string): ParsedStateEntry[] {
+  const entries: ParsedStateEntry[] = [];
+  for (const line of content.split("\n")) {
+    const superMatch = line.match(/superblock:\s*"([0-9a-fA-F]+):([0-9a-fA-F]+):[0-9a-fA-F]+"/);
+    const fileMatch = line.match(/filename:\s*"([^"]*)"/);
+    if (!superMatch || !fileMatch) continue;
+    const majHex = superMatch[1];
+    const minHex = superMatch[2];
+    const filename = fileMatch[1];
+    if (!majHex || !minHex || filename === undefined) continue;
+    const decimal = `${parseInt(majHex, 16)}:${parseInt(minHex, 16)}`;
+    entries.push({ filename, superblock: decimal });
+  }
+  return entries;
+}
+
+/**
+ * Derive a comma-joined list of exports a client is *actively using*, by
+ * mapping each open file's superblock back to a mount path and then to a
+ * matching export. The Samba `Share` column reflects "mounted shares"
+ * because tcons are stateful per-share; NFSv4 has no such concept, so this
+ * column only populates while files are actively open. An idle-but-mounted
+ * client will show null here. The UI surfaces a tooltip to make this
+ * limitation discoverable.
+ */
+function deriveShares(
+  statesEntries: ParsedStateEntry[],
+  mountInfo: Map<string, string>,
+  exports: Set<string>
+): string | null {
+  if (statesEntries.length === 0 || exports.size === 0) return null;
+  const shares = new Set<string>();
+  for (const e of statesEntries) {
+    const mountPath = mountInfo.get(e.superblock);
+    if (mountPath && exports.has(mountPath)) shares.add(mountPath);
+  }
+  if (shares.size === 0) return null;
+  return [...shares].sort().join(", ");
+}
+
 function parseDump(stdout: string): ConnectedClient[] {
   const out: ConnectedClient[] = [];
   if (!stdout.trim()) return out;
 
   const clientBlocks = stdout.split(/^---CLIENT:([^-]+)---$/m);
-  // split() with a capturing group yields: [pre, id1, block1, id2, block2, ...]
+  // split() with a capturing group yields: [pre, id1, block1, id2, block2, ...].
+  // The "pre" slot (clientBlocks[0]) holds the global context (MOUNTINFO +
+  // EXPORTS) emitted before any client block.
+  const globalContext = clientBlocks[0] ?? "";
+  const mountInfoMatch = globalContext.match(/---MOUNTINFO---\n([\s\S]*?)(?=---EXPORTS---|$)/);
+  const exportsMatch = globalContext.match(/---EXPORTS---\n([\s\S]*?)$/);
+  const mountInfo = parseMountInfo(mountInfoMatch?.[1] ?? "");
+  const exports = parseExports(exportsMatch?.[1] ?? "");
+
   for (let i = 1; i < clientBlocks.length; i += 2) {
     const id = clientBlocks[i]?.trim();
     const body = clientBlocks[i + 1] ?? "";
@@ -123,8 +230,10 @@ function parseDump(stdout: string): ConnectedClient[] {
     const statesMatch = body.match(/---STATES---\n([\s\S]*)$/);
 
     const parsed = parseInfoBlock(infoMatch?.[1] ?? "");
-    const openFiles = statesMatch ? countStates(statesMatch[1] ?? "") : 0;
+    const statesContent = statesMatch?.[1] ?? "";
+    const openFiles = statesMatch ? countStates(statesContent) : 0;
     const connectedSince = parseMtime(mtimeMatch?.[1] ?? "");
+    const share = deriveShares(parseStates(statesContent), mountInfo, exports);
 
     // Defensive: skip blocks with no parseable address. The bash dump shouldn't
     // produce these (it filters non-directories), but a CLIENT marker with an
@@ -139,7 +248,7 @@ function parseDump(stdout: string): ConnectedClient[] {
       ip: parsed.address,
       hostname: parsed.hostname,
       protocolVersion: parsed.minorVersion ? `NFSv4.${parsed.minorVersion}` : "NFSv4",
-      share: null,
+      share,
       connectedSince,
       openFiles,
       encrypted: false,

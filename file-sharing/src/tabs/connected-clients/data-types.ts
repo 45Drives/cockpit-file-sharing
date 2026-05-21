@@ -10,7 +10,13 @@ export interface ConnectedClient {
   hostname: string | null;
   /** e.g. "SMB3_11", "NFSv4.2". */
   protocolVersion: string;
-  /** Samba: share name per tcon. NFS: null (kernel doesn't surface per-export here). */
+  /**
+   * Samba: share name per tcon. NFS: comma-joined list of exports the client
+   * is *actively using* (derived by mapping each open file's superblock back
+   * to a mount path and then to an /etc/exports entry). NFSv4 has no per-
+   * client mount list at the server, so an idle-but-mounted NFS client shows
+   * null here. The UI surfaces this caveat via a hover tooltip.
+   */
   share: string | null;
   /**
    * When the session/tcon was established. Samba surfaces this directly per
