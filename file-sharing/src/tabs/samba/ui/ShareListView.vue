@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, defineProps, nextTick } from "vue";
+import { ref, computed, defineProps, inject, nextTick, watch } from "vue";
 import {
   CardContainer,
   Disclosure,
@@ -8,8 +8,9 @@ import {
 } from "@45drives/houston-common-ui";
 import { PlusIcon } from "@heroicons/vue/20/solid";
 import ShareEditor from "@/tabs/samba/ui/ShareEditor.vue";
-import { PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
+import { EyeIcon, PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
 import { SambaShareConfig } from "@45drives/houston-common-lib";
+import { readOnlyInjectionKey } from "@/common/injectionKeys";
 
 const _ = cockpit.gettext;
 
@@ -23,7 +24,17 @@ const emit = defineEmits<{
   (e: "removeShare", share: SambaShareConfig, callback?: () => void): void;
 }>();
 
+const readOnly = inject(readOnlyInjectionKey, computed(() => false));
+
 const showNewShareEditor = ref(false);
+
+// Auto-close any open "new share" form when read-only is toggled on, so the
+// editor doesn't get orphaned (the `+` button is hidden, leaving no obvious
+// way to close it). Per-row editors don't need this — their inputs become
+// disabled and the Apply button hides reactively.
+watch(readOnly, (isReadOnly) => {
+  if (isReadOnly) showNewShareEditor.value = false;
+});
 
 const shareNames = computed(() => props.shares.map((s) => s.name));
 </script>
@@ -46,7 +57,7 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
     </Disclosure>
 
     <Table
-      :emptyText="_('No shares. Click \'+\' to add one.')"
+      :emptyText="readOnly ? _('No shares configured.') : _('No shares. Click \'+\' to add one.')"
       noScroll
       class="sm:rounded-lg sm:shadow sm:border sm:border-default sm:overflow-hidden"
     >
@@ -56,8 +67,8 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
           <th scope="col">{{ _("Path") }}</th>
           <th scope="col">{{ _("Description") }}</th>
           <th scope="col" class="flex flex-row justify-end">
-            <span class="sr-only">{{ _("Edit/Delete") }}</span>
-            <button @click="showNewShareEditor = !showNewShareEditor">
+            <span class="sr-only">{{ readOnly ? _("View") : _("Edit/Delete") }}</span>
+            <button v-if="!readOnly" @click="showNewShareEditor = !showNewShareEditor">
               <span class="sr-only">{{ _("Add new share") }}</span>
               <PlusIcon class="size-icon icon-default" />
             </button>
@@ -82,11 +93,16 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
                 {{ share.description }}
               </td>
               <td class="button-group-row justify-end">
-                <button @click="setShowEditor(!showEditor)">
-                  <span class="sr-only">Edit</span>
-                  <PencilSquareIcon class="size-icon icon-default" />
+                <button
+                  @click="setShowEditor(!showEditor)"
+                  :title="readOnly ? _('View details') : _('Edit')"
+                >
+                  <span class="sr-only">{{ readOnly ? _("View") : _("Edit") }}</span>
+                  <EyeIcon v-if="readOnly" class="size-icon icon-default" />
+                  <PencilSquareIcon v-else class="size-icon icon-default" />
                 </button>
                 <button
+                  v-if="!readOnly"
                   @click="
                     // for fileystem-specific hooks:
                     setShowEditor(true);

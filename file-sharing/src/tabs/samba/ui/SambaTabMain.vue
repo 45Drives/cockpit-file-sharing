@@ -26,7 +26,11 @@ import GlobalConfigEditor from "./GlobalConfigEditor.vue";
 import ShareListView from "@/tabs/samba/ui/ShareListView.vue";
 
 import { provide, ref, watch, computed } from "vue";
-import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
+import {
+  serverClusterInjectionKey,
+  cephClientNameInjectionKey,
+  readOnlyInjectionKey,
+} from "@/common/injectionKeys";
 
 import { HookedSambaManager as SambaManager } from "@/tabs/samba/samba-manager";
 import { okAsync } from "neverthrow";
@@ -38,6 +42,9 @@ const _ = cockpit.gettext;
 const userSettings = useUserSettings();
 
 const smbConfPath = computed(() => userSettings.value.samba.confPath);
+
+const readOnly = computed(() => userSettings.value.samba.readOnly);
+provide(readOnlyInjectionKey, readOnly);
 
 provide(serverClusterInjectionKey, getServerCluster("ctdb"));
 const cephClientName = ref<`client.${string}`>("client.samba");
@@ -126,6 +133,10 @@ const checkIfSmbConfIncludesRegistry = (smbConfPath: string) =>
     .andThen((sm) => sm.checkIfSambaConfIncludesRegistry(smbConfPath))
     .map((smbConfHasIncludeRegistry) => {
       if (!smbConfHasIncludeRegistry) {
+        // In read-only mode we don't manage shares ourselves, so the misconfig
+        // notification + Fix-now action are noise (and the action would write
+        // to smb.conf — forbidden when the user opted out of edits).
+        if (readOnly.value) return;
         pushNotification(
           new Notification(
             _("Samba is Misconfigured"),
@@ -235,13 +246,14 @@ watch(smbConfPath, () => actions.checkIfSmbConfIncludesRegistry(smbConfPath.valu
         {{ _("Import/Export Config") }}
       </template>
       <div class="button-group-row flex-wrap">
-        <button class="btn btn-primary" @click="actions.importConfig">
+        <button v-if="!readOnly" class="btn btn-primary" @click="actions.importConfig">
           {{ _("Import") }}
         </button>
         <button class="btn btn-primary" @click="actions.exportConfig">
           {{ _("Export") }}
         </button>
         <button
+          v-if="!readOnly"
           class="btn btn-secondary inline-flex flex-row items-center gap-1"
           @click="actions.importFromSmbConf(smbConfPath)"
         >
