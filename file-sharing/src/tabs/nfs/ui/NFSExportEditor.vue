@@ -317,33 +317,36 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
           {{ validationScope.isValid() ? exportPreview : "" }}
         </div>
       </InputLabelWrapper>
-
-      <div class="button-group-row justify-end grow">
-        <button
-          class="btn btn-secondary"
-          @click="
-            () => {
-              resetChanges();
-              shareDirectoryInputAndOptionsRef?.resetChanges?.();
-              $emit('cancel');
-            }
-          "
-        >
-          {{ readOnly ? _("Close") : _("Cancel") }}
-        </button>
-        <button
-          v-if="!readOnly"
-          class="btn btn-primary"
-          @click="$emit('apply', tempExportConfig)"
-          :disabled="
-            !validationScope.isValid() ||
-            (!modified && !shareDirectoryOptionsModified) ||
-            globalProcessingState !== 0
-          "
-        >
-          {{ _("Apply") }}
-        </button>
-      </div>
     </fieldset>
+
+    <!-- Action row outside the fieldset so Close stays clickable in
+         read-only mode (the fieldset's disabled cascade would otherwise
+         trap the user in the details view). Apply is v-if'd off anyway. -->
+    <div class="button-group-row justify-end grow">
+      <button
+        class="btn btn-secondary"
+        @click="
+          () => {
+            resetChanges();
+            shareDirectoryInputAndOptionsRef?.resetChanges?.();
+            $emit('cancel');
+          }
+        "
+      >
+        {{ readOnly ? _("Close") : _("Cancel") }}
+      </button>
+      <button
+        v-if="!readOnly"
+        class="btn btn-primary"
+        @click="$emit('apply', tempExportConfig)"
+        :disabled="
+          !validationScope.isValid() ||
+          (!modified && !shareDirectoryOptionsModified) ||
+          globalProcessingState !== 0
+        "
+      >
+        {{ _("Apply") }}
+      </button>
+    </div>
   </div>
 </template>
