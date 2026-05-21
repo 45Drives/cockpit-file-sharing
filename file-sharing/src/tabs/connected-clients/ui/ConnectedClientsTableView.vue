@@ -240,6 +240,9 @@ const sortableColumns: { field: SortField; label: string }[] = [
           </template>
         </Table>
       </div>
+      <p class="text-muted text-sm mt-3">
+        {{ _("Note: NFS clients only appear while their NFSv4 lease is active (~90 s of recent I/O). An idle-but-mounted client may briefly disappear from this list until its next operation re-confirms the lease.") }}
+      </p>
     </div>
   </CardContainer>
 </template>

@@ -119,18 +119,22 @@ function countStates(block: string): number {
 
 /**
  * Parse /proc/self/mountinfo into a map from "major:minor" (decimal, as
- * mountinfo writes it) to the mount point path. We use the kernel's own
- * device numbering as the join key for matching states-file entries below.
+ * mountinfo writes it) to the list of mount paths that share that device.
+ * Multi-value because a single filesystem can be mounted at multiple paths
+ * (e.g. ZFS dataset + bind mounts of it); we need to keep all candidates so
+ * deriveShares can pick the one that's actually an NFS export.
  */
-function parseMountInfo(content: string): Map<string, string> {
-  const map = new Map<string, string>();
+export function parseMountInfo(content: string): Map<string, string[]> {
+  const map = new Map<string, string[]>();
   for (const raw of content.split("\n")) {
     const parts = raw.trim().split(/\s+/);
     if (parts.length < 5) continue;
     const majorMinor = parts[2];
     const mountPath = parts[4];
     if (majorMinor && mountPath && /^\d+:\d+$/.test(majorMinor)) {
-      map.set(majorMinor, mountPath);
+      const existing = map.get(majorMinor);
+      if (existing) existing.push(mountPath);
+      else map.set(majorMinor, [mountPath]);
     }
   }
   return map;
@@ -142,7 +146,7 @@ function parseMountInfo(content: string): Map<string, string> {
  * remaining line is the export path. Wildcard / netgroup paths aren't
  * supported by NFSv4 anyway, so a strict starts-with-"/" filter is enough.
  */
-function parseExports(content: string): Set<string> {
+export function parseExports(content: string): Set<string> {
   const set = new Set<string>();
   for (const raw of content.split("\n")) {
     const line = raw.trim();
@@ -166,7 +170,7 @@ interface ParsedStateEntry {
  * The superblock value is hex `major:minor:inode`; we drop the inode and
  * convert major:minor to decimal so it joins against mountinfo's format.
  */
-function parseStates(content: string): ParsedStateEntry[] {
+export function parseStates(content: string): ParsedStateEntry[] {
   const entries: ParsedStateEntry[] = [];
   for (const line of content.split("\n")) {
     const superMatch = line.match(/superblock:\s*"([0-9a-fA-F]+):([0-9a-fA-F]+):[0-9a-fA-F]+"/);
@@ -191,22 +195,31 @@ function parseStates(content: string): ParsedStateEntry[] {
  * client will show null here. The UI surfaces a tooltip to make this
  * limitation discoverable.
  */
-function deriveShares(
+export function deriveShares(
   statesEntries: ParsedStateEntry[],
-  mountInfo: Map<string, string>,
+  mountInfo: Map<string, string[]>,
   exports: Set<string>
 ): string | null {
   if (statesEntries.length === 0 || exports.size === 0) return null;
   const shares = new Set<string>();
   for (const e of statesEntries) {
-    const mountPath = mountInfo.get(e.superblock);
-    if (mountPath && exports.has(mountPath)) shares.add(mountPath);
+    const candidates = mountInfo.get(e.superblock);
+    if (!candidates) continue;
+    // A single filesystem can have multiple mount paths (ZFS dataset + bind
+    // mounts, for example); find one that's actually exported. First match
+    // wins — they all reference the same underlying storage.
+    for (const path of candidates) {
+      if (exports.has(path)) {
+        shares.add(path);
+        break;
+      }
+    }
   }
   if (shares.size === 0) return null;
   return [...shares].sort().join(", ");
 }
 
-function parseDump(stdout: string): ConnectedClient[] {
+export function parseDump(stdout: string): ConnectedClient[] {
   const out: ConnectedClient[] = [];
   if (!stdout.trim()) return out;
 
