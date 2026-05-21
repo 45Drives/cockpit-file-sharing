@@ -17,10 +17,22 @@ const superuserOpts = { superuser: "try" as const };
  * 5.3+. On older kernels (or hosts not running the NFS server) the directory
  * is absent and this script exits cleanly with empty stdout — the UI then
  * shows no NFS rows, which is the correct outcome.
+ *
+ * NFSv4 lease semantics: the kernel only keeps a client entry while the
+ * client has an active lease (~90s since the last operation by default).
+ * An idle mount whose lease has lapsed will not appear here until the next
+ * I/O re-confirms it — any touch of the mount (`ls`, `stat`, file open)
+ * re-establishes the lease and the entry reappears. Operators should
+ * expect NFS rows to rotate in and out over time; that's the kernel's
+ * notion of "connected", not a bug in this view.
  */
 const dumpScript = `
 if [ ! -d /proc/fs/nfsd/clients ]; then exit 0; fi
 for d in /proc/fs/nfsd/clients/*/; do
+  # When the directory exists but is empty, bash's default glob behavior keeps
+  # the literal pattern, so $d would be ".../clients/*/" and basename would
+  # give "*". Skip non-directories defensively (no nullglob assumption).
+  [ -d "$d" ] || continue
   id=$(basename "$d")
   echo "---CLIENT:$id---"
   # mtime of the client dentry = first-contact time. The kernel creates the
@@ -113,6 +125,12 @@ function parseDump(stdout: string): ConnectedClient[] {
     const parsed = parseInfoBlock(infoMatch?.[1] ?? "");
     const openFiles = statesMatch ? countStates(statesMatch[1] ?? "") : 0;
     const connectedSince = parseMtime(mtimeMatch?.[1] ?? "");
+
+    // Defensive: skip blocks with no parseable address. The bash dump shouldn't
+    // produce these (it filters non-directories), but a CLIENT marker with an
+    // empty info block would otherwise render as a phantom row with id "nfs:*"
+    // and empty IP/hostname. Easier to guarantee correctness here too.
+    if (!parsed.address) continue;
 
     out.push({
       id: `nfs:${id}`,
