@@ -11,7 +11,7 @@ const superuserOpts = { superuser: "try" as const };
  * both and are left as null (UI shows "—").
  *
  * Returns whatever the resolver says verbatim — if DNS returns a short name
- * (`quim`) that's what you'll get; if it returns an FQDN that's what you'll
+ * (`nas01`) that's what you'll get; if it returns an FQDN that's what you'll
  * get; NetBIOS names are always returned in their registered short form.
  */
 export function resolveHostnames(
@@ -100,7 +100,7 @@ function parseNmblookup(stdout: string, ips: string[]): Map<string, string | nul
     const ip = blocks[i]?.trim();
     const body = blocks[i + 1] ?? "";
     if (!ip) continue;
-    // Look for a line like `\tQUIM            <00> -         B <ACTIVE>`.
+    // Look for a line like `\tWORKSTATION     <00> -         B <ACTIVE>`.
     // Skip <GROUP> entries (workgroup names) and the "Looking up status" header.
     for (const raw of body.split("\n")) {
       const line = raw.trim();

@@ -5,7 +5,7 @@ import { getSambaClients, kickSambaClient } from "@/tabs/connected-clients/samba
 import { getNfsClients } from "@/tabs/connected-clients/nfs-clients";
 import { resolveHostnames } from "@/tabs/connected-clients/hostname-resolver";
 
-export type GetClientsError = ProcessError | ParsingError;
+type GetClientsError = ProcessError | ParsingError;
 
 /**
  * Collapses raw per-tcon rows (Samba) and per-client rows (NFS) into one row

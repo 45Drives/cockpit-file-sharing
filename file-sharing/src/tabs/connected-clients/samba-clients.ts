@@ -55,6 +55,9 @@ function isEncrypted(enc: SmbStatusEncryption | undefined): boolean {
 }
 
 function parseDate(s: string | undefined): Date | null {
+  // Samba emits ISO 8601 with explicit TZ offset (e.g. "2025-04-15T15:32:46.123+00:00").
+  // new Date() parses that unambiguously; naive strings (no offset) would be interpreted
+  // as browser-local, silently producing wrong timestamps off by the browser-vs-server skew.
   if (!s) return null;
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d;
