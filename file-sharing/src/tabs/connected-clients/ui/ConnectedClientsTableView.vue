@@ -125,6 +125,20 @@ const sortedClients = computed(() => {
 const formatDate = (d: Date | null): string => (d ? d.toLocaleString() : "—");
 const fallback = (v: string | null | undefined): string =>
   v && v.length > 0 ? v : "—";
+
+// Column definitions for the sortable header row. Labels are wrapped in _()
+// at module init time, matching the convention used elsewhere in this project
+// (e.g. tabVisibilityOptions in UserSettingsView.vue).
+const sortableColumns: { field: SortField; label: string }[] = [
+  { field: "protocol", label: _("Protocol") },
+  { field: "user", label: _("User") },
+  { field: "ip", label: _("Client") },
+  { field: "protocolVersion", label: _("Version") },
+  { field: "share", label: _("Share") },
+  { field: "connectedSince", label: _("Connected since") },
+  { field: "openFiles", label: _("Open files") },
+  { field: "encrypted", label: _("Encrypted") },
+];
 </script>
 
 <template>
@@ -162,63 +176,24 @@ const fallback = (v: string | null | undefined): string =>
         >
           <template #thead>
             <tr>
-              <th scope="col">
-                <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('protocol')">
-                  {{ _("Protocol") }}
-                  <ChevronUpIcon v-if="sortBy === 'protocol' && sortDir === 'asc'" class="size-4" />
-                  <ChevronDownIcon v-else-if="sortBy === 'protocol' && sortDir === 'desc'" class="size-4" />
+              <th v-for="col in sortableColumns" :key="col.field" scope="col">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1"
+                  @click="toggleSort(col.field)"
+                >
+                  {{ col.label }}
+                  <ChevronUpIcon
+                    v-if="sortBy === col.field && sortDir === 'asc'"
+                    class="size-4"
+                  />
+                  <ChevronDownIcon
+                    v-else-if="sortBy === col.field && sortDir === 'desc'"
+                    class="size-4"
+                  />
                 </button>
               </th>
-              <th scope="col">
-                <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('user')">
-                  {{ _("User") }}
-                  <ChevronUpIcon v-if="sortBy === 'user' && sortDir === 'asc'" class="size-4" />
-                  <ChevronDownIcon v-else-if="sortBy === 'user' && sortDir === 'desc'" class="size-4" />
-                </button>
-              </th>
-              <th scope="col">
-                <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('ip')">
-                  {{ _("Client") }}
-                  <ChevronUpIcon v-if="sortBy === 'ip' && sortDir === 'asc'" class="size-4" />
-                  <ChevronDownIcon v-else-if="sortBy === 'ip' && sortDir === 'desc'" class="size-4" />
-                </button>
-              </th>
-              <th scope="col">
-                <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('protocolVersion')">
-                  {{ _("Version") }}
-                  <ChevronUpIcon v-if="sortBy === 'protocolVersion' && sortDir === 'asc'" class="size-4" />
-                  <ChevronDownIcon v-else-if="sortBy === 'protocolVersion' && sortDir === 'desc'" class="size-4" />
-                </button>
-              </th>
-              <th scope="col">
-                <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('share')">
-                  {{ _("Share") }}
-                  <ChevronUpIcon v-if="sortBy === 'share' && sortDir === 'asc'" class="size-4" />
-                  <ChevronDownIcon v-else-if="sortBy === 'share' && sortDir === 'desc'" class="size-4" />
-                </button>
-              </th>
-              <th scope="col">
-                <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('connectedSince')">
-                  {{ _("Connected since") }}
-                  <ChevronUpIcon v-if="sortBy === 'connectedSince' && sortDir === 'asc'" class="size-4" />
-                  <ChevronDownIcon v-else-if="sortBy === 'connectedSince' && sortDir === 'desc'" class="size-4" />
-                </button>
-              </th>
-              <th scope="col">
-                <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('openFiles')">
-                  {{ _("Open files") }}
-                  <ChevronUpIcon v-if="sortBy === 'openFiles' && sortDir === 'asc'" class="size-4" />
-                  <ChevronDownIcon v-else-if="sortBy === 'openFiles' && sortDir === 'desc'" class="size-4" />
-                </button>
-              </th>
-              <th scope="col">
-                <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('encrypted')">
-                  {{ _("Encrypted") }}
-                  <ChevronUpIcon v-if="sortBy === 'encrypted' && sortDir === 'asc'" class="size-4" />
-                  <ChevronDownIcon v-else-if="sortBy === 'encrypted' && sortDir === 'desc'" class="size-4" />
-                </button>
-              </th>
-              <th scope="col" class="justify-end"><span class="sr-only">Actions</span></th>
+              <th scope="col" class="justify-end"><span class="sr-only">{{ _("Actions") }}</span></th>
             </tr>
           </template>
           <template #tbody>
