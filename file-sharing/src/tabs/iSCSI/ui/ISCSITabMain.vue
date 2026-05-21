@@ -27,6 +27,7 @@ import type { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 import ConfigurationEditor from "@/tabs/iSCSI/ui/screens/config/ConfigurationEditor.vue";
 import { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 import { useUserSettings } from "@/common/user-settings";
+import { readOnlyInjectionKey } from "@/common/injectionKeys";
 import { ResultAsync } from "neverthrow";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import type { Target } from "@/tabs/iSCSI/types/Target";
@@ -40,8 +41,17 @@ const OLD_CONF_PATH = "/etc/scst/cockpit-iscsi.conf";
 const NEW_CONF_PATH = "/etc/scst.conf";
 const has45DrivesOcfProvider = ref(false);
 provide("has45DrivesOcfProvider", has45DrivesOcfProvider);
-const canEdit = computed(() => !useUserSettings().value.iscsi.clusteredServer || has45DrivesOcfProvider.value);
+// iscsi.readOnly is the user-facing kill switch (settings modal); it composes
+// with the existing clustered/OCF-provider gate so every screen's canEditIscsi
+// inject already respects the new flag without per-screen changes.
+const canEdit = computed(() =>
+  !useUserSettings().value.iscsi.readOnly &&
+  (!useUserSettings().value.iscsi.clusteredServer || has45DrivesOcfProvider.value)
+);
 provide("canEditIscsi", canEdit);
+// Also publish under the standard injection key so future iSCSI components
+// can use the same pattern as the NFS/Samba tabs.
+provide(readOnlyInjectionKey, computed(() => useUserSettings().value.iscsi.readOnly));
 
 // Function to check and move the configuration file
 const moveConfigFileIfNeeded = async () => {
