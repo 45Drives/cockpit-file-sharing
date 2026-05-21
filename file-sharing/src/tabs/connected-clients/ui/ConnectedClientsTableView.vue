@@ -149,7 +149,7 @@ const sortableColumns: { field: SortField; label: string }[] = [
         <div class="flex items-center gap-2">
           <SelectMenu v-model="filter" :options="filterOptions" />
           <button
-            class="btn btn-secondary inline-flex flex-row items-center gap-1"
+            class="btn btn-secondary inline-flex flex-row items-center gap-1 text-base font-normal"
             @click="emit('refresh')"
             :title="_('Refresh now')"
           >
