@@ -9,7 +9,11 @@ import {
 } from "@45drives/houston-common-ui";
 import { Upload, /* Download, */ getServerCluster, server, Command } from "@45drives/houston-common-lib";
 import { computed, provide, ref } from "vue";
-import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
+import {
+  serverClusterInjectionKey,
+  cephClientNameInjectionKey,
+  readOnlyInjectionKey,
+} from "@/common/injectionKeys";
 
 import { useUserSettings } from "@/common/user-settings";
 import { getNFSManager } from "@/tabs/nfs/nfs-manager";
@@ -25,6 +29,9 @@ const cluster = getServerCluster("pcs");
 provide(serverClusterInjectionKey, cluster);
 const cephClientName = ref<`client.${string}`>("client.nfs");
 provide(cephClientNameInjectionKey, cephClientName);
+
+const readOnly = computed(() => userSettings.value.nfs.readOnly);
+provide(readOnlyInjectionKey, readOnly);
 
 const nfsManager = computed(() => {
   const exportsPath = userSettings.value.nfs.confPath;
@@ -124,7 +131,7 @@ const actions = wrapActions({
         {{ _("Import/Export Config") }}
       </template>
       <div class="button-group-row flex-wrap">
-        <button class="btn btn-primary" @click="actions.importConfig">
+        <button v-if="!readOnly" class="btn btn-primary" @click="actions.importConfig">
           {{ _("Import") }}
         </button>
         <button class="btn btn-primary" @click="actions.exportConfig">

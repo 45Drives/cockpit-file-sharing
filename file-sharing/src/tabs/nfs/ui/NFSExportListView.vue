@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, defineProps, nextTick } from "vue";
+import { ref, computed, defineProps, inject, nextTick, watch } from "vue";
 import type { NFSExport } from "@/tabs/nfs/data-types";
 import {
   CardContainer,
@@ -8,7 +8,8 @@ import {
   Table,
 } from "@45drives/houston-common-ui";
 import NFSExportEditor from "@/tabs/nfs/ui/NFSExportEditor.vue";
-import { PencilSquareIcon, TrashIcon, PlusIcon } from "@heroicons/vue/20/solid";
+import { PencilSquareIcon, EyeIcon, TrashIcon, PlusIcon } from "@heroicons/vue/20/solid";
+import { readOnlyInjectionKey } from "@/common/injectionKeys";
 
 const _ = cockpit.gettext;
 
@@ -22,7 +23,18 @@ const emit = defineEmits<{
   (e: "removeExport", nfsExport: NFSExport, callback?: () => void): void;
 }>();
 
+// Default ref(false) handles standalone test mounts that aren't under a provider.
+const readOnly = inject(readOnlyInjectionKey, computed(() => false));
+
 const showNewExportEditor = ref(false);
+
+// Auto-close any open "new share" form when read-only is toggled on, so the
+// editor doesn't get orphaned (the `+` button is hidden, leaving no obvious
+// way to close it otherwise). Per-row editors don't need this — their inputs
+// just become disabled and the Apply button hides reactively.
+watch(readOnly, (isReadOnly) => {
+  if (isReadOnly) showNewExportEditor.value = false;
+});
 
 const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path));
 </script>
@@ -45,7 +57,7 @@ const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path)
     </Disclosure>
 
     <Table
-      :emptyText="_('No shares. Click \'+\' to add one.')"
+      :emptyText="readOnly ? _('No shares configured.') : _('No shares. Click \'+\' to add one.')"
       noScroll
       class="sm:rounded-lg sm:shadow sm:border sm:border-default sm:overflow-hidden"
     >
@@ -54,8 +66,8 @@ const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path)
           <th scope="col">{{ _("Path") }}</th>
           <th scope="col">{{ _("Comment") }}</th>
           <th scope="col" class="flex flex-row justify-end">
-            <span class="sr-only">{{ _("Edit/Delete") }}</span>
-            <button @click="showNewExportEditor = !showNewExportEditor">
+            <span class="sr-only">{{ readOnly ? _("View") : _("Edit/Delete") }}</span>
+            <button v-if="!readOnly" @click="showNewExportEditor = !showNewExportEditor">
               <span class="sr-only">{{ _("Add new share") }}</span>
               <PlusIcon class="size-icon icon-default" />
             </button>
@@ -76,11 +88,16 @@ const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path)
                 {{ nfsExport.comment }}
               </td>
               <td class="button-group-row justify-end">
-                <button @click="setShowEditor(!showEditor)">
-                  <span class="sr-only">Edit</span>
-                  <PencilSquareIcon class="size-icon icon-default" />
+                <button
+                  @click="setShowEditor(!showEditor)"
+                  :title="readOnly ? _('View details') : _('Edit')"
+                >
+                  <span class="sr-only">{{ readOnly ? _("View") : _("Edit") }}</span>
+                  <EyeIcon v-if="readOnly" class="size-icon icon-default" />
+                  <PencilSquareIcon v-else class="size-icon icon-default" />
                 </button>
                 <button
+                  v-if="!readOnly"
                   @click="
                     // for fileystem-specific hooks:
                     setShowEditor(true);
