@@ -90,10 +90,18 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
           :options="tabVisibilityOptions"
         />
       </InputLabelWrapper>
-      <ToggleSwitch v-model="tempUserSettings.samba.readOnly">
+      <ToggleSwitch
+        v-model="tempUserSettings.samba.readOnly"
+        :disabled="tempUserSettings.samba.readOnlyLocked"
+      >
         {{ _("Read-only mode") }}
         <template #description>
-          {{ _("Hide every edit affordance in the Samba tab (add/edit/delete/import). Useful when the Samba config is owned externally (config-as-code, Ansible, manual edits) and Cockpit is only meant to visualize.") }}
+          <span v-if="tempUserSettings.samba.readOnlyLocked">
+            {{ _("Locked: this value is pinned via /etc/cockpit-file-sharing.conf.json (samba.readOnlyLocked = true). Edit the file to change it.") }}
+          </span>
+          <span v-else>
+            {{ _("Hide every edit affordance in the Samba tab (add/edit/delete/import). Useful when the Samba config is owned externally (config-as-code, Ansible, manual edits) and Cockpit is only meant to visualize.") }}
+          </span>
         </template>
       </ToggleSwitch>
       <div class="text-header">NFS</div>
@@ -113,10 +121,18 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
         </template>
         <SelectMenu v-model="tempUserSettings.nfs.tabVisibility" :options="tabVisibilityOptions" />
       </InputLabelWrapper>
-      <ToggleSwitch v-model="tempUserSettings.nfs.readOnly">
+      <ToggleSwitch
+        v-model="tempUserSettings.nfs.readOnly"
+        :disabled="tempUserSettings.nfs.readOnlyLocked"
+      >
         {{ _("Read-only mode") }}
         <template #description>
-          {{ _("Hide every edit affordance in the NFS tab (add/edit/delete/import). Useful when /etc/exports (or the configured file) is owned externally and Cockpit is only meant to visualize.") }}
+          <span v-if="tempUserSettings.nfs.readOnlyLocked">
+            {{ _("Locked: this value is pinned via /etc/cockpit-file-sharing.conf.json (nfs.readOnlyLocked = true). Edit the file to change it.") }}
+          </span>
+          <span v-else>
+            {{ _("Hide every edit affordance in the NFS tab (add/edit/delete/import). Useful when /etc/exports (or the configured file) is owned externally and Cockpit is only meant to visualize.") }}
+          </span>
         </template>
       </ToggleSwitch>
       <div class="text-header">iSCSI</div>
@@ -149,10 +165,18 @@ const tabVisibilityOptions: SelectMenuOption<TabVisibility>[] = [
           :options="tabVisibilityOptions"
         />
       </InputLabelWrapper>
-      <ToggleSwitch v-model="tempUserSettings.iscsi.readOnly">
+      <ToggleSwitch
+        v-model="tempUserSettings.iscsi.readOnly"
+        :disabled="tempUserSettings.iscsi.readOnlyLocked"
+      >
         {{ _("Read-only mode") }}
         <template #description>
-          {{ _("Hide top-level edit affordances across the iSCSI sub-screens. iSCSI is composed of many screens (portals, initiator groups, LUNs, CHAP, …); this flag gates their primary add/edit/delete buttons.") }}
+          <span v-if="tempUserSettings.iscsi.readOnlyLocked">
+            {{ _("Locked: this value is pinned via /etc/cockpit-file-sharing.conf.json (iscsi.readOnlyLocked = true). Edit the file to change it.") }}
+          </span>
+          <span v-else>
+            {{ _("Hide top-level edit affordances across the iSCSI sub-screens. iSCSI is composed of many screens (portals, initiator groups, LUNs, CHAP, …); this flag gates their primary add/edit/delete buttons.") }}
+          </span>
         </template>
       </ToggleSwitch>
        <div class="text-header">S3</div>
