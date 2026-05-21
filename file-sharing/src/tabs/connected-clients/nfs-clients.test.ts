@@ -197,4 +197,23 @@ suite("nfs-clients parseDump", () => {
     );
     expect(parseDump(stdout)[0]!.connectedSince).toBeNull();
   });
+
+  test("CLIENT block with no parseable address produces no row", () => {
+    // Regression: when /proc/fs/nfsd/clients/ exists but is empty, the bash
+    // glob doesn't expand and the dump produced a stray `---CLIENT:*---`
+    // with no INFO content. The parser must skip it, not emit a phantom row
+    // with id "nfs:*" and empty IP.
+    const stdout = sample("*", "---MTIME---\n");
+    expect(parseDump(stdout)).toEqual([]);
+  });
+
+  test("CLIENT block with INFO but no address is also skipped", () => {
+    // Belt-and-braces: even if a future kernel format omitted the address
+    // line, we shouldn't render a row with no identity.
+    const stdout = sample(
+      "abc",
+      ["---INFO---", "status: confirmed", "name: Linux NFSv4.2 host"].join("\n")
+    );
+    expect(parseDump(stdout)).toEqual([]);
+  });
 });
