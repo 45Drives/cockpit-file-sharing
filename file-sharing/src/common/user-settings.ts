@@ -119,10 +119,11 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
             tabVisibility:
               contents.connectedClients?.tabVisibility ||
               defaultSettings().connectedClients.tabVisibility,
+            // `??` not `||` here and below: 0 / false are valid user choices
+            // (even if not currently exposed in the UI), don't overwrite with default.
             refreshIntervalSeconds:
-              contents.connectedClients?.refreshIntervalSeconds ||
+              contents.connectedClients?.refreshIntervalSeconds ??
               defaultSettings().connectedClients.refreshIntervalSeconds,
-            // `??` not `||`: false is a valid user choice, don't overwrite with default.
             notifyOnChange:
               contents.connectedClients?.notifyOnChange ??
               defaultSettings().connectedClients.notifyOnChange,
