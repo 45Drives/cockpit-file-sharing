@@ -52,6 +52,16 @@ const clientLabel = (c: ConnectedClient): string => {
 };
 const shareLabel = (c: ConnectedClient, share: string): string =>
   `${share} · ${clientIdentity(c)}`;
+
+// Per-protocol toast titles. Strings stay as literal _() calls at each branch
+// so the gettext extractor catches them; using a key-driven helper would hide
+// them from the extraction tooling.
+const connectedTitle = (c: ConnectedClient): string =>
+  c.protocol === "samba" ? _("Samba client connected") : _("NFS client connected");
+const reconnectedTitle = (c: ConnectedClient): string =>
+  c.protocol === "samba" ? _("Samba client reconnected") : _("NFS client reconnected");
+const disconnectedTitle = (c: ConnectedClient): string =>
+  c.protocol === "samba" ? _("Samba client disconnected") : _("NFS client disconnected");
 const shareSet = (s: string | null): Set<string> =>
   new Set(s ? s.split(", ") : []);
 const sessionDiffers = (a: Date | null, b: Date | null): boolean => {
@@ -67,11 +77,11 @@ watch(clients, (newClients) => {
       const old = prev.get(c.id);
       if (!old) {
         pushNotification(
-          new Notification(_("Client connected"), clientLabel(c), "info")
+          new Notification(connectedTitle(c), clientLabel(c), "info")
         );
       } else if (sessionDiffers(c.connectedSince, old.connectedSince)) {
         pushNotification(
-          new Notification(_("Client reconnected"), clientLabel(c), "info")
+          new Notification(reconnectedTitle(c), clientLabel(c), "info")
         );
       } else {
         // Same id, same session — check for share-set delta. A user can
@@ -97,7 +107,7 @@ watch(clients, (newClients) => {
     for (const [id, c] of prev) {
       if (!newMap.has(id)) {
         pushNotification(
-          new Notification(_("Client disconnected"), clientLabel(c), "warning")
+          new Notification(disconnectedTitle(c), clientLabel(c), "warning")
         );
       }
     }
@@ -121,6 +131,7 @@ const refreshIntervalSeconds = computed(
 const inFlight = ref(false);
 const MIN_SPIN_MS = 400;
 let spinStartedAt = 0;
+let spinReleaseTimer: number | undefined;
 const beginInFlight = () => {
   inFlight.value = true;
   spinStartedAt = performance.now();
@@ -130,7 +141,10 @@ const releaseInFlight = () => {
   if (remaining <= 0) {
     inFlight.value = false;
   } else {
-    window.setTimeout(() => {
+    // Tracked so onUnmounted can clear it — otherwise a pending tick fires
+    // after teardown and Vue warns about mutating a destroyed component.
+    spinReleaseTimer = window.setTimeout(() => {
+      spinReleaseTimer = undefined;
       inFlight.value = false;
     }, remaining);
   }
@@ -168,6 +182,7 @@ const startTimer = () => {
 onMounted(startTimer);
 onUnmounted(() => {
   if (refreshTimer !== undefined) window.clearInterval(refreshTimer);
+  if (spinReleaseTimer !== undefined) window.clearTimeout(spinReleaseTimer);
 });
 watch(refreshIntervalSeconds, startTimer);
 
