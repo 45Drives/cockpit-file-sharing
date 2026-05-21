@@ -1,7 +1,35 @@
 import { suite, test, expect } from "vitest";
-import { parseDump } from "./nfs-clients";
+import {
+  parseDump,
+  parseMountInfo,
+  parseExports,
+  parseStates,
+  deriveShares,
+} from "./nfs-clients";
 
 const sample = (id: string, body: string) => `---CLIENT:${id}---\n${body}`;
+
+// Realistic-ish global context fixture for the share-derivation tests below.
+// Major:minor 0:74 maps to /tank/general, 0:75 to /tank/media, 0:99 to
+// /not-exported (deliberately not in EXPORTS to exercise the negative path).
+const ctx = (extra?: { mountinfo?: string; exports?: string }) =>
+  [
+    "---MOUNTINFO---",
+    extra?.mountinfo ??
+      [
+        "26 25 0:24 / /sys rw,relatime - sysfs sysfs rw",
+        "40 25 0:74 / /tank/general rw,relatime - zfs tank/general rw",
+        "41 25 0:75 / /tank/media rw,relatime - zfs tank/media rw",
+        "42 25 0:99 / /not-exported rw,relatime - zfs tank/scratch rw",
+      ].join("\n"),
+    "---EXPORTS---",
+    extra?.exports ??
+      [
+        "# header comment",
+        "/tank/general 10.0.0.2(rw,sync,no_subtree_check)",
+        "/tank/media   10.0.0.2(rw,sync,no_subtree_check)",
+      ].join("\n"),
+  ].join("\n") + "\n";
 
 suite("nfs-clients parseDump", () => {
   test("empty input returns no rows", () => {
@@ -215,5 +243,241 @@ suite("nfs-clients parseDump", () => {
       ["---INFO---", "status: confirmed", "name: Linux NFSv4.2 host"].join("\n")
     );
     expect(parseDump(stdout)).toEqual([]);
+  });
+});
+
+suite("nfs-clients parseMountInfo", () => {
+  test("extracts major:minor → mount-path pairs", () => {
+    const map = parseMountInfo(
+      [
+        "26 25 0:24 / /sys rw,relatime - sysfs sysfs rw",
+        "40 25 0:74 / /tank/general rw,relatime - zfs tank/general rw",
+      ].join("\n")
+    );
+    expect(map.get("0:24")).toBe("/sys");
+    expect(map.get("0:74")).toBe("/tank/general");
+    expect(map.size).toBe(2);
+  });
+
+  test("ignores lines that don't have a major:minor in column 3", () => {
+    // Garbage / truncated lines must not corrupt the map.
+    const map = parseMountInfo(
+      ["bogus line", "40 25 not-a-device / /tank/general rw - zfs tank/general rw"].join("\n")
+    );
+    expect(map.size).toBe(0);
+  });
+
+  test("empty input → empty map", () => {
+    expect(parseMountInfo("").size).toBe(0);
+  });
+});
+
+suite("nfs-clients parseExports", () => {
+  test("extracts the first whitespace-delimited path on each non-comment line", () => {
+    const set = parseExports(
+      [
+        "# comment",
+        "",
+        "/tank/general 10.0.0.2(rw,sync)",
+        "/tank/media   10.0.0.2(rw,sync,no_subtree_check)",
+      ].join("\n")
+    );
+    expect(set.has("/tank/general")).toBe(true);
+    expect(set.has("/tank/media")).toBe(true);
+    expect(set.size).toBe(2);
+  });
+
+  test("skips comment and blank lines", () => {
+    const set = parseExports(["# foo", "", "  ", "# /tank/should-not-appear"].join("\n"));
+    expect(set.size).toBe(0);
+  });
+
+  test("requires path to start with /", () => {
+    // wildcard / netgroup paths aren't valid NFSv4 exports; filter them out
+    // so they can't accidentally match a mount path in the derivation step.
+    const set = parseExports(["* 10.0.0.2(rw)", "@group 10.0.0.2(rw)"].join("\n"));
+    expect(set.size).toBe(0);
+  });
+});
+
+suite("nfs-clients parseStates", () => {
+  test("extracts filename + superblock and converts hex major:minor to decimal", () => {
+    // Real kernel format: superblock is hex major:minor:inode; we only need
+    // major:minor for the mountinfo join, and we want it as decimal because
+    // that's how /proc/self/mountinfo writes column 3.
+    const line =
+      `- 0x1234: { type: open, access: rw, deny: --, superblock: "00:4a:1260", ` +
+      `filename: "Wordlists/101.txt" }`;
+    const entries = parseStates(line);
+    expect(entries).toEqual([{ filename: "Wordlists/101.txt", superblock: "0:74" }]);
+  });
+
+  test("multiple entries on consecutive lines all parse", () => {
+    const content = [
+      `- 0xa: { type: deleg, access: r, superblock: "00:4a:1260", filename: "a.txt" }`,
+      `- 0xb: { type: open, access: rw, deny: --, superblock: "00:4b:99", filename: "sub/b.txt" }`,
+    ].join("\n");
+    const entries = parseStates(content);
+    expect(entries).toHaveLength(2);
+    expect(entries[0]!.superblock).toBe("0:74");
+    expect(entries[1]!.superblock).toBe("0:75");
+  });
+
+  test("lines without both superblock and filename are skipped", () => {
+    expect(parseStates(`- 0x1: { type: open, superblock: "00:4a:1260" }`)).toEqual([]);
+    expect(parseStates(`- 0x1: { type: open, filename: "x" }`)).toEqual([]);
+    expect(parseStates(`random noise`)).toEqual([]);
+  });
+});
+
+suite("nfs-clients deriveShares", () => {
+  const mountInfo = new Map([
+    ["0:74", "/tank/general"],
+    ["0:75", "/tank/media"],
+    ["0:99", "/not-exported"],
+  ]);
+  const exports = new Set(["/tank/general", "/tank/media"]);
+
+  test("returns single export when one open file matches", () => {
+    expect(
+      deriveShares([{ filename: "Wordlists/101.txt", superblock: "0:74" }], mountInfo, exports)
+    ).toBe("/tank/general");
+  });
+
+  test("comma-joins (sorted) when files span multiple exports", () => {
+    expect(
+      deriveShares(
+        [
+          { filename: "a.txt", superblock: "0:75" },
+          { filename: "b.txt", superblock: "0:74" },
+        ],
+        mountInfo,
+        exports
+      )
+    ).toBe("/tank/general, /tank/media");
+  });
+
+  test("dedupes when multiple files map to the same export", () => {
+    expect(
+      deriveShares(
+        [
+          { filename: "a.txt", superblock: "0:74" },
+          { filename: "b.txt", superblock: "0:74" },
+        ],
+        mountInfo,
+        exports
+      )
+    ).toBe("/tank/general");
+  });
+
+  test("returns null when no open files", () => {
+    expect(deriveShares([], mountInfo, exports)).toBeNull();
+  });
+
+  test("returns null when superblock has no mount-info match", () => {
+    expect(
+      deriveShares([{ filename: "x", superblock: "9:99" }], mountInfo, exports)
+    ).toBeNull();
+  });
+
+  test("returns null when mount path isn't an export", () => {
+    expect(
+      deriveShares([{ filename: "x", superblock: "0:99" }], mountInfo, exports)
+    ).toBeNull();
+  });
+
+  test("returns null when exports set is empty (no /etc/exports content)", () => {
+    expect(
+      deriveShares([{ filename: "x", superblock: "0:74" }], mountInfo, new Set())
+    ).toBeNull();
+  });
+});
+
+suite("nfs-clients parseDump — share derivation integration", () => {
+  test("idle client (empty states) leaves share null", () => {
+    const stdout =
+      ctx() +
+      sample(
+        "idle",
+        [
+          "---MTIME---",
+          "1716196800",
+          "---INFO---",
+          'address: "10.0.0.2:111"',
+          'name: "Linux NFSv4.2 idleclient"',
+          "minor version: 2",
+        ].join("\n")
+      );
+    const row = parseDump(stdout)[0]!;
+    expect(row.share).toBeNull();
+    expect(row.ip).toBe("10.0.0.2");
+  });
+
+  test("active client (open file on exported mount) gets share populated", () => {
+    const stdout =
+      ctx() +
+      sample(
+        "active",
+        [
+          "---MTIME---",
+          "1716196800",
+          "---INFO---",
+          'address: "10.0.0.2:222"',
+          'name: "Linux NFSv4.2 activeclient"',
+          "minor version: 2",
+          "---STATES---",
+          `- 0x1: { type: open, superblock: "00:4a:1260", filename: "foo.txt" }`,
+        ].join("\n")
+      );
+    const row = parseDump(stdout)[0]!;
+    expect(row.share).toBe("/tank/general");
+  });
+
+  test("global context applies to every CLIENT in the dump", () => {
+    const stdout =
+      ctx() +
+      sample(
+        "c1",
+        [
+          "---INFO---",
+          'address: "10.0.0.2:1"',
+          "minor version: 2",
+          "---STATES---",
+          `- 0x1: { type: open, superblock: "00:4a:1", filename: "x" }`,
+        ].join("\n")
+      ) +
+      "\n" +
+      sample(
+        "c2",
+        [
+          "---INFO---",
+          'address: "10.0.0.3:1"',
+          "minor version: 2",
+          "---STATES---",
+          `- 0x1: { type: open, superblock: "00:4b:1", filename: "y" }`,
+        ].join("\n")
+      );
+    const rows = parseDump(stdout);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.share).toBe("/tank/general");
+    expect(rows[1]!.share).toBe("/tank/media");
+  });
+
+  test("missing MOUNTINFO/EXPORTS context degrades gracefully (share=null, row still appears)", () => {
+    // If the bash dump emits CLIENT blocks but no global context (unlikely
+    // but defensive), every NFS row gets share=null instead of crashing.
+    const stdout = sample(
+      "abc",
+      [
+        "---INFO---",
+        'address: "10.0.0.2:1"',
+        "minor version: 2",
+        "---STATES---",
+        `- 0x1: { type: open, superblock: "00:4a:1", filename: "x" }`,
+      ].join("\n")
+    );
+    const row = parseDump(stdout)[0]!;
+    expect(row.share).toBeNull();
+    expect(row.ip).toBe("10.0.0.2");
   });
 });
