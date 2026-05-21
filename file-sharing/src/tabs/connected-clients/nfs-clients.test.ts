@@ -116,4 +116,85 @@ suite("nfs-clients parseDump", () => {
     );
     expect(parseDump(stdout)[0]!.openFiles).toBe(0);
   });
+
+  test("quote-wrapped info values are stripped (real kernel format)", () => {
+    // Recent kernels wrap address and name in double quotes. The parser
+    // should strip them so the IP doesn't render as `"10.0.0.1` and the
+    // hostname as `host"`.
+    const stdout = sample(
+      "q",
+      [
+        "---INFO---",
+        'address: "10.0.0.1:919"',
+        "status: confirmed",
+        'name: "Linux NFSv4.2 quotedhost"',
+        "minor version: 2",
+      ].join("\n")
+    );
+    const row = parseDump(stdout)[0]!;
+    expect(row.ip).toBe("10.0.0.1");
+    expect(row.hostname).toBe("quotedhost");
+  });
+
+  test("MTIME marker is parsed into connectedSince", () => {
+    const epoch = 1716196800; // 2024-05-20T08:00:00Z
+    const stdout = sample(
+      "m",
+      [
+        "---MTIME---",
+        String(epoch),
+        "---INFO---",
+        "address: 10.0.0.1:919",
+        "name: Linux NFSv4.2 mtimehost",
+        "minor version: 2",
+      ].join("\n")
+    );
+    const row = parseDump(stdout)[0]!;
+    expect(row.connectedSince).toBeInstanceOf(Date);
+    expect(row.connectedSince!.getTime()).toBe(epoch * 1000);
+  });
+
+  test("missing MTIME marker leaves connectedSince null", () => {
+    // Older kernels / hosts where stat -c %Y produced no output; parser
+    // must fall back to null rather than NaN-ing the Date.
+    const stdout = sample(
+      "n",
+      ["---INFO---", "address: 10.0.0.1:919", "name: Linux NFSv4.2 host", "minor version: 2"].join(
+        "\n"
+      )
+    );
+    expect(parseDump(stdout)[0]!.connectedSince).toBeNull();
+  });
+
+  test("non-numeric MTIME line yields null connectedSince", () => {
+    const stdout = sample(
+      "b",
+      [
+        "---MTIME---",
+        "not-an-epoch",
+        "---INFO---",
+        "address: 10.0.0.1:919",
+        "name: Linux NFSv4.2 host",
+        "minor version: 2",
+      ].join("\n")
+    );
+    expect(parseDump(stdout)[0]!.connectedSince).toBeNull();
+  });
+
+  test("MTIME of 0 (epoch) is rejected as connectedSince", () => {
+    // A real client dentry will always have a positive mtime; 0 indicates
+    // stat failed or returned a placeholder. Treat as missing.
+    const stdout = sample(
+      "z",
+      [
+        "---MTIME---",
+        "0",
+        "---INFO---",
+        "address: 10.0.0.1:919",
+        "name: Linux NFSv4.2 host",
+        "minor version: 2",
+      ].join("\n")
+    );
+    expect(parseDump(stdout)[0]!.connectedSince).toBeNull();
+  });
 });
