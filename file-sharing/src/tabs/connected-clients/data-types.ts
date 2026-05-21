@@ -12,7 +12,14 @@ export interface ConnectedClient {
   protocolVersion: string;
   /** Samba: share name per tcon. NFS: null (kernel doesn't surface per-export here). */
   share: string | null;
-  /** When the session/tcon was established. NFS clients have no exposed timestamp. */
+  /**
+   * When the session/tcon was established. Samba surfaces this directly per
+   * tcon; NFS has no dedicated "connected at" field (the kernel's only time
+   * value is `seconds from last renew`, which resets on every NFSv4 lease
+   * renewal), so we use the `/proc/fs/nfsd/clients/<id>/` dentry mtime as a
+   * proxy — it's set on first confirm and only changes on lease expiry +
+   * reconnect, which matches the operator's notion of "connected since".
+   */
   connectedSince: Date | null;
   openFiles: number;
   encrypted: boolean;

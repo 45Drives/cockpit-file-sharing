@@ -23,6 +23,11 @@ if [ ! -d /proc/fs/nfsd/clients ]; then exit 0; fi
 for d in /proc/fs/nfsd/clients/*/; do
   id=$(basename "$d")
   echo "---CLIENT:$id---"
+  # mtime of the client dentry = first-contact time. The kernel creates the
+  # dentry when a client confirms and only recreates it on lease expiry +
+  # reconnect, so this stays put across NFSv4 lease renewals.
+  echo "---MTIME---"
+  stat -c %Y "$d" 2>/dev/null
   if [ -r "$d/info" ]; then
     echo "---INFO---"
     cat "$d/info" 2>/dev/null
@@ -48,7 +53,12 @@ function parseInfoBlock(block: string): ParsedInfo {
     if (!line || !line.includes(":")) continue;
     const idx = line.indexOf(":");
     const k = line.slice(0, idx).trim();
-    const v = line.slice(idx + 1).trim();
+    let v = line.slice(idx + 1).trim();
+    // Recent kernels wrap values in double quotes (e.g. `address: "10.0.0.1:919"`,
+    // `name: "Linux NFSv4.2 host"`); older ones don't. Strip them defensively.
+    if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
+      v = v.slice(1, -1);
+    }
     info[k] = v;
   }
   // address looks like "192.168.1.10:919" or "[fe80::1]:919"
@@ -96,11 +106,13 @@ function parseDump(stdout: string): ConnectedClient[] {
     const body = clientBlocks[i + 1] ?? "";
     if (!id) continue;
 
+    const mtimeMatch = body.match(/---MTIME---\n([^\n]*)/);
     const infoMatch = body.match(/---INFO---\n([\s\S]*?)(?=---STATES---|$)/);
     const statesMatch = body.match(/---STATES---\n([\s\S]*)$/);
 
     const parsed = parseInfoBlock(infoMatch?.[1] ?? "");
     const openFiles = statesMatch ? countStates(statesMatch[1] ?? "") : 0;
+    const connectedSince = parseMtime(mtimeMatch?.[1] ?? "");
 
     out.push({
       id: `nfs:${id}`,
@@ -110,12 +122,18 @@ function parseDump(stdout: string): ConnectedClient[] {
       hostname: parsed.hostname,
       protocolVersion: parsed.minorVersion ? `NFSv4.${parsed.minorVersion}` : "NFSv4",
       share: null,
-      connectedSince: null,
+      connectedSince,
       openFiles,
       encrypted: false,
     });
   }
   return out;
+}
+
+function parseMtime(s: string): Date | null {
+  const epoch = Number.parseInt(s.trim(), 10);
+  if (!Number.isFinite(epoch) || epoch <= 0) return null;
+  return new Date(epoch * 1000);
 }
 
 export function getNfsClients(server: Server): ResultAsync<ConnectedClient[], ProcessError> {
