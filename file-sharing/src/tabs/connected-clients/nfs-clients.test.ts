@@ -254,9 +254,25 @@ suite("nfs-clients parseMountInfo", () => {
         "40 25 0:74 / /tank/general rw,relatime - zfs tank/general rw",
       ].join("\n")
     );
-    expect(map.get("0:24")).toBe("/sys");
-    expect(map.get("0:74")).toBe("/tank/general");
+    expect(map.get("0:24")).toEqual(["/sys"]);
+    expect(map.get("0:74")).toEqual(["/tank/general"]);
     expect(map.size).toBe(2);
+  });
+
+  test("collects ALL mount paths for the same superblock (multi-mount filesystems)", () => {
+    // A single filesystem can be visible at multiple mount points — bind
+    // mounts, ZFS datasets with secondary mountpoints, LVM-bind layouts,
+    // some container setups. Keeping every candidate lets deriveShares pick
+    // whichever one is actually exported, regardless of mountinfo line
+    // order (which a single-value Map would silently truncate to "last
+    // wins" — and "last" can easily be a non-exported bind-mount path).
+    const map = parseMountInfo(
+      [
+        "40 25 0:42 / /srv/data rw - ext4 /dev/sda1 rw",
+        "41 25 0:42 / /export/data rw - ext4 /dev/sda1 rw",
+      ].join("\n")
+    );
+    expect(map.get("0:42")).toEqual(["/srv/data", "/export/data"]);
   });
 
   test("ignores lines that don't have a major:minor in column 3", () => {
@@ -331,10 +347,10 @@ suite("nfs-clients parseStates", () => {
 });
 
 suite("nfs-clients deriveShares", () => {
-  const mountInfo = new Map([
-    ["0:74", "/tank/general"],
-    ["0:75", "/tank/media"],
-    ["0:99", "/not-exported"],
+  const mountInfo = new Map<string, string[]>([
+    ["0:74", ["/tank/general"]],
+    ["0:75", ["/tank/media"]],
+    ["0:99", ["/not-exported"]],
   ]);
   const exports = new Set(["/tank/general", "/tank/media"]);
 
@@ -390,6 +406,22 @@ suite("nfs-clients deriveShares", () => {
     expect(
       deriveShares([{ filename: "x", superblock: "0:74" }], mountInfo, new Set())
     ).toBeNull();
+  });
+
+  test("multi-mount filesystem: picks the export-matching path, ignores siblings", () => {
+    // Regression: when a filesystem is visible at multiple mount points (e.g.
+    // a ZFS dataset with a secondary mountpoint, or any `mount --bind`
+    // layout), the parser keeps every candidate path and deriveShares picks
+    // whichever is the actual export — regardless of mountinfo line order.
+    // Before the fix this collapsed to a single value, last-write-wins, and
+    // a non-exported bind-mount path would silently win.
+    const multiMount = new Map<string, string[]>([
+      ["0:42", ["/srv/data", "/export/data", "/mnt/bind/data"]],
+    ]);
+    const onlyExportedPath = new Set(["/export/data"]);
+    expect(
+      deriveShares([{ filename: "f", superblock: "0:42" }], multiMount, onlyExportedPath)
+    ).toBe("/export/data");
   });
 });
 
