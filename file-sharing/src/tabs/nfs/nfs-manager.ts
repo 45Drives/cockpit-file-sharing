@@ -117,22 +117,18 @@ export class NFSManagerSingleServer implements INFSManager {
   }
 
   enableNFSService(now: "now" | undefined = undefined): ResultAsync<void, ProcessError> {
-    console.log("enabling NFS service");
     return this.systemdManager.enable({ name: "nfs-server.service" }, now).map(() => undefined);
   }
 
   disableNFSService(now: "now" | undefined = undefined): ResultAsync<void, ProcessError> {
-    console.log("disabling NFS service");
     return this.systemdManager.disable({ name: "nfs-server.service" }, now).map(() => undefined);
   }
 
   startNFSService(): ResultAsync<void, ProcessError> {
-    console.log("starting NFS service");
     return this.systemdManager.start({ name: "nfs-server.service" }).map(() => undefined);
   }
 
   stopNFSService(): ResultAsync<void, ProcessError> {
-    console.log("stopping NFS service");
     return this.systemdManager.stop({ name: "nfs-server.service" }).map(() => undefined);
   }
 }
