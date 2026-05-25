@@ -47,11 +47,7 @@ export async function listBucketsFromCeph(): Promise<CephBucket[]> {
 
 export async function isCephRgwHealthy(): Promise<boolean> {
   try {
-    // Any lightweight admin call that fails fast if RGW is unreachable/unauthorized
-    await rgwJson(["zonegroup", "get"]);
-    await ensureRgwUserExists({uid: "houstonUi",displayName: "Houston UI",systemUser: false,
-    });
-    return true;
+    return (await firstWorkingRgwGateway()) !== null;
   } catch (e) {
     return false;
   }
@@ -1222,7 +1218,7 @@ async function rgwUserExists(uid: string, tenant?: string): Promise<boolean> {
     return false;
   }
 }
-async function ensureRgwUserExists(opts: {uid: string;tenant?: string;displayName: string;systemUser?: boolean;maxBuckets?: number;suspended?: boolean;
+export async function ensureRgwUserExists(opts: {uid: string;tenant?: string;displayName: string;systemUser?: boolean;maxBuckets?: number;suspended?: boolean;
 }): Promise<void> {
   const exists = await rgwUserExists(opts.uid, opts.tenant);
   if (exists) return;
