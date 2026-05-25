@@ -7,9 +7,10 @@ import {
   type CommandOptions,
   Command,
 } from "@45drives/houston-common-lib";
-import { ResultAsync } from "neverthrow";
+import { Result, ResultAsync } from "neverthrow";
 import { NFSExportsParser } from "@/tabs/nfs/exports-parser";
 import { Hooks, executeHookCallbacks } from "@/common/hooks";
+import { getSystemdManager, type ISystemdManager } from "@/common/systemd-manager";
 
 export interface INFSManager {
   server: Server;
@@ -20,17 +21,25 @@ export interface INFSManager {
   exportConfig(): ResultAsync<string, ProcessError>;
   importConfig(config: string): ResultAsync<this, ProcessError>;
   onExportsFileChanged(callback: () => void): { remove: () => void };
+  nfsServiceRunning(): ResultAsync<boolean, ProcessError>;
+  nfsServiceEnabled(): ResultAsync<boolean, ProcessError>;
+  enableNFSService(now?: "now"): ResultAsync<void, ProcessError>;
+  disableNFSService(now?: "now"): ResultAsync<void, ProcessError>;
+  startNFSService(): ResultAsync<void, ProcessError>;
+  stopNFSService(): ResultAsync<void, ProcessError>;
 }
 
 export class NFSManagerSingleServer implements INFSManager {
   private exportsFile: File;
   private commandOptions: CommandOptions = { superuser: "try" };
   private nfsExportsParser = new NFSExportsParser();
+  private systemdManager: ISystemdManager;
   constructor(
     public server: Server,
     exportsFilePath: string
   ) {
     this.exportsFile = new File(this.server, exportsFilePath);
+    this.systemdManager = getSystemdManager(this.server);
   }
 
   private ensureExportsFile(): ResultAsync<File, ProcessError> {
@@ -62,6 +71,7 @@ export class NFSManagerSingleServer implements INFSManager {
     return this.getExports()
       .map((exports) => [...exports, nfsExport])
       .andThen((exports) => this.setExports(exports))
+      .andThen(() => this.systemdManager.daemonReload())
       .map(() => nfsExport);
   }
 
@@ -76,6 +86,7 @@ export class NFSManagerSingleServer implements INFSManager {
     return this.getExports()
       .map((exports) => exports.filter((e) => e.path !== nfsExport.path))
       .andThen((exports) => this.setExports(exports))
+      .andThen(() => this.systemdManager.daemonReload())
       .map(() => nfsExport);
   }
 
@@ -95,6 +106,34 @@ export class NFSManagerSingleServer implements INFSManager {
     return cockpit
       .file(this.exportsFile.path, { host: this.server.host })
       .watch((_1, _2) => callback(), { read: false });
+  }
+
+  nfsServiceRunning(): ResultAsync<boolean, ProcessError> {
+    return this.systemdManager.checkActive({ name: "nfs-server.service" });
+  }
+
+  nfsServiceEnabled(): ResultAsync<boolean, ProcessError> {
+    return this.systemdManager.checkEnabled({ name: "nfs-server.service" });
+  }
+
+  enableNFSService(now: "now" | undefined = undefined): ResultAsync<void, ProcessError> {
+    console.log("enabling NFS service");
+    return this.systemdManager.enable({ name: "nfs-server.service" }, now).map(() => undefined);
+  }
+
+  disableNFSService(now: "now" | undefined = undefined): ResultAsync<void, ProcessError> {
+    console.log("disabling NFS service");
+    return this.systemdManager.disable({ name: "nfs-server.service" }, now).map(() => undefined);
+  }
+
+  startNFSService(): ResultAsync<void, ProcessError> {
+    console.log("starting NFS service");
+    return this.systemdManager.start({ name: "nfs-server.service" }).map(() => undefined);
+  }
+
+  stopNFSService(): ResultAsync<void, ProcessError> {
+    console.log("stopping NFS service");
+    return this.systemdManager.stop({ name: "nfs-server.service" }).map(() => undefined);
   }
 }
 
@@ -143,6 +182,38 @@ export class NFSManagerClustered implements INFSManager {
 
   onExportsFileChanged(callback: () => void): { remove: () => void } {
     return this.getterManager.onExportsFileChanged(callback);
+  }
+
+  nfsServiceRunning(): ResultAsync<boolean, ProcessError> {
+    return ResultAsync.combine(this.managers.map((m) => m.nfsServiceRunning())).map((results) =>
+      results.every((r) => r)
+    );
+  }
+
+  nfsServiceEnabled(): ResultAsync<boolean, ProcessError> {
+    return ResultAsync.combine(this.managers.map((m) => m.nfsServiceEnabled())).map((results) =>
+      results.every((r) => r)
+    );
+  }
+
+  enableNFSService(now: "now" | undefined = undefined): ResultAsync<void, ProcessError> {
+    return ResultAsync.combine(this.managers.map((m) => m.enableNFSService(now))).map(
+      () => undefined
+    );
+  }
+
+  disableNFSService(now: "now" | undefined = undefined): ResultAsync<void, ProcessError> {
+    return ResultAsync.combine(this.managers.map((m) => m.disableNFSService(now))).map(
+      () => undefined
+    );
+  }
+
+  startNFSService(): ResultAsync<void, ProcessError> {
+    return ResultAsync.combine(this.managers.map((m) => m.startNFSService())).map(() => undefined);
+  }
+
+  stopNFSService(): ResultAsync<void, ProcessError> {
+    return ResultAsync.combine(this.managers.map((m) => m.stopNFSService())).map(() => undefined);
   }
 }
 
@@ -200,6 +271,30 @@ class HookedNFSManager implements INFSManager {
 
   onExportsFileChanged(...args: Parameters<NFSManagerSingleServer["onExportsFileChanged"]>) {
     return this.mgr.onExportsFileChanged(...args);
+  }
+
+  nfsServiceRunning(...args: Parameters<NFSManagerSingleServer["nfsServiceRunning"]>) {
+    return this.mgr.nfsServiceRunning(...args);
+  }
+
+  nfsServiceEnabled(...args: Parameters<NFSManagerSingleServer["nfsServiceEnabled"]>) {
+    return this.mgr.nfsServiceEnabled(...args);
+  }
+
+  enableNFSService(...args: Parameters<NFSManagerSingleServer["enableNFSService"]>) {
+    return this.mgr.enableNFSService(...args);
+  }
+
+  disableNFSService(...args: Parameters<NFSManagerSingleServer["disableNFSService"]>) {
+    return this.mgr.disableNFSService(...args);
+  }
+
+  startNFSService(...args: Parameters<NFSManagerSingleServer["startNFSService"]>) {
+    return this.mgr.startNFSService(...args);
+  }
+
+  stopNFSService(...args: Parameters<NFSManagerSingleServer["stopNFSService"]>) {
+    return this.mgr.stopNFSService(...args);
   }
 }
 
