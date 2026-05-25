@@ -109,6 +109,7 @@ export interface ISystemdManager {
   unescape(text: string, opts?: { path?: boolean }): ResultAsync<string, ProcessError>;
   pathToMountUnitName(path: string): ResultAsync<SystemdUnit<"mount">["name"], ProcessError>;
   mountUnitNameToPath(unitName: SystemdUnit<"mount">["name"]): ResultAsync<string, ProcessError>;
+  daemonReload(): ResultAsync<void, ProcessError>;
 }
 
 export class SystemdManagerSingleServer implements ISystemdManager {
@@ -206,7 +207,7 @@ export class SystemdManagerSingleServer implements ISystemdManager {
       .andThen((unit) => this.getUnitFilePath(unit).map((path) => new File(this.server, path)))
       .andThen((unitFile) => unitFile.assertIsFile())
       .andThen((unitFile) => unitFile.remove({ superuser: "try" }))
-      .andThen(() => this.server.execute(this.systemctlCommand("daemon-reload")))
+      .andThen(() => this.daemonReload())
       .map(() => unit);
   }
 
@@ -282,7 +283,7 @@ export class SystemdManagerSingleServer implements ISystemdManager {
                 new File(this.server, filePath).write(settingsText, { superuser: "try" })
               )
           )
-          .andThen(() => this.server.execute(this.systemctlCommand("daemon-reload")))
+          .andThen(() => this.daemonReload())
           .map(() => unit);
   }
 
@@ -317,6 +318,10 @@ export class SystemdManagerSingleServer implements ISystemdManager {
   }
   mountUnitNameToPath(unitName: SystemdUnit<"mount">["name"]): ResultAsync<string, ProcessError> {
     return this.unescape(unitName.replace(/\.mount$/, ""), { path: true });
+  }
+
+  daemonReload(): ResultAsync<void, ProcessError> {
+    return this.server.execute(this.systemctlCommand("daemon-reload"), true).map(() => undefined);
   }
 }
 
@@ -413,6 +418,10 @@ export class SystemdManagerClustered implements ISystemdManager {
 
   mountUnitNameToPath(...args: Parameters<ISystemdManager["mountUnitNameToPath"]>) {
     return this.getterManager.mountUnitNameToPath(...args);
+  }
+
+  daemonReload() {
+    return ResultAsync.combine(this.managers.map((m) => m.daemonReload())).map(() => undefined);
   }
 }
 
