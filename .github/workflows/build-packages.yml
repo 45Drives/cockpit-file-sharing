@@ -2,7 +2,7 @@ name: Build Packages
 on:
   push:
     branches: 
-      - rgw-pool-creation-bug
+      - build
     tags:
       - 'v*.*.*'
 jobs:

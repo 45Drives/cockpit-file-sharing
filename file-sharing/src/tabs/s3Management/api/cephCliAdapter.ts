@@ -141,15 +141,14 @@ async function resolveIpv4ViaGetent(hostname: string): Promise<string | null> {
   return ip ? ip : null;
 }
 
-async function httpProbeViaCurl(endpointUrl: string, timeoutSec = 1, insecure = false): Promise<boolean> {
+async function httpProbeViaCurl(endpointUrl: string, timeoutSec = 1): Promise<boolean> {
   const url = String(endpointUrl ?? "").trim();
   if (!url) return false;
 
-  const insecureFlag = insecure ? "-k " : "";
   const rc = await execText([
     "bash",
     "-lc",
-    `command -v curl >/dev/null 2>&1 || { echo "nocurl"; exit 0; }; curl -sS ${insecureFlag}-m ${timeoutSec} -o /dev/null "${url}/" >/dev/null 2>&1; echo $?`,
+    `command -v curl >/dev/null 2>&1 || { echo "nocurl"; exit 0; }; curl -sS -m ${timeoutSec} -o /dev/null "${url}/" >/dev/null 2>&1; echo $?`,
   ]);
 
   // If curl is not installed, we cannot verify the endpoint — report it as unreachable
@@ -196,7 +195,7 @@ async function firstWorkingRgwGateway(): Promise<RgwGateway | null> {
 
     const scheme = parsed.ssl ? "https" : "http";
     const endpoint = `${scheme}://${host}:${port}`;
-    const ok = await httpProbeViaCurl(endpoint, 1, parsed.ssl);
+    const ok = await httpProbeViaCurl(endpoint, 1);
     if (!ok) continue;
 
     return { id, hostname, zonegroup, zone, endpoint, isDefault };
