@@ -21,6 +21,7 @@
         "ubuntu_common": [
             "cockpit-bridge",
             "coreutils",
+            "curl",
             "attr",
             "findutils",
             "hostname",
@@ -36,6 +37,7 @@
         "rocky_common": [
             "cockpit-bridge",
             "coreutils",
+            "curl",
             "attr",
             "findutils",
             "hostname",
