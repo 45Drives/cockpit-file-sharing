@@ -620,12 +620,16 @@ async function chooseView(view: View) {
       cancelButtonText: "Cancel",
     });
 
-    if (proceed.isErr() || !proceed.value) return;
+    if (proceed.isErr()) {
+      pushNotification(new Notification("Ceph RGW", "Could not display confirmation dialog. Please try again.", "error"));
+      return;
+    }
+    if (!proceed.value) return; // user cancelled
 
     try {
       await ensureRgwUserExists({uid: "houstonUi", displayName: "Houston UI", systemUser: false});
     } catch (e: any) {
-      pushNotification(new Notification("Ceph RGW", `Failed to create houstonUi service user: ${e?.message}`, "error"));
+      pushNotification(new Notification("Ceph RGW", `Failed to create houstonUi service user: ${e?.message ?? String(e) ?? "Unknown error"}`, "error"));
       return;
     }
   }
