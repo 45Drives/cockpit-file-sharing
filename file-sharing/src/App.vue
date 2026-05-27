@@ -31,10 +31,10 @@ const appVersion = __APP_VERSION__;
 
 const showUserSettings = ref(false);
 
-const showSambaTab = ref(true);
-const showNfsTab = ref(true);
-const showIscsiTab = ref(true);
-const showS3Tab = ref(true);
+const showSambaTab = ref(false);
+const showNfsTab = ref(false);
+const showIscsiTab = ref(false);
+const showS3Tab = ref(false);
 const sambaConfigured = (): ResultAsync<boolean, never> => {
   return getServer()
     .andThen((server) => server.execute(new BashCommand("command -v net")))
