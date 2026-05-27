@@ -6,19 +6,10 @@ import {
   computedResult,
   reportSuccess,
   assertConfirm,
-  ToggleSwitch,
-  ToggleSwitchGroup,
-  reportError,
 } from "@45drives/houston-common-ui";
-import {
-  Upload,
-  /* Download, */ getServerCluster,
-  server,
-  Command,
-} from "@45drives/houston-common-lib";
-import { computed, onMounted, onUnmounted, provide, ref, watch } from "vue";
+import { Upload, getServerCluster, server, Command } from "@45drives/houston-common-lib";
+import { computed, provide, ref, watch } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
-import { okAsync } from "neverthrow";
 
 import { useUserSettings } from "@/common/user-settings";
 import { getNFSManager, type INFSManager } from "@/tabs/nfs/nfs-manager";
@@ -38,7 +29,6 @@ provide(serverClusterInjectionKey, cluster);
 
 const cephClientName = ref<`client.${string}`>("client.nfs");
 provide(cephClientNameInjectionKey, cephClientName);
-
 
 const nfsManager = computed(() => {
   const exportsPath = userSettings.value.nfs.confPath;
@@ -81,9 +71,7 @@ const editExport = (nfsExport: NFSExport) =>
 const removeExport = (nfsExport: NFSExport) =>
   assertConfirm({
     header: _("Permanently delete export for") + ` ${nfsExport.path}?`,
-    body: _(
-      "This cannot be undone.\nThis only removes the export definition, no files or folders will be deleted."
-    ),
+    body: _("This cannot be undone.\nThis only removes the export definition, no files or folders will be deleted."),
     dangerous: true,
   })
     .andThen(() => nfsManager.value)
@@ -101,15 +89,6 @@ const exportConfig = () =>
         }.exports`
       )
     );
-// .map((config) =>
-//   Download.text(
-//     config,
-//     `cockpit-file-sharing_nfs_exported_${new Date()
-//       .toISOString()
-//       .replace(/:/g, "-")
-//       .replace(/T/, "_")}.exports`
-//   )
-// );
 
 const importConfig = () =>
   assertConfirm({
