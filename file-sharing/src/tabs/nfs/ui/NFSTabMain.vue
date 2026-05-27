@@ -151,7 +151,7 @@ const actions = wrapActions({
       serviceManager="system"
       :server="clusterRef"
       warnIfStopped
-      name="NFS Service"
+      :name="_('NFS Service')"
     />
   </CenteredCardColumn>
 </template>

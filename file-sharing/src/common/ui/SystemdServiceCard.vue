@@ -118,13 +118,13 @@ defineExpose({
 <template>
   <CardContainer>
     <template #header>
-      {{ _(name) }}
+      {{ name }}
     </template>
     <div class="space-y-content">
       <ToggleSwitchGroup>
         <ToggleSwitch v-model="running" ref="startSwitchRef">
           <div class="inline-flex flex-row gap-1">
-            {{ _(name) }}
+            {{ name }}
             {{ running ? _(" is running.") : _("is stopped.") }}
             <ExclamationTriangleIcon v-if="!running" class="size-icon icon-warning" />
           </div>
@@ -133,7 +133,7 @@ defineExpose({
           </template>
         </ToggleSwitch>
         <ToggleSwitch v-model="enabled" ref="enableSwitchRef">
-          {{ _(name) }}
+          {{ name }}
           {{ enabled ? _("is enabled.") : _("is disabled.") }}
           <template #description>
             {{ enabled ? _("Click toggle to disable.") : _("Click toggle to enable.") }}
