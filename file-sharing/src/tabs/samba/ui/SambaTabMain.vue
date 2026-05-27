@@ -272,7 +272,7 @@ watch(smbConfPath, () => actions.checkIfSmbConfIncludesRegistry(smbConfPath.valu
     <SystemdServiceCard
       v-if="clusterRef"
       :name="_('Samba Service')"
-      serviceName="smbd.service"
+      serviceName="smb.service"
       :server="clusterRef"
       warnIfStopped
     />
