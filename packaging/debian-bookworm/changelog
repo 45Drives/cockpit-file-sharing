@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.5.9-1bookworm) bookworm; urgency=medium
+
+  * Ensure NFS service continues running after removing Ceph remount
+  * Add systemd service monitoring and management for NFS and Samba
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 27 May 2026 12:55:55 -0300
+
 cockpit-file-sharing (4.5.8-1bookworm) bookworm; urgency=medium
 
   * fix: prevent .rgw.root pool creation on clusters without RGW through s3 module

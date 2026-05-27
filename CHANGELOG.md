@@ -1,3 +1,4 @@
-## Cockpit File Sharing 4.5.8-1
+## Cockpit File Sharing 4.5.9-1
 
-* fix: prevent .rgw.root pool creation on clusters without RGW through s3 module
+* Ensure NFS service continues running after removing Ceph remount
+* Add systemd service monitoring and management for NFS and Samba

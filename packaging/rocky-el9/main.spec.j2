@@ -37,6 +37,9 @@ fi
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed May 27 2026 Joshua Boudreau <jboudreau@45drives.com> 4.5.9-1
+- Ensure NFS service continues running after removing Ceph remount
+- Add systemd service monitoring and management for NFS and Samba
 * Mon May 25 2026 Rachit Hans <rhans@45drives.com> 4.5.8-1
 - fix: prevent .rgw.root pool creation on clusters without RGW through s3 module
 * Thu May 14 2026 Rachit Hans <rhans@45drives.com> 4.5.7-2
