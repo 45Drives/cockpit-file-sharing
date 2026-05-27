@@ -7,7 +7,7 @@ import {
   type CommandOptions,
   Command,
 } from "@45drives/houston-common-lib";
-import { Result, ResultAsync } from "neverthrow";
+import { okAsync, Result, ResultAsync } from "neverthrow";
 import { NFSExportsParser } from "@/tabs/nfs/exports-parser";
 import { Hooks, executeHookCallbacks } from "@/common/hooks";
 import { getSystemdManager, type ISystemdManager } from "@/common/systemd-manager";
@@ -236,25 +236,51 @@ class HookedNFSManager implements INFSManager {
   }
 
   addExport(...args: Parameters<NFSManagerSingleServer["addExport"]>) {
-    return executeHookCallbacks(Hooks.BeforeAddShare, this.server, args[0])
-      .andThen(() => this.mgr.addExport(...args))
-      .andThen((r) => executeHookCallbacks(Hooks.AfterAddShare, this.server, args[0]).map(() => r));
+    return this.nfsServiceRunning().andThen((nfsWasRunning) =>
+      executeHookCallbacks(Hooks.BeforeAddShare, this.server, args[0])
+        .andThen(() => this.mgr.addExport(...args))
+        .andThen((r) =>
+          executeHookCallbacks(Hooks.AfterAddShare, this.server, args[0]).map(() => r)
+        )
+        .andThen((r) => {
+          if (nfsWasRunning) {
+            return this.startNFSService().map(() => r);
+          }
+          return okAsync(r);
+        })
+    );
   }
 
   editExport(...args: Parameters<NFSManagerSingleServer["editExport"]>) {
-    return executeHookCallbacks(Hooks.BeforeEditShare, this.server, args[0])
-      .andThen(() => this.mgr.editExport(...args))
-      .andThen((r) =>
-        executeHookCallbacks(Hooks.AfterEditShare, this.server, args[0]).map(() => r)
-      );
+    return this.nfsServiceRunning().andThen((nfsWasRunning) =>
+      executeHookCallbacks(Hooks.BeforeEditShare, this.server, args[0])
+        .andThen(() => this.mgr.editExport(...args))
+        .andThen((r) =>
+          executeHookCallbacks(Hooks.AfterEditShare, this.server, args[0]).map(() => r)
+        )
+        .andThen((r) => {
+          if (nfsWasRunning) {
+            return this.startNFSService().map(() => r);
+          }
+          return okAsync(r);
+        })
+    );
   }
 
   removeExport(...args: Parameters<NFSManagerSingleServer["removeExport"]>) {
-    return executeHookCallbacks(Hooks.BeforeRemoveShare, this.server, args[0])
-      .andThen(() => this.mgr.removeExport(...args))
-      .andThen((r) =>
-        executeHookCallbacks(Hooks.AfterRemoveShare, this.server, args[0]).map(() => r)
-      );
+    return this.nfsServiceRunning().andThen((nfsWasRunning) =>
+      executeHookCallbacks(Hooks.BeforeRemoveShare, this.server, args[0])
+        .andThen(() => this.mgr.removeExport(...args))
+        .andThen((r) =>
+          executeHookCallbacks(Hooks.AfterRemoveShare, this.server, args[0]).map(() => r)
+        )
+        .andThen((r) => {
+          if (nfsWasRunning) {
+            return this.startNFSService().map(() => r);
+          }
+          return okAsync(r);
+        })
+    );
   }
 
   exportConfig(...args: Parameters<NFSManagerSingleServer["exportConfig"]>) {
