@@ -131,7 +131,7 @@ defineExpose({
         <ToggleSwitch v-model="running" ref="startSwitchRef">
           <div class="inline-flex flex-row gap-1">
             {{ name }}
-            {{ running ? _(" is running.") : _("is stopped.") }}
+            {{ running ? _("is running.") : _("is stopped.") }}
             <ExclamationTriangleIcon v-if="!running" class="size-icon icon-warning" />
           </div>
           <template #description>
