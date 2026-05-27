@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import { type SystemdUnitName } from "@/common/systemd-manager";
 import { server as defaultServer, Server } from "@45drives/houston-common-lib";
 
@@ -105,6 +105,12 @@ watch([showStatus, running, enabled], () => {
       pollStatusInterval = window.setInterval(() => fetchStatus(), 5000);
     }
   } else if (pollStatusInterval !== undefined) {
+    window.clearInterval(pollStatusInterval);
+    pollStatusInterval = undefined;
+  }
+});
+onUnmounted(() => {
+  if (pollStatusInterval !== undefined) {
     window.clearInterval(pollStatusInterval);
     pollStatusInterval = undefined;
   }
