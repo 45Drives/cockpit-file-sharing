@@ -175,7 +175,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import S3BucketsView from "./bucketManagement/S3BucketsView.vue";
 import RustfsInstanceSelector from "./RustfsInstanceSelector.vue";
-import { isCephRgwHealthy, listRgwGateways } from "../api/cephCliAdapter";
+import { isCephRgwHealthy, listRgwGateways, ensureRgwUserExists } from "../api/cephCliAdapter";
 import {
   isMinioAvailable,
   listMinioAliasCandidates,
@@ -198,7 +198,8 @@ import { CardContainer } from "@45drives/houston-common-ui";
 import { ArchiveBoxIcon, ArrowPathIcon } from "@heroicons/vue/20/solid";
 import AccIcon from "../images/AccIcon.vue";
 import type { RgwGateway } from "../types/types";
-import { pushNotification, Notification } from "@45drives/houston-common-ui";
+import { pushNotification, Notification, confirm } from "@45drives/houston-common-ui";
+import { unwrap } from "@45drives/houston-common-lib";
 
 type Backend = "minio" | "rustfs" | "ceph" | "garage";
 type View = "buckets" | "users";
@@ -603,13 +604,33 @@ async function chooseBackend(backend: Backend) {
   step.value = 2;
 }
 
-function chooseView(view: View) {
+async function chooseView(view: View) {
   if (selectedBackend.value === "rustfs" && view === "users") {
     const alias = selectedRustfsAlias.value.trim();
     if (!alias) return;
     // Reuse MinIO access-management command layer against selected RustFS alias.
     setMinioAlias(alias);
   }
+
+  // Ensure houstonUi RGW user exists before entering bucket management for Ceph
+  if (selectedBackend.value === "ceph" && view === "buckets") {
+    const proceed = await unwrap(confirm({
+      header: "Ceph RGW Service User",
+      body: "A 'houstonUi' service user is required for bucket operations. It will be created on Ceph RGW if it does not already exist. Press OK to proceed.",
+      confirmButtonText: "OK",
+      cancelButtonText: "Cancel",
+    }));
+
+    if (!proceed) return; // user cancelled
+
+    try {
+      await ensureRgwUserExists({uid: "houstonUi", displayName: "Houston UI", systemUser: false});
+    } catch (e: any) {
+      pushNotification(new Notification("Ceph RGW", `Failed to create houstonUi service user: ${e?.message ?? String(e) ?? "Unknown error"}`, "error"));
+      return;
+    }
+  }
+
   selectedView.value = view;
   step.value = 3;
 }

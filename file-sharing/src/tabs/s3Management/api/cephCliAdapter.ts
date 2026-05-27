@@ -47,11 +47,7 @@ export async function listBucketsFromCeph(): Promise<CephBucket[]> {
 
 export async function isCephRgwHealthy(): Promise<boolean> {
   try {
-    // Any lightweight admin call that fails fast if RGW is unreachable/unauthorized
-    await rgwJson(["zonegroup", "get"]);
-    await ensureRgwUserExists({uid: "houstonUi",displayName: "Houston UI",systemUser: false,
-    });
-    return true;
+    return (await firstWorkingRgwGateway()) !== null;
   } catch (e) {
     return false;
   }
@@ -88,26 +84,45 @@ async function execText(
   }
 }
 
-function parseRgwFrontend(frontendConfig: string): { host?: string; port: number } | null {
+function parseRgwFrontend(frontendConfig: string): { host?: string; port: number; ssl?: boolean } | null {
+  const config = frontendConfig || "";
+
+  // Detect SSL: ssl_endpoint, ssl_port, or ssl_certificate present
+  const hasSsl = /\bssl_endpoint=|\bssl_port=|\bssl_certificate=/.test(config);
+
+  // Matches: "beast ssl_endpoint=192.168.85.64:443"
+  const sslEndpoint = config.match(/\bssl_endpoint=(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})\b/);
+  if (sslEndpoint && sslEndpoint[1] && sslEndpoint[2]) {
+    const port = Number(sslEndpoint[2]);
+    if (Number.isFinite(port) && port > 0 && port < 65536) return { host: sslEndpoint[1], port, ssl: true };
+  }
+
+  // Matches: "beast ssl_port=443"
+  const sslPortOnly = config.match(/\bssl_port=(\d{1,5})\b/);
+  if (sslPortOnly && sslPortOnly[1]) {
+    const port = Number(sslPortOnly[1]);
+    if (Number.isFinite(port) && port > 0 && port < 65536) return { port, ssl: true };
+  }
+
   // Matches: "beast endpoint=192.168.85.64:8080"
-  const endpoint = frontendConfig.match(/\bendpoint=(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})\b/);
+  const endpoint = config.match(/\bendpoint=(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})\b/);
   if (endpoint && endpoint[1] && endpoint[2]) {
     const port = Number(endpoint[2]);
-    if (Number.isFinite(port) && port > 0 && port < 65536) return { host: endpoint[1], port };
+    if (Number.isFinite(port) && port > 0 && port < 65536) return { host: endpoint[1], port, ssl: hasSsl };
   }
 
   // Matches: "beast port=192.168.45.230:8080"
-  const portIp = frontendConfig.match(/\bport=(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})\b/);
+  const portIp = config.match(/\bport=(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})\b/);
   if (portIp && portIp[1] && portIp[2]) {
     const port = Number(portIp[2]);
-    if (Number.isFinite(port) && port > 0 && port < 65536) return { host: portIp[1], port };
+    if (Number.isFinite(port) && port > 0 && port < 65536) return { host: portIp[1], port, ssl: hasSsl };
   }
 
   // Matches: "beast port=8080"
-  const portOnly = frontendConfig.match(/\bport=(\d{1,5})\b/);
+  const portOnly = config.match(/\bport=(\d{1,5})\b/);
   if (portOnly && portOnly[1]) {
     const port = Number(portOnly[1]);
-    if (Number.isFinite(port) && port > 0 && port < 65536) return { port };
+    if (Number.isFinite(port) && port > 0 && port < 65536) return { port, ssl: hasSsl };
   }
 
   return null;
@@ -133,9 +148,11 @@ async function httpProbeViaCurl(endpointUrl: string, timeoutSec = 1): Promise<bo
   const rc = await execText([
     "bash",
     "-lc",
-    `curl -sS -m ${timeoutSec} -o /dev/null "${url}/" >/dev/null 2>&1; echo $?`,
+    `command -v curl >/dev/null 2>&1 || { echo "nocurl"; exit 0; }; curl -sSk -m ${timeoutSec} -o /dev/null "${url}/" >/dev/null 2>&1; echo $?`,
   ]);
 
+  // If curl is not installed, we cannot verify the endpoint — report it as unreachable
+  if (rc === "nocurl") return false;
   return rc === "0";
 }
 
@@ -176,7 +193,8 @@ async function firstWorkingRgwGateway(): Promise<RgwGateway | null> {
       host = ip;
     }
 
-    const endpoint = `http://${host}:${port}`;
+    const scheme = parsed.ssl ? "https" : "http";
+    const endpoint = `${scheme}://${host}:${port}`;
     const ok = await httpProbeViaCurl(endpoint, 1);
     if (!ok) continue;
 
@@ -1222,7 +1240,7 @@ async function rgwUserExists(uid: string, tenant?: string): Promise<boolean> {
     return false;
   }
 }
-async function ensureRgwUserExists(opts: {uid: string;tenant?: string;displayName: string;systemUser?: boolean;maxBuckets?: number;suspended?: boolean;
+export async function ensureRgwUserExists(opts: {uid: string;tenant?: string;displayName: string;systemUser?: boolean;maxBuckets?: number;suspended?: boolean;
 }): Promise<void> {
   const exists = await rgwUserExists(opts.uid, opts.tenant);
   if (exists) return;
