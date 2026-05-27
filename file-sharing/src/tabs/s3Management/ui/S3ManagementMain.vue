@@ -613,18 +613,14 @@ async function chooseView(view: View) {
 
   // Ensure houstonUi RGW user exists before entering bucket management for Ceph
   if (selectedBackend.value === "ceph" && view === "buckets") {
-    const proceed = await confirm({
+    const proceed = await unwrap(confirm({
       header: "Ceph RGW Service User",
       body: "A 'houstonUi' service user is required for bucket operations. It will be created on Ceph RGW if it does not already exist. Press OK to proceed.",
       confirmButtonText: "OK",
       cancelButtonText: "Cancel",
-    });
+    }));
 
-    if (proceed.isErr()) {
-      pushNotification(new Notification("Ceph RGW", "Could not display confirmation dialog. Please try again.", "error"));
-      return;
-    }
-    if (!proceed.value) return; // user cancelled
+    if (!proceed) return; // user cancelled
 
     try {
       await ensureRgwUserExists({uid: "houstonUi", displayName: "Houston UI", systemUser: false});
