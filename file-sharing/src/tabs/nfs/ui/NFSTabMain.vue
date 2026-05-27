@@ -8,7 +8,7 @@ import {
   assertConfirm,
 } from "@45drives/houston-common-ui";
 import { Upload, getServerCluster, server, Command } from "@45drives/houston-common-lib";
-import { computed, provide, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, provide, ref, watch } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
 
 import { useUserSettings } from "@/common/user-settings";
@@ -46,13 +46,21 @@ const [nfsExports, refetchNFSExports] = computedResult<NFSExport[]>(
   []
 );
 
-let watchHandle: ReturnType<INFSManager["onExportsFileChanged"]> | undefined;
+let watchHandle: ReturnType<INFSManager["onExportsFileChanged"]> | undefined = undefined;
+onMounted(() => {
+  watchHandle?.remove();
+  watchHandle = undefined;
+  nfsManager.value.map((m) => (watchHandle = m.onExportsFileChanged(refetchNFSExports)));
+});
+onUnmounted(() => {
+  watchHandle?.remove();
+  watchHandle = undefined;
+});
 watch(
   nfsManager,
   (mgrResult) => {
-    if (watchHandle) {
-      watchHandle.remove();
-    }
+    watchHandle?.remove();
+    watchHandle = undefined;
     mgrResult.map((m) => (watchHandle = m.onExportsFileChanged(refetchNFSExports)));
   },
   { immediate: true }
@@ -71,7 +79,9 @@ const editExport = (nfsExport: NFSExport) =>
 const removeExport = (nfsExport: NFSExport) =>
   assertConfirm({
     header: _("Permanently delete export for") + ` ${nfsExport.path}?`,
-    body: _("This cannot be undone.\nThis only removes the export definition, no files or folders will be deleted."),
+    body: _(
+      "This cannot be undone.\nThis only removes the export definition, no files or folders will be deleted."
+    ),
     dangerous: true,
   })
     .andThen(() => nfsManager.value)
