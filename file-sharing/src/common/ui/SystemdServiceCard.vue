@@ -155,7 +155,7 @@ defineExpose({
           </template>
           <div class="space-y-content sm:pl-4">
             <template v-if="Array.isArray(status)">
-              <template v-for="s in status">
+              <template v-for="s in status" :key="s.host">
                 <div>
                   <div class="text-label">{{ s.host }}</div>
                   <div class="sm:pl-4">
