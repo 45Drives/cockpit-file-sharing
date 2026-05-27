@@ -139,8 +139,11 @@ defineExpose({
           </template>
         </ToggleSwitch>
         <ToggleSwitch v-model="enabled" ref="enableSwitchRef">
-          {{ name }}
-          {{ enabled ? _("is enabled.") : _("is disabled.") }}
+          <div class="inline-flex flex-row gap-1">
+            {{ name }}
+            {{ enabled ? _("is enabled.") : _("is disabled.") }}
+            <ExclamationTriangleIcon v-if="!enabled" class="size-icon icon-warning" />
+          </div>
           <template #description>
             {{ enabled ? _("Click toggle to disable.") : _("Click toggle to enable.") }}
             <br />
