@@ -17,7 +17,7 @@ PLUGIN_SRCS=file-sharing
 
 # For installing to a remote machine for testing with `make install-remote`
 # REMOTE_TEST_HOST=192.168.206.100
-REMOTE_TEST_HOST=192.168.100.1
+REMOTE_TEST_HOST=192.168.222.106
 REMOTE_TEST_USER=root
 # Restarts cockpit after install
 RESTART_COCKPIT?=0
@@ -61,11 +61,14 @@ OUTPUTS:=$(addsuffix /dist/index.html, $(PLUGIN_SRCS))
 NPM_PREFIX:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn --cwd' || echo 'npm --prefix')
 NPM_UPDATE:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn upgrade --cwd' || echo 'npm update --prefix')
 
-default: $(OUTPUTS)
+VENV_REQUIREMENTS:=$(wildcard */requirements.txt)
+VENVS:=$(patsubst %/requirements.txt,%/venv, $(VENV_REQUIREMENTS))
+
+default: $(OUTPUTS) $(VENVS) README.md
 
 all: default
 
-.PHONY: default all install clean help install-local install-remote install houston-common bootstrap-yarn
+.PHONY: default all install clean help install-local install-remote install houston-common bootstrap-yarn readme
 
 bootstrap-yarn: .yarnrc.yml
 
@@ -83,7 +86,7 @@ houston-common-%:
 
 # build outputs
 .SECONDEXPANSION:
-$(OUTPUTS): %/dist/index.html: bootstrap-yarn houston-common $$(shell find '$$*' -type d \( -name node_modules -o -path '$$*/dist' -o -path '*node_modules*'  \) -prune -o -type f -not \( -name .gitignore \) -print)
+$(OUTPUTS): %/dist/index.html: bootstrap-yarn houston-common $$(shell find '$$*' -type d \( -name node_modules -o -path '*dist*' -o -path '*node_modules*' -o -path '*venv*' \) -prune -o -type f -not \( -name .gitignore \) -print)
 	@echo -e $(call cyantext,Building $*)
 	yarn --cwd $* install
 ifeq ($(AUTO_UPGRADE_DEPS),1)
@@ -93,10 +96,17 @@ endif
 	@echo -e $(call greentext,Done building $*)
 	@echo
 
+$(VENVS): %/venv: %/requirements.txt
+	@echo -e $(call cyantext,Setting up python venv for $*)
+	python3 -m venv $@ && $@/bin/pip install -r $<
+	touch $@
+	@echo -e $(call greentext,Done setting up python venv for $*)
+	@echo
+
 # system install, requires `systemctl restart cockpit.socket`
 # runs plugin-install-* for each plugin
 .SECONDEXPANSION:
-install install-local install-remote: $$(OUTPUTS) $$(addprefix plugin-$$@-, $$(PLUGIN_SRCS)) system-files-$$@
+install install-local install-remote: default $$(addprefix plugin-$$@-, $$(PLUGIN_SRCS)) system-files-$$@
 ifeq ($(RESTART_COCKPIT), 1)
 ifndef DESTDIR
 	$(SSH) systemctl stop cockpit.socket
@@ -113,8 +123,8 @@ plugin-install-% plugin-install-local-% plugin-install-remote-%:
 	@echo
 	@echo Copying files
 	@test -z "$(SSH)" && \
-		cp -af $*/dist/* $(DESTDIR)$(INSTALL_PREFIX)/$*$(INSTALL_SUFFIX) || \
-		rsync -avh $*/dist/* $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST):$(DESTDIR)$(INSTALL_PREFIX)/$*$(INSTALL_SUFFIX)
+		cp -af $*/dist/* $*/venv $(DESTDIR)$(INSTALL_PREFIX)/$*$(INSTALL_SUFFIX) || \
+		rsync -avh $*/dist/* $*/venv $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST):$(DESTDIR)$(INSTALL_PREFIX)/$*$(INSTALL_SUFFIX)
 	@echo -e $(call greentext,Done installing $*)
 	@echo
 
@@ -148,6 +158,7 @@ package-generic: default
 
 clean: FORCE houston-common-clean
 	rm $(dir $(OUTPUTS)) -rf
+	rm $(VENVS) -rf
 
 clean-all: clean FORCE
 	rm .yarnrc.yml .yarn/ -rf

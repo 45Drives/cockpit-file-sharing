@@ -4,3 +4,4 @@ node_modules/
 .yarnrc.yml
 *_generic.tar.gz
 *_generic.zip
+venv/
