@@ -33,13 +33,18 @@ import { okAsync } from "neverthrow";
 
 import { sambaManagerInjectionKey } from "@/tabs/samba/ui/injectionKeys";
 
+import SystemdServiceCard from "@/common/ui/SystemdServiceCard.vue";
+
 const _ = cockpit.gettext;
 
 const userSettings = useUserSettings();
 
 const smbConfPath = computed(() => userSettings.value.samba.confPath);
 
-provide(serverClusterInjectionKey, getServerCluster("ctdb"));
+const cluster = getServerCluster("ctdb")
+const [clusterRef] = computedResult(() => cluster);
+
+provide(serverClusterInjectionKey, cluster);
 const cephClientName = ref<`client.${string}`>("client.samba");
 provide(cephClientNameInjectionKey, cephClientName);
 
@@ -264,5 +269,12 @@ watch(smbConfPath, () => actions.checkIfSmbConfIncludesRegistry(smbConfPath.valu
         </button>
       </div>
     </CardContainer>
+    <SystemdServiceCard
+      v-if="clusterRef"
+      :name="_('Samba Service (smbd)')"
+      serviceName="smbd.service"
+      :server="clusterRef"
+      warnIfStopped
+    />
   </CenteredCardColumn>
 </template>

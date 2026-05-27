@@ -26,64 +26,23 @@ import type { NFSExport } from "@/tabs/nfs/data-types";
 
 import NFSExportListView from "@/tabs/nfs/ui/NFSExportListView.vue";
 
-import { ExclamationTriangleIcon } from "@heroicons/vue/24/solid";
+import SystemdServiceCard from "@/common/ui/SystemdServiceCard.vue";
 
 const _ = cockpit.gettext;
 
 const userSettings = useUserSettings();
 
 const cluster = getServerCluster("pcs");
+const [clusterRef] = computedResult(() => cluster);
 provide(serverClusterInjectionKey, cluster);
+
 const cephClientName = ref<`client.${string}`>("client.nfs");
 provide(cephClientNameInjectionKey, cephClientName);
+
 
 const nfsManager = computed(() => {
   const exportsPath = userSettings.value.nfs.confPath;
   return cluster.map((cluster) => getNFSManager(cluster, exportsPath));
-});
-
-const [_nfsServiceRunning, refetchNFSServiceRunning] = computedResult(
-  () => nfsManager.value.andThen((m) => m.nfsServiceRunning()),
-  false
-);
-
-const [_nfsServiceEnabled, refetchNFSServiceEnabled] = computedResult(
-  () => nfsManager.value.andThen((m) => m.nfsServiceEnabled()),
-  false
-);
-
-let servicePollHandle: number;
-onMounted(() => {
-  servicePollHandle = window.setInterval(() => {
-    refetchNFSServiceRunning();
-    refetchNFSServiceEnabled();
-  }, 5000);
-});
-
-onUnmounted(() => {
-  window.clearInterval(servicePollHandle);
-});
-
-const setNFSServiceRunning = (running: boolean) =>
-  (running
-    ? nfsManager.value.andThen((m) => m.startNFSService())
-    : nfsManager.value.andThen((m) => m.stopNFSService())
-  ).andThen(() => refetchNFSServiceRunning());
-
-const setNFSServiceEnabled = (enabled: boolean) =>
-  (enabled
-    ? nfsManager.value.andThen((m) => m.enableNFSService())
-    : nfsManager.value.andThen((m) => m.disableNFSService())
-  ).andThen(() => refetchNFSServiceEnabled());
-
-const nfsServiceRunning = computed<boolean>({
-  get: () => _nfsServiceRunning.value,
-  set: (value) => actions.setNFSServiceRunning(value),
-});
-
-const nfsServiceEnabled = computed<boolean>({
-  get: () => _nfsServiceEnabled.value,
-  set: (value) => actions.setNFSServiceEnabled(value),
 });
 
 const exportsSortPredicate = (a: NFSExport, b: NFSExport) =>
@@ -115,19 +74,9 @@ const addExport = (nfsExport: NFSExport) =>
     .map(() => reportSuccess(_("Successfully added export for") + ` ${nfsExport.path}`));
 
 const editExport = (nfsExport: NFSExport) =>
-  refetchNFSServiceRunning().andThen((nfsServiceWasRunning) =>
-    nfsManager.value
-      .andThen((m) =>
-        m.editExport(nfsExport).andThen(() => {
-          if (nfsServiceWasRunning) {
-            return setNFSServiceRunning(true);
-          } else {
-            return okAsync(null);
-          }
-        })
-      )
-      .map(() => reportSuccess(_("Successfully edited export for") + ` ${nfsExport.path}`))
-  );
+  nfsManager.value
+    .andThen((m) => m.editExport(nfsExport))
+    .map(() => reportSuccess(_("Successfully edited export for") + ` ${nfsExport.path}`));
 
 const removeExport = (nfsExport: NFSExport) =>
   assertConfirm({
@@ -138,17 +87,7 @@ const removeExport = (nfsExport: NFSExport) =>
     dangerous: true,
   })
     .andThen(() => nfsManager.value)
-    .andThen((m) =>
-      refetchNFSServiceRunning().andThen((nfsServiceWasRunning) =>
-        m.removeExport(nfsExport).andThen(() => {
-          if (nfsServiceWasRunning) {
-            return setNFSServiceRunning(true);
-          } else {
-            return okAsync(null);
-          }
-        })
-      )
-    )
+    .andThen((m) => m.removeExport(nfsExport))
     .map(() => reportSuccess(_("Successfully removed export for") + ` ${nfsExport.path}`));
 
 const exportConfig = () =>
@@ -191,38 +130,11 @@ const actions = wrapActions({
   removeExport,
   exportConfig,
   importConfig,
-  setNFSServiceRunning,
-  setNFSServiceEnabled,
 });
 </script>
 
 <template>
   <CenteredCardColumn>
-    <CardContainer>
-      <template #header>
-        {{ _("NFS Service") }}
-      </template>
-      <ToggleSwitchGroup>
-        <ToggleSwitch v-model="nfsServiceRunning">
-          <div class="inline-flex flex-row gap-1">
-            {{ _("NFS Service") }}
-            {{ nfsServiceRunning ? _(" is running.") : _("is stopped.") }}
-            <ExclamationTriangleIcon v-if="!nfsServiceRunning" class="size-icon icon-warning" />
-          </div>
-          <template #description>
-            {{ nfsServiceRunning ? _("Click toggle to stop.") : _("Click toggle to start.") }}
-          </template>
-        </ToggleSwitch>
-        <ToggleSwitch v-model="nfsServiceEnabled">
-          {{ _("NFS Service") }}
-          {{ nfsServiceEnabled ? _(" is enabled.") : _("is disabled.") }}
-          <template #description>
-            {{ nfsServiceEnabled ? _("Click toggle to disable.") : _("Click toggle to enable.") }} <br/>
-            {{ _("When enabled, the NFS service will automatically start when the system boots.") }}
-          </template>
-        </ToggleSwitch>
-      </ToggleSwitchGroup>
-    </CardContainer>
     <NFSExportListView
       :nfsExports="nfsExports"
       @addExport="(newConf, callback) => actions.addExport(newConf).map(() => callback?.())"
@@ -244,5 +156,13 @@ const actions = wrapActions({
         </button>
       </div>
     </CardContainer>
+    <SystemdServiceCard
+      v-if="clusterRef"
+      serviceName="nfs-server.service"
+      serviceManager="system"
+      :server="clusterRef"
+      warnIfStopped
+      name="NFS Service"
+    />
   </CenteredCardColumn>
 </template>
