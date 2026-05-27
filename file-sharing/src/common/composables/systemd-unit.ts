@@ -7,6 +7,7 @@ import {
 } from "@/common/systemd-manager";
 import { Server, unwrap } from "@45drives/houston-common-lib";
 import { computedResult, reportSuccess, wrapAction } from "@45drives/houston-common-ui";
+import { ResultAsync } from "neverthrow";
 
 export const useSystemdUnit = (
   serviceName: SystemdUnitName,
@@ -27,11 +28,13 @@ export const useSystemdUnit = (
   const fetchDescription = () =>
     manager.getUnitDescription(unit).map((result) => (description.value = result));
 
+  const ready = ref(false);
+
   let servicePollHandle: number | undefined = undefined;
   onMounted(() => {
-    fetchRunning();
-    fetchEnabled();
-    fetchDescription();
+    ResultAsync.combine([fetchRunning(), fetchEnabled(), fetchDescription()]).map(
+      () => (ready.value = true)
+    );
     if (servicePollHandle !== undefined) {
       window.clearInterval(servicePollHandle);
     }
@@ -77,5 +80,6 @@ export const useSystemdUnit = (
     },
     description,
     getStatus,
+    ready,
   };
 };

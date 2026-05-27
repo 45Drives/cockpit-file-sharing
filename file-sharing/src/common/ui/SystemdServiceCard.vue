@@ -33,7 +33,7 @@ const props = withDefaults(
   }
 );
 
-const { running, enabled, refresh, description, getStatus } = useSystemdUnit(
+const { running, enabled, refresh, description, getStatus, ready } = useSystemdUnit(
   props.serviceName,
   props.serviceManager,
   props.server
@@ -48,8 +48,8 @@ if (props.warnIfStopped) {
   let stoppedWarning: Notification | undefined = undefined;
   let disabledWarning: Notification | undefined = undefined;
   watch(
-    [name, running, enabled],
-    ([newName, newRunning, newEnabled], [oldName, oldRunning, oldEnabled]) => {
+    [name, running, enabled, ready],
+    ([newName, newRunning, newEnabled, ready], [oldName]) => {
       stoppedWarning?.remove();
       disabledWarning?.remove();
       if (newName !== oldName || !stoppedWarning || !disabledWarning) {
@@ -76,6 +76,9 @@ if (props.warnIfStopped) {
           await new Promise((resolve) => setTimeout(resolve, 500)); // pause for a moment
           enabled.value = true;
         });
+      }
+      if (!ready) {
+        return;
       }
       if (!newRunning) {
         pushNotification(stoppedWarning);
