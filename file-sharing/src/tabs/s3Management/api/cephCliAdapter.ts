@@ -148,7 +148,7 @@ async function httpProbeViaCurl(endpointUrl: string, timeoutSec = 1): Promise<bo
   const rc = await execText([
     "bash",
     "-lc",
-    `command -v curl >/dev/null 2>&1 || { echo "nocurl"; exit 0; }; curl -sS -m ${timeoutSec} -o /dev/null "${url}/" >/dev/null 2>&1; echo $?`,
+    `command -v curl >/dev/null 2>&1 || { echo "nocurl"; exit 0; }; curl -sSk -m ${timeoutSec} -o /dev/null "${url}/" >/dev/null 2>&1; echo $?`,
   ]);
 
   // If curl is not installed, we cannot verify the endpoint — report it as unreachable
