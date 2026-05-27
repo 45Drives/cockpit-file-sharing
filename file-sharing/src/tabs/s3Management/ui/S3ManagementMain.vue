@@ -199,6 +199,7 @@ import { ArchiveBoxIcon, ArrowPathIcon } from "@heroicons/vue/20/solid";
 import AccIcon from "../images/AccIcon.vue";
 import type { RgwGateway } from "../types/types";
 import { pushNotification, Notification, confirm } from "@45drives/houston-common-ui";
+import { unwrap } from "@45drives/houston-common-lib";
 
 type Backend = "minio" | "rustfs" | "ceph" | "garage";
 type View = "buckets" | "users";
