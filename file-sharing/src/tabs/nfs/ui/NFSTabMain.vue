@@ -8,7 +8,7 @@ import {
   assertConfirm,
 } from "@45drives/houston-common-ui";
 import { Upload, getServerCluster, server, Command } from "@45drives/houston-common-lib";
-import { computed, onMounted, onUnmounted, provide, ref, watch } from "vue";
+import { computed, onUnmounted, provide, ref, watch } from "vue";
 import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
 
 import { useUserSettings } from "@/common/user-settings";
@@ -47,11 +47,6 @@ const [nfsExports, refetchNFSExports] = computedResult<NFSExport[]>(
 );
 
 let watchHandle: ReturnType<INFSManager["onExportsFileChanged"]> | undefined = undefined;
-onMounted(() => {
-  watchHandle?.remove();
-  watchHandle = undefined;
-  nfsManager.value.map((m) => (watchHandle = m.onExportsFileChanged(refetchNFSExports)));
-});
 onUnmounted(() => {
   watchHandle?.remove();
   watchHandle = undefined;
