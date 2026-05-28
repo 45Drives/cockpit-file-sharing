@@ -30,8 +30,7 @@
             "systemd",
             "nfs-kernel-server",
             "samba-common-bin",
-            "python3-pip",
-            "python3-venv",
+            "python3",
             "python3-botocore"
         ],
         "rocky_common": [
@@ -46,7 +45,7 @@
             "systemd",
             "nfs-utils",
             "samba-common-tools",
-            "python3-pip",
+            "python3",
             "python3-botocore"
         ]
     },

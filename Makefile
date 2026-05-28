@@ -62,9 +62,9 @@ NPM_PREFIX:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn --cwd' || ech
 NPM_UPDATE:=$(shell command -v yarn > /dev/null 2>&1 && echo 'yarn upgrade --cwd' || echo 'npm update --prefix')
 
 VENV_REQUIREMENTS:=$(wildcard */requirements.txt)
-VENVS:=$(patsubst %/requirements.txt,%/venv, $(VENV_REQUIREMENTS))
+VENV_REQUIREMENT_DIRS:=$(patsubst %.txt,%, $(VENV_REQUIREMENTS))
 
-default: $(OUTPUTS) $(VENVS) README.md
+default: $(OUTPUTS) $(VENV_REQUIREMENT_DIRS) README.md
 
 all: default
 
@@ -96,11 +96,12 @@ endif
 	@echo -e $(call greentext,Done building $*)
 	@echo
 
-$(VENVS): %/venv: %/requirements.txt
-	@echo -e $(call cyantext,Setting up python venv for $*)
-	python3 -m venv $@ && $@/bin/pip install -r $<
+$(VENV_REQUIREMENT_DIRS): %/requirements: %/requirements.txt
+	@echo -e $(call cyantext,Downloading python venv dependencies for $*)
+	mkdir -p $@
+	python3 -m pip download -r $< --dest $@
 	touch $@
-	@echo -e $(call greentext,Done setting up python venv for $*)
+	@echo -e $(call greentext,Done downloading python venv dependencies for $*)
 	@echo
 
 # system install, requires `systemctl restart cockpit.socket`
