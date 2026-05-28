@@ -6,13 +6,16 @@ import {
   type SystemdUnit,
 } from "@/common/systemd-manager";
 import { Server } from "@45drives/houston-common-lib";
-import { reportSuccess, wrapAction } from "@45drives/houston-common-ui";
+import { reportSuccess, wrapAction, confirm, assertConfirm } from "@45drives/houston-common-ui";
 import { ResultAsync } from "neverthrow";
+
+const _ = cockpit.gettext;
 
 export const useSystemdUnit = (
   serviceName: SystemdUnitName,
   serviceManager: "user" | "system",
-  server: Server | [Server, ...Server[]]
+  server: Server | [Server, ...Server[]],
+  quirks: { mustStopBeforeEnable?: boolean } = {}
 ) => {
   const manager: ISystemdManager = Array.isArray(server)
     ? getSystemdManager(server, serviceManager)
@@ -55,18 +58,35 @@ export const useSystemdUnit = (
     get: () => _running.value,
     set: wrapAction((value) =>
       (value ? manager.start(unit) : manager.stop(unit))
-        .map(() => reportSuccess(`${value ? "Started" : "Stopped"} ${unit.name}.`))
+        .map(() => reportSuccess(`${value ? _("Started") : _("Stopped")} ${unit.name}.`))
         .andThen(() => fetchRunning())
     ),
   });
 
   const enabled = computed<boolean>({
     get: () => _enabled.value,
-    set: wrapAction((value) =>
-      (value ? manager.enable(unit) : manager.disable(unit))
-        .map(() => reportSuccess(`${value ? "Enabled" : "Disabled"} ${unit.name}.`))
-        .andThen(() => fetchEnabled())
-    ),
+    set: wrapAction((value) => {
+      let result;
+      if (quirks.mustStopBeforeEnable && running.value && value && !enabled.value) {
+        result = assertConfirm({
+          header: _("Stop service before enabling?"),
+          body: _(
+            "Enabling the service while it is running can cause the service status to display incorrectly. Do you want to stop the service, enable it, and then start it again?"
+          ),
+          dangerous: true,
+        })
+          .andThen(() => manager.stop(unit))
+          .andThen(() => fetchRunning())
+          .andThen(() => manager.enable(unit))
+          .andThen(() => manager.start(unit))
+          .andThen(() => fetchRunning());
+      } else {
+        result = value ? manager.enable(unit) : manager.disable(unit);
+      }
+      return result
+        .map(() => reportSuccess(`${value ? _("Enabled") : _("Disabled")} ${unit.name}.`))
+        .andThen(() => fetchEnabled());
+    }),
   });
 
   const getStatus = () => manager.getStatus(unit);

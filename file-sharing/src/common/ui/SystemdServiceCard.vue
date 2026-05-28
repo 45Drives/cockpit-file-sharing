@@ -25,19 +25,36 @@ const props = withDefaults(
     server?: Server | [Server, ...Server[]];
     name?: string;
     warnIfStopped?: boolean | string;
+    disableStartStop?: boolean;
+    disableEnable?: boolean;
+    mustStopBeforeEnable?: boolean;
   }>(),
   {
     serviceManager: "system",
     server: () => defaultServer,
     warnIfStopped: false,
+    disableStartStop: false,
+    disableEnable: false,
+    mustStopBeforeEnable: false,
   }
 );
 
 const { running, enabled, refresh, description, getStatus, ready } = useSystemdUnit(
   props.serviceName,
   props.serviceManager,
-  props.server
+  props.server,
+  {
+    mustStopBeforeEnable: props.mustStopBeforeEnable,
+  }
 );
+
+const emit = defineEmits<{
+  "update:running": [value: boolean];
+  "update:enabled": [value: boolean];
+}>();
+
+watch(running, (newVal) => emit("update:running", newVal));
+watch(enabled, (newVal) => emit("update:enabled", newVal));
 
 const name = computed(() => props.name ?? description.value ?? props.serviceName);
 
@@ -60,10 +77,14 @@ if (props.warnIfStopped) {
             : _("Consider starting it to ensure your server behaves as expected."),
           "warning",
           "never"
-        ).addAction(_("Start now"), async () => {
-          await startSwitchRef.value?.$el.scrollIntoView({ behavior: "smooth" });
-          running.value = true;
-        });
+        ).addAction(
+          _("Start now"),
+          async () => {
+            await startSwitchRef.value?.$el.scrollIntoView({ behavior: "smooth" });
+            running.value = true;
+          },
+          false
+        );
         disabledWarning = new Notification(
           newName + _(" is not enabled."),
           typeof props.warnIfStopped === "string"
@@ -71,11 +92,15 @@ if (props.warnIfStopped) {
             : _("Consider enabling it to ensure your server behaves as expected."),
           "warning",
           "never"
-        ).addAction(_("Enable now"), async () => {
-          await enableSwitchRef.value?.$el.scrollIntoView({ behavior: "smooth" });
-          await new Promise((resolve) => setTimeout(resolve, 500)); // pause for a moment
-          enabled.value = true;
-        });
+        ).addAction(
+          _("Enable now"),
+          async () => {
+            await enableSwitchRef.value?.$el.scrollIntoView({ behavior: "smooth" });
+            await new Promise((resolve) => setTimeout(resolve, 500)); // pause for a moment
+            enabled.value = true;
+          },
+          false
+        );
       }
       if (!ready) {
         return;
@@ -126,9 +151,10 @@ defineExpose({
     <template #header>
       {{ name }}
     </template>
+    <slot :running="running" :enabled="enabled"></slot>
     <div class="space-y-content">
       <ToggleSwitchGroup>
-        <ToggleSwitch v-model="running" ref="startSwitchRef">
+        <ToggleSwitch v-model="running" ref="startSwitchRef" :disabled="props.disableStartStop">
           <div class="inline-flex flex-row gap-1">
             {{ name }}
             {{ running ? _("is running.") : _("is stopped.") }}
@@ -138,7 +164,7 @@ defineExpose({
             {{ running ? _("Click toggle to stop.") : _("Click toggle to start.") }}
           </template>
         </ToggleSwitch>
-        <ToggleSwitch v-model="enabled" ref="enableSwitchRef">
+        <ToggleSwitch v-model="enabled" ref="enableSwitchRef" :disabled="props.disableEnable">
           <div class="inline-flex flex-row gap-1">
             {{ name }}
             {{ enabled ? _("is enabled.") : _("is disabled.") }}

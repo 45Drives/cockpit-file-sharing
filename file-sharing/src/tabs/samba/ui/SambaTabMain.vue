@@ -7,6 +7,8 @@ import {
   type SambaShareConfig,
   type SambaGlobalConfig,
   Command,
+  BashCommand,
+  FileSystemNode,
 } from "@45drives/houston-common-lib";
 import {
   CenteredCardColumn,
@@ -41,7 +43,7 @@ const userSettings = useUserSettings();
 
 const smbConfPath = computed(() => userSettings.value.samba.confPath);
 
-const cluster = getServerCluster("ctdb")
+const cluster = getServerCluster("ctdb");
 const [clusterRef] = computedResult(() => cluster);
 
 provide(serverClusterInjectionKey, cluster);
@@ -170,23 +172,25 @@ const importConfig = () =>
 const exportConfig = () =>
   sambaManager
     .andThen((sm) => sm.exportConfig())
-    .andThen((config) => server.map(s =>
-      s.downloadCommandOutput(
-        new Command(['echo', config]),
-        `cockpit-file-sharing_samba_exported_${
-          new Date().toISOString().replace(/:/g, "-").replace(/T/, "_").split('.')[0]
-        }.conf`
+    .andThen((config) =>
+      server.map((s) =>
+        s.downloadCommandOutput(
+          new Command(["echo", config]),
+          `cockpit-file-sharing_samba_exported_${
+            new Date().toISOString().replace(/:/g, "-").replace(/T/, "_").split(".")[0]
+          }.conf`
+        )
       )
-    ));
-    // .map((config) =>
-    //   Download.text(
-    //     config,
-    //     `cockpit-file-sharing_samba_exported_${new Date()
-    //       .toISOString()
-    //       .replace(/:/g, "-")
-    //       .replace(/T/, "_")}.conf`
-    //   )
-    // );
+    );
+// .map((config) =>
+//   Download.text(
+//     config,
+//     `cockpit-file-sharing_samba_exported_${new Date()
+//       .toISOString()
+//       .replace(/:/g, "-")
+//       .replace(/T/, "_")}.conf`
+//   )
+// );
 
 const importFromSmbConf = (smbConfPath: string) =>
   assertConfirm({
@@ -216,6 +220,31 @@ const actions = wrapActions({
 
 watch(smbConfPath, () => actions.checkIfSmbConfIncludesRegistry(smbConfPath.value), {
   immediate: true,
+});
+
+const [smbServiceName] = computedResult<"smb.service" | "smbd.service">(() =>
+  server
+    .andThen((s) =>
+      s.execute(new BashCommand("systemctl list-unit-files | grep smb", [], { superuser: "try" }))
+    )
+    .map((p) => p.getStdout().trim())
+    .map((unit_list) => {
+      if (unit_list.includes("smbd.service")) {
+        return "smbd.service";
+      }
+      return "smb.service";
+    })
+);
+
+// ubuntu 20.04 (and maybe others) quirk with enabling service while unit is running causing service to appear stopped:
+const [ubu20QuirkStopBeforeEnable] = computedResult(() => {
+  const serviceName = smbServiceName.value;
+  if (!serviceName) {
+    return okAsync(undefined);
+  }
+  return server.andThen((s) =>
+    new FileSystemNode(s, `/etc/init.d/${serviceName.replace(".service", "")}`).exists()
+  );
 });
 </script>
 
@@ -270,11 +299,13 @@ watch(smbConfPath, () => actions.checkIfSmbConfIncludesRegistry(smbConfPath.valu
       </div>
     </CardContainer>
     <SystemdServiceCard
-      v-if="clusterRef"
+      v-if="clusterRef && smbServiceName && ubu20QuirkStopBeforeEnable !== undefined"
       :name="_('Samba Service')"
-      serviceName="smb.service"
+      :serviceName="smbServiceName"
       :server="clusterRef"
+      :mustStopBeforeEnable="ubu20QuirkStopBeforeEnable"
       warnIfStopped
-    />
+    >
+    </SystemdServiceCard>
   </CenteredCardColumn>
 </template>
