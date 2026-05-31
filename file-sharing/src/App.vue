@@ -13,6 +13,7 @@ import {
 import { SambaTabMain } from "@/tabs/samba/ui";
 import ISCSITabMain from "@/tabs/iSCSI/ui/ISCSITabMain.vue";
 import { NFSTabMain } from "@/tabs/nfs/ui";
+import { ConnectedClientsTabMain } from "@/tabs/connected-clients/ui";
 import UserSettingsView from "@/common/ui/UserSettingsView.vue";
 import { ref, computed, watchEffect, type WatchStopHandle, onUnmounted, watch } from "vue";
 import { Cog8ToothIcon } from "@heroicons/vue/20/solid";
@@ -35,6 +36,7 @@ const showSambaTab = ref(true);
 const showNfsTab = ref(true);
 const showIscsiTab = ref(true);
 const showS3Tab = ref(true);
+const showConnectedClientsTab = ref(true);
 const sambaConfigured = (): ResultAsync<boolean, never> => {
   return getServer()
     .andThen((server) => server.execute(new BashCommand("command -v net")))
@@ -67,6 +69,21 @@ const s3Configured = (): ResultAsync<boolean, never> => {
     ),
     () => null
   ).orElse((_) => ok(false));
+};
+
+// Shown when either smbstatus is present OR the kernel NFSv4 clients dir
+// exists. Either signal means we have at least one source of live data.
+const connectedClientsConfigured = (): ResultAsync<boolean, never> => {
+  return getServer()
+    .andThen((server) =>
+      server.execute(
+        new BashCommand(
+          "command -v smbstatus >/dev/null 2>&1 || [ -d /proc/fs/nfsd/clients ]"
+        )
+      )
+    )
+    .map((_) => true)
+    .orElse((_) => ok(false));
 };
 
 let watchStopHandle: WatchStopHandle;
@@ -177,6 +194,21 @@ globalProcessingWrapPromise(useUserSettings(true)).then((userSettings) => {
           );
           break;
       }
+      switch (userSettings.connectedClients.tabVisibility) {
+        case "always":
+          showConnectedClientsTab.value = true;
+          break;
+        case "never":
+          showConnectedClientsTab.value = false;
+          break;
+        case "auto":
+          globalProcessingWrapPromise(
+            connectedClientsConfigured()
+              .map((value) => (showConnectedClientsTab.value = value))
+              .unwrapOr(null)
+          );
+          break;
+      }
     },
     { immediate: true }
   );
@@ -216,7 +248,15 @@ const visibleTabs = computed<HoustonAppTabEntry[]>(() => [
           component: S3ManagementMain,
         },
       ]
-    : [])
+    : []),
+  ...(showConnectedClientsTab.value
+    ? [
+        {
+          label: "Connected Clients",
+          component: ConnectedClientsTabMain,
+        },
+      ]
+    : []),
 ]);
 </script>
 
