@@ -3,12 +3,14 @@ import {
   defineProps,
   computed,
   defineEmits,
+  inject,
   ref,
   watchEffect,
   onMounted,
   type Ref,
   watch,
 } from "vue";
+import { readOnlyInjectionKey } from "@/common/injectionKeys";
 import {
   InputField,
   ToggleSwitch,
@@ -51,6 +53,10 @@ const emit = defineEmits<{
 }>();
 
 const globalProcessingState = useGlobalProcessingState();
+
+// Named `tabReadOnly` to avoid shadowing `tempShareConfig.readOnly`, which is
+// the SMB share's own "read only = yes" config field (entirely unrelated).
+const tabReadOnly = inject(readOnlyInjectionKey, computed(() => false));
 
 const shareConf = computed<SambaShareConfig>(() =>
   props.newShare ? SambaShareConfig.makeNew() : props.share
@@ -182,7 +188,7 @@ mutuallyExclusive(
 <template>
   <div class="space-y-content">
     <div v-if="newShare" class="text-header">{{ _("New Share") }}</div>
-    <div class="space-y-content">
+    <fieldset :disabled="tabReadOnly" class="space-y-content !m-0 !p-0 border-0">
       <InputLabelWrapper>
         <template #label>
           {{ _("Share Name") }}
@@ -247,14 +253,21 @@ mutuallyExclusive(
         </ToggleSwitch>
       </ToggleSwitchGroup>
 
+    </fieldset>
+      <!-- Disclosure outside the fieldset so its toggle button stays
+           interactive in read-only mode (operators still want to inspect
+           Advanced). Inner ParsedTextArea is wrapped in its own disabled
+           fieldset to block edits. -->
       <Disclosure v-model:show="revealAdvancedTextarea">
         <template v-slot:label>
           {{ _("Advanced") }}
         </template>
-        <ParsedTextArea
-          :parser="KeyValueSyntax({ trailingNewline: false })"
-          v-model="tempShareConfig.advancedOptions"
-        />
+        <fieldset :disabled="tabReadOnly" class="!m-0 !p-0 border-0">
+          <ParsedTextArea
+            :parser="KeyValueSyntax({ trailingNewline: false })"
+            v-model="tempShareConfig.advancedOptions"
+          />
+        </fieldset>
       </Disclosure>
 
       <div class="button-group-row justify-end grow">
@@ -268,9 +281,10 @@ mutuallyExclusive(
             }
           "
         >
-          {{ _("Cancel") }}
+          {{ tabReadOnly ? _("Close") : _("Cancel") }}
         </button>
         <button
+          v-if="!tabReadOnly"
           class="btn btn-primary"
           @click="$emit('apply', tempShareConfig)"
           :disabled="
@@ -282,6 +296,5 @@ mutuallyExclusive(
           {{ _("Apply") }}
         </button>
       </div>
-    </div>
   </div>
 </template>

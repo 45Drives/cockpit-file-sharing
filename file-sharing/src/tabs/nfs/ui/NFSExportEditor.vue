@@ -18,10 +18,11 @@ import {
   Table,
   type ValidationResult,
 } from "@45drives/houston-common-ui";
-import { defineProps, defineEmits, computed, ref } from "vue";
+import { defineProps, defineEmits, computed, inject, ref } from "vue";
 import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
 import { PlusIcon, TrashIcon } from "@heroicons/vue/20/solid";
 import { getServer, FileSystemNode } from "@45drives/houston-common-lib";
+import { readOnlyInjectionKey } from "@/common/injectionKeys";
 
 import { NFSExportParser } from "@/tabs/nfs/exports-parser";
 
@@ -47,6 +48,11 @@ const emit = defineEmits<{
 }>();
 
 const globalProcessingState = useGlobalProcessingState();
+
+// Read-only mode hides write affordances and disables inputs so the editor
+// becomes a details view. Provided by the tab's TabMain (see NFSTabMain.vue);
+// defaults to false for standalone test mounts.
+const readOnly = inject(readOnlyInjectionKey, computed(() => false));
 
 const exportConfig = computed<NFSExport>(() =>
   props.newExport ? newNFSExport() : props.nfsExport
@@ -206,7 +212,11 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
 <template>
   <div class="space-y-content">
     <div v-if="newExport" class="text-header">{{ _("New Share") }}</div>
-    <div class="space-y-content">
+    <!-- fieldset[disabled] cascades to every form control inside, including
+         third-party InputField/SelectMenu components, without each needing
+         a :disabled prop. Hidden buttons (Add/Remove client, Apply) are
+         additionally v-if'd off so they don't take layout space. -->
+    <fieldset :disabled="readOnly" class="space-y-content !m-0 !p-0 border-0">
       <div>
         <ShareDirectoryInputAndOptions
           v-model:path="tempExportConfig.path"
@@ -260,7 +270,7 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
               <th scope="col">{{ _("Settings") }}</th>
               <th scope="col" class="flex flex-row justify-end">
                 <span class="sr-only">{{ _("Delete") }}</span>
-                <button @click="() => addClient()">
+                <button v-if="!readOnly" @click="() => addClient()">
                   <span class="sr-only">{{ _("Add new client") }}</span>
                   <PlusIcon class="size-icon icon-default" />
                 </button>
@@ -282,6 +292,7 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
                 <td>
                   <div class="button-group-row justify-end">
                     <button
+                      v-if="!readOnly"
                       :disabled="tempExportConfig.clients.length <= 1"
                       :title="_('Remove client')"
                       @click="() => removeClient(index)"
@@ -306,32 +317,36 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
           {{ validationScope.isValid() ? exportPreview : "" }}
         </div>
       </InputLabelWrapper>
+    </fieldset>
 
-      <div class="button-group-row justify-end grow">
-        <button
-          class="btn btn-secondary"
-          @click="
-            () => {
-              resetChanges();
-              shareDirectoryInputAndOptionsRef?.resetChanges?.();
-              $emit('cancel');
-            }
-          "
-        >
-          {{ _("Cancel") }}
-        </button>
-        <button
-          class="btn btn-primary"
-          @click="$emit('apply', tempExportConfig)"
-          :disabled="
-            !validationScope.isValid() ||
-            (!modified && !shareDirectoryOptionsModified) ||
-            globalProcessingState !== 0
-          "
-        >
-          {{ _("Apply") }}
-        </button>
-      </div>
+    <!-- Action row outside the fieldset so Close stays clickable in
+         read-only mode (the fieldset's disabled cascade would otherwise
+         trap the user in the details view). Apply is v-if'd off anyway. -->
+    <div class="button-group-row justify-end grow">
+      <button
+        class="btn btn-secondary"
+        @click="
+          () => {
+            resetChanges();
+            shareDirectoryInputAndOptionsRef?.resetChanges?.();
+            $emit('cancel');
+          }
+        "
+      >
+        {{ readOnly ? _("Close") : _("Cancel") }}
+      </button>
+      <button
+        v-if="!readOnly"
+        class="btn btn-primary"
+        @click="$emit('apply', tempExportConfig)"
+        :disabled="
+          !validationScope.isValid() ||
+          (!modified && !shareDirectoryOptionsModified) ||
+          globalProcessingState !== 0
+        "
+      >
+        {{ _("Apply") }}
+      </button>
     </div>
   </div>
 </template>

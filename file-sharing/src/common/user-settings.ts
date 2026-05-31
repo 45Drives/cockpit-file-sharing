@@ -12,6 +12,20 @@ export type UserSettings = {
      */
     confPath: string;
     tabVisibility: TabVisibility;
+    /**
+     * When true, hide every edit affordance in the tab (add/edit/delete/import).
+     * Read-only operations (view, export) stay available. For deployments where
+     * the config is owned externally (e.g. config-as-code, Ansible, manual edits
+     * to /etc/samba/smb.conf) and Cockpit is only meant to visualize.
+     */
+    readOnly: boolean;
+    /**
+     * When true, the read-only toggle in the user settings UI becomes
+     * non-interactive (still shown, current value still applied). Lets admins
+     * pin the value via /etc/cockpit-file-sharing.conf.json (Ansible / Puppet /
+     * shell edit) and prevent end-users from undoing it in the UI.
+     */
+    readOnlyLocked: boolean;
   };
   /**
    * NFS-specific settings
@@ -22,6 +36,16 @@ export type UserSettings = {
      */
     confPath: string;
     tabVisibility: TabVisibility;
+    /**
+     * When true, hide every edit affordance in the tab (add/edit/delete/import).
+     * Read-only operations (view, export) stay available. For deployments where
+     * /etc/exports (or the configured file) is owned externally.
+     */
+    readOnly: boolean;
+    /**
+     * Admin-lock for the read-only toggle. See samba.readOnlyLocked.
+     */
+    readOnlyLocked: boolean;
   };
   s3: {
 
@@ -39,6 +63,16 @@ export type UserSettings = {
     clusteredServer: boolean;
     subnetMask: number;
     tabVisibility: TabVisibility;
+    /**
+     * When true, hide every edit affordance in the tab. iSCSI consists of many
+     * sub-screens (portals, initiator groups, LUNs, CHAP, …); this flag gates
+     * their primary add/edit/delete buttons at the screen level.
+     */
+    readOnly: boolean;
+    /**
+     * Admin-lock for the read-only toggle. See samba.readOnlyLocked.
+     */
+    readOnlyLocked: boolean;
   };
  
   /**
@@ -55,10 +89,14 @@ const defaultSettings = (): UserSettings => ({
   samba: {
     confPath: "/etc/samba/smb.conf",
     tabVisibility: "auto",
+    readOnly: false,
+    readOnlyLocked: false,
   },
   nfs: {
     confPath: "/etc/exports.d/cockpit-file-sharing.exports",
     tabVisibility: "auto",
+    readOnly: false,
+    readOnlyLocked: false,
   },
   s3: {
     tabVisibility: "auto",
@@ -70,6 +108,8 @@ const defaultSettings = (): UserSettings => ({
     clusteredServer: false,
     subnetMask: 16,
     tabVisibility: "auto",
+    readOnly: false,
+    readOnlyLocked: false,
   },
   includeSystemAccounts: false,
   includeDomainAccounts: false,
@@ -92,10 +132,16 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
           samba: {
             confPath: contents.samba?.confPath || defaultSettings().samba.confPath,
             tabVisibility: contents.samba?.tabVisibility || defaultSettings().samba.tabVisibility,
+            // `??` not `||`: false is the default + a valid user choice.
+            readOnly: contents.samba?.readOnly ?? defaultSettings().samba.readOnly,
+            readOnlyLocked:
+              contents.samba?.readOnlyLocked ?? defaultSettings().samba.readOnlyLocked,
           },
           nfs: {
             confPath: contents.nfs?.confPath || defaultSettings().nfs.confPath,
             tabVisibility: contents.nfs?.tabVisibility || defaultSettings().nfs.tabVisibility,
+            readOnly: contents.nfs?.readOnly ?? defaultSettings().nfs.readOnly,
+            readOnlyLocked: contents.nfs?.readOnlyLocked ?? defaultSettings().nfs.readOnlyLocked,
           },
           s3: {
             tabVisibility: contents.s3?.tabVisibility || defaultSettings().s3.tabVisibility,
@@ -110,6 +156,9 @@ const configFileReadPromise = new Promise<Ref<UserSettings>>((resolve) => {
               defaultSettings().iscsi.clusteredServerChecked,
             subnetMask: contents.iscsi?.subnetMask || defaultSettings().iscsi.subnetMask,
             tabVisibility: contents.iscsi?.tabVisibility || defaultSettings().iscsi.tabVisibility,
+            readOnly: contents.iscsi?.readOnly ?? defaultSettings().iscsi.readOnly,
+            readOnlyLocked:
+              contents.iscsi?.readOnlyLocked ?? defaultSettings().iscsi.readOnlyLocked,
           },
           includeSystemAccounts:
             contents.includeSystemAccounts ?? defaultSettings().includeSystemAccounts,
