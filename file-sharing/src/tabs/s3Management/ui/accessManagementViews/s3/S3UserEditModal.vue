@@ -109,7 +109,7 @@
               <!-- Policies -->
               <div v-if="activeAccessTab === 'policies'" class="px-4 py-4 space-y-3">
                 <div class="flex items-center justify-between">
-                  <div class="text-sm text-default">Attach MinIO policies</div>
+                  <div class="text-sm text-default">Attach {{ showServiceAccounts ? 'MinIO' : 'RustFS' }} policies</div>
                   <div class="text-xs text-muted">Selected: {{ localPolicies.length }}</div>
                 </div>
 
@@ -135,7 +135,7 @@
               <!-- Groups -->
               <div v-else-if="activeAccessTab === 'groups'" class="px-4 py-4 space-y-3">
                 <div class="flex items-center justify-between">
-                  <div class="text-sm text-default">Attach MinIO groups</div>
+                  <div class="text-sm text-default">Attach {{ showServiceAccounts ? 'MinIO' : 'RustFS' }} groups</div>
                   <div class="text-xs text-muted">Selected: {{ localGroups.length }}</div>
                 </div>
 
@@ -234,7 +234,7 @@
                 <div>
                   <div class="text-sm font-medium text-default">Reset user Password</div>
                   <div class="text-xs text-muted">
-                    If enabled, the user must use the new password key for MinIO access.
+                    If enabled, the user must use the new password key for S3 access.
                   </div>
                 </div>
 

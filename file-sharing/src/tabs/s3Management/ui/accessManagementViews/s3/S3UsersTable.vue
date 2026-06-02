@@ -330,7 +330,7 @@ async function handleUserUpdate(payload: S3AccessUserUpdatePayload) {
     pushNotification(new Notification("Success", `User updated succesfully"`, "success", 2000));
 
   } catch (e: any) {
-    pushNotification(new Notification(`Failed to update MinIO user"`, e?.message, "error"));
+    pushNotification(new Notification(`Failed to update ${isRustfsBackend ? "RustFS" : "MinIO"} user`, e?.message, "error"));
 
     // editDialogError.value = e?.message || "Failed to update MinIO user.";
   } finally {
