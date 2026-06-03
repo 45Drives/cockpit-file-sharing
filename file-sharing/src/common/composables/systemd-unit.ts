@@ -6,7 +6,7 @@ import {
   type SystemdUnit,
 } from "@/common/systemd-manager";
 import { Server } from "@45drives/houston-common-lib";
-import { reportSuccess, wrapAction, confirm, assertConfirm } from "@45drives/houston-common-ui";
+import { reportSuccess, wrapAction, assertConfirm } from "@45drives/houston-common-ui";
 import { ResultAsync } from "neverthrow";
 
 const _ = cockpit.gettext;

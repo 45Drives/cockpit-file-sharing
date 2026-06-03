@@ -228,7 +228,7 @@ async function onDeleteUser(user: S3AccessUser) {
     } else {
       await deleteMinioUser(username);
     }
-    pushNotification(new Notification("Success",`User "${username} deleted succesfully`, "success"));
+    pushNotification(new Notification("Success", `User "${username}" deleted successfully`, "success"));
 
   } catch (e: any) {
     const msg = (e?.message || "").toLowerCase();
@@ -263,7 +263,7 @@ async function handleUserSubmit(payload: S3AccessUserCreatePayload) {
     }
     await loadUsers();
     showUserDialog.value = false;
-    pushNotification(new Notification(`User created succesfully."`, "success"));
+    pushNotification(new Notification("Success", "User created successfully.", "success"));
 
   } catch (e: any) {
     pushNotification(new Notification(`Failed to create user."`, e?.message, "error"));
@@ -327,7 +327,7 @@ async function handleUserUpdate(payload: S3AccessUserUpdatePayload) {
     }
     await loadUsers();
     showEditDialog.value = false;
-    pushNotification(new Notification("Success", `User updated succesfully"`, "success", 2000));
+    pushNotification(new Notification("Success", "User updated successfully", "success", 2000));
 
   } catch (e: any) {
     pushNotification(new Notification(`Failed to update ${isRustfsBackend ? "RustFS" : "MinIO"} user`, e?.message, "error"));
