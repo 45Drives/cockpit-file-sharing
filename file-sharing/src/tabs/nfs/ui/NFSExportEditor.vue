@@ -44,7 +44,7 @@ const props = defineProps<
       }
   ) & {
     allExportedPaths: string[];
-    manager: NFSManager;
+    manager: InstanceType<typeof NFSManager>;
   }
 >();
 
@@ -374,7 +374,6 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
           @click="
             () => {
               resetChanges();
-              shareDirectoryInputAndOptionsRef?.resetChanges?.();
               $emit('cancel');
             }
           "

@@ -54,28 +54,32 @@
 </template>
 
 <script setup lang="ts">
-import { Server, type LocalUser } from "@45drives/houston-common-lib";
+import { Server, type LocalUser, server } from "@45drives/houston-common-lib";
 import { Table } from "@45drives/houston-common-ui";
 import { computed, ref, watch, inject } from "vue";
 import SambaPasswordButtons from "@/tabs/samba/ui/SambaPasswordButtons.vue";
 import { useUserSettings } from "@/common/user-settings";
 import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/vue/20/solid";
 
-import { sambaManagerInjectionKey } from "@/tabs/samba/ui/injectionKeys";
+const props = withDefaults(
+  defineProps<{
+    server: Server;
+  }>(),
+  {
+    server: () => server,
+  }
+);
 
 const settings = useUserSettings();
-
-const server = ref<Server>();
-inject(sambaManagerInjectionKey)?.map((s) => (server.value = s.getServer()));
 
 const includeSystemUsers = computed(() => settings.value.includeSystemAccounts);
 
 const allUsers = ref<LocalUser[]>([]);
 
 watch(
-  server,
+  () => props.server,
   (server) => {
-    server?.getLocalUsers().map((users) => (allUsers.value = users));
+    server.getLocalUsers().map((users) => (allUsers.value = users));
   },
   { immediate: true }
 );

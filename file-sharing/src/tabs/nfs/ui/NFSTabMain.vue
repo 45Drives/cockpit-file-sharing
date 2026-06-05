@@ -10,8 +10,7 @@ import {
   Notification,
 } from "@45drives/houston-common-ui";
 import { Upload, getServerCluster, server, Command } from "@45drives/houston-common-lib";
-import { computed, onUnmounted, provide, ref, watch } from "vue";
-import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
+import { onUnmounted, ref, watch } from "vue";
 
 import { useUserSettings } from "@/common/user-settings";
 import { NFSManager } from "@/tabs/nfs/nfs-manager";
@@ -21,9 +20,9 @@ import NFSExportListView from "@/tabs/nfs/ui/NFSExportListView.vue";
 
 import SystemdServiceCard from "@/common/ui/SystemdServiceCard.vue";
 import type { ShareDefinition } from "@/common/share-common";
-import { ok, okAsync } from "neverthrow";
+import { okAsync, ResultAsync } from "neverthrow";
 
-import { prompt, promptResult } from "@/common/prompt";
+import { promptResult } from "@/common/prompt";
 
 const _ = cockpit.gettext;
 
@@ -31,10 +30,6 @@ const userSettings = useUserSettings();
 
 const cluster = getServerCluster("pcs");
 const [clusterRef] = computedResult(() => cluster);
-provide(serverClusterInjectionKey, cluster);
-
-const cephClientName = ref<`client.${string}`>("client.nfs");
-provide(cephClientNameInjectionKey, cephClientName);
 
 const [nfsManager] = computedResult(() => {
   const exportsPath = userSettings.value.nfs.confPath;
@@ -51,17 +46,40 @@ const [nfsExports, refetchNFSExports] = computedResult<NFSExport[]>(
   []
 );
 
+const pollSystemdService = ref(true);
+
+const pauseSystemdServicePolling = <TArgs, TResult, TErr>(
+  action: (...args: TArgs[]) => ResultAsync<TResult, TErr>
+) => {
+  return (...args: TArgs[]) => {
+    pollSystemdService.value = false;
+    return action(...args)
+      .map((r) => {
+        pollSystemdService.value = true;
+        return r;
+      })
+      .mapErr((e) => {
+        pollSystemdService.value = true;
+        return e;
+      });
+  };
+};
+
 const addExport = (nfsExport: ShareDefinition<NFSExport>) =>
   nfsManager.value
     ?.addShare(nfsExport)
     .map(() => reportSuccess(_("Successfully added export for") + ` ${nfsExport.path}`)) ??
   okAsync(undefined);
 
-const editExport = (nfsExport: ShareDefinition<NFSExport>) =>
-  nfsManager.value
-    ?.editShare(nfsExport)
-    .map(() => reportSuccess(_("Successfully edited export for") + ` ${nfsExport.path}`)) ??
-  okAsync(undefined);
+const editExport = (nfsExport: ShareDefinition<NFSExport>) => {
+  const mgr = nfsManager.value;
+  if (!mgr) {
+    return okAsync(undefined);
+  }
+  return pauseSystemdServicePolling(() => mgr.editShare(nfsExport))().map(() =>
+    reportSuccess(_("Successfully edited export for") + ` ${nfsExport.path}`)
+  );
+};
 
 const removeExport = (nfsExport: NFSExport) => {
   const mgr = nfsManager.value;
@@ -76,7 +94,9 @@ const removeExport = (nfsExport: NFSExport) => {
     dangerous: true,
   })
     .andThen(() => mgr.getShareDefinition(nfsExport))
-    .andThen((nfsExport) => mgr.removeShare(nfsExport) ?? okAsync(nfsExport))
+    .andThen(
+      pauseSystemdServicePolling((nfsExport) => mgr.removeShare(nfsExport) ?? okAsync(nfsExport))
+    )
     .map(() => reportSuccess(_("Successfully removed export for") + ` ${nfsExport.path}`));
 };
 
@@ -166,7 +186,8 @@ const actions = wrapActions({
   syncClusterConfig,
 });
 
-let watchHandle: ReturnType<NFSManager["onExportsFileChanged"]> | undefined = undefined;
+let watchHandle: ReturnType<InstanceType<typeof NFSManager>["onExportsFileChanged"]> | undefined =
+  undefined;
 onUnmounted(() => {
   watchHandle?.remove();
   watchHandle = undefined;
@@ -217,6 +238,7 @@ watch(
       :server="clusterRef"
       warnIfStopped
       :name="_('NFS Service')"
+      :polling="pollSystemdService"
     />
   </CenteredCardColumn>
 </template>

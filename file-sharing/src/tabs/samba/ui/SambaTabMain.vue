@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  getServer,
   // Download,
   Upload,
   getServerCluster,
@@ -9,6 +8,7 @@ import {
   Command,
   BashCommand,
   FileSystemNode,
+  server,
 } from "@45drives/houston-common-lib";
 import {
   CenteredCardColumn,
@@ -27,15 +27,15 @@ import { useUserSettings } from "@/common/user-settings";
 import GlobalConfigEditor from "./GlobalConfigEditor.vue";
 import ShareListView from "@/tabs/samba/ui/ShareListView.vue";
 
-import { provide, ref, watch, computed } from "vue";
-import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
+import { watch, computed, provide } from "vue";
 
-import { HookedSambaManager as SambaManager } from "@/tabs/samba/samba-manager";
-import { okAsync } from "neverthrow";
-
-import { sambaManagerInjectionKey } from "@/tabs/samba/ui/injectionKeys";
+import { SambaManager } from "@/tabs/samba/samba-manager";
+import { ok, okAsync } from "neverthrow";
 
 import SystemdServiceCard from "@/common/ui/SystemdServiceCard.vue";
+import type { ShareDefinition } from "@/common/share-common";
+
+import { sambaManagerInjectionKey } from "./injectionKeys";
 
 const _ = cockpit.gettext;
 
@@ -46,58 +46,48 @@ const smbConfPath = computed(() => userSettings.value.samba.confPath);
 const cluster = getServerCluster("ctdb");
 const [clusterRef] = computedResult(() => cluster);
 
-provide(serverClusterInjectionKey, cluster);
-const cephClientName = ref<`client.${string}`>("client.samba");
-provide(cephClientNameInjectionKey, cephClientName);
-
-const server = getServer();
-
-const sambaManager = server.map((server) => new SambaManager(server));
+const sambaManager = new SambaManager(server);
 provide(sambaManagerInjectionKey, sambaManager);
 
-const [globalConf, reloadGlobalConf] = computedResult(() =>
-  sambaManager.andThen((sm) => sm.getGlobalConfig())
-);
+const [globalConf, reloadGlobalConf] = computedResult(() => sambaManager.getGlobalConfig());
 
 const shareSortPredicate = (a: SambaShareConfig, b: SambaShareConfig) =>
   a.name.localeCompare(b.name, undefined, { caseFirst: "false" });
 
 const [shares, reloadShares] = computedResult(
-  () => sambaManager.andThen((sm) => sm.getShares()).map((s) => s.sort(shareSortPredicate)),
+  () => sambaManager.getShares().map((s) => s.sort(shareSortPredicate)),
   []
 );
 
 const applyGlobalSettings = (newSettings: SambaGlobalConfig) =>
   sambaManager
-    .andThen((sm) => sm.editGlobal(newSettings))
+    .editGlobal(newSettings)
     .andThen(() => reloadGlobalConf())
     .map(() => reportSuccess(_("Updated global Samba configuration.")));
 
 const reloadShare = (shareName: string) =>
-  sambaManager
-    .andThen((sm) => sm.getShare(shareName))
-    .map((newShare) => {
-      // if share is in array
-      if (shares.value.some((s) => s.name === newShare.name)) {
-        // patch new share config into array
-        shares.value = shares.value.map((oldShare) =>
-          oldShare.name === newShare.name ? newShare : oldShare
-        );
-      } else {
-        // append share to array
-        shares.value = [newShare, ...shares.value].sort(shareSortPredicate);
-      }
-    });
+  sambaManager.getShare(shareName).map((newShare) => {
+    // if share is in array
+    if (shares.value.some((s) => s.name === newShare.name)) {
+      // patch new share config into array
+      shares.value = shares.value.map((oldShare) =>
+        oldShare.name === newShare.name ? newShare : oldShare
+      );
+    } else {
+      // append share to array
+      shares.value = [newShare, ...shares.value].sort(shareSortPredicate);
+    }
+  });
 
-const addShare = (share: SambaShareConfig) =>
+const addShare = (share: ShareDefinition<SambaShareConfig>) =>
   sambaManager
-    .andThen((sm) => sm.addShare(share))
+    .addShare(share)
     .andThen(() => reloadShare(share.name))
     .map(() => reportSuccess(`${_("Successfully added share")} ${share.name}`));
 
-const editShare = (share: SambaShareConfig) =>
+const editShare = (share: ShareDefinition<SambaShareConfig>) =>
   sambaManager
-    .andThen((sm) => sm.editShare(share))
+    .editShare(share)
     .andThen(() => reloadShare(share.name))
     .map(() => reportSuccess(`${_("Successfully updated share")} ${share.name}`));
 
@@ -109,49 +99,57 @@ const removeShare = (share: SambaShareConfig) =>
     ),
     dangerous: true,
   })
-    .andThen(() => sambaManager)
-    .andThen((sm) => {
-      return confirm({
+    .andThen(() =>
+      confirm({
         header: _("Kick users from") + ` ${share.name}?`,
         body: _("Run `smbcontrol smbd close-share` before deleting share?"),
         confirmButtonText: _("Yes"),
         cancelButtonText: _("No"),
       })
-        .andThen((kickUsers) => {
-          if (kickUsers) {
-            return sm.closeSambaShare(share.name);
-          }
-          return okAsync(null);
-        })
-        .andThen(() => sm.removeShare(share));
+    )
+    .andThen((kickUsers) => {
+      if (kickUsers) {
+        return sambaManager.closeSambaShare(share.name);
+      }
+      return okAsync(null);
     })
+    .andThen(() => sambaManager.getShareDefinition(share))
+    .andThen((share) => sambaManager.removeShare(share))
     .map(() => (shares.value = shares.value.filter((s) => s.name !== share.name)))
     .map(() => reportSuccess(`${_("Successfully removed share")} ${share.name}`));
 
 const checkIfSmbConfIncludesRegistry = (smbConfPath: string) =>
-  sambaManager
-    .andThen((sm) => sm.checkIfSambaConfIncludesRegistry(smbConfPath))
-    .map((smbConfHasIncludeRegistry) => {
-      if (!smbConfHasIncludeRegistry) {
-        pushNotification(
-          new Notification(
-            _("Samba is Misconfigured"),
-            _(
-              "'include = registry' is missing from the global section of /etc/samba/smb.conf, which is required for File Sharing to manage shares."
-            ),
-            "error",
-            "never"
-          ).addAction(_("Fix now"), async () => {
-            await actions.fixSmbConfIncludeRegistry(smbConfPath);
-          })
-        );
-      }
-    });
+  cluster
+    .orElse(() => ok([server]))
+    .andThen((cluster) =>
+      sambaManager
+        .checkIfSambaConfIncludesRegistry(smbConfPath, cluster)
+        .map((smbConfHasIncludeRegistry) => {
+          if (!smbConfHasIncludeRegistry) {
+            pushNotification(
+              new Notification(
+                _("Samba is Misconfigured"),
+                _(
+                  "'include = registry' is missing from the global section of /etc/samba/smb.conf, which is required for File Sharing to manage shares."
+                ),
+                "error",
+                "never"
+              ).addAction(_("Fix now"), async () => {
+                await actions.fixSmbConfIncludeRegistry(smbConfPath);
+              })
+            );
+          }
+        })
+    );
 
 const fixSmbConfIncludeRegistry = (smbConfPath: string) =>
-  sambaManager
-    .andThen((sm) => sm.patchSambaConfIncludeRegistry(smbConfPath))
-    .map(() => reportSuccess(_("Added `include = registry` to ") + smbConfPath));
+  cluster
+    .orElse(() => ok([server]))
+    .andThen((cluster) =>
+      sambaManager
+        .patchSambaConfIncludeRegistry(smbConfPath, cluster)
+        .map(() => reportSuccess(_("Added `include = registry` to ") + smbConfPath))
+    );
 
 const importConfig = () =>
   assertConfirm({
@@ -162,24 +160,20 @@ const importConfig = () =>
     dangerous: true,
   })
     .andThen(() => Upload.text(".conf"))
-    .andThen((newConfigContents) =>
-      sambaManager.andThen((sm) => sm.importConfig(newConfigContents))
-    )
+    .andThen((newConfigContents) => sambaManager.importConfig(newConfigContents))
     .andThen(() => reloadGlobalConf())
     .andThen(() => reloadShares())
     .map(() => reportSuccess(_("Imported configuration")));
 
 const exportConfig = () =>
   sambaManager
-    .andThen((sm) => sm.exportConfig())
-    .andThen((config) =>
-      server.map((s) =>
-        s.downloadCommandOutput(
-          new Command(["echo", config]),
-          `cockpit-file-sharing_samba_exported_${
-            new Date().toISOString().replace(/:/g, "-").replace(/T/, "_").split(".")[0]
-          }.conf`
-        )
+    .exportConfig()
+    .map((config) =>
+      server.downloadCommandOutput(
+        new Command(["echo", config]),
+        `cockpit-file-sharing_samba_exported_${
+          new Date().toISOString().replace(/:/g, "-").replace(/T/, "_").split(".")[0]
+        }.conf`
       )
     );
 // .map((config) =>
@@ -200,8 +194,7 @@ const importFromSmbConf = (smbConfPath: string) =>
     ),
     dangerous: true,
   })
-    .andThen(() => sambaManager)
-    .andThen((sm) => sm.importFromSambaConf(smbConfPath))
+    .andThen(() => sambaManager.importFromSambaConf(smbConfPath))
     .andThen(() => reloadGlobalConf())
     .andThen(() => reloadShares())
     .map(() => reportSuccess(_("Imported configuration")));
@@ -224,9 +217,7 @@ watch(smbConfPath, () => actions.checkIfSmbConfIncludesRegistry(smbConfPath.valu
 
 const [smbServiceName] = computedResult<"smb.service" | "smbd.service">(() =>
   server
-    .andThen((s) =>
-      s.execute(new BashCommand("systemctl list-unit-files | grep smb", [], { superuser: "try" }))
-    )
+    .execute(new BashCommand("systemctl list-unit-files | grep smb", [], { superuser: "try" }))
     .map((p) => p.getStdout().trim())
     .map((unit_list) => {
       if (unit_list.includes("smbd.service")) {
@@ -242,9 +233,7 @@ const [ubu20QuirkStopBeforeEnable] = computedResult(() => {
   if (!serviceName) {
     return okAsync(undefined);
   }
-  return server.andThen((s) =>
-    new FileSystemNode(s, `/etc/init.d/${serviceName.replace(".service", "")}`).exists()
-  );
+  return new FileSystemNode(server, `/etc/init.d/${serviceName.replace(".service", "")}`).exists();
 });
 </script>
 
@@ -263,6 +252,7 @@ const [ubu20QuirkStopBeforeEnable] = computedResult(() => {
       @addShare="(newConf, callback) => actions.addShare(newConf).map(() => callback?.())"
       @editShare="(newConf, callback) => actions.editShare(newConf).map(() => callback?.())"
       @removeShare="(share, callback) => actions.removeShare(share).map(() => callback?.())"
+      :manager="sambaManager"
     />
     <CardContainer>
       <template #header>

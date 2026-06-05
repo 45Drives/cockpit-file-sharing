@@ -16,7 +16,7 @@ const _ = cockpit.gettext;
 
 const props = defineProps<{
   nfsExports: NFSExport[];
-  manager: NFSManager;
+  manager: InstanceType<typeof NFSManager>;
 }>();
 
 const emit = defineEmits<{

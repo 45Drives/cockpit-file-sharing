@@ -1,0 +1,8 @@
+{
+    "files": [],
+    "references": [
+        { "path": "./file-sharing" },
+        { "path": "./houston-common/houston-common-lib" },
+        { "path": "./houston-common/houston-common-ui" }
+    ]
+}

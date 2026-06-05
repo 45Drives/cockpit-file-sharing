@@ -34,24 +34,34 @@ export const useSystemdUnit = (
   const ready = ref(false);
 
   let servicePollHandle: number | undefined = undefined;
-  onMounted(() => {
-    ResultAsync.combine([fetchRunning(), fetchEnabled(), fetchDescription()]).map(
-      () => (ready.value = true)
-    );
+  const startPolling = (interval: number = 5000) => {
+    if (!ready.value) {
+      ResultAsync.combine([fetchRunning(), fetchEnabled(), fetchDescription()]).map(
+        () => (ready.value = true)
+      );
+    }
     if (servicePollHandle !== undefined) {
       window.clearInterval(servicePollHandle);
     }
     servicePollHandle = window.setInterval(() => {
       fetchRunning();
       fetchEnabled();
-    }, 5000);
-  });
+    }, interval);
+  };
 
-  onUnmounted(() => {
+  const stopPolling = () => {
     if (servicePollHandle !== undefined) {
       window.clearInterval(servicePollHandle);
       servicePollHandle = undefined;
     }
+  };
+
+  onMounted(() => {
+    startPolling();
+  });
+
+  onUnmounted(() => {
+    stopPolling();
   });
 
   const running = computed<boolean>({
@@ -101,5 +111,7 @@ export const useSystemdUnit = (
     description,
     getStatus,
     ready,
+    startPolling,
+    stopPolling,
   };
 };

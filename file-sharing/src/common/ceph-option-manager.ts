@@ -63,10 +63,15 @@ export class CephOptionManagerSingleServer implements ICephOptionManager {
   }
 
   pathMountpointManagedByFileSharing(path: string) {
-    return this.getResolvedNode(path)
-      .andThen((node) => this.getMountUnit(node))
-      .andThen((unit) => this.systemdManager.getSettings(unit))
-      .map((mountSettings) => mountSettings.Unit?.Description === SYSTEMD_MOUNT_DESCRIPTION);
+    return this.pathIsMountpoint(path).andThen((isMountpoint) => {
+      if (!isMountpoint) {
+        return ok(true);
+      }
+      return this.getResolvedNode(path)
+        .andThen((node) => this.getMountUnit(node))
+        .andThen((unit) => this.systemdManager.getSettings(unit))
+        .map((mountSettings) => mountSettings.Unit?.Description === SYSTEMD_MOUNT_DESCRIPTION);
+    });
   }
 
   private enableRemount(pathNode: FileSystemNode) {

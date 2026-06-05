@@ -17,7 +17,7 @@ import {
   type ISystemdManager,
 } from "@/common/systemd-manager";
 import {
-  ShareManagerBase,
+  ShareManagerMixin,
   type IShareManager,
   type ShareBase,
   type ShareDefinition,
@@ -142,16 +142,15 @@ class NFSManagerSingleServerDriver {
 
 const NFS_SERVICE_NAME = "nfs-server.service";
 
-export class NFSManager
-  extends ShareManagerBase<NFSExport>
-  implements INFSManager, IShareManager<NFSExport>
-{
+class _NFSManager implements INFSManager {
+  public readonly type = "nfs" as const;
+  public servers: Server | [Server, ...Server[]];
   private managers: [NFSManagerSingleServerDriver, ...NFSManagerSingleServerDriver[]];
   private primaryManager: NFSManagerSingleServerDriver;
   private systemdManager: ISystemdManager;
 
   constructor(server: Server | [Server, ...Server[]], exportsFilePath: string) {
-    super(server);
+    this.servers = server;
     this.managers = (Array.isArray(this.servers) ? this.servers : [this.servers]).map(
       (server) => new NFSManagerSingleServerDriver(server, exportsFilePath)
     ) as [NFSManagerSingleServerDriver, ...NFSManagerSingleServerDriver[]];
@@ -174,57 +173,41 @@ export class NFSManager
     });
   }
 
-  listShares() {
-    return this.primaryManager.getExports();
+  wrapShareModificationOutsideMixin(
+    share: ShareDefinition<NFSExport>,
+    action: (
+      share: ShareDefinition<NFSExport>
+    ) => ResultAsync<ShareDefinition<NFSExport>, ProcessError | ParsingError>
+  ): ResultAsync<ShareDefinition<NFSExport>, ProcessError | ParsingError> {
+    return this.ensureNFSServiceStaysRunning(() => action(share));
   }
 
-  getShareDefinition(share: NFSExport) {
-    return super.getMountpointOptions({ ...share, type: "nfs" });
+  listShares() {
+    return this.primaryManager.getExports();
   }
 
   addShare(
     nfsExport: ShareDefinition<NFSExport>
   ): ResultAsync<ShareDefinition<NFSExport>, ProcessError | ParsingError> {
-    return this.ensureNFSServiceStaysRunning(() =>
-      super
-        .preAddShare(nfsExport)
-        .andThen((nfsExport) =>
-          ResultAsync.combineWithAllErrors(this.managers.map((m) => m.addExport(nfsExport)))
-            .map(() => nfsExport)
-            .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")))
-        )
-        .andThen((nfsExport) => super.postAddShare(nfsExport))
-    );
+    return ResultAsync.combineWithAllErrors(this.managers.map((m) => m.addExport(nfsExport)))
+      .map(() => nfsExport)
+      .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")));
   }
 
   editShare(
     nfsExport: ShareDefinition<NFSExport>
   ): ResultAsync<ShareDefinition<NFSExport>, ProcessError | ParsingError> {
-    return this.ensureNFSServiceStaysRunning(() =>
-      super
-        .preEditShare(nfsExport)
-        .andThen((nfsExport) =>
-          ResultAsync.combineWithAllErrors(this.managers.map((m) => m.editExport(nfsExport)))
-            .map(() => nfsExport)
-            .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")))
-        )
-        .andThen((nfsExport) => super.postEditShare(nfsExport))
-    );
+    return ResultAsync.combineWithAllErrors(this.managers.map((m) => m.editExport(nfsExport)))
+      .map(() => nfsExport)
+      .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")));
   }
 
   removeShare(
     nfsExport: ShareDefinition<NFSExport>
   ): ResultAsync<ShareDefinition<NFSExport>, ProcessError | ParsingError> {
-    return this.ensureNFSServiceStaysRunning(() =>
-      super
-        .preRemoveShare(nfsExport)
-        .andThen((nfsExport) =>
-          ResultAsync.combineWithAllErrors(this.managers.map((m) => m.removeExport(nfsExport)))
-            .map(() => nfsExport)
-            .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")))
-        )
-        .andThen((nfsExport) => super.postRemoveShare(nfsExport))
-    );
+    return ResultAsync.combineWithAllErrors(this.managers.map((m) => m.removeExport(nfsExport)))
+      .map(() => nfsExport)
+      .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")));
   }
 
   exportConfig(): ResultAsync<string, ProcessError> {
@@ -298,16 +281,16 @@ export class NFSManager
     if (this.managers.length === 1) {
       return okAsync(this);
     }
-    return this.primaryManager
-      .getExports()
-      .andThen((exports) =>
-        this.ensureNFSServiceStaysRunning(() =>
-          ResultAsync.combineWithAllErrors(
-            this.managers.slice(1).map((m) => m.modifyExports((_) => exports))
-          )
-            .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")))
-            .map(() => this)
+    return this.primaryManager.getExports().andThen((exports) =>
+      this.ensureNFSServiceStaysRunning(() =>
+        ResultAsync.combineWithAllErrors(
+          this.managers.slice(1).map((m) => m.modifyExports((_) => exports))
         )
-      );
+          .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")))
+          .map(() => this)
+      )
+    );
   }
 }
+
+export const NFSManager = ShareManagerMixin<NFSExport, typeof _NFSManager>(_NFSManager);

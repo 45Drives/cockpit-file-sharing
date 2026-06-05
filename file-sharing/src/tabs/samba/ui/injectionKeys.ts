@@ -2,6 +2,4 @@ import type { ProcessError, SambaManagerBase } from "@45drives/houston-common-li
 import type { ResultAsync } from "neverthrow";
 import { type InjectionKey } from "vue";
 
-export const sambaManagerInjectionKey = Symbol() as InjectionKey<
-  ResultAsync<SambaManagerBase, ProcessError>
->;
+export const sambaManagerInjectionKey = Symbol() as InjectionKey<SambaManagerBase>;

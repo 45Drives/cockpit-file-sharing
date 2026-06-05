@@ -9,5 +9,9 @@
         "leave-active-class",
         "leave-from-class",
         "leave-to-class"
-    ]
+    ],
+    "npm-intellisense.packageSubfoldersIntellisense": true,
+    "js/ts.implicitProjectConfig.target": "ES6",
+    "js/ts.preferGoToSourceDefinition": true,
+    "js/ts.suggest.completeFunctionCalls": true
 }

@@ -1,29 +1,88 @@
 import {
   SambaShareConfig,
   type ISambaManager,
-  SambaManagerNet as SambaManager,
+  SambaManagerNet as __SambaManager,
+  ProcessError,
+  ParsingError,
+  Server,
 } from "@45drives/houston-common-lib";
 import { executeHookCallbacks, Hooks } from "@/common/hooks";
+import {
+  ShareManagerMixin,
+  type IShareManager,
+  type ShareBase,
+  type ShareDefinition,
+} from "@/common/share-common";
+import type { ResultAsync } from "neverthrow";
 
-export class HookedSambaManager extends SambaManager implements ISambaManager {
-  addShare(share: SambaShareConfig) {
-    return executeHookCallbacks(Hooks.BeforeAddShare, this.server, share)
-      .andThen(() => super.addShare(share))
-      .andThen(() => executeHookCallbacks(Hooks.AfterAddShare, this.server, share))
-      .map(() => share);
+class _SambaManager
+  extends __SambaManager
+  implements ISambaManager, IShareManager<SambaShareConfig>
+{
+  type = "samba" as const;
+
+  constructor(public servers: Server | [Server, ...Server[]]) {
+    super([servers].flat()[0]);
   }
 
-  editShare(share: SambaShareConfig) {
-    return executeHookCallbacks(Hooks.BeforeEditShare, this.server, share)
-      .andThen(() => super.editShare(share))
-      .andThen(() => executeHookCallbacks(Hooks.AfterEditShare, this.server, share))
-      .map(() => share);
+  wrapShareModificationOutsideMixin(
+    share: ShareDefinition<SambaShareConfig>,
+    action: (
+      share: ShareDefinition<SambaShareConfig>
+    ) => ResultAsync<ShareDefinition<SambaShareConfig>, ProcessError | ParsingError>
+  ): ResultAsync<ShareDefinition<SambaShareConfig>, ProcessError | ParsingError> {
+    return action(share);
   }
 
-  removeShare(share: SambaShareConfig) {
-    return executeHookCallbacks(Hooks.BeforeRemoveShare, this.server, share)
-      .andThen(() => super.removeShare(share))
-      .andThen(() => executeHookCallbacks(Hooks.AfterRemoveShare, this.server, share))
-      .map(() => share);
+  listShares() {
+    return super.getShares();
+  }
+
+  addShare(share: ShareDefinition<SambaShareConfig>) {
+    return super.addShare(share) as ResultAsync<
+      ShareDefinition<SambaShareConfig>,
+      ProcessError | ParsingError
+    >;
+  }
+
+  editShare(share: ShareDefinition<SambaShareConfig>) {
+    return super.editShare(share) as ResultAsync<
+      ShareDefinition<SambaShareConfig>,
+      ProcessError | ParsingError
+    >;
+  }
+
+  removeShare(share: ShareDefinition<SambaShareConfig>) {
+    return super.removeShare(share) as ResultAsync<
+      ShareDefinition<SambaShareConfig>,
+      ProcessError | ParsingError
+    >;
   }
 }
+
+export const SambaManager = ShareManagerMixin<SambaShareConfig, typeof _SambaManager>(
+  _SambaManager
+);
+
+// class HookedSambaManager extends _SambaManager implements ISambaManager {
+//   addShare(share: SambaShareConfig) {
+//     return executeHookCallbacks(Hooks.BeforeAddShare, this.server, share)
+//       .andThen(() => super.addShare(share))
+//       .andThen(() => executeHookCallbacks(Hooks.AfterAddShare, this.server, share))
+//       .map(() => share);
+//   }
+
+//   editShare(share: SambaShareConfig) {
+//     return executeHookCallbacks(Hooks.BeforeEditShare, this.server, share)
+//       .andThen(() => super.editShare(share))
+//       .andThen(() => executeHookCallbacks(Hooks.AfterEditShare, this.server, share))
+//       .map(() => share);
+//   }
+
+//   removeShare(share: SambaShareConfig) {
+//     return executeHookCallbacks(Hooks.BeforeRemoveShare, this.server, share)
+//       .andThen(() => super.removeShare(share))
+//       .andThen(() => executeHookCallbacks(Hooks.AfterRemoveShare, this.server, share))
+//       .map(() => share);
+//   }
+// }

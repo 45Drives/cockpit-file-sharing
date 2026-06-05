@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { inject, computed, ref, watchEffect, watch, reactive } from "vue";
-import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
 import { Process, StringToIntCaster } from "@45drives/houston-common-lib";
 import {
   wrapActions,
@@ -84,10 +83,7 @@ const layoutPoolOptions = computed<SelectMenuOption<string | null>[]>(() => [
 
 <template>
   <div class="space-y-content">
-    <ToggleSwitch
-      v-if="!remount || remountManagedByFileSharing"
-      v-model="remount"
-    >
+    <ToggleSwitch v-if="remountManagedByFileSharing" v-model="remount">
       {{ _("Enable Ceph Remount") }}
       <template #tooltip>
         {{

@@ -28,6 +28,7 @@ const props = withDefaults(
     disableStartStop?: boolean;
     disableEnable?: boolean;
     mustStopBeforeEnable?: boolean;
+    polling?: boolean;
   }>(),
   {
     serviceManager: "system",
@@ -36,22 +37,31 @@ const props = withDefaults(
     disableStartStop: false,
     disableEnable: false,
     mustStopBeforeEnable: false,
+    polling: true,
   }
 );
 
-const { running, enabled, refresh, description, getStatus, ready } = useSystemdUnit(
-  props.serviceName,
-  props.serviceManager,
-  props.server,
-  {
+const { running, enabled, refresh, description, getStatus, ready, startPolling, stopPolling } =
+  useSystemdUnit(props.serviceName, props.serviceManager, props.server, {
     mustStopBeforeEnable: props.mustStopBeforeEnable,
-  }
-);
+  });
 
 const emit = defineEmits<{
   "update:running": [value: boolean];
   "update:enabled": [value: boolean];
 }>();
+
+watch(
+  () => props.polling,
+  (polling) => {
+    if (polling) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+  },
+  { immediate: true }
+);
 
 watch(running, (newVal) => emit("update:running", newVal));
 watch(enabled, (newVal) => emit("update:enabled", newVal));
@@ -121,6 +131,7 @@ const fetchStatus = () =>
   getStatus()
     .map((s) => (status.value = s))
     .mapErr(reportError);
+
 const showStatus = ref(false);
 let pollStatusInterval: number | undefined = undefined;
 watch([showStatus, running, enabled], () => {
