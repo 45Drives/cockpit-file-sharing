@@ -1,4 +1,4 @@
-cockpit-file-sharing (4.6.0-0-rc1focal) focal; urgency=medium
+cockpit-file-sharing (4.6.0-0rc1focal) focal; urgency=medium
 
   * Ensure NFS service continues running after removing Ceph remount
   * Add systemd service monitoring and management for NFS and Samba

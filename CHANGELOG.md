@@ -1,4 +1,4 @@
-## Cockpit File Sharing 4.6.0-0-rc1
+## Cockpit File Sharing 4.6.0-0rc1
 
 * Ensure NFS service continues running after removing Ceph remount
 * Add systemd service monitoring and management for NFS and Samba
