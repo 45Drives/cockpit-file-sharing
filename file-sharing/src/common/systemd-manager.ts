@@ -341,6 +341,10 @@ export class SystemdManagerSingleServer implements ISystemdManager {
       .execute(this.systemctlCommand("status", unit.name), false)
       .map((proc) => proc.getStdout().trim());
   }
+
+  unitExists(unit: SystemdUnit): ResultAsync<boolean, ProcessError> {
+    return this.server.execute(this.systemctlCommand("cat", unit.name), false).map((proc) => proc.exitStatus === 0);
+  }
 }
 
 export class SystemdManagerClustered implements ISystemdManager {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, defineProps, nextTick } from "vue";
+import { ref, computed, nextTick } from "vue";
 import type { NFSExport } from "@/tabs/nfs/data-types";
 import {
   CardContainer,
@@ -9,16 +9,19 @@ import {
 } from "@45drives/houston-common-ui";
 import NFSExportEditor from "@/tabs/nfs/ui/NFSExportEditor.vue";
 import { PencilSquareIcon, TrashIcon, PlusIcon } from "@heroicons/vue/20/solid";
+import type { ShareDefinition } from "@/common/share-common";
+import type { NFSManager } from "../nfs-manager";
 
 const _ = cockpit.gettext;
 
 const props = defineProps<{
   nfsExports: NFSExport[];
+  manager: NFSManager;
 }>();
 
 const emit = defineEmits<{
-  (e: "addExport", nfsExport: NFSExport, callback?: () => void): void;
-  (e: "editExport", nfsExport: NFSExport, callback?: () => void): void;
+  (e: "addExport", nfsExport: ShareDefinition<NFSExport>, callback?: () => void): void;
+  (e: "editExport", nfsExport: ShareDefinition<NFSExport>, callback?: () => void): void;
   (e: "removeExport", nfsExport: NFSExport, callback?: () => void): void;
 }>();
 
@@ -36,6 +39,7 @@ const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path)
     <Disclosure noButton v-model:show="showNewExportEditor" v-slot="{ visible }">
       <NFSExportEditor
         v-if="visible"
+        :manager="manager"
         newExport
         :allExportedPaths="allExportedPaths"
         @cancel="showNewExportEditor = false"
@@ -80,13 +84,7 @@ const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path)
                   <span class="sr-only">Edit</span>
                   <PencilSquareIcon class="size-icon icon-default" />
                 </button>
-                <button
-                  @click="
-                    // for fileystem-specific hooks:
-                    setShowEditor(true);
-                    nextTick(() => emit('removeExport', nfsExport));
-                  "
-                >
+                <button @click="emit('removeExport', nfsExport, () => setShowEditor(false))">
                   <span class="sr-only">Delete</span>
                   <TrashIcon class="size-icon icon-danger" />
                 </button>
@@ -100,6 +98,7 @@ const allExportedPaths = computed(() => props.nfsExports.map(({ path }) => path)
                   <Disclosure noButton :show="showEditor" v-slot="{ visible }">
                     <NFSExportEditor
                       v-if="visible"
+                      :manager="manager"
                       :nfsExport="nfsExport"
                       :allExportedPaths="allExportedPaths"
                       class="!shadow-none px-4 sm:px-6 py-5"
