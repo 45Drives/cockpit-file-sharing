@@ -31,10 +31,11 @@ const appVersion = __APP_VERSION__;
 
 const showUserSettings = ref(false);
 
-const showSambaTab = ref(false);
-const showNfsTab = ref(false);
-const showIscsiTab = ref(false);
-const showS3Tab = ref(false);
+const showSambaTab = ref<boolean | undefined>(undefined);
+const showNfsTab = ref<boolean | undefined>(undefined);
+const showIscsiTab = ref<boolean | undefined>(undefined);
+const showS3Tab = ref<boolean | undefined>(undefined);
+
 const sambaConfigured = (): ResultAsync<boolean, never> => {
   return getServer()
     .andThen((server) => server.execute(new BashCommand("command -v net")))
@@ -62,9 +63,7 @@ const s3Configured = (): ResultAsync<boolean, never> => {
       isRustfsAvailable(),
       isGarageHealthy(),
       isCephRgwHealthy(),
-    ]).then(
-      (results) => results.some((r) => r.status === "fulfilled" && r.value === true)
-    ),
+    ]).then((results) => results.some((r) => r.status === "fulfilled" && r.value === true)),
     () => null
   ).orElse((_) => ok(false));
 };
@@ -209,15 +208,19 @@ const visibleTabs = computed<HoustonAppTabEntry[]>(() => [
         },
       ]
     : []),
-    ...(showS3Tab.value
+  ...(showS3Tab.value
     ? [
         {
           label: "S3",
           component: S3ManagementMain,
         },
       ]
-    : [])
+    : []),
 ]);
+
+const loading = computed<boolean>(() =>
+  [showSambaTab, showNfsTab, showIscsiTab, showS3Tab].some((s) => s.value === undefined)
+);
 </script>
 
 <template>
@@ -230,16 +233,23 @@ const visibleTabs = computed<HoustonAppTabEntry[]>(() => [
   >
     <template v-if="visibleTabs.length === 0">
       <CenteredCardColumn>
-        <CardContainer>
-          <template #header>
-            {{ _("No tabs to be displayed") }}
-          </template>
-          {{
-            _(
-              'Make sure at least one of samba, nfs, or scst are installed, or set the tab visibility to "Always Show" in the bottom-right settings menu.'
-            )
-          }}
-        </CardContainer>
+        <template v-if="loading">
+          <CardContainer>
+            {{ _("Loading...") }}
+          </CardContainer>
+        </template>
+        <template v-else>
+          <CardContainer>
+            <template #header>
+              {{ _("No tabs to be displayed") }}
+            </template>
+            {{
+              _(
+                'Make sure at least one of samba, nfs, or scst are installed, or set the tab visibility to "Always Show" in the bottom-right settings menu.'
+              )
+            }}
+          </CardContainer>
+        </template>
       </CenteredCardColumn>
     </template>
     <template #bottomRightButtonIcons>
