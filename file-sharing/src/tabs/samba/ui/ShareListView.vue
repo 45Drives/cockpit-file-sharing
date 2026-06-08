@@ -90,13 +90,7 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
                   <span class="sr-only">Edit</span>
                   <PencilSquareIcon class="size-icon icon-default" />
                 </button>
-                <button
-                  @click="
-                    // for fileystem-specific hooks:
-                    setShowEditor(true);
-                    nextTick(() => emit('removeShare', share));
-                  "
-                >
+                <button @click="emit('removeShare', share)">
                   <span class="sr-only">Delete</span>
                   <TrashIcon class="size-icon icon-danger" />
                 </button>

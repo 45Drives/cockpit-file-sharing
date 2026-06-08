@@ -39,24 +39,30 @@ class _SambaManager
   }
 
   addShare(share: ShareDefinition<SambaShareConfig>) {
-    return super.addShare(share) as ResultAsync<
+    const { mountpointOptions, type, ...sambaShare } = share;
+    const result = super.addShare(sambaShare) as ResultAsync<
       ShareDefinition<SambaShareConfig>,
       ProcessError | ParsingError
     >;
+    return result.map((share) => ({ ...share, mountpointOptions, type }));
   }
 
   editShare(share: ShareDefinition<SambaShareConfig>) {
-    return super.editShare(share) as ResultAsync<
+    const { mountpointOptions, type, ...sambaShare } = share;
+    const result = super.editShare(sambaShare) as ResultAsync<
       ShareDefinition<SambaShareConfig>,
       ProcessError | ParsingError
     >;
+    return result.map((share) => ({ ...share, mountpointOptions, type }));
   }
 
   removeShare(share: ShareDefinition<SambaShareConfig>) {
-    return super.removeShare(share) as ResultAsync<
+    const { mountpointOptions, type, ...sambaShare } = share;
+    const result = super.removeShare(sambaShare) as ResultAsync<
       ShareDefinition<SambaShareConfig>,
       ProcessError | ParsingError
     >;
+    return result.map((share) => ({ ...share, mountpointOptions, type }));
   }
 }
 

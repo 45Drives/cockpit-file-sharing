@@ -22,6 +22,8 @@ import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOpt
 import type { ShareDefinition } from "@/common/share-common";
 import type { SambaManager } from "../samba-manager";
 import { okAsync } from "neverthrow";
+import CephOptionsView from "@/common/ui/CephOptions.vue";
+import { isCephOptions } from "@/common/mountpoint-options";
 
 const _ = cockpit.gettext;
 const _N = cockpit.ngettext;
@@ -187,6 +189,26 @@ mutuallyExclusive(
     },
   })
 );
+
+const refreshMountpointOptions = () => {
+  if (!tempShareConfig.value) {
+    return;
+  }
+  props.manager.getMountpointOptions(tempShareConfig.value).map(({ mountpointOptions }) => {
+    if (props.newShare && isCephOptions(mountpointOptions)) {
+      // For new shares with ceph fs type, default to remount=true since that's the recommended configuration for ceph shares.
+      mountpointOptions.remount = true;
+    }
+    tempShareConfig.value!.mountpointOptions = mountpointOptions;
+  });
+};
+
+watch(
+  () => tempShareConfig.value?.path,
+  () => {
+    refreshMountpointOptions();
+  }
+);
 </script>
 
 <template>
@@ -217,6 +239,19 @@ mutuallyExclusive(
         :validationScope
         :newShare="newShare ?? false"
         :fsType="tempShareConfig.mountpointOptions.fsType"
+        @createDirectory="() => refreshMountpointOptions()"
+      />
+      <CephOptionsView
+        v-if="isCephOptions(tempShareConfig.mountpointOptions)"
+        :path="tempShareConfig.path"
+        :newShare="newShare"
+        v-model:remount="tempShareConfig.mountpointOptions.remount"
+        v-model:quotaBytes="tempShareConfig.mountpointOptions.quotaBytes"
+        v-model:layoutPool="tempShareConfig.mountpointOptions.layoutPool"
+        :layoutPools="tempShareConfig.mountpointOptions.possibleLayoutPools"
+        :remountManagedByFileSharing="
+          tempShareConfig.mountpointOptions.remountManagedByFileSharing
+        "
       />
 
       <ToggleSwitchGroup>
