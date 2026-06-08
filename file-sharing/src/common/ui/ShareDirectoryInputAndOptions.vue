@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect, type Ref, computed } from "vue";
+import { ref, computed } from "vue";
 import {
   InputLabelWrapper,
   wrapActions,
@@ -17,17 +17,14 @@ import {
   computedResult,
 } from "@45drives/houston-common-ui";
 import {
-  server,
+  server as defaultServer,
   Directory,
-  ProcessError,
   Server,
   FileSystemNode,
   type CommandOptions,
-  Path,
   Command,
 } from "@45drives/houston-common-lib";
 import { ResultAsync, ok, errAsync, err, okAsync } from "neverthrow";
-import { useMountpointInfo } from "@/common/useMountpointInfo";
 import { useUserSettings } from "@/common/user-settings";
 
 const _ = cockpit.gettext;
@@ -43,7 +40,7 @@ const props = withDefaults(
     server?: Server;
     fsType: string;
   }>(),
-  { server: () => server }
+  { server: () => defaultServer }
 );
 
 const serverResult = computed(() => okAsync(props.server));
@@ -140,7 +137,7 @@ const path = defineModel<string>("path", { required: true });
 
 const [subdirSuggestions] = computedResult<string[]>(() => {
   const pathFilter = `${path.value}*`;
-  const fsNode = new FileSystemNode(server, path.value);
+  const fsNode = new FileSystemNode(props.server, path.value);
   if (!fsNode.isAbsolute()) {
     return okAsync([]);
   }
@@ -159,7 +156,7 @@ const { validationResult: pathValidationResult } = props.validationScope.useVali
     return validationError(_("Share path is required."));
   }
 
-  const fsNode = new FileSystemNode(server, path.value);
+  const fsNode = new FileSystemNode(props.server, path.value);
 
   const commandOptions: CommandOptions = { superuser: "try" };
 
@@ -217,7 +214,7 @@ const showPermissionsEditor = ref(false);
 const modeAndPermissionsEditorRef = ref<InstanceType<typeof ModeAndPermissionsEditor> | null>(null);
 
 const createDirectory = () =>
-  new Directory(server, path.value)
+  new Directory(props.server, path.value)
     .create(true, { superuser: "try" })
     .map(() => reportSuccess(`Created directory '${path.value}'.`))
     .map(() => emit("createDirectory", path.value));
@@ -225,7 +222,7 @@ const createDirectory = () =>
 const createZfsDataset = () =>
   props.fsType !== "zfs"
     ? errAsync(new Error(`Not a ZFS filesystem: ${path.value}`))
-    : new FileSystemNode(server, path.value)
+    : new FileSystemNode(props.server, path.value)
         .resolve(false)
         .andThen((path) => {
           if (!path.isAbsolute()) {
@@ -248,7 +245,7 @@ const createZfsDataset = () =>
           });
         })
         .andThen((dataset) =>
-          server.execute(new Command(["zfs", "create", "-p", dataset], { superuser: "try" }))
+          props.server.execute(new Command(["zfs", "create", "-p", dataset], { superuser: "try" }))
         )
         .map(() => reportSuccess(`Created ZFS dataset '${path.value}'.`))
         .map(() => emit("createDirectory", path.value));
