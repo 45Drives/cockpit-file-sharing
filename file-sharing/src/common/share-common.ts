@@ -66,7 +66,8 @@ export function ShareManagerMixin<T extends ShareBase, TBase extends Constructor
       share: Omit<ShareDefinition<T>, "mountpointOptions">
     ): ResultAsync<ShareDefinition<T>, ProcessError | ParsingError> {
       const mainServer = Array.isArray(this.servers) ? this.servers[0] : this.servers;
-      const fsNode = new FileSystemNode(mainServer, share.path);
+      const path = share.path;
+      const fsNode = new FileSystemNode(mainServer, path);
       if (!fsNode.isAbsolute()) {
         return okAsync({ ...share, mountpointOptions: { fsType: "" } } as ShareDefinition<T>);
       }
@@ -82,15 +83,13 @@ export function ShareManagerMixin<T extends ShareBase, TBase extends Constructor
               const mgr = Array.isArray(this.servers)
                 ? getCephOptionManager(this.servers, client)
                 : getCephOptionManager(this.servers, client);
-              const layoutPool = mgr.getLayoutPool(share.path).map((p) => p.orNull());
+              const layoutPool = mgr.getLayoutPool(path).map((p) => p.orNull());
               const possibleLayoutPools =
                 this._cephLayoutPoolCache[client] ??
                 (this._cephLayoutPoolCache[client] = mgr.getLayoutPools());
-              const quotaBytes = mgr.getQuotaMaxBytes(share.path).map((q) => q.orNull());
-              const remount = mgr.pathIsMountpoint(share.path);
-              const remountManagedByFileSharing = mgr.pathMountpointManagedByFileSharing(
-                share.path
-              );
+              const quotaBytes = mgr.getQuotaMaxBytes(path).map((q) => q.orNull());
+              const remount = mgr.pathIsMountpoint(path);
+              const remountManagedByFileSharing = mgr.pathMountpointManagedByFileSharing(path);
               return ResultAsync.combineWithAllErrors([
                 layoutPool,
                 possibleLayoutPools,
