@@ -30,6 +30,15 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el9 install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Mon Jun 08 2026 Joshua Boudreau <jboudreau@45drives.com> 4.6.0-0rc2
+- Ensure NFS service continues running after removing Ceph remount
+- Add systemd service monitoring and management for NFS and Samba
+- Samba: Fix net command option injection from advanced options
+- Improve Ceph option handling
+- NFS: Ensure exports files are in sync across PCS cluster nodes with option to merge
+  when out-of-sync
+- Fix tooltip width
+- Support toggling dark mode on Cockpit version < 281
 * Fri Jun 05 2026 Joshua Boudreau <jboudreau@45drives.com> 4.6.0-0rc1
 - Ensure NFS service continues running after removing Ceph remount
 - Add systemd service monitoring and management for NFS and Samba
