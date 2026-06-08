@@ -1,5 +1,5 @@
 import Prompt from "./Prompt.vue";
-import { h, ref, render } from "vue";
+import { h, render } from "vue";
 import { CancelledByUser } from "@45drives/houston-common-lib";
 import { ResultAsync } from "neverthrow";
 
@@ -30,10 +30,10 @@ export const prompt = async <
   props: PromptProps<InputType, TChoices>
 ): Promise<PromptReturnType<InputType, TChoices>> => {
   await pending;
-  let resolvePending: () => void;
+  let resolvePending!: () => void;
   pending = new Promise<void>((resolve) => {
     resolvePending = resolve;
-  })
+  });
   return await new Promise<PromptReturnType<InputType, TChoices>>((resolve, reject) => {
     const container = document.createElement("div");
     (document.getElementById("app") ?? document.body).appendChild(container);

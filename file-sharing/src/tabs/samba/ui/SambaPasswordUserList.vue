@@ -56,7 +56,7 @@
 <script setup lang="ts">
 import { Server, type LocalUser, server } from "@45drives/houston-common-lib";
 import { Table } from "@45drives/houston-common-ui";
-import { computed, ref, watch, inject } from "vue";
+import { computed, ref, watch } from "vue";
 import SambaPasswordButtons from "@/tabs/samba/ui/SambaPasswordButtons.vue";
 import { useUserSettings } from "@/common/user-settings";
 import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/vue/20/solid";

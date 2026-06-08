@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed } from "vue";
 import type { NFSExport } from "@/tabs/nfs/data-types";
 import {
   CardContainer,

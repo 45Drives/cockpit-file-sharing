@@ -18,7 +18,7 @@ import {
   Table,
   type ValidationResult,
 } from "@45drives/houston-common-ui";
-import { computed, ref, toRaw, watch } from "vue";
+import { toRaw, watch } from "vue";
 import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
 import { PlusIcon, TrashIcon } from "@heroicons/vue/20/solid";
 import { getServer, FileSystemNode } from "@45drives/houston-common-lib";
@@ -245,10 +245,6 @@ watch(
     refreshMountpointOptions();
   }
 );
-
-const shareDirectoryInputAndOptionsRef = ref<InstanceType<
-  typeof ShareDirectoryInputAndOptions
-> | null>(null);
 </script>
 
 <template>
@@ -261,7 +257,6 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
           :disabled="!newExport"
           :validationScope
           @change="() => resolvePath()"
-          ref="shareDirectoryInputAndOptionsRef"
           :newShare="newExport ?? false"
           :fsType="tempExportConfig.mountpointOptions.fsType"
           @createDirectory="() => refreshMountpointOptions()"
@@ -308,7 +303,7 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
           {{ _("Clients") }}
         </template>
         <template #tooltip>
-          {{ clientsTooltip }}
+          <span :innerHTML="clientsTooltip"></span>
         </template>
         <Table
           :emptyText="_('No shares. Click \'+\' to add one.')"
