@@ -62,8 +62,8 @@ sudo apt install cockpit-file-sharing
 ### Direct from .deb
 Installing this way may work for other versions of Ubuntu and Debian, but it is unsupported. You won't get automatic updates this way.
 ```bash
-curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.6.0/cockpit-file-sharing_4.6.0-0rc2jammy_all.deb
-sudo apt install ./cockpit-file-sharing_4.6.0-0rc2jammy_all.deb
+curl -LO https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.6.0/cockpit-file-sharing_4.6.0-1jammy_all.deb
+sudo apt install ./cockpit-file-sharing_4.6.0-1jammy_all.deb
 ```
 ## Rocky 8, Rocky 9
 ### From 45Drives Repo (Recommended)
@@ -75,7 +75,7 @@ sudo dnf install cockpit-file-sharing
 Installing this way may work for other versions of Rocky/Centos/RHEL/Fedora/etc, but it is unsupported. You won't get automatic updates this way.
 ```bash
 # dnf or yum
-sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.6.0/cockpit-file-sharing-4.6.0-0rc2.el9.noarch.rpm
+sudo dnf install https://github.com/45Drives/cockpit-file-sharing/releases/download/v4.6.0/cockpit-file-sharing-4.6.0-1.el9.noarch.rpm
 ```
 ## Generic Installation
 1. Install Dependencies
