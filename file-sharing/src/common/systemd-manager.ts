@@ -23,8 +23,10 @@ export type SystemdUnitType =
   | "slice"
   | "scope";
 
+export type SystemdUnitName<T extends SystemdUnitType = SystemdUnitType> = `${string}.${T}`;
+
 export type SystemdUnit<T extends SystemdUnitType = SystemdUnitType> = {
-  name: `${string}.${T}`;
+  name: SystemdUnitName<T>;
 };
 
 export function isMount(unit: SystemdUnit): unit is SystemdUnit<"mount"> {
@@ -109,11 +111,17 @@ export interface ISystemdManager {
   unescape(text: string, opts?: { path?: boolean }): ResultAsync<string, ProcessError>;
   pathToMountUnitName(path: string): ResultAsync<SystemdUnit<"mount">["name"], ProcessError>;
   mountUnitNameToPath(unitName: SystemdUnit<"mount">["name"]): ResultAsync<string, ProcessError>;
+  daemonReload(): ResultAsync<void, ProcessError>;
+  getUnitDescription(unit: SystemdUnit): ResultAsync<string, ProcessError>;
+  getStatus(
+    unit: SystemdUnit
+  ): ResultAsync<string | { host: string; status: string }[], ProcessError>;
 }
 
 export class SystemdManagerSingleServer implements ISystemdManager {
   private unitFileDirectory: string;
   private iniParser: SyntaxParser<IniConfigData<string | [string, ...string[]]>>;
+  readonly host?: string;
 
   constructor(
     private server: Server,
@@ -121,6 +129,7 @@ export class SystemdManagerSingleServer implements ISystemdManager {
   ) {
     this.unitFileDirectory = `/etc/systemd/${serviceManager}`;
     this.iniParser = IniSyntax({ duplicateKey: "append", paramIndent: "" });
+    this.host = server.host;
   }
 
   private systemctlCommand(command: string, ...args: string[]) {
@@ -206,7 +215,7 @@ export class SystemdManagerSingleServer implements ISystemdManager {
       .andThen((unit) => this.getUnitFilePath(unit).map((path) => new File(this.server, path)))
       .andThen((unitFile) => unitFile.assertIsFile())
       .andThen((unitFile) => unitFile.remove({ superuser: "try" }))
-      .andThen(() => this.server.execute(this.systemctlCommand("daemon-reload")))
+      .andThen(() => this.daemonReload())
       .map(() => unit);
   }
 
@@ -282,7 +291,7 @@ export class SystemdManagerSingleServer implements ISystemdManager {
                 new File(this.server, filePath).write(settingsText, { superuser: "try" })
               )
           )
-          .andThen(() => this.server.execute(this.systemctlCommand("daemon-reload")))
+          .andThen(() => this.daemonReload())
           .map(() => unit);
   }
 
@@ -317,6 +326,24 @@ export class SystemdManagerSingleServer implements ISystemdManager {
   }
   mountUnitNameToPath(unitName: SystemdUnit<"mount">["name"]): ResultAsync<string, ProcessError> {
     return this.unescape(unitName.replace(/\.mount$/, ""), { path: true });
+  }
+
+  daemonReload(): ResultAsync<void, ProcessError> {
+    return this.server.execute(this.systemctlCommand("daemon-reload"), true).map(() => undefined);
+  }
+
+  getUnitDescription(unit: SystemdUnit): ResultAsync<string, ProcessError> {
+    return this.getUnitProperty(unit, "Description");
+  }
+
+  getStatus(unit: SystemdUnit): ResultAsync<string, ProcessError> {
+    return this.server
+      .execute(this.systemctlCommand("status", unit.name), false)
+      .map((proc) => proc.getStdout().trim());
+  }
+
+  unitExists(unit: SystemdUnit): ResultAsync<boolean, ProcessError> {
+    return this.server.execute(this.systemctlCommand("cat", unit.name), false).map((proc) => proc.exitStatus === 0);
   }
 }
 
@@ -413,6 +440,25 @@ export class SystemdManagerClustered implements ISystemdManager {
 
   mountUnitNameToPath(...args: Parameters<ISystemdManager["mountUnitNameToPath"]>) {
     return this.getterManager.mountUnitNameToPath(...args);
+  }
+
+  daemonReload() {
+    return ResultAsync.combine(this.managers.map((m) => m.daemonReload())).map(() => undefined);
+  }
+
+  getUnitDescription(unit: SystemdUnit): ResultAsync<string, ProcessError> {
+    return this.getterManager.getUnitDescription(unit);
+  }
+
+  getStatus(unit: SystemdUnit): ResultAsync<{ host: string; status: string }[], ProcessError> {
+    return ResultAsync.combine(
+      this.managers.map((m) => m.getStatus(unit).orElse((err) => ok(err.toString())))
+    ).map((statuses) =>
+      statuses.map((status, index) => ({
+        host: this.managers[index]?.host ?? "localhost",
+        status,
+      }))
+    );
   }
 }
 

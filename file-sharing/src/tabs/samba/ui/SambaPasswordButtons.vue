@@ -31,7 +31,7 @@ import {
   DisclosureController,
 } from "@45drives/houston-common-ui";
 import { computed, inject } from "vue";
-import { errAsync, okAsync } from "neverthrow";
+import { err, errAsync, ok, okAsync } from "neverthrow";
 import SambaPasswordForm from "@/tabs/samba/ui/SambaPasswordForm.vue";
 import { sambaManagerInjectionKey } from "@/tabs/samba/ui/injectionKeys";
 
@@ -45,7 +45,7 @@ const [smbpasswdIsSet, checkSmbpasswdIsSet] = computedResult<boolean>(() => {
   if (!user.value?.login) {
     return okAsync(false);
   }
-  return sambaManager?.andThen((sm) => sm.userHasPassword(user.value.login)) ?? okAsync(false);
+  return sambaManager?.userHasPassword(user.value.login) ?? okAsync(false);
 }, false);
 
 const setSmbpasswd = wrapAction((password: string) => {
@@ -58,7 +58,7 @@ const setSmbpasswd = wrapAction((password: string) => {
   const login = user.value.login;
   return (
     sambaManager
-      .map((sm) => sm.setUserPassword(login, password))
+      .setUserPassword(login, password)
       .map(() => {
         checkSmbpasswdIsSet();
         pushNotification(
@@ -86,7 +86,7 @@ const removeSmbpasswd = wrapAction(() => {
     body: "They will no longer be able to access Samba shares.",
     dangerous: true,
   })
-    .andThen(() => sambaManager ?? errAsync(new Error("SambaManager not provided!")))
+    .andThen(() => (sambaManager ? ok(sambaManager) : err(new Error("SambaManager not provided!"))))
     .andThen((sm) => sm.removeUserPassword(login))
     .map(() => {
       checkSmbpasswdIsSet();

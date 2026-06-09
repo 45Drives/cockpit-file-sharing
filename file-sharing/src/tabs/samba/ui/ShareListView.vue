@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, defineProps, nextTick } from "vue";
+import { ref, computed, nextTick } from "vue";
 import {
   CardContainer,
   Disclosure,
@@ -10,16 +10,19 @@ import { PlusIcon } from "@heroicons/vue/20/solid";
 import ShareEditor from "@/tabs/samba/ui/ShareEditor.vue";
 import { PencilSquareIcon, TrashIcon } from "@heroicons/vue/20/solid";
 import { SambaShareConfig } from "@45drives/houston-common-lib";
+import type { ShareDefinition } from "@/common/share-common";
+import type { SambaManager } from "../samba-manager";
 
 const _ = cockpit.gettext;
 
 const props = defineProps<{
   shares: SambaShareConfig[];
+  manager: InstanceType<typeof SambaManager>;
 }>();
 
 const emit = defineEmits<{
-  (e: "addShare", share: SambaShareConfig, callback?: () => void): void;
-  (e: "editShare", share: SambaShareConfig, callback?: () => void): void;
+  (e: "addShare", share: ShareDefinition<SambaShareConfig>, callback?: () => void): void;
+  (e: "editShare", share: ShareDefinition<SambaShareConfig>, callback?: () => void): void;
   (e: "removeShare", share: SambaShareConfig, callback?: () => void): void;
 }>();
 
@@ -42,6 +45,7 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
         @cancel="showNewShareEditor = false"
         @apply="(s) => emit('addShare', s, () => (showNewShareEditor = false))"
         class="!shadow-none !divide-y-0 pb-5 pt-5 px-4 sm:!pt-0 sm:!px-0"
+        :manager="manager"
       />
     </Disclosure>
 
@@ -86,13 +90,7 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
                   <span class="sr-only">Edit</span>
                   <PencilSquareIcon class="size-icon icon-default" />
                 </button>
-                <button
-                  @click="
-                    // for fileystem-specific hooks:
-                    setShowEditor(true);
-                    nextTick(() => emit('removeShare', share));
-                  "
-                >
+                <button @click="emit('removeShare', share)">
                   <span class="sr-only">Delete</span>
                   <TrashIcon class="size-icon icon-danger" />
                 </button>
@@ -111,6 +109,7 @@ const shareNames = computed(() => props.shares.map((s) => s.name));
                       class="!shadow-none px-4 sm:px-6 py-5"
                       @cancel="setShowEditor(false)"
                       @apply="(share) => emit('editShare', share, () => setShowEditor(false))"
+                      :manager="manager"
                     />
                   </Disclosure>
                 </div>

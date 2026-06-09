@@ -6,29 +6,34 @@ import {
   computedResult,
   reportSuccess,
   assertConfirm,
+  pushNotification,
+  Notification,
 } from "@45drives/houston-common-ui";
-import { Upload, /* Download, */ getServerCluster, server, Command } from "@45drives/houston-common-lib";
-import { computed, provide, ref } from "vue";
-import { serverClusterInjectionKey, cephClientNameInjectionKey } from "@/common/injectionKeys";
+import { Upload, getServerCluster, server, Command } from "@45drives/houston-common-lib";
+import { onUnmounted, ref, watch } from "vue";
 
 import { useUserSettings } from "@/common/user-settings";
-import { getNFSManager } from "@/tabs/nfs/nfs-manager";
+import { NFSManager } from "@/tabs/nfs/nfs-manager";
 import type { NFSExport } from "@/tabs/nfs/data-types";
 
 import NFSExportListView from "@/tabs/nfs/ui/NFSExportListView.vue";
+
+import SystemdServiceCard from "@/common/ui/SystemdServiceCard.vue";
+import type { ShareDefinition } from "@/common/share-common";
+import { okAsync, ResultAsync } from "neverthrow";
+
+import { promptResult } from "@/common/prompt";
 
 const _ = cockpit.gettext;
 
 const userSettings = useUserSettings();
 
 const cluster = getServerCluster("pcs");
-provide(serverClusterInjectionKey, cluster);
-const cephClientName = ref<`client.${string}`>("client.nfs");
-provide(cephClientNameInjectionKey, cephClientName);
+const [clusterRef] = computedResult(() => cluster);
 
-const nfsManager = computed(() => {
+const [nfsManager] = computedResult(() => {
   const exportsPath = userSettings.value.nfs.confPath;
-  return cluster.map((cluster) => getNFSManager(cluster, exportsPath));
+  return cluster.map((cluster) => new NFSManager(cluster, exportsPath));
 });
 
 const exportsSortPredicate = (a: NFSExport, b: NFSExport) =>
@@ -36,68 +41,139 @@ const exportsSortPredicate = (a: NFSExport, b: NFSExport) =>
 
 const [nfsExports, refetchNFSExports] = computedResult<NFSExport[]>(
   () =>
-    nfsManager.value
-      .andThen((m) => m.getExports())
-      .map((exports) => exports.sort(exportsSortPredicate)),
+    nfsManager.value?.listShares().map((exports) => exports.sort(exportsSortPredicate)) ??
+    okAsync([]),
   []
 );
 
-const addExport = (nfsExport: NFSExport) =>
-  nfsManager.value
-    .andThen((m) => m.addExport(nfsExport))
-    .andThen(() => refetchNFSExports())
-    .map(() => reportSuccess(_("Successfully added export for") + ` ${nfsExport.path}`));
+const pollSystemdService = ref(true);
 
-const editExport = (nfsExport: NFSExport) =>
-  nfsManager.value
-    .andThen((m) => m.editExport(nfsExport))
-    .andThen(() => refetchNFSExports())
-    .map(() => reportSuccess(_("Successfully edited export for") + ` ${nfsExport.path}`));
+const pauseSystemdServicePolling = <TArgs, TResult, TErr>(
+  action: (...args: TArgs[]) => ResultAsync<TResult, TErr>
+) => {
+  return (...args: TArgs[]) => {
+    pollSystemdService.value = false;
+    return action(...args)
+      .map((r) => {
+        pollSystemdService.value = true;
+        return r;
+      })
+      .mapErr((e) => {
+        pollSystemdService.value = true;
+        return e;
+      });
+  };
+};
 
-const removeExport = (nfsExport: NFSExport) =>
-  assertConfirm({
+const addExport = (nfsExport: ShareDefinition<NFSExport>) =>
+  nfsManager.value
+    ?.addShare(nfsExport)
+    .map(() => reportSuccess(_("Successfully added export for") + ` ${nfsExport.path}`)) ??
+  okAsync(undefined);
+
+const editExport = (nfsExport: ShareDefinition<NFSExport>) => {
+  const mgr = nfsManager.value;
+  if (!mgr) {
+    return okAsync(undefined);
+  }
+  return pauseSystemdServicePolling(() => mgr.editShare(nfsExport))().map(() =>
+    reportSuccess(_("Successfully edited export for") + ` ${nfsExport.path}`)
+  );
+};
+
+const removeExport = (nfsExport: NFSExport) => {
+  const mgr = nfsManager.value;
+  if (!mgr) {
+    return okAsync(undefined);
+  }
+  return assertConfirm({
     header: _("Permanently delete export for") + ` ${nfsExport.path}?`,
-    body: _("This cannot be undone.\nThis only removes the export definition, no files or folders will be deleted."),
+    body: _(
+      "This cannot be undone.\nThis only removes the export definition, no files or folders will be deleted."
+    ),
     dangerous: true,
   })
-    .andThen(() => nfsManager.value)
-    .andThen((m) => m.removeExport(nfsExport))
-    .andThen(() => refetchNFSExports())
+    .andThen(() => mgr.getShareDefinition(nfsExport))
+    .andThen(
+      pauseSystemdServicePolling((nfsExport) => mgr.removeShare(nfsExport) ?? okAsync(nfsExport))
+    )
     .map(() => reportSuccess(_("Successfully removed export for") + ` ${nfsExport.path}`));
+};
 
 const exportConfig = () =>
   nfsManager.value
-    .andThen((m) => m.exportConfig())
-    .map((config) => 
+    ?.exportConfig()
+    .map((config) =>
       server.downloadCommandOutput(
-        new Command(['echo', config]),
+        new Command(["echo", config]),
         `cockpit-file-sharing_nfs_exported_${
-          new Date().toISOString().replace(/:/g, "-").replace(/T/, "_").split('.')[0]
+          new Date().toISOString().replace(/:/g, "-").replace(/T/, "_").split(".")[0]
         }.exports`
       )
-    );
-    // .map((config) =>
-    //   Download.text(
-    //     config,
-    //     `cockpit-file-sharing_nfs_exported_${new Date()
-    //       .toISOString()
-    //       .replace(/:/g, "-")
-    //       .replace(/T/, "_")}.exports`
-    //   )
-    // );
+    ) ?? okAsync(undefined);
 
-const importConfig = () =>
-  assertConfirm({
+const importConfig = () => {
+  const mgr = nfsManager.value;
+  if (!mgr) {
+    return okAsync(undefined);
+  }
+  return assertConfirm({
     header: _("Overwrite current configuration?"),
     body: _("This cannot be undone. You should export a copy of your config first."),
     dangerous: true,
   })
     .andThen(() => Upload.text(".exports"))
-    .andThen((newConfigContents) =>
-      nfsManager.value.andThen((m) => m.importConfig(newConfigContents))
-    )
-    .andThen(() => refetchNFSExports())
+    .andThen((newConfigContents) => mgr.importConfig(newConfigContents))
     .map(() => reportSuccess(_("Imported configuration")));
+};
+
+const checkIfClusterConfigInSync = () => {
+  const mgr = nfsManager.value;
+  if (!mgr) {
+    return okAsync(undefined);
+  }
+  return mgr.clusterConfigInSync().map((inSync) => {
+    if (!inSync) {
+      const notif = new Notification(
+        _("Cluster out of sync"),
+        _("NFS configuration is not in sync across cluster nodes"),
+        "error",
+        "never"
+      );
+      notif.addAction(
+        _("Sync now"),
+        async () => {
+          await actions.syncClusterConfig();
+          actions.checkIfClusterConfigInSync();
+        },
+        true
+      );
+      pushNotification(notif);
+    }
+    return inSync;
+  });
+};
+
+const syncClusterConfig = () => {
+  const mgr = nfsManager.value;
+  if (!mgr) {
+    return okAsync(undefined);
+  }
+  return promptResult({
+    type: "radio",
+    choices: {
+      [_("Merge")]: () => mgr.mergeClusterConfigs(),
+      [_("Overwrite with current")]: () => mgr.overwriteClusterConfigs(),
+    },
+    headerText: _("Sync NFS configuration across cluster?"),
+    bodyText: _(
+      "This will attempt to merge the NFS exports configurations across all cluster nodes."
+    ),
+    cancelable: true,
+  })
+    .andThen((result) => result())
+    .map(() => reportSuccess(_("Sync complete")));
+};
 
 const actions = wrapActions({
   refetchNFSExports,
@@ -106,13 +182,36 @@ const actions = wrapActions({
   removeExport,
   exportConfig,
   importConfig,
+  checkIfClusterConfigInSync,
+  syncClusterConfig,
 });
+
+let watchHandle: ReturnType<InstanceType<typeof NFSManager>["onExportsFileChanged"]> | undefined =
+  undefined;
+onUnmounted(() => {
+  watchHandle?.remove();
+  watchHandle = undefined;
+});
+watch(
+  nfsManager,
+  (m) => {
+    if (m === undefined) {
+      return;
+    }
+    watchHandle?.remove();
+    watchHandle = m.onExportsFileChanged(refetchNFSExports);
+    actions.checkIfClusterConfigInSync();
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
   <CenteredCardColumn>
     <NFSExportListView
+      v-if="nfsManager"
       :nfsExports="nfsExports"
+      :manager="nfsManager"
       @addExport="(newConf, callback) => actions.addExport(newConf).map(() => callback?.())"
       @editExport="(newConf, callback) => actions.editExport(newConf).map(() => callback?.())"
       @removeExport="
@@ -132,5 +231,14 @@ const actions = wrapActions({
         </button>
       </div>
     </CardContainer>
+    <SystemdServiceCard
+      v-if="clusterRef"
+      serviceName="nfs-server.service"
+      serviceManager="system"
+      :server="clusterRef"
+      warnIfStopped
+      :name="_('NFS Service')"
+      :polling="pollSystemdService"
+    />
   </CenteredCardColumn>
 </template>

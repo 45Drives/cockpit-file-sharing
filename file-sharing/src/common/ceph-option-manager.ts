@@ -63,10 +63,15 @@ export class CephOptionManagerSingleServer implements ICephOptionManager {
   }
 
   pathMountpointManagedByFileSharing(path: string) {
-    return this.getResolvedNode(path)
-      .andThen((node) => this.getMountUnit(node))
-      .andThen((unit) => this.systemdManager.getSettings(unit))
-      .map((mountSettings) => mountSettings.Unit?.Description === SYSTEMD_MOUNT_DESCRIPTION);
+    return this.pathIsMountpoint(path).andThen((isMountpoint) => {
+      if (!isMountpoint) {
+        return ok(true);
+      }
+      return this.getResolvedNode(path)
+        .andThen((node) => this.getMountUnit(node))
+        .andThen((unit) => this.systemdManager.getSettings(unit))
+        .map((mountSettings) => mountSettings.Unit?.Description === SYSTEMD_MOUNT_DESCRIPTION);
+    });
   }
 
   private enableRemount(pathNode: FileSystemNode) {
@@ -160,8 +165,17 @@ export class CephOptionManagerSingleServer implements ICephOptionManager {
   removeRemount(path: string): ResultAsync<this, ProcessError | ParsingError> {
     return this.getResolvedNode(path)
       .andThen((node) => this.getMountUnit(node))
-      .andThen((unit) => this.systemdManager.disable(unit, "now"))
-      .andThen((unit) => this.systemdManager.removeUnit(unit))
+      .andThen((unit) =>
+        this.systemdManager
+          .unitExists(unit)
+          .andThen((exists) =>
+            exists
+              ? this.systemdManager
+                  .disable(unit, "now")
+                  .andThen((unit) => this.systemdManager.removeUnit(unit))
+              : ok(unit)
+          )
+      )
       .map(() => this);
   }
 

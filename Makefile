@@ -17,7 +17,7 @@ PLUGIN_SRCS=file-sharing
 
 # For installing to a remote machine for testing with `make install-remote`
 # REMOTE_TEST_HOST=192.168.206.100
-REMOTE_TEST_HOST=192.168.100.1
+REMOTE_TEST_HOST=192.168.222.106
 REMOTE_TEST_USER=root
 # Restarts cockpit after install
 RESTART_COCKPIT?=0
@@ -115,12 +115,7 @@ plugin-install-% plugin-install-local-% plugin-install-remote-%:
 	@test -z "$(SSH)" && \
 		cp -af $*/dist/* $(DESTDIR)$(INSTALL_PREFIX)/$*$(INSTALL_SUFFIX) || \
 		rsync -avh $*/dist/* $(REMOTE_TEST_USER)@$(REMOTE_TEST_HOST):$(DESTDIR)$(INSTALL_PREFIX)/$*$(INSTALL_SUFFIX)
-	@if [ -n "$(PYTHON_VENV_SETUP)" ]; then \
-		echo Setting up Python virtual environment and installing dependencies in $(PYTHON_VENV_SETUP); \
-		$(SSH) python3 -m venv $(PYTHON_VENV_SETUP) && \
-		$(SSH) $(PYTHON_VENV_SETUP)/bin/pip install --upgrade pip && \
-		$(SSH) $(PYTHON_VENV_SETUP)/bin/pip install -r $(DESTDIR)$(INSTALL_PREFIX)/$*$(INSTALL_SUFFIX)/requirements.txt; \
-	fi
+
 	@echo -e $(call greentext,Done installing $*)
 	@echo
 

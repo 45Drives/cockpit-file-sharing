@@ -12,6 +12,6 @@ jq 'del(.packageManager)' ./package.json | sponge ./package.json
 
 rm .yarnrc.yml .yarn -rf
 
-yarn set version stable
+yarn set version 4.6.0
 
 yarn config set nodeLinker node-modules

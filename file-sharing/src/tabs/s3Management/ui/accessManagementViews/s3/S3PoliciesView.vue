@@ -143,7 +143,7 @@ async function loadPolicies() {
       ? await listRustfsPolicies()
       : await listMinioPolicies();
   } catch (e: any) {
-    error.value = e?.message || "Failed to load MinIO policies.";
+    error.value = e?.message || `Failed to load ${isRustfsBackend ? "RustFS" : "MinIO"} policies.`;
   } finally {
     loading.value = false;
   }
@@ -168,7 +168,7 @@ async function handlePolicyCreate(payload: { name: string; json: string }) {
     pushNotification(new Notification("Success",`Policy "${payload.name} created successfully"`, "success"));
 
   } catch (e: any) {
-    pushNotification(new Notification(`Failed to create MinIO policy`, e?.message, "error"));
+    pushNotification(new Notification(`Failed to create ${isRustfsBackend ? "RustFS" : "MinIO"} policy`, e?.message, "error"));
 
     // createDialogError.value = e?.message || "Failed to create MinIO policy.";
   } finally {
@@ -211,7 +211,7 @@ async function handlePolicySave(payload: { name: string; json: string }) {
     pushNotification(new Notification("Success", `Policy updated successfully`, "success", 2000));
 
   } catch (e: any) {
-    pushNotification(new Notification(`Failed to update MinIO policy`, e?.message, "error"));
+    pushNotification(new Notification(`Failed to update ${isRustfsBackend ? "RustFS" : "MinIO"} policy`, e?.message, "error"));
 
     // viewEditError.value = e?.message || "Failed to update MinIO policy.";
   } finally {
@@ -224,7 +224,7 @@ async function onDeletePolicy(name: string) {
     header: `Delete policy "${name}"?`,
     body: isRustfsBackend
       ? "Are you sure you want to delete this RustFS policy?"
-      : "Are you sure you want to delete this MinIO policy? Any users or groups attached to this policy will lose its permissions.",
+      : `Are you sure you want to delete this MinIO policy? Any users or groups attached to this policy will lose its permissions.`,
     confirmButtonText: "Delete",
     dangerous: true,
   }));

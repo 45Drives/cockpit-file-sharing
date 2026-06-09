@@ -179,7 +179,7 @@ async function loadUsers() {
       ? await listRustfsUsers()
       : await listMinioUsers();
   } catch (e) {
-    pushNotification(new Notification(`Failed to load MinIO users for group creation`, e as any, "error"));
+    pushNotification(new Notification(`Failed to load ${isRustfsBackend ? "RustFS" : "MinIO"} users for group creation`, e as any, "error"));
   }
 }
 
@@ -238,8 +238,18 @@ async function handleGroupUpdate(payload: { name: string; members: string[]; pol
     } catch {
       // Keep dialog closed when update succeeded; reload failure is non-fatal here.
     }
+    pushNotification(new Notification(
+      "Success",
+      `${isRustfsBackend ? "RustFS" : "MinIO"} group "${payload.name}" updated`,
+      "success",
+      2000
+    ));
   } catch (e: any) {
-    pushNotification(new Notification(`Failed to update MinIO group"`, e?.message, "error"));
+    pushNotification(new Notification(
+      `Failed to update ${isRustfsBackend ? "RustFS" : "MinIO"} group`,
+      e?.message,
+      "error"
+    ));
 
     // groupDialogError.value = e?.message || "Failed to update MinIO group.";
   } finally {
@@ -321,7 +331,7 @@ async function loadPolicies() {
       ? await listRustfsPolicies()
       : await listMinioPolicies();
   } catch (e: any) {
-    pushNotification(new Notification(`Failed to load MinIO policies for groups"`, e?.message, "error"));
+    pushNotification(new Notification(`Failed to load ${isRustfsBackend ? "RustFS" : "MinIO"} policies for groups`, e?.message, "error"));
 
   }
 }

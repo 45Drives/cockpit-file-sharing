@@ -7,25 +7,37 @@ import {
   type CommandOptions,
   Command,
 } from "@45drives/houston-common-lib";
-import { ResultAsync } from "neverthrow";
+import { err, ok, okAsync, ResultAsync } from "neverthrow";
 import { NFSExportsParser } from "@/tabs/nfs/exports-parser";
-import { Hooks, executeHookCallbacks } from "@/common/hooks";
+import {
+  SystemdManagerClustered,
+  SystemdManagerSingleServer,
+  type ISystemdManager,
+} from "@/common/systemd-manager";
+import {
+  ShareManagerMixin,
+  type IShareManager,
+  type ShareDefinition,
+} from "@/common/share-common";
 
-export interface INFSManager {
-  server: Server;
-  getExports(): ResultAsync<NFSExport[], ProcessError | ParsingError>;
-  addExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
-  editExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
-  removeExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError>;
+export interface INFSManager extends IShareManager<NFSExport> {
   exportConfig(): ResultAsync<string, ProcessError>;
   importConfig(config: string): ResultAsync<this, ProcessError>;
   onExportsFileChanged(callback: () => void): { remove: () => void };
 }
 
-export class NFSManagerSingleServer implements INFSManager {
+// function resultLogger(context: any): <T>(x: T) => T {
+//   return (x) => {
+//     console.log(context, x);
+//     return x;
+//   };
+// }
+
+class NFSManagerSingleServerDriver {
   private exportsFile: File;
   private commandOptions: CommandOptions = { superuser: "try" };
   private nfsExportsParser = new NFSExportsParser();
+
   constructor(
     public server: Server,
     exportsFilePath: string
@@ -52,6 +64,38 @@ export class NFSManagerSingleServer implements INFSManager {
       .map(() => this);
   }
 
+  modifyExports(
+    modifier: (exports: NFSExport[]) => NFSExport[]
+  ): ResultAsync<this, ProcessError | ParsingError> {
+    return (
+      this.getExports()
+        // .map(resultLogger("Original Exports"))
+        // .mapErr(resultLogger("Original Exports"))
+        .andThen((exports) => {
+          const originalExports = structuredClone(exports);
+          const modifiedExports = modifier(exports);
+          return (
+            this.setExports(modifiedExports)
+              // .map(resultLogger("Set exports result"))
+              // .mapErr(resultLogger("Set exports result"))
+              .orElse((error) => {
+                // Attempt to revert to original exports if setting modified exports fails
+                return (
+                  this.setExports(originalExports)
+                    // .map(resultLogger("Revert exports result"))
+                    // .mapErr(resultLogger("Revert exports result"))
+                    .andThen(() => err(error))
+                    .mapErr((error2) => {
+                      error.message += `\nFailed to revert changes: ${error2.message}`;
+                      return error;
+                    })
+                );
+              })
+          );
+        })
+    );
+  }
+
   getExports(): ResultAsync<NFSExport[], ProcessError | ParsingError> {
     return this.ensureExportsFile()
       .andThen((exportsFile) => exportsFile.read(this.commandOptions))
@@ -59,24 +103,19 @@ export class NFSManagerSingleServer implements INFSManager {
   }
 
   addExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return this.getExports()
-      .map((exports) => [...exports, nfsExport])
-      .andThen((exports) => this.setExports(exports))
-      .map(() => nfsExport);
+    return this.modifyExports((exports) => [...exports, nfsExport]).map(() => nfsExport);
   }
 
   editExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return this.getExports()
-      .map((exports) => exports.map((e) => (e.path === nfsExport.path ? nfsExport : e)))
-      .andThen((exports) => this.setExports(exports))
-      .map(() => nfsExport);
+    return this.modifyExports((exports) =>
+      exports.map((e) => (e.path === nfsExport.path ? nfsExport : e))
+    ).map(() => nfsExport);
   }
 
   removeExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return this.getExports()
-      .map((exports) => exports.filter((e) => e.path !== nfsExport.path))
-      .andThen((exports) => this.setExports(exports))
-      .map(() => nfsExport);
+    return this.modifyExports((exports) => exports.filter((e) => e.path !== nfsExport.path)).map(
+      () => nfsExport
+    );
   }
 
   exportConfig(): ResultAsync<string, ProcessError> {
@@ -98,114 +137,157 @@ export class NFSManagerSingleServer implements INFSManager {
   }
 }
 
-export class NFSManagerClustered implements INFSManager {
-  private managers: [NFSManagerSingleServer, ...NFSManagerSingleServer[]];
-  private getterManager: NFSManagerSingleServer;
-  public server: Server;
+const NFS_SERVICE_NAME = "nfs-server.service";
 
-  constructor(servers: [Server, ...Server[]], exportsFilePath: string) {
-    this.managers = servers.map(
-      (server) => new NFSManagerSingleServer(server, exportsFilePath)
-    ) as [NFSManagerSingleServer, ...NFSManagerSingleServer[]];
-    this.getterManager = this.managers[0];
-    this.server = this.getterManager.server;
+class _NFSManager implements INFSManager {
+  public readonly type = "nfs" as const;
+  public servers: Server | [Server, ...Server[]];
+  private managers: [NFSManagerSingleServerDriver, ...NFSManagerSingleServerDriver[]];
+  private primaryManager: NFSManagerSingleServerDriver;
+  private systemdManager: ISystemdManager;
+
+  constructor(server: Server | [Server, ...Server[]], exportsFilePath: string) {
+    this.servers = server;
+    this.managers = (Array.isArray(this.servers) ? this.servers : [this.servers]).map(
+      (server) => new NFSManagerSingleServerDriver(server, exportsFilePath)
+    ) as [NFSManagerSingleServerDriver, ...NFSManagerSingleServerDriver[]];
+    this.primaryManager = this.managers[0];
+    this.systemdManager = Array.isArray(this.servers)
+      ? new SystemdManagerClustered(this.servers)
+      : new SystemdManagerSingleServer(this.servers);
   }
 
-  getExports(...args: Parameters<NFSManagerSingleServer["getExports"]>) {
-    return this.getterManager.getExports(...args);
+  private ensureNFSServiceStaysRunning<T, E>(
+    action: () => ResultAsync<T, E>
+  ): ResultAsync<T, E | ProcessError | ParsingError> {
+    return this.systemdManager.checkActive({ name: NFS_SERVICE_NAME }).andThen((wasActive) => {
+      return action().andThen((result) => {
+        if (wasActive) {
+          return this.systemdManager.start({ name: NFS_SERVICE_NAME }).map(() => result);
+        }
+        return okAsync(result);
+      });
+    });
   }
 
-  addExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return ResultAsync.combine(this.managers.map((m) => m.addExport(nfsExport))).map(
-      () => nfsExport
-    );
+  wrapShareModificationOutsideMixin(
+    share: ShareDefinition<NFSExport>,
+    action: (
+      share: ShareDefinition<NFSExport>
+    ) => ResultAsync<ShareDefinition<NFSExport>, ProcessError | ParsingError>
+  ): ResultAsync<ShareDefinition<NFSExport>, ProcessError | ParsingError> {
+    return this.ensureNFSServiceStaysRunning(() => action(share));
   }
 
-  editExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return ResultAsync.combine(this.managers.map((m) => m.editExport(nfsExport))).map(
-      () => nfsExport
-    );
+  listShares() {
+    return this.primaryManager.getExports();
   }
 
-  removeExport(nfsExport: NFSExport): ResultAsync<NFSExport, ProcessError | ParsingError> {
-    return ResultAsync.combine(this.managers.map((m) => m.removeExport(nfsExport))).map(
-      () => nfsExport
-    );
+  addShare(
+    nfsExport: ShareDefinition<NFSExport>
+  ): ResultAsync<ShareDefinition<NFSExport>, ProcessError | ParsingError> {
+    return ResultAsync.combineWithAllErrors(this.managers.map((m) => m.addExport(nfsExport)))
+      .map(() => nfsExport)
+      .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")));
+  }
+
+  editShare(
+    nfsExport: ShareDefinition<NFSExport>
+  ): ResultAsync<ShareDefinition<NFSExport>, ProcessError | ParsingError> {
+    return ResultAsync.combineWithAllErrors(this.managers.map((m) => m.editExport(nfsExport)))
+      .map(() => nfsExport)
+      .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")));
+  }
+
+  removeShare(
+    nfsExport: ShareDefinition<NFSExport>
+  ): ResultAsync<ShareDefinition<NFSExport>, ProcessError | ParsingError> {
+    return ResultAsync.combineWithAllErrors(this.managers.map((m) => m.removeExport(nfsExport)))
+      .map(() => nfsExport)
+      .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")));
   }
 
   exportConfig(): ResultAsync<string, ProcessError> {
-    return this.getterManager.exportConfig();
+    return this.primaryManager.exportConfig();
   }
 
   importConfig(config: string): ResultAsync<this, ProcessError> {
-    return ResultAsync.combine(this.managers.map((m) => m.importConfig(config))).map(() => this);
+    return this.ensureNFSServiceStaysRunning(() =>
+      ResultAsync.combineWithAllErrors(this.managers.map((m) => m.importConfig(config)))
+        .map(() => this)
+        .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")))
+    );
   }
 
-  onExportsFileChanged(callback: () => void): { remove: () => void } {
-    return this.getterManager.onExportsFileChanged(callback);
+  onExportsFileChanged(
+    callback: () => void,
+    anyInCluster: boolean = false
+  ): { remove: () => void } {
+    if (anyInCluster && this.managers.length > 1) {
+      const handles = this.managers.map((m) => m.onExportsFileChanged(callback));
+      return {
+        remove: () => handles.forEach((h) => h.remove()),
+      };
+    }
+    return this.primaryManager.onExportsFileChanged(callback);
+  }
+
+  clusterConfigInSync(): ResultAsync<boolean, ParsingError | ProcessError> {
+    if (this.managers.length === 1) {
+      return okAsync(true);
+    }
+    return ResultAsync.combineWithAllErrors(this.managers.map((m) => m.getExports()))
+      .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")))
+      .map((exportsList) => {
+        const [firstExports, ...otherExports] = exportsList as [NFSExport[], ...NFSExport[][]];
+        const firstExportsString = JSON.stringify(
+          firstExports.sort((a, b) => a.path.localeCompare(b.path))
+        );
+        return otherExports.every(
+          (exports) =>
+            JSON.stringify(exports.sort((a, b) => a.path.localeCompare(b.path))) ===
+            firstExportsString
+        );
+      });
+  }
+
+  mergeClusterConfigs(): ResultAsync<this, ProcessError | ParsingError> {
+    if (this.managers.length === 1) {
+      return okAsync(this);
+    }
+    return ResultAsync.combineWithAllErrors(this.managers.map((m) => m.getExports()))
+      .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")))
+      .andThen((exportsList) => {
+        const merged = [
+          ...new Map<string, NFSExport>(
+            exportsList
+              .flat(1)
+              .reverse()
+              .map((e) => [e.path, e])
+          ).values(),
+        ];
+        return this.ensureNFSServiceStaysRunning(() =>
+          ResultAsync.combineWithAllErrors(this.managers.map((m) => m.modifyExports((_) => merged)))
+            .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")))
+            .map(() => this)
+        );
+      });
+  }
+
+  overwriteClusterConfigs(): ResultAsync<this, ProcessError | ParsingError> {
+    if (this.managers.length === 1) {
+      return okAsync(this);
+    }
+    return this.primaryManager.getExports().andThen((exports) =>
+      this.ensureNFSServiceStaysRunning(() =>
+        ResultAsync.combineWithAllErrors(
+          this.managers.slice(1).map((m) => m.modifyExports((_) => exports))
+        )
+          .mapErr((errors) => new ProcessError(errors.map((e) => e.message).join(";\n")))
+          .map(() => this)
+      )
+    );
   }
 }
 
-function _getNFSManager(
-  servers: Server | [Server, ...Server[]],
-  exportsFilePath: string
-): INFSManager {
-  if (Array.isArray(servers)) {
-    return servers.length === 1
-      ? new NFSManagerSingleServer(servers[0], exportsFilePath)
-      : new NFSManagerClustered(servers, exportsFilePath);
-  }
-  return new NFSManagerSingleServer(servers, exportsFilePath);
-}
-
-class HookedNFSManager implements INFSManager {
-  public server: Server;
-  constructor(private mgr: INFSManager) {
-    this.server = mgr.server;
-  }
-
-  getExports(...args: Parameters<NFSManagerSingleServer["getExports"]>) {
-    return this.mgr.getExports(...args);
-  }
-
-  addExport(...args: Parameters<NFSManagerSingleServer["addExport"]>) {
-    return executeHookCallbacks(Hooks.BeforeAddShare, this.server, args[0])
-      .andThen(() => this.mgr.addExport(...args))
-      .andThen((r) => executeHookCallbacks(Hooks.AfterAddShare, this.server, args[0]).map(() => r));
-  }
-
-  editExport(...args: Parameters<NFSManagerSingleServer["editExport"]>) {
-    return executeHookCallbacks(Hooks.BeforeEditShare, this.server, args[0])
-      .andThen(() => this.mgr.editExport(...args))
-      .andThen((r) =>
-        executeHookCallbacks(Hooks.AfterEditShare, this.server, args[0]).map(() => r)
-      );
-  }
-
-  removeExport(...args: Parameters<NFSManagerSingleServer["removeExport"]>) {
-    return executeHookCallbacks(Hooks.BeforeRemoveShare, this.server, args[0])
-      .andThen(() => this.mgr.removeExport(...args))
-      .andThen((r) =>
-        executeHookCallbacks(Hooks.AfterRemoveShare, this.server, args[0]).map(() => r)
-      );
-  }
-
-  exportConfig(...args: Parameters<NFSManagerSingleServer["exportConfig"]>) {
-    return this.mgr.exportConfig(...args);
-  }
-
-  importConfig(...args: Parameters<NFSManagerSingleServer["importConfig"]>) {
-    return this.mgr.importConfig(...args).map(() => this);
-  }
-
-  onExportsFileChanged(...args: Parameters<NFSManagerSingleServer["onExportsFileChanged"]>) {
-    return this.mgr.onExportsFileChanged(...args);
-  }
-}
-
-export function getNFSManager(
-  servers: Server | [Server, ...Server[]],
-  exportsFilePath: string
-): INFSManager {
-  return new HookedNFSManager(_getNFSManager(servers, exportsFilePath));
-}
+export const NFSManager = ShareManagerMixin<NFSExport, typeof _NFSManager>(_NFSManager);

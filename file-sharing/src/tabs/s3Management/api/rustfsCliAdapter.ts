@@ -604,7 +604,9 @@ async function getPythonVenvPath(): Promise<string> {
       return _pythonVenvPathCache;
     }
   }
-  return "/usr/share/cockpit-file-sharing/venv";
+  // Fallback to system python if no venv exists
+  _pythonVenvPathCache = "/usr";
+  return _pythonVenvPathCache;
 }
 
 async function execRustfsPython(
@@ -615,7 +617,8 @@ async function execRustfsPython(
     .map(([k, v]) => `export ${k}=${shellQuote(v)}`)
     .join("; ");
 
-  const cmdLine = `${exports}; ${getPythonVenvPath()}/bin/python3 - <<'PY'\n${pythonSource}\nPY`;
+  const venvPath = await getPythonVenvPath();
+  const cmdLine = `${exports}; ${venvPath}/bin/python3 - <<'PY'\n${pythonSource}\nPY`;
   const cmd = new Command(["bash", "-lc", cmdLine], {});
   const proc = await unwrap(server.execute(cmd, false));
   const stdout = proc.getStdout().toString().trim();
@@ -902,35 +905,56 @@ async function createRustfsBucketViaS3Api(
   const { endpointUrl, region, creds } = await resolveRustfsS3ApiConfig();
   const bucketUrl = `${endpointUrl}/${encodeURIComponent(target)}/`;
 
-  const cmdParts = [
-    `AWS_ACCESS_KEY_ID=${shellQuote(creds.accessKeyId)}`,
-    `AWS_SECRET_ACCESS_KEY=${shellQuote(creds.secretAccessKey)}`,
-    `${getPythonVenvPath()}/bin/awscurl --service s3`,
-    `--region ${shellQuote(region)}`,
-    "-X 'PUT'",
-  ];
-  if (objectLockEnabled) {
-    cmdParts.push(`-H ${shellQuote("x-amz-bucket-object-lock-enabled: true")}`);
-  }
-  cmdParts.push(shellQuote(bucketUrl));
+  const py = `
+import os, sys, hashlib
+import botocore.auth
+import botocore.credentials
+from botocore.awsrequest import AWSRequest
+from urllib.request import urlopen, Request
+from urllib.error import HTTPError
 
-  const commandString = cmdParts.join(" ");
-  const redacted = commandString.replace(
-    /AWS_SECRET_ACCESS_KEY='[^']*'/,
-    "AWS_SECRET_ACCESS_KEY='***'"
-  );
+url = os.environ["RUSTFS_API_URL"]
+region = os.environ["AWS_DEFAULT_REGION"]
+access_key = os.environ["AWS_ACCESS_KEY_ID"]
+secret_key = os.environ["AWS_SECRET_ACCESS_KEY"]
+object_lock = os.environ.get("RUSTFS_OBJECT_LOCK_ENABLED", "false") == "true"
 
-  const cmd = new Command(["bash", "-lc", commandString], {});
-  const proc = await unwrap(server.execute(cmd, false));
-  const stdout = proc.getStdout();
-  const stderr = proc.getStderr();
-  const exitStatus = proc.exitStatus;
-  if (exitStatus !== 0) {
-    const msg = stderr.trim() || stdout.trim() || `awscurl exited with status ${exitStatus}`;
-    throw new Error(msg);
-  }
+content_hash = hashlib.sha256(b"").hexdigest()
+headers = {"x-amz-content-sha256": content_hash}
+if object_lock:
+    headers["x-amz-bucket-object-lock-enabled"] = "true"
 
-  const trimmed = stdout.trim();
+request = AWSRequest(method="PUT", url=url, data=None, headers=headers)
+creds = botocore.credentials.Credentials(access_key, secret_key)
+botocore.auth.SigV4Auth(creds, "s3", region).add_auth(request)
+
+prepped = request.prepare()
+req = Request(
+    url,
+    data=None,
+    headers=dict(prepped.headers),
+    method="PUT",
+)
+try:
+    resp = urlopen(req)
+    output = resp.read().decode()
+except HTTPError as e:
+    output = e.read().decode()
+    print(output, file=sys.stdout)
+    sys.exit(1)
+
+print(output)
+`;
+
+  const out = await execRustfsPython(py, {
+    RUSTFS_API_URL: bucketUrl,
+    AWS_DEFAULT_REGION: region,
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+    RUSTFS_OBJECT_LOCK_ENABLED: objectLockEnabled ? "true" : "false",
+  });
+
+  const trimmed = out.trim();
   const apiError = extractRustfsApiErrorMessage(trimmed);
   if (apiError) {
     throw new Error(apiError);
@@ -946,28 +970,50 @@ async function deleteRustfsBucketViaS3Api(bucketName: string): Promise<void> {
   const { endpointUrl, region, creds } = await resolveRustfsS3ApiConfig();
   const bucketUrl = `${endpointUrl}/${encodeURIComponent(target)}/`;
 
-  const cmdParts = [
-    `AWS_ACCESS_KEY_ID=${shellQuote(creds.accessKeyId)}`,
-    `AWS_SECRET_ACCESS_KEY=${shellQuote(creds.secretAccessKey)}`,
-    `${getPythonVenvPath()}/bin/awscurl --service s3`,
-    `--region ${shellQuote(region)}`,
-    "-X 'DELETE'",
-    shellQuote(bucketUrl),
-  ];
+  const py = `
+import os, sys, hashlib
+import botocore.auth
+import botocore.credentials
+from botocore.awsrequest import AWSRequest
+from urllib.request import urlopen, Request
+from urllib.error import HTTPError
 
-  const commandString = cmdParts.join(" ");
+url = os.environ["RUSTFS_API_URL"]
+region = os.environ["AWS_DEFAULT_REGION"]
+access_key = os.environ["AWS_ACCESS_KEY_ID"]
+secret_key = os.environ["AWS_SECRET_ACCESS_KEY"]
 
-  const cmd = new Command(["bash", "-lc", commandString], {});
-  const proc = await unwrap(server.execute(cmd, false));
-  const stdout = proc.getStdout();
-  const stderr = proc.getStderr();
-  const exitStatus = proc.exitStatus;
-  if (exitStatus !== 0) {
-    const msg = stderr.trim() || stdout.trim() || `awscurl exited with status ${exitStatus}`;
-    throw new Error(msg);
-  }
+content_hash = hashlib.sha256(b"").hexdigest()
+request = AWSRequest(method="DELETE", url=url, data=None, headers={"x-amz-content-sha256": content_hash})
+creds = botocore.credentials.Credentials(access_key, secret_key)
+botocore.auth.SigV4Auth(creds, "s3", region).add_auth(request)
 
-  const trimmed = stdout.trim();
+prepped = request.prepare()
+req = Request(
+    url,
+    data=None,
+    headers=dict(prepped.headers),
+    method="DELETE",
+)
+try:
+    resp = urlopen(req)
+    output = resp.read().decode()
+except HTTPError as e:
+    output = e.read().decode()
+    print(output, file=sys.stdout)
+    sys.exit(1)
+
+print(output)
+`;
+
+  const out = await execRustfsPython(py, {
+    RUSTFS_API_URL: bucketUrl,
+    AWS_DEFAULT_REGION: region,
+    AWS_ACCESS_KEY_ID: creds.accessKeyId,
+    AWS_SECRET_ACCESS_KEY: creds.secretAccessKey,
+  });
+
+  const trimmed = out.trim();
   const apiError = extractRustfsApiErrorMessage(trimmed);
   if (apiError) {
     throw new Error(apiError);
@@ -1091,34 +1137,64 @@ async function runRustfsAdminApiRequest(
   const url = `${apiBase}/${String(path).replace(/^\/+/, "")}`;
   const bodyJson = body === undefined ? "" : JSON.stringify(body);
 
-  const cmdParts = [
-    `AWS_ACCESS_KEY_ID=${shellQuote(accessKey)}`,
-    `AWS_SECRET_ACCESS_KEY=${shellQuote(secretKey)}`,
-    `${getPythonVenvPath()}/bin/awscurl --service s3`,
-    `--region ${shellQuote(region)}`,
-    `-X ${shellQuote(method)}`,
-  ];
+  const py = `
+import os, sys, json, hashlib
+import botocore.auth
+import botocore.credentials
+from botocore.awsrequest import AWSRequest
+from urllib.request import urlopen, Request
+from urllib.error import HTTPError
 
+url = os.environ["RUSTFS_API_URL"]
+method = os.environ["RUSTFS_METHOD"]
+region = os.environ["AWS_DEFAULT_REGION"]
+access_key = os.environ["AWS_ACCESS_KEY_ID"]
+secret_key = os.environ["AWS_SECRET_ACCESS_KEY"]
+body_data = os.environ.get("RUSTFS_BODY") or None
+
+payload_bytes = body_data.encode("utf-8") if body_data else b""
+content_hash = hashlib.sha256(payload_bytes).hexdigest()
+
+headers = {"x-amz-content-sha256": content_hash}
+if body_data:
+    headers["Content-Type"] = "application/json"
+    headers["Content-Length"] = str(len(payload_bytes))
+
+request = AWSRequest(method=method, url=url, data=payload_bytes if body_data else None, headers=headers)
+creds = botocore.credentials.Credentials(access_key, secret_key)
+botocore.auth.SigV4Auth(creds, "s3", region).add_auth(request)
+
+import urllib.request as ur
+signed_headers = dict(request.headers)
+req = ur.Request(
+    url,
+    data=payload_bytes if body_data else None,
+    headers=signed_headers,
+    method=method,
+)
+try:
+    resp = urlopen(req)
+    output = resp.read().decode()
+except HTTPError as e:
+    output = e.read().decode()
+    print(output, file=sys.stdout)
+    sys.exit(1)
+
+print(output)
+`;
+
+  const env: Record<string, string> = {
+    RUSTFS_API_URL: url,
+    RUSTFS_METHOD: method,
+    AWS_DEFAULT_REGION: region,
+    AWS_ACCESS_KEY_ID: accessKey,
+    AWS_SECRET_ACCESS_KEY: secretKey,
+  };
   if (body !== undefined) {
-    cmdParts.push(`-H ${shellQuote("Content-Type: application/json")}`);
-    cmdParts.push(`-d ${shellQuote(bodyJson)}`);
-  }
-  cmdParts.push(shellQuote(url));
-
-  const commandString = cmdParts.join(" ");
-
-
-  const cmd = new Command(["bash", "-lc", commandString], {});
-  const proc = await unwrap(server.execute(cmd, false));
-  const stdout = proc.getStdout();
-  const stderr = proc.getStderr();
-  const exitStatus = proc.exitStatus;
-  if (exitStatus !== 0) {
-    const msg = stderr.trim() || stdout.trim() || `awscurl exited with status ${exitStatus}`;
-    throw new Error(msg);
+    env.RUSTFS_BODY = bodyJson;
   }
 
-  const trimmed = stdout.trim();
+  const trimmed = (await execRustfsPython(py, env)).trim();
   const apiError = extractRustfsApiErrorMessage(trimmed);
   if (apiError) {
     throw new Error(apiError);
@@ -1922,7 +1998,7 @@ export async function updateRustfsGroup(
     const policyName = desiredPolicies.join(",");
     await runRustfsAdminApiRequest(
       "PUT",
-      `set-user-or-group-policy?policyName=${policyName}&userOrGroup=${encodeURIComponent(groupName)}&isGroup=true`,
+      `set-user-or-group-policy?policyName=${encodeURIComponent(policyName)}&userOrGroup=${encodeURIComponent(groupName)}&isGroup=true`,
       {}
     );
   }
@@ -1986,7 +2062,7 @@ export async function createRustfsUser(
     const userOrGroup = encodeURIComponent(username);
     await runRustfsAdminApiRequest(
       "PUT",
-      `set-user-or-group-policy?policyName=${policyName}&userOrGroup=${userOrGroup}&isGroup=false`,
+      `set-user-or-group-policy?policyName=${encodeURIComponent(policyName)}&userOrGroup=${userOrGroup}&isGroup=false`,
       {}
     );
 
@@ -2067,7 +2143,7 @@ export async function updateRustfsUser(payload: S3AccessUserUpdatePayload): Prom
     const userOrGroup = encodeURIComponent(username);
     await runRustfsAdminApiRequest(
       "PUT",
-      `set-user-or-group-policy?policyName=${policyName}&userOrGroup=${userOrGroup}&isGroup=false`,
+      `set-user-or-group-policy?policyName=${encodeURIComponent(policyName)}&userOrGroup=${userOrGroup}&isGroup=false`,
       {}
     );
   }

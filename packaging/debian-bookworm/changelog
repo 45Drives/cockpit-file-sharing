@@ -1,3 +1,48 @@
+cockpit-file-sharing (4.6.0-1bookworm) bookworm; urgency=medium
+
+  * Ensure NFS service continues running after removing Ceph remount
+  * Add systemd service monitoring and management for NFS and Samba
+  * Samba: Fix net command option injection from advanced options
+  * Improve Ceph option handling
+  * NFS: Ensure exports files are in sync across PCS cluster nodes with option to
+    merge when out-of-sync
+  * Fix tooltip width
+  * Support toggling dark mode on Cockpit version < 281
+  * Improve clarity of error message when cluster host is down
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Tue, 09 Jun 2026 11:20:46 -0300
+
+cockpit-file-sharing (4.6.0-0rc2bookworm) bookworm; urgency=medium
+
+  * Ensure NFS service continues running after removing Ceph remount
+  * Add systemd service monitoring and management for NFS and Samba
+  * Samba: Fix net command option injection from advanced options
+  * Improve Ceph option handling
+  * NFS: Ensure exports files are in sync across PCS cluster nodes with option to
+    merge when out-of-sync
+  * Fix tooltip width
+  * Support toggling dark mode on Cockpit version < 281
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Mon, 08 Jun 2026 12:27:12 -0300
+
+cockpit-file-sharing (4.6.0-0rc1bookworm) bookworm; urgency=medium
+
+  * Ensure NFS service continues running after removing Ceph remount
+  * Add systemd service monitoring and management for NFS and Samba
+  * Samba: Fix net command option injection from advanced options
+  * Improve Ceph option handling
+  * NFS: Ensure exports files are in sync across PCS cluster nodes with option to
+    merge when out-of-sync
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 05 Jun 2026 14:22:53 -0300
+
+cockpit-file-sharing (4.5.9-1bookworm) bookworm; urgency=medium
+
+  * Ensure NFS service continues running after removing Ceph remount
+  * Add systemd service monitoring and management for NFS and Samba
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Wed, 27 May 2026 12:55:55 -0300
+
 cockpit-file-sharing (4.5.8-1bookworm) bookworm; urgency=medium
 
   * fix: prevent .rgw.root pool creation on clusters without RGW through s3 module

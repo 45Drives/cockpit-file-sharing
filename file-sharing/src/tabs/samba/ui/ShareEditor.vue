@@ -1,14 +1,5 @@
 <script setup lang="ts">
-import {
-  defineProps,
-  computed,
-  defineEmits,
-  ref,
-  watchEffect,
-  onMounted,
-  type Ref,
-  watch,
-} from "vue";
+import { computed, ref, watchEffect, onMounted, type Ref, watch, toRaw } from "vue";
 import {
   InputField,
   ToggleSwitch,
@@ -22,11 +13,17 @@ import {
   validationSuccess,
   validationError,
   ValidationResultView,
+  computedResult,
 } from "@45drives/houston-common-ui";
 import { server } from "@45drives/houston-common-lib";
 import { KeyValueSyntax, SambaShareConfig } from "@45drives/houston-common-lib";
 import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
 import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
+import type { ShareDefinition } from "@/common/share-common";
+import type { SambaManager } from "../samba-manager";
+import { okAsync } from "neverthrow";
+import CephOptionsView from "@/common/ui/CephOptions.vue";
+import { isCephOptions } from "@/common/mountpoint-options";
 
 const _ = cockpit.gettext;
 const _N = cockpit.ngettext;
@@ -42,19 +39,28 @@ const props = defineProps<
       }
   ) & {
     allShareNames: string[];
+    manager: InstanceType<typeof SambaManager>;
   }
 >();
 
 const emit = defineEmits<{
   (e: "cancel"): void;
-  (e: "apply", value: SambaShareConfig): void;
+  (e: "apply", value: ShareDefinition<SambaShareConfig>): void;
 }>();
 
 const globalProcessingState = useGlobalProcessingState();
 
-const shareConf = computed<SambaShareConfig>(() =>
-  props.newShare ? SambaShareConfig.makeNew() : props.share
-);
+const defaultConfig = {
+  ...SambaShareConfig.makeNew(),
+  type: "samba" as const,
+  mountpointOptions: { fsType: "" },
+};
+const [shareConf] = computedResult<ShareDefinition<SambaShareConfig>>(() => {
+  if (props.newShare) {
+    return okAsync(defaultConfig);
+  }
+  return props.manager.getShareDefinition(toRaw(props.share));
+});
 
 const { tempObject: tempShareConfig, modified, resetChanges } = useTempObjectStaging(shareConf);
 const shareDirectoryOptionsModified = ref(false);
@@ -65,7 +71,7 @@ const { validationResult: shareNameValidationResult } = validationScope.useValid
   if (!props.newShare) {
     return validationSuccess();
   }
-  const name = tempShareConfig.value.name;
+  const name = tempShareConfig.value?.name;
   if (!name) {
     return validationError(_("Share name is required."));
   }
@@ -107,15 +113,18 @@ onMounted(async () => {
   isDomainJoined.value = await server.isServerDomainJoined().unwrapOr(false);
 });
 
-const windowsACLsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
-  include: {
-    "map acl inherit": "yes",
-    "vfs objects": ["acl_xattr"],
-  },
-  exclude: {},
-});
+const windowsACLsOptions = BooleanKeyValueSuite(
+  () => tempShareConfig.value?.advancedOptions ?? {},
+  {
+    include: {
+      "map acl inherit": "yes",
+      "vfs objects": ["acl_xattr"],
+    },
+    exclude: {},
+  }
+);
 
-const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
+const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advancedOptions ?? {}, {
   include: {
     "vfs objects": ["shadow_copy2"],
   },
@@ -128,18 +137,21 @@ const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advan
   exclude: {},
 });
 
-const macOSSharesOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
-  include: {
-    "fruit:encoding": "native",
-    "fruit:metadata": "stream",
-    "fruit:zero_file_id": "yes",
-    "fruit:nfs_aces": "no",
-    "vfs objects": ["catia", "fruit", "streams_xattr"],
-  },
-  exclude: {},
-});
+const macOSSharesOptions = BooleanKeyValueSuite(
+  () => tempShareConfig.value?.advancedOptions ?? {},
+  {
+    include: {
+      "fruit:encoding": "native",
+      "fruit:metadata": "stream",
+      "fruit:zero_file_id": "yes",
+      "fruit:nfs_aces": "no",
+      "vfs objects": ["catia", "fruit", "streams_xattr"],
+    },
+    exclude: {},
+  }
+);
 
-const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advancedOptions, {
+const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.advancedOptions ?? {}, {
   include: {
     "vfs objects": ["full_audit"],
   },
@@ -152,10 +164,6 @@ const auditLogsOptions = BooleanKeyValueSuite(() => tempShareConfig.value.advanc
   },
   exclude: {},
 });
-
-const shareDirectoryInputAndOptionsRef = ref<InstanceType<
-  typeof ShareDirectoryInputAndOptions
-> | null>(null);
 
 function mutuallyExclusive(a: Ref<boolean>, b: Ref<boolean>) {
   watch(a, (a) => {
@@ -173,14 +181,38 @@ function mutuallyExclusive(a: Ref<boolean>, b: Ref<boolean>) {
 mutuallyExclusive(
   windowsACLsOptions,
   computed({
-    get: () => tempShareConfig.value.inheritPermissions,
-    set: (v) => (tempShareConfig.value.inheritPermissions = v),
+    get: () => tempShareConfig.value?.inheritPermissions ?? false,
+    set: (v) => {
+      if (tempShareConfig.value) {
+        tempShareConfig.value.inheritPermissions = v;
+      }
+    },
   })
+);
+
+const refreshMountpointOptions = () => {
+  if (!tempShareConfig.value) {
+    return;
+  }
+  props.manager.getMountpointOptions(tempShareConfig.value).map(({ mountpointOptions }) => {
+    if (props.newShare && isCephOptions(mountpointOptions)) {
+      // For new shares with ceph fs type, default to remount=true since that's the recommended configuration for ceph shares.
+      mountpointOptions.remount = true;
+    }
+    tempShareConfig.value!.mountpointOptions = mountpointOptions;
+  });
+};
+
+watch(
+  () => tempShareConfig.value?.path,
+  () => {
+    refreshMountpointOptions();
+  }
 );
 </script>
 
 <template>
-  <div class="space-y-content">
+  <div class="space-y-content" v-if="tempShareConfig">
     <div v-if="newShare" class="text-header">{{ _("New Share") }}</div>
     <div class="space-y-content">
       <InputLabelWrapper>
@@ -205,9 +237,21 @@ mutuallyExclusive(
         :disabled="!newShare"
         allowNonExisting
         :validationScope
-        v-model:modified="shareDirectoryOptionsModified"
-        ref="shareDirectoryInputAndOptionsRef"
         :newShare="newShare ?? false"
+        :fsType="tempShareConfig.mountpointOptions.fsType"
+        @createDirectory="() => refreshMountpointOptions()"
+      />
+      <CephOptionsView
+        v-if="isCephOptions(tempShareConfig.mountpointOptions)"
+        :path="tempShareConfig.path"
+        :newShare="newShare"
+        v-model:remount="tempShareConfig.mountpointOptions.remount"
+        v-model:quotaBytes="tempShareConfig.mountpointOptions.quotaBytes"
+        v-model:layoutPool="tempShareConfig.mountpointOptions.layoutPool"
+        :layoutPools="tempShareConfig.mountpointOptions.possibleLayoutPools"
+        :remountManagedByFileSharing="
+          tempShareConfig.mountpointOptions.remountManagedByFileSharing
+        "
       />
 
       <ToggleSwitchGroup>
@@ -263,7 +307,6 @@ mutuallyExclusive(
           @click="
             () => {
               resetChanges();
-              shareDirectoryInputAndOptionsRef?.resetChanges?.();
               $emit('cancel');
             }
           "

@@ -18,12 +18,18 @@ import {
   Table,
   type ValidationResult,
 } from "@45drives/houston-common-ui";
-import { defineProps, defineEmits, computed, ref } from "vue";
+import { toRaw, watch } from "vue";
 import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
 import { PlusIcon, TrashIcon } from "@heroicons/vue/20/solid";
 import { getServer, FileSystemNode } from "@45drives/houston-common-lib";
 
 import { NFSExportParser } from "@/tabs/nfs/exports-parser";
+import type { ShareDefinition } from "@/common/share-common";
+import type { NFSManager } from "../nfs-manager";
+import { ok, okAsync } from "neverthrow";
+
+import CephOptionsView from "@/common/ui/CephOptions.vue";
+import { isCephOptions } from "@/common/mountpoint-options";
 
 const _ = cockpit.gettext;
 
@@ -38,29 +44,39 @@ const props = defineProps<
       }
   ) & {
     allExportedPaths: string[];
+    manager: InstanceType<typeof NFSManager>;
   }
 >();
 
 const emit = defineEmits<{
   (e: "cancel"): void;
-  (e: "apply", value: NFSExport): void;
+  (e: "apply", value: ShareDefinition<NFSExport>): void;
 }>();
 
 const globalProcessingState = useGlobalProcessingState();
 
-const exportConfig = computed<NFSExport>(() =>
-  props.newExport ? newNFSExport() : props.nfsExport
-);
+const defaultConfig = {
+  ...newNFSExport(),
+  type: "nfs" as const,
+  mountpointOptions: { fsType: "" },
+};
+const [exportConfig] = computedResult<ShareDefinition<NFSExport>>(() => {
+  if (props.newExport) {
+    return okAsync(defaultConfig);
+  }
+  return props.manager.getShareDefinition(toRaw(props.nfsExport));
+});
 
 const { tempObject: tempExportConfig, modified, resetChanges } = useTempObjectStaging(exportConfig);
-const shareDirectoryOptionsModified = ref(false);
 
 const addClient = () => {
-  tempExportConfig.value.clients = [...tempExportConfig.value.clients, newNFSExportClient()];
+  if (tempExportConfig.value)
+    tempExportConfig.value.clients = [...tempExportConfig.value.clients, newNFSExportClient()];
 };
 
 const removeClient = (index: number) => {
-  tempExportConfig.value.clients = tempExportConfig.value.clients.filter((_, i) => i !== index);
+  if (tempExportConfig.value)
+    tempExportConfig.value.clients = tempExportConfig.value.clients.filter((_, i) => i !== index);
 };
 
 const clientsTooltip = _(
@@ -78,14 +94,20 @@ Settings:
 
 const parser = new NFSExportParser();
 
-const [exportPreview] = computedResult(() => parser.unapply(tempExportConfig.value), "");
+const [exportPreview] = computedResult(() => {
+  if (tempExportConfig.value) return parser.unapply(tempExportConfig.value);
+  return ok("");
+}, "");
 
 const resolvePath = () => {
+  if (!tempExportConfig.value) {
+    return;
+  }
   const path = tempExportConfig.value.path;
   getServer()
     .map((s) => new FileSystemNode(s, path))
     .andThen((node) => node.resolve(false, { superuser: "try" }))
-    .map((node) => (tempExportConfig.value.path = node.path));
+    .map((node) => (tempExportConfig.value!.path = node.path));
 };
 
 const validationScope = new ValidationScope();
@@ -93,14 +115,14 @@ const { validationResult: pathValidationResult } = validationScope.useValidator(
   if (!props.newExport) {
     return validationSuccess();
   }
-  if (props.allExportedPaths.includes(tempExportConfig.value.path)) {
+  if (tempExportConfig.value && props.allExportedPaths.includes(tempExportConfig.value.path)) {
     return validationError(_("Path already exported") + `: ${tempExportConfig.value.path}`);
   }
   return validationSuccess();
 });
 
 const { validationResult: commentValidationResult } = validationScope.useValidator(() => {
-  if (tempExportConfig.value.comment.endsWith("\\")) {
+  if (tempExportConfig.value && tempExportConfig.value.comment.endsWith("\\")) {
     return validationError(_("Comment cannot end with '\\'."));
   }
   return validationSuccess();
@@ -161,7 +183,10 @@ const clientOptionsValidator = (optionList: string): ValidationResult => {
 };
 
 const { validationResult: defaultClientSettingsValidationResult } = validationScope.useValidator(
-  () => clientOptionsValidator(tempExportConfig.value.defaultClientSettings)
+  () =>
+    tempExportConfig.value
+      ? clientOptionsValidator(tempExportConfig.value.defaultClientSettings)
+      : validationSuccess()
 );
 
 const clientValidator = (client: NFSExportClient): ValidationResult => {
@@ -175,6 +200,9 @@ const clientValidator = (client: NFSExportClient): ValidationResult => {
 };
 
 const { validationResult: clientSettingsValidationResult } = validationScope.useValidator(() => {
+  if (!tempExportConfig.value) {
+    return validationSuccess();
+  }
   const clients = tempExportConfig.value.clients;
   for (const [index, client] of clients.entries()) {
     if (clients.findIndex(({ host }) => host === client.host) !== index) {
@@ -198,13 +226,29 @@ const { validationResult: clientSettingsValidationResult } = validationScope.use
   return validationSuccess();
 });
 
-const shareDirectoryInputAndOptionsRef = ref<InstanceType<
-  typeof ShareDirectoryInputAndOptions
-> | null>(null);
+const refreshMountpointOptions = () => {
+  if (!tempExportConfig.value) {
+    return;
+  }
+  props.manager.getMountpointOptions(tempExportConfig.value).map(({ mountpointOptions }) => {
+    if (props.newExport && isCephOptions(mountpointOptions)) {
+      // For new exports with ceph fs type, default to remount=true since that's the recommended configuration for ceph shares.
+      mountpointOptions.remount = true;
+    }
+    tempExportConfig.value!.mountpointOptions = mountpointOptions;
+  });
+};
+
+watch(
+  () => tempExportConfig.value?.path,
+  () => {
+    refreshMountpointOptions();
+  }
+);
 </script>
 
 <template>
-  <div class="space-y-content">
+  <div v-if="tempExportConfig" class="space-y-content">
     <div v-if="newExport" class="text-header">{{ _("New Share") }}</div>
     <div class="space-y-content">
       <div>
@@ -213,12 +257,24 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
           :disabled="!newExport"
           :validationScope
           @change="() => resolvePath()"
-          ref="shareDirectoryInputAndOptionsRef"
-          v-model:modified="shareDirectoryOptionsModified"
           :newShare="newExport ?? false"
+          :fsType="tempExportConfig.mountpointOptions.fsType"
+          @createDirectory="() => refreshMountpointOptions()"
         />
         <ValidationResultView v-bind="pathValidationResult" />
       </div>
+      <CephOptionsView
+        v-if="isCephOptions(tempExportConfig.mountpointOptions)"
+        :path="tempExportConfig.path"
+        :newShare="newExport"
+        v-model:remount="tempExportConfig.mountpointOptions.remount"
+        v-model:quotaBytes="tempExportConfig.mountpointOptions.quotaBytes"
+        v-model:layoutPool="tempExportConfig.mountpointOptions.layoutPool"
+        :layoutPools="tempExportConfig.mountpointOptions.possibleLayoutPools"
+        :remountManagedByFileSharing="
+          tempExportConfig.mountpointOptions.remountManagedByFileSharing
+        "
+      />
 
       <InputLabelWrapper>
         <template #label>
@@ -247,7 +303,7 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
           {{ _("Clients") }}
         </template>
         <template #tooltip>
-          {{ clientsTooltip }}
+          <span :innerHTML="clientsTooltip"></span>
         </template>
         <Table
           :emptyText="_('No shares. Click \'+\' to add one.')"
@@ -313,7 +369,6 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
           @click="
             () => {
               resetChanges();
-              shareDirectoryInputAndOptionsRef?.resetChanges?.();
               $emit('cancel');
             }
           "
@@ -323,11 +378,7 @@ const shareDirectoryInputAndOptionsRef = ref<InstanceType<
         <button
           class="btn btn-primary"
           @click="$emit('apply', tempExportConfig)"
-          :disabled="
-            !validationScope.isValid() ||
-            (!modified && !shareDirectoryOptionsModified) ||
-            globalProcessingState !== 0
-          "
+          :disabled="!validationScope.isValid() || !modified || globalProcessingState !== 0"
         >
           {{ _("Apply") }}
         </button>
