@@ -1,0 +1,30 @@
+FROM docker.io/ubuntu:jammy
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update -y && apt-get install -y -qq \
+    git curl ca-certificates \
+    jq moreutils \
+    debhelper dpkg-dev devscripts fakeroot \
+    python3-pip \
+  && pip3 install j2cli \
+  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y nodejs \
+  && npm install -g yarn \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY . .
+
+RUN git clone --depth 1 https://github.com/45Drives/houston-common.git houston-common
+RUN export ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/" \
+  && make
+
+RUN cp -r packaging/debian-trixie/. debian/ \
+  && j2 packaging/debian-trixie/control.j2 manifest.json > debian/control \
+  && j2 packaging/debian-trixie/copyright.j2 manifest.json > debian/copyright \
+  && rm debian/control.j2 debian/copyright.j2
+
+RUN dpkg-buildpackage -us -uc -b
+
+RUN ls /*.deb

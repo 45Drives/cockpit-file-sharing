@@ -1,0 +1,5 @@
+cockpit-file-sharing (4.5.7-1trixie) trixie; urgency=medium
+
+  * Initial build for trixie
+
+ -- Jakov Petrina <jkv.petrina@gmail.com>  Sun, 24 May 2026 22:36:00 +0200
