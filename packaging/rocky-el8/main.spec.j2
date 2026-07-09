@@ -31,6 +31,8 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el8 install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Wed Jul 08 2026 Rachit Hans <rhans@45drives.com> 4.6.1-1
+- fix: add debian-trixie packaging support
 * Tue Jun 09 2026 Joshua Boudreau <jboudreau@45drives.com> 4.6.0-1
 - Ensure NFS service continues running after removing Ceph remount
 - Add systemd service monitoring and management for NFS and Samba
