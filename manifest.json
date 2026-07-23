@@ -3,8 +3,8 @@
     "name": "cockpit-file-sharing",
     "title": "Cockpit File Sharing",
     "description": "A cockpit module to make file sharing with Samba and NFS easier.",
-    "version": "4.6.0",
-    "build_number": "1",
+    "version": "4.6.1",
+    "build_number": "2",
     "stable": true,
     "author": "Josh Boudreau <jboudreau@45drives.com>",
     "git_url": "https://github.com/45Drives/cockpit-file-sharing",
@@ -59,6 +59,11 @@
             "image": "ci.cr.45d.io/ci/simple/ubuntu-jammy:1"
         },
         {
+            "group": "debian",
+            "os_name": "debian-trixie",
+            "image": "ci.cr.45d.io/ci/simple/debian-trixie:1"
+        },
+        {
             "group": "ubuntu",
             "os_name": "ubuntu-jammy",
             "image": "ci.cr.45d.io/ci/simple/ubuntu-jammy:1"
@@ -80,8 +85,8 @@
     ],
     "changelog": {
         "urgency": "medium",
-        "version": "4.6.0",
-        "build_number": "1",
+        "version": "4.6.1",
+        "build_number": "2",
         "date": null,
         "packager": "Josh Boudreau <jboudreau@45drives.com>",
         "changes": []
