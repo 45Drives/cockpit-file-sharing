@@ -16,16 +16,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          submodules: true
-          fetch-depth: 0 # required to fetch main
-      - id: check_merged_main
-        if: startsWith(github.ref, 'refs/tags/')
-        run: git merge-base --is-ancestor ${{ github.ref }} origin/main
-      
       - id: prebuild
         name: Prebuild flow
-        uses: 45drives/actions/prebuild-flow@main
+        uses: 45drives/actions/prebuild-flow@abort_build_if_not_merged
         with:
           directory: ${{ github.workspace }}
   
