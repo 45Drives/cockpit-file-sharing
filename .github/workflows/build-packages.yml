@@ -18,7 +18,7 @@ jobs:
       
       - id: prebuild
         name: Prebuild flow
-        uses: 45drives/actions/prebuild-flow@main
+        uses: 45drives/actions/prebuild-flow@abort_build_if_not_merged
         with:
           directory: ${{ github.workspace }}
   
