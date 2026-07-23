@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.6.1-1
+## Cockpit File Sharing 4.6.1-2
 
-* fix: add debian-trixie packaging support
+* Repackage with correct houston-common submodule commit
