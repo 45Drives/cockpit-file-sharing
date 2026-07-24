@@ -14,9 +14,9 @@ import { SambaTabMain } from "@/tabs/samba/ui";
 import ISCSITabMain from "@/tabs/iSCSI/ui/ISCSITabMain.vue";
 import { NFSTabMain } from "@/tabs/nfs/ui";
 import UserSettingsView from "@/common/ui/UserSettingsView.vue";
-import { ref, computed, watchEffect, type WatchStopHandle, onUnmounted, watch } from "vue";
+import { ref, computed, type WatchStopHandle, onUnmounted, watch, type Component } from "vue";
 import { Cog8ToothIcon } from "@heroicons/vue/20/solid";
-import { useUserSettings } from "@/common/user-settings";
+import { useUserSettings, type TabVisibility, type UserSettings } from "@/common/user-settings";
 import { ResultAsync, ok } from "neverthrow";
 import { BashCommand, Directory, getServer } from "@45drives/houston-common-lib";
 import S3ManagementMain from "./tabs/s3Management/ui/S3ManagementMain.vue";
@@ -31,42 +31,125 @@ const appVersion = __APP_VERSION__;
 
 const showUserSettings = ref(false);
 
-const showSambaTab = ref<boolean | undefined>(undefined);
-const showNfsTab = ref<boolean | undefined>(undefined);
-const showIscsiTab = ref<boolean | undefined>(undefined);
-const showS3Tab = ref<boolean | undefined>(undefined);
-
-const sambaConfigured = (): ResultAsync<boolean, never> => {
-  return getServer()
-    .andThen((server) => server.execute(new BashCommand("command -v net")))
-    .map((_) => true)
-    .orElse((_) => ok(false));
+const timeout = <T,>(func: () => Promise<T>, seconds: number, description: string): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    const result = func();
+    const notif = new Notification(
+      _("Process not responding"),
+      description + _(" took longer than ") + seconds + "s",
+      "warning",
+      "never"
+    )
+      .addAction(_("Wait longer"), () => resolve(timeout(() => result, seconds, description)), true)
+      .addAction(_("Give up"), () => reject(), true);
+    const t = globalThis.setTimeout(() => {
+      pushNotification(notif);
+      result.finally(() => {
+        notif.remove();
+      });
+    }, seconds * 1000);
+    result.then(resolve);
+    result.catch(reject);
+    result.finally(() => {
+      globalThis.clearTimeout(t);
+    });
+  });
 };
 
-const nfsConfigured = (): ResultAsync<boolean, never> => {
-  return getServer()
-    .andThen((server) => server.execute(new BashCommand("command -v exportfs")))
-    .map((_) => true)
-    .orElse((_) => ok(false));
-};
+const defineTabs = (
+  tabDefs: {
+    label: string;
+    component: Component;
+    getVisibilitySetting: (settings: UserSettings) => TabVisibility;
+    autoShowCheck: () => ResultAsync<boolean, never>;
+    /** default = 10s
+     */
+    autoShowTimeout?: number;
+  }[]
+) =>
+  tabDefs.map((tab) => {
+    const visible = ref<boolean | undefined>(undefined);
+    return {
+      ...tab,
+      visible,
+      updateVisibility: (settings: UserSettings): void => {
+        switch (tab.getVisibilitySetting(settings)) {
+          case "always":
+            visible.value = true;
+            break;
+          case "never":
+            visible.value = false;
+            break;
+          case "auto":
+            globalProcessingWrapPromise(
+              timeout(
+                () =>
+                  tab
+                    .autoShowCheck()
+                    .map((value) => (visible.value = value))
+                    .unwrapOr(null),
+                tab.autoShowTimeout ?? 10,
+                _("Checking configuration for ") + tab.label
+              )
+            );
+            break;
+        }
+      },
+    };
+  });
 
-const iscsiConfigured = (): ResultAsync<boolean, never> => {
-  return getServer()
-    .andThen((server) => new Directory(server, "/sys/kernel/scst_tgt").exists({ superuser: "try" }))
-    .orElse((_) => ok(false));
-};
+const tabs = defineTabs([
+  {
+    label: _("Samba"),
+    component: SambaTabMain,
+    getVisibilitySetting: (settings) => settings.samba.tabVisibility,
+    autoShowCheck: () =>
+      getServer()
+        .andThen((server) => server.execute(new BashCommand("command -v net")))
+        .map((_) => true)
+        .orElse((_) => ok(false)),
+  },
+  {
+    label: _("NFS"),
+    component: NFSTabMain,
+    getVisibilitySetting: (settings) => settings.nfs.tabVisibility,
+    autoShowCheck: () =>
+      getServer()
+        .andThen((server) => server.execute(new BashCommand("command -v exportfs")))
+        .map((_) => true)
+        .orElse((_) => ok(false)),
+  },
+  {
+    label: _("iSCSI"),
+    component: ISCSITabMain,
+    getVisibilitySetting: (settings) => settings.iscsi.tabVisibility,
+    autoShowCheck: () =>
+      getServer()
+        .andThen((server) =>
+          new Directory(server, "/sys/kernel/scst_tgt").exists({ superuser: "try" })
+        )
+        .orElse((_) => ok(false)),
+  },
+  {
+    label: _("S3"),
+    component: S3ManagementMain,
+    getVisibilitySetting: (settings) => settings.s3.tabVisibility,
+    autoShowCheck: () =>
+      ResultAsync.fromPromise(
+        Promise.allSettled([
+          isMinioAvailable(),
+          isRustfsAvailable(),
+          isGarageHealthy(),
+          isCephRgwHealthy(),
+        ]).then((results) => results.some((r) => r.status === "fulfilled" && r.value === true)),
+        () => null
+      ).orElse((_) => ok(false)),
+  },
+]);
 
-const s3Configured = (): ResultAsync<boolean, never> => {
-  return ResultAsync.fromPromise(
-    Promise.allSettled([
-      isMinioAvailable(),
-      isRustfsAvailable(),
-      isGarageHealthy(),
-      isCephRgwHealthy(),
-    ]).then((results) => results.some((r) => r.status === "fulfilled" && r.value === true)),
-    () => null
-  ).orElse((_) => ok(false));
-};
+const visibleTabs = computed<HoustonAppTabEntry[]>(() => tabs.filter((tab) => tab.visible.value));
+
+const loading = computed<boolean>(() => tabs.some((tab) => tab.visible.value === undefined));
 
 let watchStopHandle: WatchStopHandle;
 
@@ -116,111 +199,15 @@ globalProcessingWrapPromise(useUserSettings(true)).then((userSettings) => {
             }
           });
       }
-      switch (userSettings.samba.tabVisibility) {
-        case "always":
-          showSambaTab.value = true;
-          break;
-        case "never":
-          showSambaTab.value = false;
-          break;
-        case "auto":
-          globalProcessingWrapPromise(
-            sambaConfigured()
-              .map((value) => (showSambaTab.value = value))
-              .unwrapOr(null)
-          );
-          break;
-      }
-      switch (userSettings.nfs.tabVisibility) {
-        case "always":
-          showNfsTab.value = true;
-          break;
-        case "never":
-          showNfsTab.value = false;
-          break;
-        case "auto":
-          globalProcessingWrapPromise(
-            nfsConfigured()
-              .map((value) => (showNfsTab.value = value))
-              .unwrapOr(null)
-          );
-          break;
-      }
-      switch (userSettings.iscsi.tabVisibility) {
-        case "always":
-          showIscsiTab.value = true;
-          break;
-        case "never":
-          showIscsiTab.value = false;
-          break;
-        case "auto":
-          globalProcessingWrapPromise(
-            iscsiConfigured()
-              .map((value) => (showIscsiTab.value = value))
-              .unwrapOr(null)
-          );
-          break;
-      }
-      switch (userSettings.s3.tabVisibility) {
-        case "always":
-          showS3Tab.value = true;
-          break;
-        case "never":
-          showS3Tab.value = false;
-          break;
-        case "auto":
-          globalProcessingWrapPromise(
-            s3Configured()
-              .map((value) => (showS3Tab.value = value))
-              .unwrapOr(null)
-          );
-          break;
-      }
+      tabs.forEach((tab) => {
+        tab.updateVisibility(userSettings);
+      });
     },
     { immediate: true }
   );
 });
 
 onUnmounted(() => watchStopHandle?.());
-
-const visibleTabs = computed<HoustonAppTabEntry[]>(() => [
-  ...(showSambaTab.value
-    ? [
-        {
-          label: "Samba",
-          component: SambaTabMain,
-        },
-      ]
-    : []),
-  ...(showNfsTab.value
-    ? [
-        {
-          label: "NFS",
-          component: NFSTabMain,
-        },
-      ]
-    : []),
-  ...(showIscsiTab.value
-    ? [
-        {
-          label: "iSCSI",
-          component: ISCSITabMain,
-        },
-      ]
-    : []),
-  ...(showS3Tab.value
-    ? [
-        {
-          label: "S3",
-          component: S3ManagementMain,
-        },
-      ]
-    : []),
-]);
-
-const loading = computed<boolean>(() =>
-  [showSambaTab, showNfsTab, showIscsiTab, showS3Tab].some((s) => s.value === undefined)
-);
 </script>
 
 <template>

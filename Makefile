@@ -76,7 +76,7 @@ houston-common/Makefile:
 	git submodule update --init
 
 houston-common: houston-common/Makefile bootstrap-yarn
-	find houston-common -maxdepth 2 -name package.json -not -path "*/node_modules/*" -exec sh -c 'jq "del(.packageManager)" "$$1" | sponge "$$1"' _ {} \;
+# 	find houston-common -maxdepth 2 -name package.json -not -path "*/node_modules/*" -exec sh -c 'jq "del(.packageManager)" "$$1" | sponge "$$1"' _ {} \;
 	$(MAKE) -C houston-common
 
 houston-common-%:
