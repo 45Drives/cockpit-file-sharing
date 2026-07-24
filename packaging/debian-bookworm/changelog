@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.6.2-1bookworm) bookworm; urgency=medium
+
+  * Add timeout to tab visibility checks
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Fri, 24 Jul 2026 12:30:17 -0300
+
 cockpit-file-sharing (4.6.1-2bookworm) bookworm; urgency=medium
 
   * Repackage with correct houston-common submodule commit
