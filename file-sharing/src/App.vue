@@ -24,37 +24,13 @@ import { isMinioAvailable } from "@/tabs/s3Management/api/minioCliAdapter";
 import { isRustfsAvailable } from "@/tabs/s3Management/api/rustfsCliAdapter";
 import { isGarageHealthy } from "@/tabs/s3Management/api/garageCliAdapter";
 import { isCephRgwHealthy } from "@/tabs/s3Management/api/cephCliAdapter";
+import { promiseTimeout } from "@/common/promise-timeout";
 
 const _ = cockpit.gettext;
 
 const appVersion = __APP_VERSION__;
 
 const showUserSettings = ref(false);
-
-const timeout = <T,>(func: () => Promise<T>, seconds: number, description: string): Promise<T> => {
-  return new Promise((resolve, reject) => {
-    const result = func();
-    const notif = new Notification(
-      _("Process not responding"),
-      description + _(" took longer than ") + seconds + "s",
-      "warning",
-      "never"
-    )
-      .addAction(_("Wait longer"), () => resolve(timeout(() => result, seconds, description)), true)
-      .addAction(_("Give up"), () => reject(), true);
-    const t = globalThis.setTimeout(() => {
-      pushNotification(notif);
-      result.finally(() => {
-        notif.remove();
-      });
-    }, seconds * 1000);
-    result.then(resolve);
-    result.catch(reject);
-    result.finally(() => {
-      globalThis.clearTimeout(t);
-    });
-  });
-};
 
 const defineTabs = (
   tabDefs: {
@@ -82,13 +58,14 @@ const defineTabs = (
             break;
           case "auto":
             globalProcessingWrapPromise(
-              timeout(
+              promiseTimeout(
                 () =>
                   tab
                     .autoShowCheck()
                     .map((value) => (visible.value = value))
                     .unwrapOr(null),
                 tab.autoShowTimeout ?? 10,
+                true,
                 _("Checking configuration for ") + tab.label
               )
             );
