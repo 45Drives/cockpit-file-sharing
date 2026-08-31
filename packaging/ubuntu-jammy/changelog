@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.6.1-2jammy) jammy; urgency=medium
+
+  * Repackage with correct houston-common submodule commit
+
+ -- Joshua Boudreau <jboudreau@45drives.com>  Thu, 23 Jul 2026 15:32:00 -0300
+
 cockpit-file-sharing (4.6.1-1jammy) jammy; urgency=medium
 
   * fix: add debian-trixie packaging support
