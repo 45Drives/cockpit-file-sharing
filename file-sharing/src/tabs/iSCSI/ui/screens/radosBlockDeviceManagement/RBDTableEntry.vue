@@ -31,8 +31,6 @@ import { Modal } from "@45drives/houston-common-ui";
 import { PlusIcon } from "@heroicons/vue/24/solid";
 import { VirtualDevice } from '@/tabs/iSCSI/types/VirtualDevice';
 
-const _cockpit = cockpit;
-
 const props = defineProps<{
   device: RadosBlockDevice | LogicalVolume;
 }>();

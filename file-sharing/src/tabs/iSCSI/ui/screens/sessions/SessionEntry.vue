@@ -34,8 +34,6 @@ import ConnectionTable from "@/tabs/iSCSI/ui/screens/connections/ConnectionTable
 
 const props = defineProps<{ session: Session }>();
 
-const _cockpit = cockpit;
-
 const emit = defineEmits(["deleteEntry"]);
 
 const driver = inject<ResultAsync<ISCSIDriver, ProcessError>>("iSCSIDriver")!;

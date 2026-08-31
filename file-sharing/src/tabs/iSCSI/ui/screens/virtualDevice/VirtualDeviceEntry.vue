@@ -52,7 +52,6 @@ const props = defineProps<{
   device: VirtualDevice | RadosBlockDevice | LogicalVolume
 }>();
 const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
-const _cockpit = cockpit;
 
 const _ = cockpit.gettext;
 

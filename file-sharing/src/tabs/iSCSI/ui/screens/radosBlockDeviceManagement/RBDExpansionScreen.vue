@@ -46,8 +46,6 @@ import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCS
 import { ProcessError, formatBytes } from "@45drives/houston-common-lib";
 import type { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
 
-const _cockpit = cockpit;
-
 const _ = cockpit.gettext;
 
 const driver = inject<ResultAsync<ISCSIDriverClusteredServer, ProcessError>>("iSCSIDriver")!;
@@ -159,10 +157,12 @@ const sizeAmount = ref(
 watch([sizeAmount, sizeUnitExponent], ([amount, exponent]) => {
   const parsed = Number(amount);
 
+  // Round up, never down: the entered value is a minimum the user is asking for,
+  // and a fractional byte count must not resolve to less than that.
   tempOptions.value.maximumSize =
     amount.trim() === "" || !Number.isFinite(parsed)
       ? undefined
-      : Math.round(parsed * 1024 ** exponent);
+      : Math.ceil(parsed * 1024 ** exponent);
 });
 
 const actions = wrapActions({resizeDevice});

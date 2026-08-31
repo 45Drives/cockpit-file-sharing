@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.6.2-1
+## Cockpit File Sharing 4.6.2-2
 
-* fixing the rbd/vg resize issue
+* building test package
