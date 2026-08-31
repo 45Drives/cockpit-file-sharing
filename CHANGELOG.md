@@ -1,3 +1,3 @@
-## Cockpit File Sharing 4.6.1-2
+## Cockpit File Sharing 4.6.2-1
 
-* Repackage with correct houston-common submodule commit
+* fixing the rbd/vg resize issue
