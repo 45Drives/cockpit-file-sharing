@@ -729,18 +729,8 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
           const lv = availableLogicalVolumes.find((vol) => vol.filePath === path);
           if (lv) {
             if (hasVG(lv.filePath)) {
-              foundDevices.push(
-                new VirtualDevice(
-                  lv.deviceName,
-                  lv.filePath,
-                  lv.blockSize,
-                  lv.deviceType,
-                  lv.maximumSize,
-                  true,
-                  undefined,
-                  lv.server
-                )
-              );
+              lv.assigned = true;
+              foundDevices.push(lv);
             }
 
             continue;
@@ -758,18 +748,8 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         // === 3. Add all UNASSIGNED Logical Volumes ===
         for (let lv of availableLogicalVolumes) {
           if (!assignedPaths.has(lv.filePath) && hasVG(lv.filePath)) {
-            foundDevices.push(
-              new VirtualDevice(
-                lv.deviceName,
-                lv.filePath,
-                lv.blockSize,
-                lv.deviceType,
-                lv.maximumSize,
-                false,
-                undefined,
-                lv.server
-              )
-            );
+            lv.assigned = false;
+            foundDevices.push(lv);
           }
         }
         return ok(foundDevices);
