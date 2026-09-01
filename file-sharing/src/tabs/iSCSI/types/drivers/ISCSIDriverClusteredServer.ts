@@ -244,8 +244,11 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
   }
   deletePortalFromTarget(target: Target, portal: Portal): ResultAsync<void, ProcessError> {
     return this.findTargetPCSResource(target).andThen((targetResource) => {
+      const addressOf = (candidate: Portal) => candidate.address.split(":")[0];
+      const removedAddress = addressOf(portal);
+
       const updatedPortalList = target.portals
-        .filter((existingPortal) => existingPortal !== portal)
+        .filter((existingPortal) => addressOf(existingPortal) !== removedAddress)
         .map((existingPortal) => existingPortal.address)
         .join(", ");
 
@@ -1436,10 +1439,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
         let rbdsToRemove = blockDevice.volumeGroup.volumes.map(
           (physicalVolume) => physicalVolume.rbd
         );
-        self.pcsResourceManager.removeResourceFromGroup(
-          targetResource?.resourceGroup?.name!,
-          "iscsi_LUN_" + lun.name
-        );
+        yield* self.pcsResourceManager
+          .removeResourceFromGroup(
+            targetResource?.resourceGroup?.name!,
+            "iscsi_LUN_" + lun.name
+          )
+          .safeUnwrap();
         // console.log("Removing LV and related resources for LUN: iscsi_LUN_",lun.name)
         const lvmResources11 = yield* self.pcsResourceManager.fetchResources().safeUnwrap();
 
@@ -1453,10 +1458,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
             values.get("lvname") === blockDevice.deviceName &&
             values.get("vgname") === blockDevice.volumeGroup.name
           ) {
-            self.pcsResourceManager.removeResourceFromGroup(
-              targetResource?.resourceGroup?.name!!,
-              "iscsi_LVM_" + lun.name + "_" + blockDevice.volumeGroup.name
-            );
+            yield* self.pcsResourceManager
+              .removeResourceFromGroup(
+                targetResource?.resourceGroup?.name!!,
+                "iscsi_LVM_" + lun.name + "_" + blockDevice.volumeGroup.name
+              )
+              .safeUnwrap();
             break;
           }
         }
@@ -1475,10 +1482,12 @@ export class ISCSIDriverClusteredServer implements ISCSIDriver {
               values.get("pool") === rbdToRemove.parentPool.name
             ) {
               //         yield* self.pcsResourceManager.disableResource(resource).safeUnwrap();
-              self.pcsResourceManager.removeResourcefromOrderGroup(
-                rbdToRemove.deviceName,
-                targetResource.resourceGroup!.name!
-              );
+              yield* self.pcsResourceManager
+                .removeResourcefromOrderGroup(
+                  rbdToRemove.deviceName,
+                  targetResource.resourceGroup!.name!
+                )
+                .safeUnwrap();
               break;
             }
           }

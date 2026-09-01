@@ -210,15 +210,24 @@ export class PCSResourceManager {
 
             const resources = yield * self.fetchResources().safeUnwrap();
 
-            const nextResource = resources
-            .filter((resource) => resource.resourceGroup?.name === resourceGroup.name)
-            .sort((r1, r2) => PCSResourceTypeInfo[r1.resourceType].orderInGroup - PCSResourceTypeInfo[r2.resourceType].orderInGroup)
-            .find((groupResource) => currentResourceIndex <= PCSResourceTypeInfo[groupResource.resourceType].orderInGroup);
+            const memberOrder = yield * self.fetchGroupMemberOrder(resourceGroup.name).safeUnwrap();
+
+            const rankOf = (resourceName: string) => {
+                const known = resources.find((groupResource) => groupResource.name === resourceName);
+                return known === undefined
+                    ? undefined
+                    : PCSResourceTypeInfo[known.resourceType].orderInGroup;
+            };
+
+            const anchorName = memberOrder.find((memberName) => {
+                const rank = rankOf(memberName);
+                return rank !== undefined && rank > currentResourceIndex;
+            });
 
             let positionArgument: string[] = [];
 
-            if (nextResource !== undefined) {
-                positionArgument = [`--before`, nextResource.name];
+            if (anchorName !== undefined) {
+                positionArgument = [`--before`, anchorName];
             }
 
             resource.resourceGroup = resourceGroup;
@@ -288,6 +297,16 @@ export class PCSResourceManager {
         return this.fetchResources().map((resources) => resources.find((resource) => resource.name === resourceName));
     }
 
+
+    fetchGroupMemberOrder(resourceGroupName: string): ResultAsync<string[], ProcessError> {
+        return this.server
+          .execute(new BashCommand(`pcs resource config --output-format json`))
+          .map(proc => proc.getStdout())
+          .andThen(safeJsonParse<PCSConfigJson>)
+          .mapErr(err => new ProcessError(`Unable to get current PCS configuration: ${err}`))
+          .map((cfg) => (cfg.groups ?? []).find(g => g.id === resourceGroupName)?.member_ids ?? []);
+    }
+
     fetchResources(): ResultAsync<PCSResource[], ProcessError> {
         if (this.currentResources !== undefined) {
           return okAsync(this.currentResources);
@@ -305,7 +324,10 @@ export class PCSResourceManager {
             const resources = primitives
               .map((resource) => {
                 const resourceType = this.getResourceTypeOfPCSResource(resource);
-                if (!resourceType) return undefined;
+                // Must compare against undefined, not test truthiness:
+                // PCSResourceType.PORTBLOCK_ON is 0, so `!resourceType` would
+                // silently drop every portblock-on resource from the list.
+                if (resourceType === undefined) return undefined;
       
                 const group = groups.find(g => g.member_ids.includes(resource.id));
                 const groupObject = group ? new PCSResourceGroup(group.id) : undefined;
