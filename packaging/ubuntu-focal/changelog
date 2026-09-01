@@ -1,3 +1,15 @@
+cockpit-file-sharing (4.6.2-2focal) focal; urgency=medium
+
+  * building test package
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 31 Aug 2026 12:16:53 -0300
+
+cockpit-file-sharing (4.6.2-1focal) focal; urgency=medium
+
+  * fixing the rbd/vg resize issue
+
+ -- Rachit Hans <rhans@45drives.com>  Mon, 31 Aug 2026 11:53:16 -0300
+
 cockpit-file-sharing (4.6.1-2focal) focal; urgency=medium
 
   * Repackage with correct houston-common submodule commit

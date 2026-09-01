@@ -2,7 +2,7 @@
   <tr>
     <td class="max-w-40 truncate" :title="device.deviceName">{{ device.deviceName }}</td>
     <td class="max-w-40 truncate" :title="device.filePath">{{ device.filePath }}</td>
-    <td v-if="useUserSettings().value.iscsi.clusteredServer">{{ `${_cockpit.format_bytes(device.maximumSize)} ` }}</td>
+    <td v-if="useUserSettings().value.iscsi.clusteredServer">{{ formatBytes(device.maximumSize ?? 0, "binary") }}</td>
     <td v-else>{{ device.blockSize }}</td>
 
     <td>{{ getDeviceType() }}</td>
@@ -40,7 +40,7 @@ import { wrapActions, confirmBeforeAction } from "@45drives/houston-common-ui";
 import { inject, ref, reactive } from "vue";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import { ResultAsync } from "neverthrow";
-import { ProcessError } from "@45drives/houston-common-lib";
+import { ProcessError, formatBytes } from "@45drives/houston-common-lib";
 import { useUserSettings } from "@/common/user-settings";
 import { RadosBlockDevice } from "@/tabs/iSCSI/types/cluster/RadosBlockDevice";
 import { LogicalVolume } from "@/tabs/iSCSI/types/cluster/LogicalVolume";
@@ -52,7 +52,6 @@ const props = defineProps<{
   device: VirtualDevice | RadosBlockDevice | LogicalVolume
 }>();
 const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
-const _cockpit = cockpit;
 
 const _ = cockpit.gettext;
 

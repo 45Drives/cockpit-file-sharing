@@ -46,6 +46,9 @@
         </template>
 
         <ByteInput v-model="tempDeviceOptions.maximumSize"/>
+        <p v-if="alignedSize !== undefined" class="text-sm text-muted">
+          {{ _(`This size cannot be divided evenly across ${tempDeviceOptions.numberOfRBDs} RBDs, so the device will be rounded up to ${alignedSizeText}.`) }}
+        </p>
         <ValidationResultView v-bind="sizeValidationResult" />
       </InputLabelWrapper>
 
@@ -78,7 +81,7 @@
 import { Pool } from "@/tabs/iSCSI/types/cluster/Pool";
 import type { ISCSIDriverClusteredServer } from "@/tabs/iSCSI/types/drivers/ISCSIDriverClusteredServer";
 import { VirtualDevice } from "@/tabs/iSCSI/types/VirtualDevice";
-import type { ProcessError } from "@45drives/houston-common-lib";
+import { formatBytes, type ProcessError } from "@45drives/houston-common-lib";
 import {
   CardContainer,
   SelectMenu,
@@ -131,6 +134,45 @@ const newOptions = ref<DeviceOptions>({
 
 const { tempObject: tempDeviceOptions, modified, resetChanges } = useTempObjectStaging(newOptions);
 
+// A striped logical volume has to use the same whole number of extents on every
+// stripe, so a requested size that does not divide evenly is rounded *up* -
+// rounding down would hand back less capacity than was asked for. Show the size
+// that will actually be created so the difference is not a surprise afterwards.
+//
+// The real extent size is read from the volume group at creation time; the group
+// does not exist yet here, so this preview assumes the LVM default of 4 MiB. It
+// is display only - the authoritative arithmetic lives in RBDManager.
+const extentSize = 4 * 1024 ** 2;
+
+const alignedSize = computed(() => {
+  const requested = tempDeviceOptions.value.maximumSize;
+  const stripeCount = tempDeviceOptions.value.numberOfRBDs;
+
+  if (requested === undefined || requested <= 0 || stripeCount <= 0) {
+    return undefined;
+  }
+
+  const aligned = Math.ceil(requested / stripeCount / extentSize) * extentSize * stripeCount;
+
+  return aligned === requested ? undefined : aligned;
+});
+
+// `formatBytes` rounds to four significant digits, which would render an 11.004
+// GiB result as "11.00 GiB" - indistinguishable from the 11 GiB that was typed,
+// making the message look like it is saying nothing. Show enough decimals for
+// the difference to be visible.
+const alignedSizeText = computed(() => {
+  const aligned = alignedSize.value;
+
+  if (aligned === undefined) {
+    return "";
+  }
+
+  const gib = aligned / 1024 ** 3;
+
+  return gib >= 1 ? `${Number(gib.toFixed(3))} GiB` : `${Number((aligned / 1024 ** 2).toFixed(3))} MiB`;
+});
+
 driver
   .andThen((driver) => driver.rbdManager.fetchAvaliablePools())
   .map((pools) => pools.map((pool) => ({ label: pool.name, value: pool })))
@@ -145,7 +187,7 @@ const createDevice = () => {
       return new ResultAsync(safeTry(async function * () {
         let createdRBDs = [];
 
-        const sizePerRBD = Math.round(tempDeviceOptions.value.maximumSize!/tempDeviceOptions.value.numberOfRBDs);
+        const sizePerRBD = Math.ceil(tempDeviceOptions.value.maximumSize!/tempDeviceOptions.value.numberOfRBDs);
 
         for (let i = 0; i < tempDeviceOptions.value.numberOfRBDs; i++) {
           const result = yield * rbdManager.createRadosBlockDevice(
@@ -158,7 +200,7 @@ const createDevice = () => {
           createdRBDs.push(result);
         }
 
-        return ok(yield * rbdManager.createLogicalVolumeFromRadosBlockDevices(tempDeviceOptions.value.name!, `${tempDeviceOptions.value.name!}_VG`, createdRBDs).safeUnwrap());
+        return ok(yield * rbdManager.createLogicalVolumeFromRadosBlockDevices(tempDeviceOptions.value.name!, `${tempDeviceOptions.value.name!}_VG`, createdRBDs, tempDeviceOptions.value.maximumSize).safeUnwrap());
       }))
       .map((logicalVolume) => {
         emit('created', logicalVolume);

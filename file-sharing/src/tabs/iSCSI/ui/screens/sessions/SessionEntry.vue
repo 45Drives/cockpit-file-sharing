@@ -1,8 +1,8 @@
 <template>
   <tr>
     <td>{{ session.initiatorName }}</td>
-    <td>{{ _cockpit.format_bytes(session.readAmountKB * 1024) }}</td>
-    <td>{{ _cockpit.format_bytes(session.writeAmountKB * 1024) }}</td>
+    <td>{{ formatBytes(session.readAmountKB * 1024, "binary") }}</td>
+    <td>{{ formatBytes(session.writeAmountKB * 1024, "binary") }}</td>
     <td class="button-group-row justify-end">
       <button @click="showEditor = !showEditor">
         <span class="sr-only">Edit</span>
@@ -26,15 +26,13 @@
 import { inject, ref } from "vue";
 import { ChevronDownIcon } from "@heroicons/vue/20/solid";
 import { ResultAsync } from "neverthrow";
-import { ProcessError } from "@45drives/houston-common-lib";
+import { ProcessError, formatBytes } from "@45drives/houston-common-lib";
 import { Disclosure } from "@45drives/houston-common-ui";
 import type { ISCSIDriver } from "@/tabs/iSCSI/types/drivers/ISCSIDriver";
 import type { Session } from "@/tabs/iSCSI/types/Session";
 import ConnectionTable from "@/tabs/iSCSI/ui/screens/connections/ConnectionTable.vue";
 
 const props = defineProps<{ session: Session }>();
-
-const _cockpit = cockpit;
 
 const emit = defineEmits(["deleteEntry"]);
 
