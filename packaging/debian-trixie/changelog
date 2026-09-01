@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.6.2-3trixie) trixie; urgency=medium
+
+  * building release package: fixed device resizing and ordering of portblocks and
+    vips
+
+ -- Rachit Hans <rhans@45drives.com>  Tue, 01 Sep 2026 12:57:38 -0300
+
 cockpit-file-sharing (4.6.2-2trixie) trixie; urgency=medium
 
   * building test package
