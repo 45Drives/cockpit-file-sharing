@@ -2,7 +2,7 @@ name: Build Packages
 on:
   push:
     branches: 
-      - fix/iscsi-rbd-size-alignment
+      - build
     tags:
       - 'v*.*.*'
 jobs:
