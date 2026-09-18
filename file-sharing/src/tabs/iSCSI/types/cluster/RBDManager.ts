@@ -4,7 +4,7 @@ import { PhysicalVolume } from './PhysicalVolume';
 import { LogicalVolume } from '@/tabs/iSCSI/types/cluster/LogicalVolume';
 import { RadosBlockDevice } from './RadosBlockDevice';
 import { Pool, PoolType } from "@/tabs/iSCSI/types/cluster/Pool";
-import { BashCommand, ProcessError, safeJsonParse, Server, StringToIntCaster } from '@45drives/houston-common-lib';
+import { BashCommand, Command, ProcessError, safeJsonParse, Server, StringToIntCaster } from '@45drives/houston-common-lib';
 import { Notification, pushNotification } from '@45drives/houston-common-ui';
 import { err, errAsync, ok, okAsync, ResultAsync, safeTry } from 'neverthrow';
 
@@ -173,16 +173,21 @@ export class RBDManager {
             });
     }
 
-    expandRadosBlockDevice(device: RadosBlockDevice, newSizeBytes: number, server: Server = this.server) {
+    expandRadosBlockDevice(device: RadosBlockDevice, newSizeBytes: number, server?: Server) {
+        // Callers that already resolved the owning node (the LVM path) pass it in.
+        // Otherwise fall back to the node the image was enumerated on: its mapping and
+        // SCST device live there, which is not necessarily the primary server.
+        const targetServer = server ?? device.server ?? this.server;
+
         // Always fully qualify the image as <pool>/<image>; without the pool prefix
         // `rbd resize` only ever resolves images in the default "rbd" pool.
         const imageSpec = device.parentPool?.name
             ? `${device.parentPool.name}/${device.deviceName}`
             : device.deviceName;
 
-        return server.execute(new BashCommand(`rbd resize --size ${newSizeBytes}B ${imageSpec}`))
+        return targetServer.execute(new BashCommand(`rbd resize --size ${newSizeBytes}B ${imageSpec}`))
             .andThen((proc) =>
-                this.resyncScstDevicesForPath(device.filePath, server).map(() => proc)
+                this.resyncScstDevicesForPath(device.filePath, targetServer).map(() => proc)
             );
     }
 
@@ -480,13 +485,15 @@ export class RBDManager {
         const scstDevices = "/sys/kernel/scst_tgt/devices";
 
         return server
-            .execute(new BashCommand(
+            .execute(new Command([
+                "bash", "-c",
                 `shopt -s nullglob; ` +
                 `for d in ${scstDevices}/*; do ` +
                 `[ -r "$d/filename" ] || continue; ` +
-                `[ "$(head -n1 "$d/filename")" = "${devicePath}" ] && basename "$d"; ` +
-                `done`
-            ), false)
+                `[ "$(head -n1 "$d/filename")" = "$1" ] && basename "$d"; ` +
+                `done`,
+                "bash", devicePath,
+            ]), false)
             .map((proc) =>
                 proc.getStdout()
                     .split("\n")
@@ -512,17 +519,20 @@ export class RBDManager {
 
                 return ResultAsync.combine(deviceNames.map((deviceName) =>
                     server
-                        .execute(new BashCommand(
-                            `scstadmin -resync_dev ${deviceName} -noprompt`
-                        ), false)
-                        .andThen(() => server.execute(new BashCommand(
-                            `echo "$(cat /sys/kernel/scst_tgt/devices/${deviceName}/size_mb 2>/dev/null)" ` +
-                            `"$(blockdev --getsize64 ${devicePath} 2>/dev/null)"`
-                        ), false))
-                        .map((proc) => {
-                            const [reportedMb, deviceBytes] = proc.getStdout().trim().split(/\s+/);
-                            const scstMb = StringToIntCaster()(reportedMb ?? "");
-                            const bytes = StringToIntCaster()(deviceBytes ?? "");
+                        .execute(new Command([
+                            "scstadmin", "-resync_dev", deviceName, "-noprompt",
+                        ]), false)
+                        .andThen(() => ResultAsync.combine([
+                            server.execute(new Command([
+                                "cat", `${scstDevices}/${deviceName}/size_mb`,
+                            ]), false).map((proc) => proc.getStdout().trim()),
+                            server.execute(new Command([
+                                "blockdev", "--getsize64", devicePath,
+                            ]), false).map((proc) => proc.getStdout().trim()),
+                        ] as const))
+                        .map(([reportedMb, deviceBytes]) => {
+                            const scstMb = StringToIntCaster()(reportedMb);
+                            const bytes = StringToIntCaster()(deviceBytes);
 
                             if (scstMb.isNone() || bytes.isNone()) {
                                 const message = `${deviceName} on ${server.host}: could not read ` +
