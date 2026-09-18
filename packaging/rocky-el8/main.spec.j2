@@ -31,6 +31,9 @@ make DESTDIR=%{buildroot} OS_PACKAGE_RELEASE=el8 install
 /usr/share/cockpit/file-sharing/*
 
 %changelog
+* Fri Sep 18 2026 Rachit Hans <rhans@45drives.com> 4.6.3-1
+- resized RBD/LVM devices now show their new capacity to connected initiators immediately,
+  without requiring a failover
 * Tue Sep 01 2026 Rachit Hans <rhans@45drives.com> 4.6.2-3
 - building release package: fixed device resizing and ordering of portblocks and
   vips

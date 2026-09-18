@@ -18,7 +18,7 @@
           {{ _(`This size cannot be divided evenly across the ${stripeCount} RBDs backing this device, so it will be rounded up to ${alignedSizeText}.`) }}
         </p>
         <p class="text-sm text-muted">
-          {{ _("Connected initiators are told about the new capacity straight away, but the partition and filesystem on the disk still have to be extended from the client (for example Extend Volume in Windows Disk Management, or growpart and resize2fs/xfs_growfs on Linux).") }}
+          {{ _("The disk grows immediately, but the partition and filesystem on it must still be extended from the client.") }}
         </p>
         <ValidationResultView v-bind="sizeValidationResult" />
       </InputLabelWrapper>
