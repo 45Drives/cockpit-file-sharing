@@ -4,7 +4,8 @@ import { PhysicalVolume } from './PhysicalVolume';
 import { LogicalVolume } from '@/tabs/iSCSI/types/cluster/LogicalVolume';
 import { RadosBlockDevice } from './RadosBlockDevice';
 import { Pool, PoolType } from "@/tabs/iSCSI/types/cluster/Pool";
-import { BashCommand, ProcessError, safeJsonParse, Server, StringToIntCaster } from '@45drives/houston-common-lib';
+import { BashCommand, Command, ProcessError, safeJsonParse, Server, StringToIntCaster } from '@45drives/houston-common-lib';
+import { Notification, pushNotification } from '@45drives/houston-common-ui';
 import { err, errAsync, ok, okAsync, ResultAsync, safeTry } from 'neverthrow';
 
 export class RBDManager {
@@ -172,14 +173,22 @@ export class RBDManager {
             });
     }
 
-    expandRadosBlockDevice(device: RadosBlockDevice, newSizeBytes: number, server: Server = this.server) {
+    expandRadosBlockDevice(device: RadosBlockDevice, newSizeBytes: number, server?: Server) {
+        // Callers that already resolved the owning node (the LVM path) pass it in.
+        // Otherwise fall back to the node the image was enumerated on: its mapping and
+        // SCST device live there, which is not necessarily the primary server.
+        const targetServer = server ?? device.server ?? this.server;
+
         // Always fully qualify the image as <pool>/<image>; without the pool prefix
         // `rbd resize` only ever resolves images in the default "rbd" pool.
         const imageSpec = device.parentPool?.name
             ? `${device.parentPool.name}/${device.deviceName}`
             : device.deviceName;
 
-        return server.execute(new BashCommand(`rbd resize --size ${newSizeBytes}B ${imageSpec}`));
+        return targetServer.execute(new BashCommand(`rbd resize --size ${newSizeBytes}B ${imageSpec}`))
+            .andThen((proc) =>
+                this.resyncScstDevicesForPath(device.filePath, targetServer).map(() => proc)
+            );
     }
 
     /**
@@ -444,6 +453,7 @@ export class RBDManager {
                         return errAsync(error);
                     })
                 )
+                .andThen(() => this.resyncScstDevicesForPath(volume.filePath, targetServer))
                 // Refresh the in-memory sizes from the actual post-resize state so the UI
                 // reflects reality without a full page reload. A failure here means we no
                 // longer know the real size, so surface it.
@@ -469,6 +479,95 @@ export class RBDManager {
             .mapErr((error) => new ProcessError(
                 `Failed to expand ${volume.filePath}: ${error instanceof Error ? error.message : error}`
             ));
+    }
+
+    private resyncScstDevicesForPath(devicePath: string, server: Server) {
+        const scstDevices = "/sys/kernel/scst_tgt/devices";
+
+        return server
+            .execute(new Command([
+                "bash", "-c",
+                `shopt -s nullglob; ` +
+                `for d in ${scstDevices}/*; do ` +
+                `[ -r "$d/filename" ] || continue; ` +
+                `[ "$(head -n1 "$d/filename")" = "$1" ] && basename "$d"; ` +
+                `done`,
+                "bash", devicePath,
+            ]), false)
+            .map((proc) =>
+                proc.getStdout()
+                    .split("\n")
+                    .map((line) => line.trim())
+                    .filter((line) => line.length > 0)
+            )
+            .orElse((error) => {
+                const message = `Could not list SCST devices on ${server.host}: ${error}. ` +
+                    `The volume was expanded, but initiators may need a rescan or failover ` +
+                    `to see the new size.`;
+                pushNotification(new Notification("Unable to refresh device size", message, "warning"));
+                return okAsync([] as string[]);
+            })
+            .andThen((deviceNames) => {
+                if (deviceNames.length === 0) {
+                    console.log(`[resyncScstDevicesForPath] no SCST device on ${server.host} ` +
+                        `is backed by ${devicePath}; nothing to resync.`);
+                    return okAsync(undefined);
+                }
+
+                console.log(`[resyncScstDevicesForPath] resyncing ${deviceNames.join(", ")} ` +
+                    `on ${server.host} for ${devicePath}`);
+
+                return ResultAsync.combine(deviceNames.map((deviceName) =>
+                    server
+                        .execute(new Command([
+                            "scstadmin", "-resync_dev", deviceName, "-noprompt",
+                        ]), false)
+                        .andThen(() => ResultAsync.combine([
+                            server.execute(new Command([
+                                "cat", `${scstDevices}/${deviceName}/size_mb`,
+                            ]), false).map((proc) => proc.getStdout().trim()),
+                            server.execute(new Command([
+                                "blockdev", "--getsize64", devicePath,
+                            ]), false).map((proc) => proc.getStdout().trim()),
+                        ] as const))
+                        .map(([reportedMb, deviceBytes]) => {
+                            const scstMb = StringToIntCaster()(reportedMb);
+                            const bytes = StringToIntCaster()(deviceBytes);
+
+                            if (scstMb.isNone() || bytes.isNone()) {
+                                const message = `${deviceName} on ${server.host}: could not read ` +
+                                    `back the capacity to verify the resync. The volume was ` +
+                                    `expanded; initiators may need a rescan or failover to see it.`;
+                                pushNotification(new Notification(
+                                    "Unable to verify device size", message, "warning"));
+                                return;
+                            }
+
+                            const expectedMb = Math.floor(bytes.some() / 1048576);
+                            const actualMb = scstMb.some();
+                            if (actualMb === expectedMb) {
+                                console.log(`[resyncScstDevicesForPath] ${deviceName} on ` +
+                                    `${server.host}: SCST now reports ${actualMb} MB, ` +
+                                    `matching the block device.`);
+                            } else {
+                                const message = `${deviceName} on ${server.host}: SCST reports ` +
+                                    `${actualMb} MB but the block device is ${expectedMb} MB. The ` +
+                                    `volume was expanded; initiators may need a rescan or failover ` +
+                                    `to see it.`;
+                                pushNotification(new Notification(
+                                    "Block device size mismatch", message, "warning"));
+                            }
+                        })
+                        .orElse((error) => {
+                            const message = `Failed to resync ${deviceName} on ${server.host}: ` +
+                                `${error}. The volume was expanded; initiators may need a rescan ` +
+                                `or failover to see it.`;
+                            pushNotification(new Notification(
+                                "Unable to refresh device size", message, "warning"));
+                            return okAsync(undefined);
+                        })
+                )).map(() => undefined);
+            });
     }
 
     /**
