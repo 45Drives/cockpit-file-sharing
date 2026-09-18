@@ -5,6 +5,7 @@ import { LogicalVolume } from '@/tabs/iSCSI/types/cluster/LogicalVolume';
 import { RadosBlockDevice } from './RadosBlockDevice';
 import { Pool, PoolType } from "@/tabs/iSCSI/types/cluster/Pool";
 import { BashCommand, ProcessError, safeJsonParse, Server, StringToIntCaster } from '@45drives/houston-common-lib';
+import { Notification, pushNotification } from '@45drives/houston-common-ui';
 import { err, errAsync, ok, okAsync, ResultAsync, safeTry } from 'neverthrow';
 
 export class RBDManager {
@@ -480,6 +481,7 @@ export class RBDManager {
 
         return server
             .execute(new BashCommand(
+                `shopt -s nullglob; ` +
                 `for d in ${scstDevices}/*; do ` +
                 `[ -r "$d/filename" ] || continue; ` +
                 `[ "$(head -n1 "$d/filename")" = "${devicePath}" ] && basename "$d"; ` +
@@ -491,7 +493,13 @@ export class RBDManager {
                     .map((line) => line.trim())
                     .filter((line) => line.length > 0)
             )
-            .orElse(() => okAsync([] as string[]))
+            .orElse((error) => {
+                const message = `Could not list SCST devices on ${server.host}: ${error}. ` +
+                    `The volume was expanded, but initiators may need a rescan or failover ` +
+                    `to see the new size.`;
+                pushNotification(new Notification("Unable to refresh device size", message, "warning"));
+                return okAsync([] as string[]);
+            })
             .andThen((deviceNames) => {
                 if (deviceNames.length === 0) {
                     console.log(`[resyncScstDevicesForPath] no SCST device on ${server.host} ` +
@@ -517,10 +525,11 @@ export class RBDManager {
                             const bytes = StringToIntCaster()(deviceBytes ?? "");
 
                             if (scstMb.isNone() || bytes.isNone()) {
-                                console.warn(`[resyncScstDevicesForPath] ${deviceName} on ` +
-                                    `${server.host}: could not read back the capacity to verify ` +
-                                    `the resync. The volume was expanded; initiators may need a ` +
-                                    `rescan or failover to see it.`);
+                                const message = `${deviceName} on ${server.host}: could not read ` +
+                                    `back the capacity to verify the resync. The volume was ` +
+                                    `expanded; initiators may need a rescan or failover to see it.`;
+                                pushNotification(new Notification(
+                                    "Unable to verify device size", message, "warning"));
                                 return;
                             }
 
@@ -531,16 +540,20 @@ export class RBDManager {
                                     `${server.host}: SCST now reports ${actualMb} MB, ` +
                                     `matching the block device.`);
                             } else {
-                                console.warn(`[resyncScstDevicesForPath] ${deviceName} on ` +
-                                    `${server.host}: SCST reports ${actualMb} MB but the ` +
-                                    `block device is ${expectedMb} MB. The volume was expanded; ` +
-                                    `initiators may need a rescan or failover to see it.`);
+                                const message = `${deviceName} on ${server.host}: SCST reports ` +
+                                    `${actualMb} MB but the block device is ${expectedMb} MB. The ` +
+                                    `volume was expanded; initiators may need a rescan or failover ` +
+                                    `to see it.`;
+                                pushNotification(new Notification(
+                                    "Block device size mismatch", message, "warning"));
                             }
                         })
                         .orElse((error) => {
-                            console.warn(`[resyncScstDevicesForPath] failed to resync ` +
-                                `${deviceName} on ${server.host}: ${error}. The volume was ` +
-                                `expanded; initiators may need a rescan or failover to see it.`);
+                            const message = `Failed to resync ${deviceName} on ${server.host}: ` +
+                                `${error}. The volume was expanded; initiators may need a rescan ` +
+                                `or failover to see it.`;
+                            pushNotification(new Notification(
+                                "Unable to refresh device size", message, "warning"));
                             return okAsync(undefined);
                         })
                 )).map(() => undefined);
