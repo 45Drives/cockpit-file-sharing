@@ -17,6 +17,9 @@
         <p v-if="alignedSize !== undefined" class="text-sm text-muted">
           {{ _(`This size cannot be divided evenly across the ${stripeCount} RBDs backing this device, so it will be rounded up to ${alignedSizeText}.`) }}
         </p>
+        <p class="text-sm text-muted">
+          {{ _("The disk grows immediately, but the partition and filesystem on it must still be extended from the client.") }}
+        </p>
         <ValidationResultView v-bind="sizeValidationResult" />
       </InputLabelWrapper>
     </div>
@@ -113,7 +116,7 @@ const resizeDevice = () => {
     // Genuine Rados Block Device.
     if (device instanceof RadosBlockDevice) {
       return d.rbdManager
-        .expandRadosBlockDevice(device, newSize)
+        .expandRadosBlockDevice(device, newSize,device.server)
         .map(() => {
           device.maximumSize = newSize;
           syncSize(device);

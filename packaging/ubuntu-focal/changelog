@@ -1,3 +1,10 @@
+cockpit-file-sharing (4.6.3-1focal) focal; urgency=medium
+
+  * resized RBD/LVM devices now show their new capacity to connected initiators immediately,
+    without requiring a failover
+
+ -- Rachit Hans <rhans@45drives.com>  Fri, 18 Sep 2026 10:27:16 -0300
+
 cockpit-file-sharing (4.6.2-3focal) focal; urgency=medium
 
   * building release package: fixed device resizing and ordering of portblocks and
