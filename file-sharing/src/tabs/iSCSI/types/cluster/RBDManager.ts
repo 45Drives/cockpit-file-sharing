@@ -41,7 +41,7 @@ export class RBDManager {
                         if (this.cachedRBDs === null) {
                             this.cachedRBDs = [];
                         }
-                      const  newRbd = new RadosBlockDevice(name, mapProc.getStdout().trim(), blockSize.some(), size, parentPool, dataPool);
+                      const  newRbd = new RadosBlockDevice(name, mapProc.getStdout().trim(), blockSize.some(), size, parentPool,this.server, dataPool);
                         return okAsync(newRbd)
                     return errAsync(new ProcessError("Unable to determine block size of RBD"));
                 })
@@ -173,21 +173,14 @@ export class RBDManager {
             });
     }
 
-    expandRadosBlockDevice(device: RadosBlockDevice, newSizeBytes: number, server?: Server) {
-        // Callers that already resolved the owning node (the LVM path) pass it in.
-        // Otherwise fall back to the node the image was enumerated on: its mapping and
-        // SCST device live there, which is not necessarily the primary server.
-        const targetServer = server ?? device.server ?? this.server;
-
-        // Always fully qualify the image as <pool>/<image>; without the pool prefix
-        // `rbd resize` only ever resolves images in the default "rbd" pool.
+    expandRadosBlockDevice(device: RadosBlockDevice, newSizeBytes: number, server: Server) {
         const imageSpec = device.parentPool?.name
             ? `${device.parentPool.name}/${device.deviceName}`
             : device.deviceName;
 
-        return targetServer.execute(new BashCommand(`rbd resize --size ${newSizeBytes}B ${imageSpec}`))
+        return server.execute(new BashCommand(`rbd resize --size ${newSizeBytes}B ${imageSpec}`))
             .andThen((proc) =>
-                this.resyncScstDevicesForPath(device.filePath, targetServer).map(() => proc)
+                this.resyncScstDevicesForPath(device.filePath, server).map(() => proc)
             );
     }
 

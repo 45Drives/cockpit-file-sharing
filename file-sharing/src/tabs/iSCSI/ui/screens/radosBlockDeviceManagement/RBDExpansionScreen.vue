@@ -116,7 +116,7 @@ const resizeDevice = () => {
     // Genuine Rados Block Device.
     if (device instanceof RadosBlockDevice) {
       return d.rbdManager
-        .expandRadosBlockDevice(device, newSize)
+        .expandRadosBlockDevice(device, newSize,device.server)
         .map(() => {
           device.maximumSize = newSize;
           syncSize(device);
