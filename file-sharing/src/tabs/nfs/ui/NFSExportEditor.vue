@@ -155,7 +155,7 @@ const allowedClientSettings = {
     "all_squash",
     "no_all_squash",
   ],
-  argumentOpts: ["mountpoint", "mp", "fsid", "refer", "replicas", "anonuid", "anongid"],
+  argumentOpts: ["mountpoint", "mp", "fsid", "refer", "replicas", "anonuid", "anongid", "sec"],
 };
 
 const clientOptionsValidator = (optionList: string): ValidationResult => {
