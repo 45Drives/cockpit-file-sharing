@@ -137,6 +137,15 @@ const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.adva
   exclude: {},
 });
 
+const selinuxLabelForSamba = computed({
+  get: () => tempShareConfig.value?.selinuxLabelForSamba !== false,
+  set: (value) => {
+    if (tempShareConfig.value) {
+      tempShareConfig.value.selinuxLabelForSamba = value;
+    }
+  },
+});
+
 const macOSSharesOptions = BooleanKeyValueSuite(
   () => tempShareConfig.value?.advancedOptions ?? {},
   {
@@ -266,6 +275,12 @@ watch(
         </ToggleSwitch>
         <ToggleSwitch v-model="tempShareConfig.inheritPermissions">
           {{ _("Inherit Permissions") }}
+        </ToggleSwitch>
+        <ToggleSwitch v-model="selinuxLabelForSamba">
+          {{ _("Label path for Samba under SELinux") }}
+          <template #description>
+            {{ _("Apply a persistent Samba SELinux label to this share path") }}
+          </template>
         </ToggleSwitch>
         <ToggleSwitch v-if="isDomainJoined" v-model="windowsACLsOptions">
           {{ _("Windows ACLs") }}
