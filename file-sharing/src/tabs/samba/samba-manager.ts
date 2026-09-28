@@ -26,10 +26,11 @@ export type ActiveDirectoryConfigurationCheck = {
 };
 
 export type SambaSelinuxCheck = {
-  status: "disabled" | "missing" | "labeled" | "needs-label" | "review";
+  status: "disabled" | "missing" | "labeled" | "needs-label" | "review" | "incomplete";
   mode: string;
   actualType: string;
   expectedType: string;
+  location: "root" | "descendant";
 };
 
 class _SambaManager
@@ -66,6 +67,12 @@ class _SambaManager
       actual=$(stat -c %C -- "$1") || exit 1
       expected=$(matchpathcon -n -- "$1") || exit 1
       printf 'actual=%s\\nexpected=%s\\n' "$actual" "$expected"
+      case "$actual" in
+        *:samba_share_t:*)
+          descendant=$(timeout 8s find "$1" -mindepth 1 ! -type l ! -context '*:samba_share_t:*' -printf 'found:%Z\\n' -quit) || { printf 'scanIncomplete=true\\n'; exit 0; }
+          if [ -n "$descendant" ]; then printf 'descendant=%s\\n' "\${descendant#found:}"; fi
+          ;;
+      esac
     `;
     return server.execute(new BashCommand(script, [path], { superuser: "try" })).map((process) => {
       const values = Object.fromEntries(
@@ -75,14 +82,16 @@ class _SambaManager
         })
       );
       const contextType = (context: string) => context.split(":")[2] ?? "";
-      const actualType = contextType(values.actual ?? "");
+      const location = "descendant" in values ? "descendant" : "root";
+      const actualType = contextType(location === "descendant" ? values.descendant : values.actual);
       const expectedType = contextType(values.expected ?? "");
       const status = values.mode === "Disabled" ? "disabled" :
         values.missing === "true" ? "missing" :
+        values.scanIncomplete === "true" ? "incomplete" :
         actualType === "samba_share_t" ? "labeled" :
-        expectedType === "samba_share_t" || ["unlabeled_t", "default_t"].includes(actualType)
+        (location === "root" && expectedType === "samba_share_t") || ["unlabeled_t", "default_t"].includes(actualType)
           ? "needs-label" : "review";
-      return { status, mode: values.mode ?? "", actualType, expectedType } as SambaSelinuxCheck;
+      return { status, mode: values.mode ?? "", actualType, expectedType, location } as SambaSelinuxCheck;
     });
   }
 

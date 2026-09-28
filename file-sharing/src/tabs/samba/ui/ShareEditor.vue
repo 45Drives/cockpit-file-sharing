@@ -307,7 +307,7 @@ watch(
         @createDirectory="() => { refreshMountpointOptions(); void checkSambaSelinuxLabel(); }"
       />
       <div
-        v-if="!['printers', 'print$'].includes(tempShareConfig.name.toLowerCase()) && (selinuxCheckFailed || selinuxCheck?.status === 'needs-label' || selinuxCheck?.status === 'review')"
+        v-if="!['printers', 'print$'].includes(tempShareConfig.name.toLowerCase()) && (selinuxCheckFailed || selinuxCheck?.status === 'incomplete' || selinuxCheck?.status === 'needs-label' || selinuxCheck?.status === 'review')"
         class="space-y-2"
       >
         <ValidationResultView
@@ -315,10 +315,17 @@ watch(
           type="warning"
           :message="_('Unable to check the SELinux label for this path.')"
         />
+        <ValidationResultView
+          v-else-if="selinuxCheck?.status === 'incomplete'"
+          type="warning"
+          :message="_('Could not verify SELinux labels throughout this share.')"
+        />
         <template v-else-if="selinuxCheck?.status === 'needs-label' || selinuxCheck?.status === 'review'">
           <ValidationResultView
             type="warning"
-            :message="_('SELinux may block Samba on this path. Current type: ') + selinuxCheck.actualType"
+            :message="(selinuxCheck.location === 'descendant'
+              ? _('SELinux may block Samba on a file or subdirectory. Current type: ')
+              : _('SELinux may block Samba on this path. Current type: ')) + selinuxCheck.actualType"
           />
           <p v-if="selinuxCheck.status === 'review'" class="text-feedback text-warning">
             {{ _("Confirm this label is not intentional before changing it.") }}
