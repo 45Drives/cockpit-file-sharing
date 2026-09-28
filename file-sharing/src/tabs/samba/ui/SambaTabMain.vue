@@ -27,9 +27,9 @@ import { useUserSettings } from "@/common/user-settings";
 import GlobalConfigEditor from "./GlobalConfigEditor.vue";
 import ShareListView from "@/tabs/samba/ui/ShareListView.vue";
 
-import { watch, computed, provide } from "vue";
+import { watch, computed, provide, ref } from "vue";
 
-import { SambaManager } from "@/tabs/samba/samba-manager";
+import { SambaManager, type ActiveDirectoryConfigurationCheck } from "@/tabs/samba/samba-manager";
 import { ok, okAsync } from "neverthrow";
 
 import SystemdServiceCard from "@/common/ui/SystemdServiceCard.vue";
@@ -49,7 +49,23 @@ const [clusterRef] = computedResult(() => cluster);
 const sambaManager = new SambaManager(server);
 provide(sambaManagerInjectionKey, sambaManager);
 
+const activeDirectoryCheck = ref<ActiveDirectoryConfigurationCheck>();
+
+async function checkActiveDirectoryConfiguration() {
+  activeDirectoryCheck.value = undefined;
+  await sambaManager.checkActiveDirectoryConfiguration().match(
+    (check) => (activeDirectoryCheck.value = check),
+    () => {}
+  );
+}
+
 const [globalConf, reloadGlobalConf] = computedResult(() => sambaManager.getGlobalConfig());
+
+watch(globalConf, (config) => {
+  if (config) {
+    void checkActiveDirectoryConfiguration();
+  }
+}, { immediate: true });
 
 const shareSortPredicate = (a: SambaShareConfig, b: SambaShareConfig) =>
   a.name.localeCompare(b.name, undefined, { caseFirst: "false" });
@@ -242,6 +258,7 @@ const [ubu20QuirkStopBeforeEnable] = computedResult(() => {
     <GlobalConfigEditor
       v-if="globalConf"
       :globalConf="globalConf"
+      :activeDirectoryCheck="activeDirectoryCheck"
       @apply="
         (newGlobalConf, callback) =>
           actions.applyGlobalSettings(newGlobalConf).map(() => callback?.())
