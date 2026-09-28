@@ -90,7 +90,6 @@ class _SambaManager
     const server = Array.isArray(this.servers) ? this.servers[0] : this.servers;
     const commandOptions = { superuser: "try" as const };
     const script = `
-      succeeded() { "$@" >/dev/null 2>&1 && printf true || printf false; }
       security=$(testparm -s --parameter-name=security 2>/dev/null) || exit 1
       printf 'security=%s\\n' "$security"
       case "$security" in [Aa][Dd][Ss]) ;; *) exit 0 ;; esac
@@ -99,8 +98,16 @@ class _SambaManager
       printf 'configured=%s\\n' "$( [ -n "$workgroup" ] && [ -n "$realm" ] && printf true || printf false )"
       for tool in net wbinfo; do command -v "$tool" >/dev/null 2>&1 || { printf 'toolsAvailable=false\\n'; exit 0; }; done
       printf 'toolsAvailable=true\\n'
-      printf 'joinHealthy='; succeeded net ads testjoin; printf '\\n'
-      printf 'trustHealthy='; succeeded wbinfo -t; printf '\\n'
+      if net ads testjoin >/dev/null 2>&1; then
+        printf 'joinHealthy=true\\n'
+      else
+        printf 'joinHealthy=false\\n'
+      fi
+      if wbinfo -t >/dev/null 2>&1; then
+        printf 'trustHealthy=true\\n'
+      else
+        printf 'trustHealthy=false\\n'
+      fi
     `;
 
     return server.execute(new BashCommand(script, [], commandOptions)).map((process) => {
