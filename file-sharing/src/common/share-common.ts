@@ -16,7 +16,6 @@ export type ShareDefinition<T> = T & {
   readonly type: "samba" | "nfs";
   path: string;
   mountpointOptions: MountpointOptions;
-  selinuxLabelForSamba?: boolean;
 };
 
 export type ShareBase = {

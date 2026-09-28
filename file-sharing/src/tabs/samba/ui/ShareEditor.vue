@@ -14,13 +14,15 @@ import {
   validationError,
   ValidationResultView,
   computedResult,
+  reportError,
+  reportSuccess,
 } from "@45drives/houston-common-ui";
 import { server } from "@45drives/houston-common-lib";
 import { KeyValueSyntax, SambaShareConfig } from "@45drives/houston-common-lib";
 import { BooleanKeyValueSuite } from "@/tabs/samba/ui/BooleanKeyValueSuite"; // TODO: move to common-ui
 import ShareDirectoryInputAndOptions from "@/common/ui/ShareDirectoryInputAndOptions.vue";
 import type { ShareDefinition } from "@/common/share-common";
-import type { SambaManager } from "../samba-manager";
+import type { SambaSelinuxCheck, SambaManager } from "../samba-manager";
 import { okAsync } from "neverthrow";
 import CephOptionsView from "@/common/ui/CephOptions.vue";
 import { isCephOptions } from "@/common/mountpoint-options";
@@ -108,6 +110,8 @@ watchEffect(() => {
 });
 
 const isDomainJoined = ref(false);
+const checkingSelinux = ref(false);
+const selinuxCheck = ref<SambaSelinuxCheck>();
 
 onMounted(async () => {
   isDomainJoined.value = await server.isServerDomainJoined().unwrapOr(false);
@@ -137,14 +141,57 @@ const shadowCopyOptions = BooleanKeyValueSuite(() => tempShareConfig.value?.adva
   exclude: {},
 });
 
-const selinuxLabelForSamba = computed({
-  get: () => tempShareConfig.value?.selinuxLabelForSamba !== false,
-  set: (value) => {
-    if (tempShareConfig.value) {
-      tempShareConfig.value.selinuxLabelForSamba = value;
+const labelingPathForSamba = ref(false);
+const selinuxCheckFailed = ref(false);
+let selinuxCheckId = 0;
+
+async function checkSambaSelinuxLabel() {
+  const path = tempShareConfig.value?.path;
+  if (!path) {
+    return;
+  }
+  const checkId = ++selinuxCheckId;
+  checkingSelinux.value = true;
+  selinuxCheckFailed.value = false;
+  selinuxCheck.value = undefined;
+  try {
+    await props.manager.checkSambaSelinuxLabel(path).match(
+      (check) => {
+        if (checkId === selinuxCheckId) {
+          selinuxCheck.value = check;
+        }
+      },
+      () => {
+        if (checkId === selinuxCheckId) {
+          selinuxCheckFailed.value = true;
+        }
+      }
+    );
+  } finally {
+    if (checkId === selinuxCheckId) {
+      checkingSelinux.value = false;
     }
-  },
-});
+  }
+}
+
+async function applySambaSelinuxLabel() {
+  if (!tempShareConfig.value?.path) {
+    return;
+  }
+
+  labelingPathForSamba.value = true;
+  try {
+    await props.manager.labelPathForSamba(tempShareConfig.value).match(
+      () => {
+        reportSuccess(_("Applied Samba SELinux label to ") + tempShareConfig.value!.path);
+        void checkSambaSelinuxLabel();
+      },
+      reportError
+    );
+  } finally {
+    labelingPathForSamba.value = false;
+  }
+}
 
 const macOSSharesOptions = BooleanKeyValueSuite(
   () => tempShareConfig.value?.advancedOptions ?? {},
@@ -214,9 +261,18 @@ const refreshMountpointOptions = () => {
 
 watch(
   () => tempShareConfig.value?.path,
-  () => {
+  (path, _, onCleanup) => {
+    ++selinuxCheckId;
+    selinuxCheck.value = undefined;
+    selinuxCheckFailed.value = false;
+    checkingSelinux.value = false;
     refreshMountpointOptions();
-  }
+    if (path) {
+      const timer = window.setTimeout(() => void checkSambaSelinuxLabel(), 350);
+      onCleanup(() => window.clearTimeout(timer));
+    }
+  },
+  { immediate: true }
 );
 </script>
 
@@ -248,8 +304,35 @@ watch(
         :validationScope
         :newShare="newShare ?? false"
         :fsType="tempShareConfig.mountpointOptions.fsType"
-        @createDirectory="() => refreshMountpointOptions()"
+        @createDirectory="() => { refreshMountpointOptions(); void checkSambaSelinuxLabel(); }"
       />
+      <div
+        v-if="!['printers', 'print$'].includes(tempShareConfig.name.toLowerCase()) && (selinuxCheckFailed || selinuxCheck?.status === 'needs-label' || selinuxCheck?.status === 'review')"
+        class="space-y-2"
+      >
+        <ValidationResultView
+          v-if="selinuxCheckFailed"
+          type="warning"
+          :message="_('Unable to check the SELinux label for this path.')"
+        />
+        <template v-else-if="selinuxCheck?.status === 'needs-label' || selinuxCheck?.status === 'review'">
+          <ValidationResultView
+            type="warning"
+            :message="_('SELinux may block Samba on this path. Current type: ') + selinuxCheck.actualType"
+          />
+          <p v-if="selinuxCheck.status === 'review'" class="text-feedback text-warning">
+            {{ _("Confirm this label is not intentional before changing it.") }}
+          </p>
+          <button
+            class="btn btn-secondary"
+            @click="applySambaSelinuxLabel"
+            :disabled="labelingPathForSamba || checkingSelinux || globalProcessingState !== 0"
+          >
+            {{ labelingPathForSamba ? _("Applying label...") : _("Apply Samba SELinux label") }}
+          </button>
+          <p class="text-xs">{{ _("Parent access and Linux permissions are unchanged.") }}</p>
+        </template>
+      </div>
       <CephOptionsView
         v-if="isCephOptions(tempShareConfig.mountpointOptions)"
         :path="tempShareConfig.path"
@@ -275,12 +358,6 @@ watch(
         </ToggleSwitch>
         <ToggleSwitch v-model="tempShareConfig.inheritPermissions">
           {{ _("Inherit Permissions") }}
-        </ToggleSwitch>
-        <ToggleSwitch v-model="selinuxLabelForSamba">
-          {{ _("Label path for Samba under SELinux") }}
-          <template #description>
-            {{ _("Apply a persistent Samba SELinux label to this share path") }}
-          </template>
         </ToggleSwitch>
         <ToggleSwitch v-if="isDomainJoined" v-model="windowsACLsOptions">
           {{ _("Windows ACLs") }}
