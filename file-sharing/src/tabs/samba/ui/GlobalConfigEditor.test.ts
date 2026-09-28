@@ -41,15 +41,17 @@ test("Advanced edits apply on the first click and invalid or unchanged drafts do
 
   (textarea.element as HTMLTextAreaElement).value = "security = ADS";
   await textarea.trigger("input");
-  expect(apply().attributes("disabled")).toBeUndefined();
+  expect((apply().element as HTMLButtonElement).disabled).toBe(false);
 
   (textarea.element as HTMLTextAreaElement).value = "invalid";
   await textarea.trigger("input");
-  expect(apply().attributes("disabled")).toBeDefined();
+  // Unparseable key/value text cannot be applied.
+  expect((apply().element as HTMLButtonElement).disabled).toBe(true);
 
   (textarea.element as HTMLTextAreaElement).value = "";
   await textarea.trigger("input");
-  expect(apply().attributes("disabled")).toBeDefined();
+  // Clearing the draft restores the original empty advanced options.
+  expect((apply().element as HTMLButtonElement).disabled).toBe(true);
 
   (textarea.element as HTMLTextAreaElement).value = "security = ADS";
   await textarea.trigger("input");
