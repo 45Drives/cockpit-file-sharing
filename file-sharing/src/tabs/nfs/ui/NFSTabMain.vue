@@ -8,9 +8,11 @@ import {
   assertConfirm,
   pushNotification,
   Notification,
+  ToggleSwitch,
 } from "@45drives/houston-common-ui";
 import { Upload, getServerCluster, server, Command } from "@45drives/houston-common-lib";
 import { onUnmounted, ref, watch } from "vue";
+import { ExclamationTriangleIcon } from "@heroicons/vue/24/solid";
 
 import { useUserSettings } from "@/common/user-settings";
 import { NFSManager } from "@/tabs/nfs/nfs-manager";
@@ -44,6 +46,99 @@ const [nfsExports, refetchNFSExports] = computedResult<NFSExport[]>(
     nfsManager.value?.listShares().map((exports) => exports.sort(exportsSortPredicate)) ??
     okAsync([]),
   []
+);
+
+type NFSPortStatus = {
+  host: string;
+  port: number;
+  listening: boolean | null;
+  firewallZones: { name: string; allowed: boolean | null; manageable: boolean }[];
+  firewallActive: boolean | null;
+};
+
+const nfsPortStatuses = ref<NFSPortStatus[]>([]);
+const checkingNfsPort = ref(false);
+const updatingNfsPort = ref(false);
+
+const checkNfsPort = async () => {
+  if (!clusterRef.value || checkingNfsPort.value) return;
+  checkingNfsPort.value = true;
+  const nodes = Array.isArray(clusterRef.value) ? clusterRef.value : [clusterRef.value];
+  try {
+    nfsPortStatuses.value = await Promise.all(
+      nodes.map(async (node) => {
+        const advertisedPort = await node.execute(new Command(["rpcinfo", "-p"])).match(
+          (proc) => Number(proc.getStdout().match(/^\s*100003\s+4\s+tcp\s+(\d+)/m)?.[1]) || null,
+          () => null
+        );
+        const port = advertisedPort ?? 2049;
+        const listening = await node
+          .execute(new Command(["ss", "-H", "-ltn", `( sport = :${port} )`]))
+          .match(
+            (proc) => proc.getStdout().trim() !== "",
+            () => null
+          );
+        const firewallActive = await node.execute(new Command(["firewall-cmd", "--state"])).match(
+          (proc) => proc.getStdout().trim() === "running",
+          () => null
+        );
+        const zones = await node.execute(new Command(["firewall-cmd", "--get-active-zones"])).match(
+          (proc) =>
+            proc
+              .getStdout()
+              .split("\n")
+              .filter((line) => line && !/^\s/.test(line))
+              .map((line) => line.trim()),
+          () => null
+        );
+        const firewallZones = await Promise.all(
+          (zones ?? []).map((zone) =>
+            node.execute(new Command(["firewall-cmd", `--zone=${zone}`, "--list-all"])).match(
+              (proc) => {
+                const output = proc.getStdout();
+                const target = output.match(/^[ \t]*target:[ \t]*([^\r\n]*)/m)?.[1];
+                const services = output.match(/^[ \t]*services:[ \t]*([^\r\n]*)/m)?.[1];
+                const ports = output.match(/^[ \t]*ports:[ \t]*([^\r\n]*)/m)?.[1];
+                const otherAllowance =
+                  target?.trim() === "ACCEPT" ||
+                  (port === 2049 && services?.split(/\s+/).includes("nfs"));
+                return {
+                  name: zone,
+                  allowed:
+                    target === undefined || services === undefined || ports === undefined
+                      ? null
+                      : otherAllowance || ports.split(/\s+/).includes(`${port}/tcp`),
+                  manageable:
+                    target !== undefined &&
+                    services !== undefined &&
+                    ports !== undefined &&
+                    !otherAllowance,
+                };
+              },
+              () => ({ name: zone, allowed: null, manageable: false })
+            )
+          )
+        );
+        return {
+          host: node.host || _("Local server"),
+          port,
+          listening,
+          firewallZones,
+          firewallActive,
+        };
+      })
+    );
+  } finally {
+    checkingNfsPort.value = false;
+  }
+};
+
+watch(
+  clusterRef,
+  () => {
+    void checkNfsPort();
+  },
+  { immediate: true }
 );
 
 const pollSystemdService = ref(true);
@@ -175,6 +270,57 @@ const syncClusterConfig = () => {
     .map(() => reportSuccess(_("Sync complete")));
 };
 
+const setNfsPortAllowed = (host: string, zone: string, port: number, allowed: boolean) => {
+  if (updatingNfsPort.value) return okAsync(undefined);
+  const nodes = clusterRef.value;
+  const node = (Array.isArray(nodes) ? nodes : nodes ? [nodes] : []).find(
+    (server) => (server.host || _("Local server")) === host
+  );
+  if (!node) return okAsync(undefined);
+  updatingNfsPort.value = true;
+  return assertConfirm({
+    header: allowed ? _("Open NFS port in firewalld?") : _("Close NFS port in firewalld?"),
+    body: `${host}: ${zone}, TCP ${port}. ${allowed ? _("This allows connections from all clients in this firewall zone and persists after reboot.") : _("This removes the explicit port allowance now and after reboot.")}`,
+  })
+    .andThen(() =>
+      node.execute(
+        new Command(
+          ["firewall-cmd", `--zone=${zone}`, `--${allowed ? "add" : "remove"}-port=${port}/tcp`],
+          {
+            superuser: "try",
+          }
+        )
+      )
+    )
+    .andThen(() =>
+      node.execute(
+        new Command(
+          [
+            "firewall-cmd",
+            "--permanent",
+            `--zone=${zone}`,
+            `--${allowed ? "add" : "remove"}-port=${port}/tcp`,
+          ],
+          {
+            superuser: "try",
+          }
+        )
+      )
+    )
+    .map(() => {
+      updatingNfsPort.value = false;
+      void checkNfsPort();
+      reportSuccess(
+        allowed ? _("NFS port opened in firewalld") : _("NFS port closed in firewalld")
+      );
+    })
+    .mapErr((error) => {
+      updatingNfsPort.value = false;
+      void checkNfsPort();
+      return error;
+    });
+};
+
 const actions = wrapActions({
   refetchNFSExports,
   addExport,
@@ -184,6 +330,7 @@ const actions = wrapActions({
   importConfig,
   checkIfClusterConfigInSync,
   syncClusterConfig,
+  setNfsPortAllowed,
 });
 
 let watchHandle: ReturnType<InstanceType<typeof NFSManager>["onExportsFileChanged"]> | undefined =
@@ -239,6 +386,60 @@ watch(
       warnIfStopped
       :name="_('NFS Service')"
       :polling="pollSystemdService"
-    />
+      @update:running="checkNfsPort"
+    >
+      <template #switches>
+        <template v-for="status in nfsPortStatuses" :key="status.host">
+          <ToggleSwitch
+            v-for="zone in status.firewallZones"
+            :key="zone.name"
+            :model-value="zone.allowed === true"
+            :disabled="checkingNfsPort || updatingNfsPort || !zone.manageable"
+            @update:model-value="
+              (allowed) => actions.setNfsPortAllowed(status.host, zone.name, status.port, allowed)
+            "
+          >
+            <span class="inline-flex items-center gap-1">
+              {{ _("NFS port") }} {{ status.port }}
+              {{
+                zone.allowed === true
+                  ? _("is allowed.")
+                  : zone.allowed === false
+                    ? _("is blocked.")
+                    : _("status unknown.")
+              }}
+              <ExclamationTriangleIcon
+                v-if="zone.allowed === false"
+                class="size-icon icon-warning"
+              />
+            </span>
+            <template #description>
+              {{ status.host }} - {{ zone.name }} -
+              {{
+                status.listening === true
+                  ? _("Listening")
+                  : status.listening === false
+                    ? _("Not listening")
+                    : _("Listener unknown")
+              }}
+              <span v-if="!zone.manageable && zone.allowed === true">
+                - {{ _("Allowed by service or zone target") }}
+              </span>
+            </template>
+          </ToggleSwitch>
+          <ToggleSwitch v-if="status.firewallZones.length === 0" :model-value="false" disabled>
+            {{ _("NFS port") }} {{ status.port }} {{ _("status unknown.") }}
+            <template #description>
+              {{ status.host }} -
+              {{
+                status.firewallActive === false
+                  ? _("Firewalld is not running")
+                  : _("Firewalld status unknown")
+              }}
+            </template>
+          </ToggleSwitch>
+        </template>
+      </template>
+    </SystemdServiceCard>
   </CenteredCardColumn>
 </template>

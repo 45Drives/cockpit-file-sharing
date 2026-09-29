@@ -187,6 +187,7 @@ defineExpose({
             {{ _("When enabled, the service will automatically start when the system boots.") }}
           </template>
         </ToggleSwitch>
+        <slot name="switches" />
       </ToggleSwitchGroup>
       <div class="button-group-row flex-wrap">
         <Disclosure v-model:show="showStatus">
