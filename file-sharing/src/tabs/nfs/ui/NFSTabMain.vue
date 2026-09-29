@@ -16,6 +16,7 @@ import { ExclamationTriangleIcon } from "@heroicons/vue/24/solid";
 
 import { useUserSettings } from "@/common/user-settings";
 import { NFSManager } from "@/tabs/nfs/nfs-manager";
+import { getNfsPortStatus, type NFSPortStatus } from "@/tabs/nfs/nfs-port-status";
 import type { NFSExport } from "@/tabs/nfs/data-types";
 
 import NFSExportListView from "@/tabs/nfs/ui/NFSExportListView.vue";
@@ -48,14 +49,6 @@ const [nfsExports, refetchNFSExports] = computedResult<NFSExport[]>(
   []
 );
 
-type NFSPortStatus = {
-  host: string;
-  port: number;
-  listening: boolean | null;
-  firewallZones: { name: string; allowed: boolean | null; manageable: boolean }[];
-  firewallActive: boolean | null;
-};
-
 const nfsPortStatuses = ref<NFSPortStatus[]>([]);
 const checkingNfsPort = ref(false);
 const updatingNfsPort = ref(false);
@@ -65,69 +58,7 @@ const checkNfsPort = async () => {
   checkingNfsPort.value = true;
   const nodes = Array.isArray(clusterRef.value) ? clusterRef.value : [clusterRef.value];
   try {
-    nfsPortStatuses.value = await Promise.all(
-      nodes.map(async (node) => {
-        const advertisedPort = await node.execute(new Command(["rpcinfo", "-p"])).match(
-          (proc) => Number(proc.getStdout().match(/^\s*100003\s+4\s+tcp\s+(\d+)/m)?.[1]) || null,
-          () => null
-        );
-        const port = advertisedPort ?? 2049;
-        const listening = await node
-          .execute(new Command(["ss", "-H", "-ltn", `( sport = :${port} )`]))
-          .match(
-            (proc) => proc.getStdout().trim() !== "",
-            () => null
-          );
-        const firewallActive = await node.execute(new Command(["firewall-cmd", "--state"])).match(
-          (proc) => proc.getStdout().trim() === "running",
-          () => null
-        );
-        const zones = await node.execute(new Command(["firewall-cmd", "--get-active-zones"])).match(
-          (proc) =>
-            proc
-              .getStdout()
-              .split("\n")
-              .filter((line) => line && !/^\s/.test(line))
-              .map((line) => line.trim()),
-          () => null
-        );
-        const firewallZones = await Promise.all(
-          (zones ?? []).map((zone) =>
-            node.execute(new Command(["firewall-cmd", `--zone=${zone}`, "--list-all"])).match(
-              (proc) => {
-                const output = proc.getStdout();
-                const target = output.match(/^[ \t]*target:[ \t]*([^\r\n]*)/m)?.[1];
-                const services = output.match(/^[ \t]*services:[ \t]*([^\r\n]*)/m)?.[1];
-                const ports = output.match(/^[ \t]*ports:[ \t]*([^\r\n]*)/m)?.[1];
-                const otherAllowance =
-                  target?.trim() === "ACCEPT" ||
-                  (port === 2049 && services?.split(/\s+/).includes("nfs"));
-                return {
-                  name: zone,
-                  allowed:
-                    target === undefined || services === undefined || ports === undefined
-                      ? null
-                      : otherAllowance || ports.split(/\s+/).includes(`${port}/tcp`),
-                  manageable:
-                    target !== undefined &&
-                    services !== undefined &&
-                    ports !== undefined &&
-                    !otherAllowance,
-                };
-              },
-              () => ({ name: zone, allowed: null, manageable: false })
-            )
-          )
-        );
-        return {
-          host: node.host || _("Local server"),
-          port,
-          listening,
-          firewallZones,
-          firewallActive,
-        };
-      })
-    );
+    nfsPortStatuses.value = await Promise.all(nodes.map(getNfsPortStatus));
   } finally {
     checkingNfsPort.value = false;
   }
