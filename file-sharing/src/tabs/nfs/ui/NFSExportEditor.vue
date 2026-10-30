@@ -89,7 +89,8 @@ const clientsTooltip = _(
 Settings:
   - Comma-separated list of export settings
   - See <a href="https://linux.die.net/man/5/exports">man exports(5)</a> for full list of settings
-  - Recommended client defaults: rw,sync,no_subtree_check`
+  - Recommended client defaults: rw,sync,no_subtree_check
+  - To allow Kerberos-secured NFSv4, add e.g. sec=sys:krb5p`
 );
 
 const parser = new NFSExportParser();
@@ -155,7 +156,19 @@ const allowedClientSettings = {
     "all_squash",
     "no_all_squash",
   ],
-  argumentOpts: ["mountpoint", "mp", "fsid", "refer", "replicas", "anonuid", "anongid"],
+  argumentOpts: [
+    "mountpoint",
+    "mp",
+    "fsid",
+    "refer",
+    "replicas",
+    "anonuid",
+    "anongid",
+    "sec",
+    "protocols",
+    "mountgids",
+    "pinclient",
+  ],
 };
 
 const clientOptionsValidator = (optionList: string): ValidationResult => {
