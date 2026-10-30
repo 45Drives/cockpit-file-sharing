@@ -10,13 +10,11 @@ import {
   defaultNFSExport,
   defaultNFSClientOptions,
   defaultNFSDefaultClientOptions,
-  NFSClientOptionsCtors,
 } from "@/tabs/nfs/data-types";
 import { Result, ok, err, safeTry } from "neverthrow";
 import { Maybe, Some, None } from "monet";
 
 // export class NFSClientOptionsParser implements SyntaxParser<NFSClientOptions> {
-//   private static ctors = Object.entries(NFSClientOptionsCtors);
 //   private hideAllDefaults: boolean;
 
 //   constructor(hideAllDefaults: boolean = false) {
