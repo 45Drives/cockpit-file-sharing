@@ -14,6 +14,7 @@ import {
   ValidationScope,
   validationSuccess,
   validationError,
+  validationWarning,
   ValidationResultView,
   Table,
   type ValidationResult,
@@ -24,6 +25,10 @@ import { PlusIcon, TrashIcon } from "@heroicons/vue/20/solid";
 import { getServer, FileSystemNode } from "@45drives/houston-common-lib";
 
 import { NFSExportParser } from "@/tabs/nfs/exports-parser";
+import {
+  validateNFSClientOptions,
+  type ClientOptionResult,
+} from "@/tabs/nfs/client-options";
 import type { ShareDefinition } from "@/common/share-common";
 import type { NFSManager } from "../nfs-manager";
 import { ok, okAsync } from "neverthrow";
@@ -89,7 +94,8 @@ const clientsTooltip = _(
 Settings:
   - Comma-separated list of export settings
   - See <a href="https://linux.die.net/man/5/exports">man exports(5)</a> for full list of settings
-  - Recommended client defaults: rw,sync,no_subtree_check`
+  - Recommended client defaults: rw,sync,no_subtree_check
+  - To allow Kerberos-secured NFSv4, add e.g. sec=sys:krb5p`
 );
 
 const parser = new NFSExportParser();
@@ -128,56 +134,12 @@ const { validationResult: commentValidationResult } = validationScope.useValidat
   return validationSuccess();
 });
 
-const allowedClientSettings = {
-  boolOpts: [
-    "secure",
-    "insecure",
-    "rw",
-    "ro",
-    "async",
-    "sync",
-    "no_wdelay",
-    "wdelay",
-    "nohide",
-    "hide",
-    "crossmnt",
-    "no_subtree_check",
-    "subtree_check",
-    "insecure_locks",
-    "no_auth_nlm",
-    "auth_nlm",
-    "secure_locks",
-    "no_acl",
-    "mountpoint",
-    "mp",
-    "root_squash",
-    "no_root_squash",
-    "all_squash",
-    "no_all_squash",
-  ],
-  argumentOpts: ["mountpoint", "mp", "fsid", "refer", "replicas", "anonuid", "anongid"],
-};
-
-const clientOptionsValidator = (optionList: string): ValidationResult => {
-  if (!optionList) {
-    return validationSuccess();
+const toValidationResult = (result: ClientOptionResult): ValidationResult => {
+  if (result.type === "warning") {
+    return validationWarning(result.message!);
   }
-  if (/\s/.test(optionList)) {
-    return validationError(_("Whitespace not permitted."));
-  }
-  const badOpts = optionList.split(",").filter((opt) => {
-    if (allowedClientSettings.boolOpts.includes(opt)) {
-      return false;
-    }
-    for (const allowedArgumentOpt of allowedClientSettings.argumentOpts) {
-      if (opt.startsWith(`${allowedArgumentOpt}=`)) {
-        return false;
-      }
-    }
-    return true;
-  });
-  if (badOpts.length) {
-    return validationError(_("Bad options") + ": " + badOpts.map((opt) => `"${opt}"`).join(", "));
+  if (result.type === "error") {
+    return validationError(result.message!);
   }
   return validationSuccess();
 };
@@ -185,18 +147,18 @@ const clientOptionsValidator = (optionList: string): ValidationResult => {
 const { validationResult: defaultClientSettingsValidationResult } = validationScope.useValidator(
   () =>
     tempExportConfig.value
-      ? clientOptionsValidator(tempExportConfig.value.defaultClientSettings)
+      ? toValidationResult(validateNFSClientOptions(tempExportConfig.value.defaultClientSettings, _))
       : validationSuccess()
 );
 
-const clientValidator = (client: NFSExportClient): ValidationResult => {
+const clientValidator = (client: NFSExportClient): ClientOptionResult => {
   if (!client.host) {
-    return validationError(_("Host required."));
+    return { type: "error", message: _("Host required.") };
   }
   if (/\s/.test(client.host)) {
-    return validationError(_("Whitespace not permitted."));
+    return { type: "error", message: _("Whitespace not permitted.") };
   }
-  return clientOptionsValidator(client.settings);
+  return validateNFSClientOptions(client.settings, _);
 };
 
 const { validationResult: clientSettingsValidationResult } = validationScope.useValidator(() => {
@@ -209,21 +171,31 @@ const { validationResult: clientSettingsValidationResult } = validationScope.use
       return validationError(_("Duplicate client") + `: ${client.host}`);
     }
   }
-  const badClientResults = clients
+  const clientResults = clients
     .map((client, index) => ({
       index,
       client,
       result: clientValidator(client),
     }))
-    .filter(({ result }) => result.type === "error");
-  if (badClientResults.length) {
+    .filter(({ result }) => result.type !== "success");
+  if (!clientResults.length) {
+    return validationSuccess();
+  }
+  // Errors (host problems) take precedence over option warnings.
+  if (clientResults.some(({ result }) => result.type === "error")) {
     return validationError(
-      badClientResults
+      clientResults
+        .filter(({ result }) => result.type === "error")
         .map(({ index, client, result }) => `${client.host || index}: ${result.message}`)
         .join("\n")
     );
   }
-  return validationSuccess();
+  return validationWarning(
+    clientResults
+      .filter(({ result }) => result.type === "warning")
+      .map(({ index, client, result }) => `${client.host || index}: ${result.message}`)
+      .join("\n")
+  );
 });
 
 const refreshMountpointOptions = () => {
