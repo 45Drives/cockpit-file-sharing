@@ -1,3 +1,9 @@
+cockpit-file-sharing (4.6.4-1focal) focal; urgency=medium
+
+  * Updates NFS exports option handling
+
+ -- Jordan Keough <jkeough@45drives.com>  Mon, 02 Nov 2026 05:37:34 -0400
+
 cockpit-file-sharing (4.6.3-1focal) focal; urgency=medium
 
   * resized RBD/LVM devices now show their new capacity to connected initiators immediately,
