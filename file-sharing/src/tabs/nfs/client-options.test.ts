@@ -49,6 +49,59 @@ suite("NFS Client Options Validation", () => {
     expect(validateNFSClientOptions("rwsync").message).toContain('"rwsync"');
   });
 
+  test.each([
+    "mountgids=100,roo",
+    "protocols=4,sec",
+    "mountgids=100,",
+    "protocols=4,,3",
+    "mountgids=100,-200",
+    "protocols=4,3.5",
+    "mountgids=",
+    "protocols=oops,4",
+    "mountgids=100,rw,200",
+    "protocols=4,futuropt=1,3",
+  ])("rejects malformed list options: %s", (options) => {
+    expect(validateNFSClientOptions(options).type).toBe("error");
+  });
+
+  test.each([
+    "mountgids=100,200,rw,sync",
+    "protocols=2,3,4,sec=krb5p",
+    "protocols=4,mountgids=100,200,ro",
+  ])("allows lists followed by recognized options: %s", (options) => {
+    expect(validateNFSClientOptions(options).type).toBe("success");
+  });
+
+  test("allows advanced options after a list with a warning", () => {
+    expect(validateNFSClientOptions("mountgids=100,200,futuropt=1").type).toBe("warning");
+    expect(validateNFSClientOptions("toString=1").type).toBe("warning");
+  });
+
+  test("translates static messages before inserting option values", () => {
+    const translations: Record<string, string> = {
+      "Whitespace not permitted.": "Keine Leerzeichen erlaubt.",
+      "Bad options": "Ungültige Optionen",
+      "Unrecognized options": "Unbekannte Optionen",
+      "See man exports(5).": "Siehe man exports(5).",
+    };
+    const translate = (message: string) => {
+      expect(translations).toHaveProperty(message);
+      return translations[message]!;
+    };
+    expect(validateNFSClientOptions("rw, sync", translate)).toEqual({
+      type: "error",
+      message: "Keine Leerzeichen erlaubt.",
+    });
+    expect(validateNFSClientOptions("mountgids=100,roo", translate)).toEqual({
+      type: "error",
+      message: 'Ungültige Optionen: "roo"',
+    });
+    expect(validateNFSClientOptions("futuropt=1", translate)).toEqual({
+      type: "warning",
+      message: 'Unbekannte Optionen: "futuropt=1". Siehe man exports(5).',
+    });
+  });
+
   test("unknown value options are warnings, not errors (advanced options)", () => {
     const result = validateNFSClientOptions("rw,futuropt=1");
     expect(result.type).toBe("warning");

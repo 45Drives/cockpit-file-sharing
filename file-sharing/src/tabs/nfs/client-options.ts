@@ -50,7 +50,10 @@ export const NFS_ARGUMENT_OPTS = [
 
 // These take comma-separated value lists, e.g. protocols=2,3,4 — bare
 // tokens after one belong to its value, per exports(5).
-const NFS_LIST_VALUE_OPTS = ["protocols", "mountgids"];
+const NFS_LIST_VALUE_PATTERNS = new Map([
+  ["protocols", /^\d+$/],
+  ["mountgids", /^\d+$/],
+]);
 
 export type ClientOptionResult = {
   type: "success" | "warning" | "error";
@@ -59,31 +62,39 @@ export type ClientOptionResult = {
 
 export const clientOptionsSuccess: ClientOptionResult = { type: "success" };
 
-export function validateNFSClientOptions(optionList: string): ClientOptionResult {
+export function validateNFSClientOptions(
+  optionList: string,
+  _: (message: string) => string = (message) => message
+): ClientOptionResult {
   if (!optionList) {
     return clientOptionsSuccess;
   }
   if (/\s/.test(optionList)) {
-    return { type: "error", message: "Whitespace not permitted." };
+    return { type: "error", message: _("Whitespace not permitted.") };
   }
   const bad: string[] = [];
   const advanced: string[] = [];
-  let inListValue = false;
+  let listValuePattern: RegExp | undefined;
   for (const opt of optionList.split(",")) {
     const eqIndex = opt.indexOf("=");
     const isValueForm = eqIndex > 0;
     const key = isValueForm ? opt.slice(0, eqIndex) : opt;
+    const nextListValuePattern = isValueForm ? NFS_LIST_VALUE_PATTERNS.get(key) : undefined;
     // known | advanced (unknown key=value, may be a newer exports(5) option)
     // | bad (malformed, unknown bare keyword, or option name missing its value)
     // | list-continue (bare token that extends a protocols=/mountgids= list)
     let kind: "known" | "advanced" | "bad" | "list-continue";
     if (isValueForm) {
-      kind = isKnownNFSClientOption(opt) ? "known" : "advanced";
+      if (nextListValuePattern && !nextListValuePattern.test(opt.slice(eqIndex + 1))) {
+        kind = "bad";
+      } else {
+        kind = isKnownNFSClientOption(opt) ? "known" : "advanced";
+      }
     } else if (eqIndex === 0) {
       kind = "bad";
     } else if (NFS_BOOL_OPTS.includes(opt)) {
       kind = "known";
-    } else if (inListValue) {
+    } else if (listValuePattern?.test(opt)) {
       kind = "list-continue";
     } else {
       kind = "bad";
@@ -93,18 +104,25 @@ export function validateNFSClientOptions(optionList: string): ClientOptionResult
     } else if (kind === "advanced") {
       advanced.push(opt);
     }
-    inListValue = isValueForm ? NFS_LIST_VALUE_OPTS.includes(key) : kind === "list-continue";
+    if (kind !== "list-continue") {
+      listValuePattern = kind === "known" ? nextListValuePattern : undefined;
+    }
   }
   if (bad.length) {
     return {
       type: "error",
-      message: `Bad options: ${bad.map((opt) => `"${opt}"`).join(", ")}`,
+      message: _("Bad options") + ": " + bad.map((opt) => `"${opt}"`).join(", "),
     };
   }
   if (advanced.length) {
     return {
       type: "warning",
-      message: `Unrecognized options: ${advanced.map((opt) => `"${opt}"`).join(", ")}. See man exports(5).`,
+      message:
+        _("Unrecognized options") +
+        ": " +
+        advanced.map((opt) => `"${opt}"`).join(", ") +
+        ". " +
+        _("See man exports(5)."),
     };
   }
   return clientOptionsSuccess;

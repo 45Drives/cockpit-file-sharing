@@ -147,18 +147,18 @@ const toValidationResult = (result: ClientOptionResult): ValidationResult => {
 const { validationResult: defaultClientSettingsValidationResult } = validationScope.useValidator(
   () =>
     tempExportConfig.value
-      ? toValidationResult(validateNFSClientOptions(tempExportConfig.value.defaultClientSettings))
+      ? toValidationResult(validateNFSClientOptions(tempExportConfig.value.defaultClientSettings, _))
       : validationSuccess()
 );
 
 const clientValidator = (client: NFSExportClient): ClientOptionResult => {
   if (!client.host) {
-    return { type: "error", message: "Host required." };
+    return { type: "error", message: _("Host required.") };
   }
   if (/\s/.test(client.host)) {
-    return { type: "error", message: "Whitespace not permitted." };
+    return { type: "error", message: _("Whitespace not permitted.") };
   }
-  return validateNFSClientOptions(client.settings);
+  return validateNFSClientOptions(client.settings, _);
 };
 
 const { validationResult: clientSettingsValidationResult } = validationScope.useValidator(() => {

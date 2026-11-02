@@ -3,52 +3,12 @@ import type {
   NFSExport,
   NFSExportClient,
   NFSClientOptions,
-  INFSClientOptionCtor,
-  INFSClientOption,
 } from "@/tabs/nfs/data-types";
 import {
-  defaultNFSExport,
-  defaultNFSClientOptions,
   defaultNFSDefaultClientOptions,
 } from "@/tabs/nfs/data-types";
 import { Result, ok, err, safeTry } from "neverthrow";
 import { Maybe, Some, None } from "monet";
-
-// export class NFSClientOptionsParser implements SyntaxParser<NFSClientOptions> {
-//   private hideAllDefaults: boolean;
-
-//   constructor(hideAllDefaults: boolean = false) {
-//     this.hideAllDefaults = hideAllDefaults;
-//   }
-
-//   apply(optionsString: string) {
-//     return optionsString.split(",").reduce<Result<NFSClientOptions, ParsingError>>(
-//       (options, token) =>
-//         options.andThen((options) => {
-//           for (const [key, Option] of NFSClientOptionsParser.ctors) {
-//             const nextOptions = Option.fromString(token).map((option) => ({
-//               ...options,
-//               [key]: option,
-//             }));
-//             if (nextOptions.isSome()) {
-//               return ok(nextOptions.some());
-//             }
-//           }
-//           return err(new ParsingError(`NFSClientOptionsParser: No match for token: ${token}`));
-//         }),
-//       ok(defaultNFSClientOptions())
-//     );
-//   }
-//   unapply(options: NFSClientOptions) {
-//     const hideAllDefaults = this.hideAllDefaults;
-//     return ok(
-//       Object.values(options)
-//         .map((option) => option.configValue(hideAllDefaults).orNull())
-//         .filter((o): o is string => o !== null)
-//         .join(",")
-//     );
-//   }
-// }
 
 export class NFSClientOptionsParser implements SyntaxParser<NFSClientOptions> {
   constructor(_?: boolean) {}
